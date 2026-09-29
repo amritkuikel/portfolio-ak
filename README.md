@@ -14,10 +14,11 @@ The full plan, phases and Definition of Done live in [docs/PLAN.md](docs/PLAN.md
 ```bash
 pnpm install
 cp .env.example .env   # then fill in real values
+pnpm db:migrate
 pnpm dev               # http://localhost:3000
 ```
 
-`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list.
+`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Visit `/health` to confirm the database connection.
 
 ## Scripts
 
@@ -31,7 +32,10 @@ pnpm dev               # http://localhost:3000
 | `pnpm check:fix` | Apply Biome fixes and formatting. |
 | `pnpm test` | Run the Vitest suite once. |
 | `pnpm test:watch` | Run Vitest in watch mode. |
-| `pnpm db:generate`, `db:migrate`, `db:push`, `db:studio` | Stubs until Drizzle is added in Phase 3. |
+| `pnpm db:generate` | Generate a SQL migration in `drizzle/` from schema changes. |
+| `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
+| `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
+| `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm storybook`, `pnpm build-storybook` | Stubs until Storybook is added in Phase 11. |
 
 ## Adding shadcn/ui components

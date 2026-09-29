@@ -114,3 +114,62 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - Error messages list every invalid variable by name and never include values.
 - **Why:** These give clear, actionable startup errors without leaking secrets into logs.
 - **Alternatives considered:** Making `EMAIL_PROVIDER` required now (it would pre-empt Phase 6's selection rules).
+
+## 0015: Neon driver is node-postgres (TCP) with a small pool and `attachDatabasePool`
+
+- **What:**
+  - `drizzle-orm/node-postgres` with a `pg` `Pool` (max 5, 10 s idle timeout), connected to Neon's pooled (`-pooler`) connection string.
+  - `attachDatabasePool` from `@vercel/functions` is registered on the pool.
+  - In dev, one pool is cached on `globalThis` so hot reloads don't leak pools.
+- **Why:**
+  - Neon's current "choose a connection method" guidance recommends TCP with `pg` for Vercel Fluid compute, which is the deploy target (decision 0002), and for long-running Node servers. Warm instances reuse TCP connections, so later queries skip connection setup.
+  - `attachDatabasePool` keeps the function alive until idle connections close before Vercel suspends it. Outside Vercel it is a no-op (verified in its source).
+  - Neon's PgBouncer does the real pooling, so the client pool stays small.
+  - TCP also supports interactive transactions, which Better Auth and Test CRUD may need.
+- **Alternatives considered:**
+  - `neon-http`: fastest for one-shot queries, but no interactive transactions. Neon now positions it for edge runtimes where TCP isn't available.
+  - `neon-serverless` over WebSocket: supports transactions, but needs `ws` and gives no benefit over TCP on Node.
+  - `postgres.js`: also recommended, but Neon's Vercel example and `attachDatabasePool`'s pg support make `pg` the most documented path.
+- **Revisit if:** The deploy target moves to Cloudflare Workers or another edge runtime. Switch to `neon-http` or `neon-serverless` there.
+
+## 0016: Drizzle stable 0.45.x, not the 1.0 release candidate
+
+- **What:** `drizzle-orm@0.45` and `drizzle-kit@0.31` (npm `latest`).
+- **Why:** Drizzle's Neon docs show `drizzle-orm@rc` (1.0.0-rc). Better Auth's Drizzle adapter (Phase 6) and TanStack DB integrations target the stable line, and an RC can change APIs before GA.
+- **Alternatives considered:** 1.0 RC (newer relational query API, higher churn risk). Revisit when 1.0 is published as `latest`.
+
+## 0017: `sslmode=require` is rewritten to `verify-full`
+
+- **What:** `withVerifiedSsl()` (`src/server/db/connection-string.ts`) rewrites `sslmode=prefer`, `require` and `verify-ca` to `verify-full`, unless `uselibpqcompat` is set. It runs for both the app pool and drizzle-kit.
+- **Why:**
+  - Neon's connection strings use `sslmode=require`. pg 8 already treats that as `verify-full`, but prints a "SECURITY WARNING" at runtime. The project rule is no warnings.
+  - pg 9 will switch `require` to libpq semantics, which don't verify the certificate.
+  - The rewrite keeps today's certificate-verifying behavior, silences the warning (verified) and survives the upgrade. Neon uses publicly trusted certificates, so `verify-full` works without extra configuration.
+- **Alternatives considered:**
+  - Asking users to edit the URL, or rejecting `require` in validation (friction with Neon's copy-paste string).
+  - `uselibpqcompat=true&sslmode=require` (weaker: no certificate verification).
+
+## 0018: Migrations use the direct URL and start from an empty baseline
+
+- **What:**
+  - drizzle-kit connects with `DATABASE_URL_UNPOOLED` when set (Vercel's Neon integration provides it), otherwise `DATABASE_URL`.
+  - `drizzle.config.ts` loads `.env` itself and validates only the two URLs.
+  - `drizzle/0000_init.sql` is an empty baseline (`SELECT 1`).
+  - The schema uses `casing: "snake_case"`.
+- **Why:**
+  - Neon recommends direct connections for schema changes. PgBouncer's transaction mode can break DDL and session-level locks.
+  - Validating only the URLs lets a CI migrate step run without app secrets such as email keys.
+  - The baseline gives `db:migrate` a journal to apply before the first real table exists, so the pipeline is proven end to end.
+  - With `snake_case` casing, TypeScript keys stay camelCase while columns stay snake_case, without naming every column twice.
+- **Alternatives considered:** Deferring `db:migrate` until Phase 6 (the script would be untested). `db:push` only (no migration history for production).
+
+## 0019: The health check hides failure details from clients
+
+- **What:**
+  - `checkDatabaseHealth()` (`src/server/db/health.ts`) runs `select 1` and returns `{ status, latencyMs, checkedAt }`.
+  - The `getDbHealth` server function (`src/functions/health.ts`) wraps it.
+  - A `/health` page renders the result through a route loader.
+  - On failure, the driver error and its `cause` are logged on the server only.
+- **Why:** Connection errors contain hostnames, ports and sometimes credentials. The client only needs to know whether the database is reachable. The page makes the check visible in SSR and exercises the server-function path.
+- **Alternatives considered:** A server route at `/api/health` for uptime monitors (can be added when monitoring is set up in Phase 10). Returning the error message (leaks infrastructure details).
+- **Verification:** A real Postgres 17 (embedded, local) was used because Docker wasn't available and no Neon credentials were configured yet. All four `db:*` scripts worked, and migrations applied to a fresh database. `/health` rendered OK with JS on and off, and "Unreachable" with no leaked details when the port was wrong. The check against a real Neon database is still pending.

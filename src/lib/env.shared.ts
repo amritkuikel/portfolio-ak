@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@t3-oss/env-core";
+import { z } from "zod";
 
 type Issue = StandardSchemaV1.Issue;
 
@@ -32,3 +33,13 @@ export const throwEnvError =
 	(issues: ReadonlyArray<Issue>): never => {
 		throw new EnvValidationError(formatEnvIssues(scope, issues));
 	};
+
+/** A postgres:// or postgresql:// URL. Shared by the server env and drizzle.config.ts. */
+export const postgresUrl = (whenMissing: string) =>
+	z.url({
+		protocol: /^postgres(ql)?$/,
+		error: (issue) =>
+			issue.input === undefined
+				? whenMissing
+				: "Must be a Postgres connection URL (postgresql://user:password@host/db).",
+	});

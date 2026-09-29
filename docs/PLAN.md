@@ -97,6 +97,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── src/
 │   ├── routes/
 │   │   ├── __root.tsx           # document shell, head, <html lang>, error/notFound
+│   │   ├── health.tsx           # database health page (Phase 3)
 │   │   ├── _public/             # public layout: header, footer
 │   │   │   ├── index.tsx
 │   │   │   └── test-crud/
@@ -112,7 +113,9 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── server/                  # SERVER-ONLY. Never imported by client code.
 │   │   ├── env.ts               # T3 Env server schema
 │   │   ├── db/
-│   │   │   ├── client.ts        # Drizzle + Neon client
+│   │   │   ├── client.ts        # Drizzle + node-postgres pool (Neon)
+│   │   │   ├── connection-string.ts # sslmode normalisation
+│   │   │   ├── health.ts        # database health check
 │   │   │   └── schema/          # one file per domain (auth, test-crud)
 │   │   ├── auth/                # Better Auth config and helpers
 │   │   ├── email/

@@ -16,12 +16,14 @@ describe("server-only import boundary", () => {
 			["src/components/relative.tsx", `import "../server/env";`],
 			["src/lib/dynamic.ts", `export const load = () => import("../server/env");`],
 			["src/lib/reexport.ts", `export { serverEnv } from "@/server/env";`],
+			["src/routes/db-leak.tsx", `import { db } from "@/server/db/client";`],
 		]);
 		expect(findServerImportViolations(fixture)).toEqual([
 			{ file: "src/routes/leaky.tsx", specifier: "@/server/env" },
 			{ file: "src/components/relative.tsx", specifier: "../server/env" },
 			{ file: "src/lib/dynamic.ts", specifier: "../server/env" },
 			{ file: "src/lib/reexport.ts", specifier: "@/server/env" },
+			{ file: "src/routes/db-leak.tsx", specifier: "@/server/db/client" },
 		]);
 	});
 

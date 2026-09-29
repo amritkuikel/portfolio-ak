@@ -10,7 +10,7 @@
 import "@tanstack/react-start/server-only";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
-import { throwEnvError } from "../lib/env.shared.ts";
+import { postgresUrl, throwEnvError } from "../lib/env.shared.ts";
 
 if (typeof window !== "undefined") {
 	throw new Error("src/server/env.ts is server-only and was loaded in a browser. Call a server function instead.");
@@ -28,13 +28,10 @@ const emailFrom = z
 	}, "Must be an email address, optionally with a name: 'Portfolio <hello@example.com>'.");
 
 export const serverEnvSchema = {
-	DATABASE_URL: z.url({
-		protocol: /^postgres(ql)?$/,
-		error: (issue) =>
-			issue.input === undefined
-				? "Required. Set it to your Neon connection string."
-				: "Must be a Postgres connection URL (postgresql://user:password@host/db).",
-	}),
+	// Pooled Neon URL (host contains "-pooler"), used by the app at runtime.
+	DATABASE_URL: postgresUrl("Required. Set it to your Neon connection string."),
+	// Direct (unpooled) Neon URL for migrations. Optional; falls back to DATABASE_URL.
+	DATABASE_URL_UNPOOLED: postgresUrl("").optional(),
 	EMAIL_PROVIDER: z.enum(["console", "resend"]).optional(),
 	RESEND_API_KEY: z.string().trim().startsWith("re_", "Resend API keys start with 're_'.").optional(),
 	EMAIL_FROM: emailFrom,
