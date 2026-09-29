@@ -1,0 +1,23 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"site_description": "A fast, server-rendered portfolio in English and Nepali.",
+	"language_switcher_label": "Language",
+	"language_en": "English",
+	"language_ne": "नेपाली",
+	"home_title": "Welcome",
+	"home_intro": "A fast, server-rendered portfolio, fully available in English and Nepali.",
+	"intl_preview_title": "Locale formatting",
+	"intl_preview_description": "Dates, numbers and currency follow the selected language.",
+	"intl_date": "Date",
+	"intl_number": "Number",
+	"intl_currency": "Currency",
+	"intl_relative_time": "Relative time",
+	"health_title": "System health",
+	"health_database": "Database",
+	"health_status_ok": "OK",
+	"health_status_error": "Unreachable",
+	"health_latency": "Latency",
+	"health_latency_value": "{value} ms",
+	"health_checked_at": "Checked at",
+	"dialog_close": "Close"
+}

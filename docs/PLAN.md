@@ -88,7 +88,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── messages/
 │   ├── en.json                  # Paraglide source messages (base locale)
 │   └── ne.json                  # must have identical keys to en.json
-├── project.inlang/              # inlang project settings
+├── project.inlang/              # inlang settings + paraglide.config.ts (compiler options)
 ├── drizzle/                     # generated SQL migrations (committed)
 ├── public/                      # static assets, self-hosted font files if needed
 ├── scripts/
@@ -139,6 +139,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── client-env.schema.ts # T3 Env client schema (also used by vite.config.ts)
 │   │   ├── env.shared.ts        # env error formatting
 │   │   ├── intl.ts              # locale-aware date, number, NPR currency, relative time
+│   │   ├── intl-ne.ts           # portable CLDR ne data (browsers lack ICU ne)
+│   │   ├── i18n/                # locale header + server-function locale middleware
 │   │   ├── validation.ts        # localized Zod helpers
 │   │   ├── query.ts             # QueryClient factory and query key conventions
 │   │   ├── stores/              # TanStack Store: theme, sidebar, table prefs
@@ -150,7 +152,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── styles/
 │   │   └── app.css              # Tailwind entry, tokens, light/dark themes, fonts
 │   ├── router.tsx               # createRouter, context, Query SSR integration, i18n rewrite
-│   └── server.ts                # server entry, Paraglide middleware
+│   ├── server.ts                # server entry, Paraglide middleware
+│   └── start.ts                 # createStart: global function middleware
 ├── tests/
 │   ├── setup.ts                 # Testing Library, jsdom, Paraglide locale setup
 │   ├── unit/                    # schemas, validation, intl, env, provider selection
@@ -251,7 +254,7 @@ Each phase lists **Scope**, **Deliverables** and **Acceptance criteria**. Every 
 - Locales `en` (base) and `ne`. URL strategy: `/` for English, `/ne/...` for Nepali. Cookie and `Accept-Language` fallbacks only as the docs recommend.
 - `<html lang>` correct on SSR for both locales.
 - Preload the Devanagari font subset only on `ne` pages (see decision 0007).
-- Language switcher that preserves path and search params.
+- Language switcher that preserves path and search params. (The URL hash is not preserved: browsers never send it to the server, so SSR cannot render it.)
 - `src/lib/intl.ts` with date, number, NPR currency and relative-time helpers built on `Intl` and keyed to the current locale.
 - Test asserting `messages/en.json` and `messages/ne.json` have identical keys.
 - All existing UI text migrated to messages.

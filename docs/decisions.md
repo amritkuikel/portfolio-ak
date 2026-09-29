@@ -173,3 +173,104 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Why:** Connection errors contain hostnames, ports and sometimes credentials. The client only needs to know whether the database is reachable. The page makes the check visible in SSR and exercises the server-function path.
 - **Alternatives considered:** A server route at `/api/health` for uptime monitors (can be added when monitoring is set up in Phase 10). Returning the error message (leaks infrastructure details).
 - **Verification:** A real Postgres 17 (embedded, local) was used because Docker wasn't available and no Neon credentials were configured yet. All four `db:*` scripts worked, and migrations applied to a fresh database. `/health` rendered OK with JS on and off, and "Unreachable" with no leaked details when the port was wrong. The check against a real Neon database is still pending.
+
+## 0020: Paraglide follows the official TanStack Start example; options live in `paraglide.config.ts`
+
+- **What:**
+  - The wiring matches `TanStack/router/examples/react/start-i18n-paraglide`: the Vite plugin, `paraglideMiddleware` in `src/server.ts` (given the original request), and router `rewrite` with `deLocalizeUrl` / `localizeUrl`.
+  - Compiler options are in `project.inlang/paraglide.config.ts` (`defineConfig`), which both the Vite plugin and the `paraglide-js compile` CLI read.
+  - `pnpm typecheck` compiles first, so it works on a fresh clone. `vitest.config.ts` also loads the plugin.
+  - `emitTsDeclarations: true` generates `.d.ts` files, instead of the example's `allowJs`.
+- **Why:**
+  - One options source prevents drift between dev, build, tests and typecheck.
+  - `emitTsDeclarations` keeps the tsconfig strict (`verbatimModuleSyntax`, no `allowJs`).
+- **Alternatives considered:**
+  - Inline plugin options plus duplicated CLI flags (drift risk).
+  - A custom shared TS module (the config file is the official mechanism, available since Paraglide 2.x).
+  - Committing the generated output.
+
+## 0021: Locale strategy is URL-only for pages; English unprefixed, Nepali under `/ne`
+
+- **What:**
+  - `strategy: ["url", "baseLocale"]`, with `urlPatterns` listing `/ne/:path(.*)?` before `/:path(.*)?`. Paraglide matches in order.
+  - No cookie or `Accept-Language` strategy for pages.
+- **Why:**
+  - Paraglide's routing docs give `["url", "baseLocale"]` as the setup for an unprefixed base locale.
+  - With an unprefixed base locale, the URL strategy always resolves, so later strategies are never consulted. The docs say always-resolving strategies belong last.
+  - Putting cookie or `Accept-Language` before `url` would make `/` language-dependent. That hurts canonical URLs, `hreflang` and caching, and makes the middleware redirect.
+  - The URL is authoritative, and the switcher is the user's control. A test asserts that `Accept-Language: ne` doesn't change `/`.
+- **Alternatives considered:**
+  - `["url", "cookie", "preferredLanguage", "baseLocale"]` as in the example, which prefixes every locale including `/en`. It conflicts with the plan's "`/` for English".
+  - Auto-redirecting first-time visitors based on `Accept-Language` (surprising, bad for SEO; could be added later as a dismissible suggestion banner).
+- **Note:** Bare `/ne` gets a 307 to `/ne/`. The canonical Nepali home is `/ne/`.
+
+## 0022: Server functions receive the page locale in a header
+
+- **What:**
+  - A global function middleware (`src/start.ts`, `src/lib/i18n/locale-middleware.ts`) adds an `x-paraglide-locale` header with the page's locale to every server function call.
+  - A Paraglide custom strategy, `custom-header`, is defined in `src/server.ts` and applied only to `/_serverFn/*` through `routeStrategies`. `toLocale()` rejects unknown values.
+- **Why:**
+  - Server function RPCs go to `/_serverFn/...` with no locale prefix. An experiment showed a call from `/ne/...` resolving to `en` on the server.
+  - The header carries the exact locale of the page that made the call, and stays correct with two tabs in different languages. A shared cookie would not.
+  - With the header, the probe returned `ne` from Nepali pages and `en` from English pages.
+  - SSR-time calls run inside the page request's AsyncLocalStorage, so they are unaffected.
+- **Alternatives considered:**
+  - A cookie strategy for RPCs, as in the example (wrong with multiple tabs, and needs `setLocale()` on the client to write the cookie).
+  - Passing `locale` as an explicit argument to every server function (easy to forget).
+
+## 0023: The language switcher uses plain links to localized URLs
+
+- **What:** `LanguageSwitcher` renders `<a href={localizeHref(location.href, { locale })} hreflang lang>` for each locale, from the router's de-localized location.
+- **Why:**
+  - Paraglide messages aren't reactive. A locale change needs a document load so SSR renders the new language, `<html lang>` and font preloads. This is the same thing `setLocale()` does with the URL strategy.
+  - Anchors work without JavaScript, are crawlable, and keep path and search params (verified in the browser, both directions).
+  - The URL hash can't be preserved in SSR, because browsers never send it.
+- **Alternatives considered:** `setLocale()` buttons (need JS). Router `<Link>` (client navigation would show stale strings).
+
+## 0024: Nepali formatting never uses ICU `ne` data
+
+- **What:**
+  - `src/lib/intl.ts` formats English with `Intl` directly.
+  - For Nepali it uses only data every runtime has: `en-IN-u-nu-deva` for lakh grouping and Devanagari digits, locale-neutral date fields, and CLDR 47 `ne` month, weekday, currency and relative-time data transcribed into `src/lib/intl-ne.ts`.
+  - The API exposes a portable subset: `dateStyle` / `timeStyle`, and decimal, percent and currency styles.
+- **Why:**
+  - Desktop Chrome's reduced ICU data has no Nepali: `Intl.DateTimeFormat.supportedLocalesOf("ne")` returns `[]`, so the browser silently formats English.
+  - Node has full ICU and formats real Nepali. The result was a hydration mismatch (React error #418) on every Nepali page, and English formatting after React re-rendered.
+  - The portable implementation produces identical strings everywhere. Tests compare it with Node's full-ICU `ne-NP` output for every date and time style, 16 dates across all months and weekdays, numbers, percent, currency, and every relative unit from -10 to +12 in both numeric modes. It matches exactly, including CLDR quirks like `+१ सत्रमा`.
+- **Alternatives considered:**
+  - `suppressHydrationWarning` (hides the error, but client re-renders still show English).
+  - Client-only formatting (breaks SSR and no-JS).
+  - Shipping full ICU data to browsers (not possible).
+  - A formatting library (large, and still needs Nepali data).
+
+## 0025: Dates render in a fixed app time zone; relative time takes an explicit `now`
+
+- **What:** `APP_TIME_ZONE = "Asia/Kathmandu"` is the default for all date formatting. `formatRelativeTimeFrom(value, now)` requires `now`.
+- **Why:** Servers run in UTC and browsers in local time, so machine-zone formatting differs between SSR and hydration. `Date.now()` during render also differs between server and client.
+- **Alternatives considered:** The user's own zone (only knowable on the client, which forces client-only rendering or a cookie round-trip). UTC (wrong for the target audience).
+
+## 0026: Devanagari font preloads only on Nepali pages; no preloads in dev
+
+- **What:**
+  - `fontPreloads(locale)` returns the Inter Latin preload everywhere, and the Noto Devanagari preload only for `ne`. It returns nothing in dev.
+  - On English pages, the switcher's "नेपाली" label uses a system Devanagari font stack (`font-devanagari-system`), so English pages never download the 121 kB web font. Verified in the network log.
+- **Why:**
+  - This follows up decision 0007.
+  - In dev, Vite injects extra stylesheet copies, so the browser re-requests the font instead of using the preload and logs a warning. Preloads are a production optimization.
+- **Known benign warning:** After switching from an English page to Nepali in the same tab, Chrome can log "preloaded but not used within a few seconds" for the Devanagari font. The cached stylesheet requests the font milliseconds after the preload starts and doesn't attach to it. It is still downloaded only once. Cold loads of `/ne/`, including on a throttled network, use the preload with no warning.
+- **Layout shift:** Nepali pages measured a CLS of 0.0006 to 0.0008, far below the 0.1 "good" threshold. The Devanagari fallback can match vertical metrics only; widths are unknown for system fonts (decision 0007). English pages measured 0.
+
+## 0027: React is split into its own client chunk
+
+- **What:** The client build's `codeSplitting.groups` puts `react`, `react-dom` and `scheduler` into a `react-vendor` chunk.
+- **Why:** Adding Paraglide's URLPattern polyfill pushed the entry chunk past Vite's 500 kB warning, to 507 kB. React DOM alone is about 200 kB and rarely changes, so a separate chunk stays cached across deploys. The entry is now 287 kB and React is 219 kB.
+- **Alternatives considered:** Raising `chunkSizeWarningLimit` (silences the warning without improving anything). Swapping client-side Zod for `zod/mini` (the forms in Phase 7 will bring Zod to the client anyway).
+
+## 0028: How "no hydration warnings" was verified
+
+- **What:** Headless Chrome 154 (puppeteer-core) loaded `/`, `/ne/`, `/health?tab=db&x=1` and `/ne/health?tab=db&x=1` on both the Vite dev server and the production build. It captured every console message and page error, clicked the language switcher, and recorded the URL, `<html lang>`, the rendered formatting samples, preloads and downloaded fonts before and after.
+- **Result:**
+  - The dev server (React's development build, which reports hydration mismatches in detail) had a clean console on all four pages, before and after switching.
+  - Production had no hydration errors.
+  - A no-JS load renders the full localized content with the correct `lang`.
+- **Why:** React's production build reports hydration failures only as minified error #418, so a dev-server run was required to catch and diagnose the Nepali `Intl` mismatch (decision 0024).

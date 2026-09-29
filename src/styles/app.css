@@ -164,3 +164,11 @@
 		@apply min-h-dvh bg-background font-sans text-foreground antialiased;
 	}
 }
+
+/* System Devanagari stack for isolated Devanagari words on non-Nepali pages
+   (e.g. the language switcher), so those pages never fetch the web font. */
+@utility font-devanagari-system {
+	font-family:
+		"Nirmala UI", "Kohinoor Devanagari", "Devanagari Sangam MN", "Noto Sans Devanagari", "Lohit Devanagari", Mangal,
+		sans-serif;
+}

@@ -8,6 +8,7 @@
  */
 import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import notoDevanagari from "@fontsource-variable/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-wght-normal.woff2?url";
+import type { Locale } from "@/paraglide/runtime";
 
 type PreloadLink = {
 	rel: "preload";
@@ -26,5 +27,15 @@ const preload = (href: string): PreloadLink => ({
 	crossOrigin: "anonymous",
 });
 
-export const latinFontPreload = preload(interLatin);
-export const devanagariFontPreload = preload(notoDevanagari);
+/**
+ * Font preloads for a page in `locale`. Latin text appears on every page; the
+ * Devanagari subset only renders first on Nepali pages (isolated Devanagari words
+ * elsewhere use a system font, see the font-devanagari-system utility).
+ *
+ * Production only: in dev, Vite injects extra copies of the stylesheet, so the
+ * browser re-requests the font instead of reusing the preload and warns about it.
+ */
+export const fontPreloads = (locale: Locale): PreloadLink[] => {
+	if (import.meta.env.DEV) return [];
+	return locale === "ne" ? [preload(interLatin), preload(notoDevanagari)] : [preload(interLatin)];
+};

@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -43,7 +44,29 @@ export default defineConfig(async ({ command, mode }) => {
 
 	return {
 		resolve: { tsconfigPaths: true },
+		environments: {
+			client: {
+				build: {
+					rolldownOptions: {
+						output: {
+							// React changes rarely; a separate chunk stays cached across deploys and keeps
+							// the entry chunk under Vite's 500 kB warning. See docs/decisions.md.
+							codeSplitting: {
+								groups: [
+									{
+										name: "react-vendor",
+										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:react|react-dom|scheduler)\//,
+									},
+								],
+							},
+						},
+					},
+				},
+			},
+		},
 		plugins: [
+			// Options live in project.inlang/paraglide.config.ts (shared with the compile CLI).
+			paraglideVitePlugin({ project: "./project.inlang" }),
 			devtools(),
 			nitro({
 				// Validates server env at boot. See the file for why this is a Nitro plugin.

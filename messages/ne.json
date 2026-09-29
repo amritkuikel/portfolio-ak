@@ -1,0 +1,23 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"site_description": "अङ्ग्रेजी र नेपालीमा उपलब्ध, छिटो र सर्भरमै रेन्डर हुने पोर्टफोलियो।",
+	"language_switcher_label": "भाषा",
+	"language_en": "English",
+	"language_ne": "नेपाली",
+	"home_title": "स्वागत छ",
+	"home_intro": "अङ्ग्रेजी र नेपाली दुवै भाषामा पूर्ण रूपमा उपलब्ध, छिटो र सर्भरमै रेन्डर हुने पोर्टफोलियो।",
+	"intl_preview_title": "स्थानीय ढाँचा",
+	"intl_preview_description": "मिति, सङ्ख्या र मुद्रा छानिएको भाषाअनुसार देखिन्छन्।",
+	"intl_date": "मिति",
+	"intl_number": "सङ्ख्या",
+	"intl_currency": "मुद्रा",
+	"intl_relative_time": "सापेक्ष समय",
+	"health_title": "प्रणाली स्वास्थ्य",
+	"health_database": "डाटाबेस",
+	"health_status_ok": "ठीक छ",
+	"health_status_error": "पहुँच हुन सकेन",
+	"health_latency": "प्रतिक्रिया समय",
+	"health_latency_value": "{value} मिलिसेकेन्ड",
+	"health_checked_at": "जाँच गरिएको समय",
+	"dialog_close": "बन्द गर्नुहोस्"
+}

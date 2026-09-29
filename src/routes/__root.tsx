@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Toaster } from "@/components/ui/sonner";
 import { clientEnv } from "@/lib/client-env";
-import { devanagariFontPreload, latinFontPreload } from "@/lib/fonts";
+import { fontPreloads } from "@/lib/fonts";
+import { m } from "@/paraglide/messages";
+import { getLocale, getTextDirection } from "@/paraglide/runtime";
 import appCss from "@/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -14,10 +16,10 @@ export const Route = createRootRoute({
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
 			{ title: clientEnv.VITE_APP_TITLE },
+			{ name: "description", content: m.site_description() },
 		],
 		links: [
-			latinFontPreload,
-			devanagariFontPreload,
+			...fontPreloads(getLocale()),
 			{ rel: "stylesheet", href: appCss },
 			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 		],
@@ -26,8 +28,9 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
+	const locale = getLocale();
 	return (
-		<html lang="en">
+		<html lang={locale} dir={getTextDirection(locale)}>
 			<head>
 				<HeadContent />
 			</head>

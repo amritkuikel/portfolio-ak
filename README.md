@@ -38,6 +38,14 @@ pnpm dev               # http://localhost:3000
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm storybook`, `pnpm build-storybook` | Stubs until Storybook is added in Phase 11. |
 
+## Internationalisation (English + Nepali)
+
+- Messages live in `messages/en.json` and `messages/ne.json`. Both files must have the same keys, and a test enforces it.
+- Use them in code with `import { m } from "@/paraglide/messages"`, then `m.some_key()`. Paraglide compiles them into `src/paraglide/` (generated, gitignored) on `dev`, `build`, `test` and `typecheck`.
+- English lives at `/`, Nepali under `/ne/`. Define each route once; the router maps `/ne/...` onto it.
+- Format dates, numbers, NPR amounts and relative times with `src/lib/intl.ts`, never `Intl` directly. Browsers such as Chrome lack Nepali locale data, so raw `Intl` output differs between server and browser.
+- Compiling messages downloads two inlang plugins from jsDelivr, so the first compile needs network access.
+
 ## Adding shadcn/ui components
 
 ```bash

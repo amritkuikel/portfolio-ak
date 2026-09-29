@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getDbHealth } from "@/functions/health";
+import { formatDateTime, formatNumber } from "@/lib/intl";
+import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/health")({
 	loader: () => getDbHealth(),
@@ -9,23 +11,22 @@ export const Route = createFileRoute("/health")({
 	component: HealthPage,
 });
 
-// Placeholder UI for Phase 3. Text moves to Paraglide messages in Phase 4.
 function HealthPage() {
 	const health = Route.useLoaderData();
 	const ok = health.status === "ok";
 	return (
 		<main className="mx-auto max-w-3xl px-4 py-16">
-			<h1 className="font-semibold text-2xl tracking-tight">Health</h1>
+			<h1 className="font-semibold text-2xl tracking-tight">{m.health_title()}</h1>
 			<dl className="mt-6 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2">
-				<dt className="text-muted-foreground">Database</dt>
+				<dt className="text-muted-foreground">{m.health_database()}</dt>
 				<dd data-testid="db-status" className={ok ? "text-green-700 dark:text-green-400" : "text-destructive"}>
-					{ok ? "OK" : "Unreachable"}
+					{ok ? m.health_status_ok() : m.health_status_error()}
 				</dd>
-				<dt className="text-muted-foreground">Latency</dt>
-				<dd>{health.latencyMs} ms</dd>
-				<dt className="text-muted-foreground">Checked at</dt>
+				<dt className="text-muted-foreground">{m.health_latency()}</dt>
+				<dd>{m.health_latency_value({ value: formatNumber(health.latencyMs) })}</dd>
+				<dt className="text-muted-foreground">{m.health_checked_at()}</dt>
 				<dd>
-					<time dateTime={health.checkedAt}>{health.checkedAt}</time>
+					<time dateTime={health.checkedAt}>{formatDateTime(health.checkedAt)}</time>
 				</dd>
 			</dl>
 		</main>
