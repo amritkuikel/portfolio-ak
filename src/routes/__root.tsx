@@ -1,21 +1,25 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ReactNode } from "react";
+import { ErrorPage } from "@/components/errors/error-page";
+import { NotFoundPage } from "@/components/errors/not-found-page";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Toaster } from "@/components/ui/sonner";
-import { clientEnv } from "@/lib/client-env";
 import { fontPreloads } from "@/lib/fonts";
+import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 import { getLocale, getTextDirection } from "@/paraglide/runtime";
+import type { RouterContext } from "@/router";
 import appCss from "@/styles/app.css?url";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{ title: clientEnv.VITE_APP_TITLE },
+			// Default title; child routes override it with pageTitle("…").
+			{ title: pageTitle() },
 			{ name: "description", content: m.site_description() },
 		],
 		links: [
@@ -24,6 +28,8 @@ export const Route = createRootRoute({
 			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 		],
 	}),
+	errorComponent: ErrorPage,
+	notFoundComponent: NotFoundPage,
 	shellComponent: RootDocument,
 });
 
@@ -34,9 +40,9 @@ function RootDocument({ children }: { children: ReactNode }) {
 			<head>
 				<HeadContent />
 			</head>
-			<body>
+			<body className="flex min-h-dvh flex-col">
 				<SiteHeader />
-				{children}
+				<div className="flex flex-1 flex-col">{children}</div>
 				<Toaster />
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}

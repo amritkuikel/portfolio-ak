@@ -283,3 +283,77 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - The same commit cloned to a shorter path passed install, typecheck, all 60 tests and the build with zero warnings.
   - The working copy's longest dependency paths are about 170 characters. pnpm already truncates `.pnpm` directory names on Windows (`virtualStoreDirMaxLength`).
 - **Alternatives considered:** pnpm `node-linker=hoisted` (loses pnpm's strictness). Enabling long paths only (already on in this machine's registry, and not enough for Node here).
+
+## 0030: TanStack Query via the official SSR integration, with a 60-second `staleTime`
+
+- **What:**
+  - `setupRouterSsrQueryIntegration` from `@tanstack/react-router-ssr-query`, with a new `QueryClient` per `getRouter()` call (once per request on the server).
+  - `staleTime` defaults to 60 s, and `AppError`s aren't retried.
+  - Loaders `await queryClient.ensureQueryData(...)`, and components read with `useSuspenseQuery`.
+  - Query keys for translated data include the locale.
+- **Why:**
+  - The integration dehydrates and hydrates automatically and provides `QueryClientProvider`. There is no hand-written dehydration.
+  - With the default `staleTime` of 0, freshly hydrated data counts as stale and refetches on mount. Verified: with 60 s, zero server-function requests are made after hydrating `/stack`.
+  - Locale in the key stops English and Nepali results from sharing cache entries.
+- **Alternatives considered:** Router loader data only, without Query (no shared cache or background refresh, and Test CRUD needs Query for TanStack DB). `useQuery` (doesn't run during SSR).
+
+## 0031: One `AppError` shape, normalised by middleware and serialised with an adapter
+
+- **What:**
+  - `AppError` (`src/lib/errors.ts`) carries `code` (7 codes), `status`, a developer `message`, optional `fieldErrors`, and `requestId`.
+  - Global function middleware assigns a request ID, logs one JSON line per call (function name, method, duration, outcome), and normalises every thrown value:
+    - redirect and notFound pass through;
+    - an `AppError` keeps its code;
+    - a `ZodError` becomes `BAD_REQUEST`;
+    - anything else becomes `INTERNAL` with no details, and the original is logged.
+  - A `createSerializationAdapter` registered in `createStart` rebuilds a real `AppError` on the client.
+  - `ErrorPage` shows a localized message chosen by `code`, plus the request ID.
+- **Why:**
+  - Clients can branch on `error instanceof AppError` and `code`, never on message strings.
+  - Raw errors leak infrastructure details. Verified: a thrown message containing a host and password never appears in the SSR HTML or on the RPC wire, while the server log keeps it under the same request ID.
+  - User-facing text stays in Paraglide, so the same error reads correctly in either language.
+- **Alternatives considered:** Returning `{ ok, error }` result objects from every function (verbose, and loses throw semantics in loaders). Relying on Start's default error serialisation (class and fields not guaranteed).
+
+## 0032: `zodInput()` instead of passing Zod schemas straight to `inputValidator`
+
+- **What:** `zodInput(schema)` wraps a schema in a `{ parse }` validator that throws `AppError("BAD_REQUEST")` with field errors keyed by dotted path. Input and output types come from the schema.
+- **Why:** For Standard Schema validators, Start throws a plain `Error` whose message is a JSON dump of the issues. That would need string parsing to normalise.
+- **Alternatives considered:** Parsing the JSON error message in middleware (fragile). Validating manually inside each handler (easy to forget).
+
+## 0033: Middleware lives in `src/middleware/`, not `src/server/middleware/`
+
+- **What:** The CSRF, logging, error and auth middleware live in `src/middleware/`.
+- **Why:** `src/start.ts` registers global middleware and is part of the client bundle. The locale middleware has a client half. Import protection denies `src/server/**` on the client, so middleware can't live there. The Start compiler strips `.server()` bodies from the client build (verified: the client bundle scan is clean). This changes the folder plan in PLAN.md.
+- **Alternatives considered:** Excluding middleware files from import protection (weakens the boundary).
+
+## 0034: CSRF protection for server functions
+
+- **What:** Start's `createCsrfMiddleware({ filter: ctx => ctx.handlerType === "serverFn" })` is registered as request middleware.
+- **Why:**
+  - In dev, Start warned that server functions were unprotected.
+  - Verified by replaying a real server-function request. Before the change, cross-site, foreign-`Origin` and signal-less requests all returned 200. After it, they return 403 while same-origin requests return 200.
+  - Page navigation is unaffected.
+- **Alternatives considered:** Silencing the warning (leaves the endpoints open). A token-based CSRF scheme (unnecessary for same-origin RPC with Fetch Metadata, and needs state).
+
+## 0035: Layout routes, guards and the session slot
+
+- **What:**
+  - Pathless layouts: `_public` (footer), `_auth` (login and register, which bounce signed-in users to a safe `?redirect=`), `_authed` (redirects anonymous users to `/login?redirect=<path>`), `_admin` (anonymous users go to login, non-admins get `AppError("FORBIDDEN")`).
+  - The router context is typed `{ queryClient, session: Session | null }`, and `session` is always `null` until Phase 6.
+  - The guards already run their real logic against that slot. `_authed` and `_admin` narrow `session` to non-null for child routes.
+  - Placeholder server middleware follows the same contracts: `sessionMiddleware`, `requireUserMiddleware` (UNAUTHORIZED) and `requireAdminMiddleware` (FORBIDDEN).
+  - `?redirect=` only accepts same-site paths (`/…`, not `//host` or `/\host`), so login can't become an open redirect.
+- **Why:** Phase 6 only has to fill the session in. Routes, redirects and server checks are already wired and tested. Route guards control navigation only; server functions must still use the middleware.
+- **Verification:** `/account` and `/admin` return 307 to `/login?redirect=…`, and `/ne/account` returns 307 to `/ne/login?redirect=%2Faccount`. `?redirect=//evil.example` is dropped. Unknown paths return 404 with the localized page.
+
+## 0036: `/stack` is the Phase 5 reference page
+
+- **What:** A public page listing this project's tech stack, with the Phase 5 patterns applied:
+  - Zod search params with `.default().catch()` (invalid values are corrected and default values stripped from the URL);
+  - a loader using `ensureQueryData`;
+  - a `pendingComponent` skeleton;
+  - a deferred stats promise rendered with `<Await>` and streamed;
+  - a search `<form>` that works without JS, and links for sorting and pagination;
+  - a dev-only `?simulate=error` that throws a deliberately leaky error.
+- **Why:** The patterns get exercised on real, localized content without building ahead into Test CRUD.
+- **Streaming verified by chunk timing:** A browser user agent receives the list, fallback and dehydrated state in the first chunk (79 ms), and the stats in a later chunk (881 ms). Crawler user agents get one complete document, because Start buffers for bots, which is good for SEO. With JS disabled, the fallback stays visible, since streamed content is inserted by inline script.

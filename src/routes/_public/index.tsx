@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/_public/")({ component: Home });
 
 // Fixed sample values: identical on server and client, so formatting can't cause hydration mismatches.
 const SAMPLE_DATE = "2026-01-15T10:30:00Z";

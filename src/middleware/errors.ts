@@ -1,0 +1,46 @@
+import { isNotFound, isRedirect } from "@tanstack/react-router";
+import { createMiddleware } from "@tanstack/react-start";
+import { z } from "zod";
+import { AppError } from "@/lib/errors";
+import { zodFieldErrors } from "@/lib/fn-input";
+import { logServerFn, requestLoggingMiddleware } from "./logging";
+
+/**
+ * Maps anything a server function throws onto the AppError shape.
+ * - Router control flow (redirect / notFound) passes through untouched.
+ * - AppError keeps its code; the request id is attached.
+ * - ZodError (a schema parsed inside a handler) becomes BAD_REQUEST.
+ * - Anything else becomes INTERNAL with no details; the original is logged.
+ */
+export const normalizeServerError = (error: unknown, requestId: string): unknown => {
+	if (isRedirect(error) || isNotFound(error)) return error;
+
+	if (error instanceof AppError) {
+		return error.requestId
+			? error
+			: new AppError(error.code, error.message, {
+					...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+					requestId,
+				});
+	}
+
+	if (error instanceof z.ZodError) {
+		return new AppError("BAD_REQUEST", "Invalid input", { fieldErrors: zodFieldErrors(error), requestId });
+	}
+
+	logServerFn("error", {
+		requestId,
+		error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error),
+	});
+	return new AppError("INTERNAL", "Internal error", { requestId });
+};
+
+export const errorNormalizationMiddleware = createMiddleware({ type: "function" })
+	.middleware([requestLoggingMiddleware])
+	.server(async ({ next, context }) => {
+		try {
+			return await next();
+		} catch (error) {
+			throw normalizeServerError(error, context.requestId);
+		}
+	});

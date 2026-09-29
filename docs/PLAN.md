@@ -123,14 +123,16 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── templates/       # React Email templates
 │   │   │   └── send.ts          # provider selection + send helper
 │   │   ├── analytics/           # posthog-node wrapper
-│   │   ├── middleware/          # server-function middleware: logging, errors, auth, admin
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
+│   ├── middleware/              # Start middleware (isomorphic; outside src/server so start.ts can import it):
+│   │                            #   csrf, logging, errors (normalisation), auth (session/user/admin guards)
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
 │   │   └── test-crud.ts
 │   ├── features/
 │   │   └── test-crud/           # schema.ts (shared Zod), queries, collection, components
 │   ├── components/
+│   │   ├── errors/              # error, not-found and pending pages
 │   │   ├── ui/                  # shadcn/ui primitives
 │   │   ├── layout/              # header, footer, admin sidebar, language switcher, theme toggle
 │   │   └── forms/               # form hook, fields, SubmitButton, FormErrorSummary
@@ -142,7 +144,12 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── intl-ne.ts           # portable CLDR ne data (browsers lack ICU ne)
 │   │   ├── i18n/                # locale header + server-function locale middleware
 │   │   ├── validation.ts        # localized Zod helpers
-│   │   ├── query.ts             # QueryClient factory and query key conventions
+│   │   ├── query.ts             # QueryClient factory (per request on the server)
+│   │   ├── errors.ts            # AppError + serialization adapter
+│   │   ├── fn-input.ts          # zodInput(): Zod -> AppError(BAD_REQUEST) for server fn input
+│   │   ├── session.ts           # Session types (router context, middleware)
+│   │   ├── redirect.ts          # safe ?redirect= validation
+│   │   ├── seo.ts               # page title template
 │   │   ├── stores/              # TanStack Store: theme, sidebar, table prefs
 │   │   ├── analytics.ts         # posthog-js wrapper with consent
 │   │   ├── fonts.ts             # font preload links

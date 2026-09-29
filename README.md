@@ -47,6 +47,13 @@ pnpm dev               # http://localhost:3000
 - Format dates, numbers, NPR amounts and relative times with `src/lib/intl.ts`, never `Intl` directly. Browsers such as Chrome lack Nepali locale data, so raw `Intl` output differs between server and browser.
 - Compiling messages downloads two inlang plugins from jsDelivr, so the first compile needs network access.
 
+## Routing, data and server functions
+
+- **Layout routes:** `_public` (public pages), `_auth` (login and register), `_authed` (signed-in users) and `_admin` (admins). The guards run in each layout's `beforeLoad`.
+- **Data loading:** Loaders call `queryClient.ensureQueryData(...)`, and components read with `useSuspenseQuery`. SSR dehydration is handled by `@tanstack/react-router-ssr-query`. See `src/routes/_public/stack.tsx` for the full pattern: search params, loader, pending state and streaming.
+- **Server functions:** Use `createServerFn().inputValidator(zodInput(schema))`. Throw `AppError(code)` for expected failures. Anything else reaches the client as `INTERNAL`, with details only in the server log.
+- **Guarding server functions:** Add `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` (`src/middleware/auth.ts`). Route guards alone never protect data.
+
 ## Adding shadcn/ui components
 
 ```bash

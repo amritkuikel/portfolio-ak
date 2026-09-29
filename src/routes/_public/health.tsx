@@ -3,7 +3,7 @@ import { getDbHealth } from "@/functions/health";
 import { formatDateTime, formatNumber } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/health")({
+export const Route = createFileRoute("/_public/health")({
 	loader: () => getDbHealth(),
 	// Always re-check; a cached health result is meaningless.
 	staleTime: 0,
