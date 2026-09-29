@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({ component: Home });
 // Placeholder page for Phase 1. Text moves to Paraglide messages in Phase 4.
 function Home() {
 	return (
-		<main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-6 px-4 py-16">
+		<main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-16">
 			<h1 className="font-semibold text-4xl tracking-tight">Portfolio</h1>
 			<Card>
 				<CardHeader>

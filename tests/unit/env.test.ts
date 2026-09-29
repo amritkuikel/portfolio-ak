@@ -1,0 +1,94 @@
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { createClientEnv } from "@/lib/client-env.schema";
+import { EnvValidationError } from "@/lib/env.shared";
+
+const validServer = {
+	DATABASE_URL: "postgresql://user:pass@ep-x-123.us-east-2.aws.neon.tech/neondb?sslmode=require",
+	EMAIL_PROVIDER: "console",
+	EMAIL_FROM: "Portfolio <hello@example.com>",
+};
+
+// src/server/env.ts validates process.env when imported, so give it valid values first.
+let createServerEnv: typeof import("@/server/env").createServerEnv;
+beforeAll(async () => {
+	for (const [key, value] of Object.entries(validServer)) vi.stubEnv(key, value);
+	({ createServerEnv } = await import("@/server/env"));
+});
+
+const serverError = (env: Record<string, string | undefined>) => {
+	try {
+		createServerEnv(env);
+	} catch (error) {
+		return error;
+	}
+	throw new Error("expected validation to fail");
+};
+
+describe("server env", () => {
+	it("accepts a valid configuration", () => {
+		expect(createServerEnv({ ...validServer }).DATABASE_URL).toBe(validServer.DATABASE_URL);
+	});
+
+	it("accepts postgres:// and a bare EMAIL_FROM address", () => {
+		const env = createServerEnv({ ...validServer, DATABASE_URL: "postgres://u:p@localhost/db", EMAIL_FROM: "a@b.co" });
+		expect(env.EMAIL_FROM).toBe("a@b.co");
+	});
+
+	it("names every missing required variable", () => {
+		const error = serverError({});
+		expect(error).toBeInstanceOf(EnvValidationError);
+		expect((error as Error).message).toMatch(/Invalid server environment variables/);
+		expect((error as Error).message).toMatch(/- DATABASE_URL: Required/);
+		expect((error as Error).message).toMatch(/- EMAIL_FROM: Required/);
+	});
+
+	it("rejects a non-Postgres DATABASE_URL", () => {
+		const error = serverError({ ...validServer, DATABASE_URL: "mysql://u:p@localhost/db" });
+		expect((error as Error).message).toMatch(/DATABASE_URL: Must be a Postgres connection URL/);
+	});
+
+	it("rejects an invalid EMAIL_FROM", () => {
+		const error = serverError({ ...validServer, EMAIL_FROM: "Portfolio <not-an-email>" });
+		expect((error as Error).message).toMatch(/EMAIL_FROM:/);
+	});
+
+	it("rejects an unknown EMAIL_PROVIDER", () => {
+		const error = serverError({ ...validServer, EMAIL_PROVIDER: "smtp" });
+		expect((error as Error).message).toMatch(/EMAIL_PROVIDER:/);
+	});
+
+	it("requires RESEND_API_KEY when EMAIL_PROVIDER is resend", () => {
+		const error = serverError({ ...validServer, EMAIL_PROVIDER: "resend" });
+		expect((error as Error).message).toMatch(/RESEND_API_KEY: Required when EMAIL_PROVIDER is 'resend'/);
+		expect(createServerEnv({ ...validServer, EMAIL_PROVIDER: "resend", RESEND_API_KEY: "re_123" }).RESEND_API_KEY).toBe(
+			"re_123",
+		);
+	});
+
+	it("treats empty strings as missing", () => {
+		const error = serverError({ ...validServer, DATABASE_URL: "" });
+		expect((error as Error).message).toMatch(/- DATABASE_URL:/);
+	});
+
+	it("never includes variable values in the error message", () => {
+		const secret = "mysql://user:SUPER_SECRET@localhost/db";
+		const error = serverError({ ...validServer, DATABASE_URL: secret });
+		expect((error as Error).message).not.toContain("SUPER_SECRET");
+	});
+});
+
+describe("client env", () => {
+	it("accepts a valid title", () => {
+		expect(createClientEnv({ VITE_APP_TITLE: "Portfolio" }).VITE_APP_TITLE).toBe("Portfolio");
+	});
+
+	it("fails with a clear message when the title is missing or blank", () => {
+		expect(() => createClientEnv({})).toThrow(/Invalid client environment variables:\n {2}- VITE_APP_TITLE:/);
+		expect(() => createClientEnv({ VITE_APP_TITLE: "   " })).toThrow(/VITE_APP_TITLE/);
+	});
+
+	it("does not expose unprefixed variables", () => {
+		const env = createClientEnv({ VITE_APP_TITLE: "Portfolio", DATABASE_URL: "postgres://x" });
+		expect(Object.keys(env)).toEqual(["VITE_APP_TITLE"]);
+	});
+});

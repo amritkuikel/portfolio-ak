@@ -120,7 +120,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── templates/       # React Email templates
 │   │   │   └── send.ts          # provider selection + send helper
 │   │   ├── analytics/           # posthog-node wrapper
-│   │   └── middleware/          # server-function middleware: logging, errors, auth, admin
+│   │   ├── middleware/          # server-function middleware: logging, errors, auth, admin
+│   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
 │   │   └── test-crud.ts
@@ -131,7 +132,9 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── layout/              # header, footer, admin sidebar, language switcher, theme toggle
 │   │   └── forms/               # form hook, fields, SubmitButton, FormErrorSummary
 │   ├── lib/
-│   │   ├── env.client.ts        # T3 Env client schema
+│   │   ├── client-env.ts        # validated client env (import this)
+│   │   ├── client-env.schema.ts # T3 Env client schema (also used by vite.config.ts)
+│   │   ├── env.shared.ts        # env error formatting
 │   │   ├── intl.ts              # locale-aware date, number, NPR currency, relative time
 │   │   ├── validation.ts        # localized Zod helpers
 │   │   ├── query.ts             # QueryClient factory and query key conventions
@@ -210,7 +213,7 @@ Each phase lists **Scope**, **Deliverables** and **Acceptance criteria**. Every 
 **Scope.** Typed, validated environment for server and client.
 
 **Deliverables**
-- T3 Env server schema in its own file (`src/server/env.ts`) and client schema in its own file (`src/lib/env.client.ts`).
+- T3 Env server schema in its own file (`src/server/env.ts`) and client schema in its own file (`src/lib/client-env.schema.ts`, consumed via `src/lib/client-env.ts`). Client files avoid the `*.client.*` name, which TanStack Start import protection reserves for client-only code.
 - Client: `VITE_APP_TITLE`, shown in the header and used in `<title>`.
 - Server: `DATABASE_URL` (validated as a postgres URL), `EMAIL_PROVIDER` (`console` or `resend`), `RESEND_API_KEY` (optional), `EMAIL_FROM`.
 - Complete, commented `.env.example`. `.env` gitignored.
