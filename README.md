@@ -8,6 +8,7 @@ The full plan, phases and Definition of Done live in [docs/PLAN.md](docs/PLAN.md
 
 - Node.js 22 or newer
 - pnpm 10 (`corepack enable` picks up the version pinned in `package.json`)
+- On Windows, clone to a short path of about 90 characters or fewer, such as `C:\dev\portfolio`. pnpm's nested `node_modules/.pnpm` paths add about 170 characters. Past about 260 in total, Node misreads ES modules, and tests and builds fail with `ERR_REQUIRE_CYCLE_MODULE`.
 
 ## Getting started
 

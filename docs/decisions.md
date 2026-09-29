@@ -274,3 +274,12 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - Production had no hydration errors.
   - A no-JS load renders the full localized content with the correct `lang`.
 - **Why:** React's production build reports hydration failures only as minified error #418, so a dev-server run was required to catch and diagnose the Nepali `Intl` mismatch (decision 0024).
+
+## 0029: Windows checkouts need a short path
+
+- **What:** The README asks Windows users to keep the project path to about 90 characters or fewer.
+- **Why:**
+  - A fresh-clone check under a long temporary directory failed tests and the build with `ERR_REQUIRE_CYCLE_MODULE` on `@tanstack/react-start/dist/esm/server-only.js`. The module path was 274 characters, and Node treated the ES module as CommonJS.
+  - The same commit cloned to a shorter path passed install, typecheck, all 60 tests and the build with zero warnings.
+  - The working copy's longest dependency paths are about 170 characters. pnpm already truncates `.pnpm` directory names on Windows (`virtualStoreDirMaxLength`).
+- **Alternatives considered:** pnpm `node-linker=hoisted` (loses pnpm's strictness). Enabling long paths only (already on in this machine's registry, and not enough for Node here).
