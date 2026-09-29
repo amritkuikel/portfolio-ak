@@ -172,7 +172,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - On failure, the driver error and its `cause` are logged on the server only.
 - **Why:** Connection errors contain hostnames, ports and sometimes credentials. The client only needs to know whether the database is reachable. The page makes the check visible in SSR and exercises the server-function path.
 - **Alternatives considered:** A server route at `/api/health` for uptime monitors (can be added when monitoring is set up in Phase 10). Returning the error message (leaks infrastructure details).
-- **Verification:** A real Postgres 17 (embedded, local) was used because Docker wasn't available and no Neon credentials were configured yet. All four `db:*` scripts worked, and migrations applied to a fresh database. `/health` rendered OK with JS on and off, and "Unreachable" with no leaked details when the port was wrong. The check against a real Neon database is still pending.
+- **Verification:** A real Postgres 17 (embedded, local) was used because Docker wasn't available and no Neon credentials were configured yet. All four `db:*` scripts worked, and migrations applied to a fresh database. `/health` rendered OK with JS on and off, and "Unreachable" with no leaked details when the port was wrong. The check against a real Neon database was completed during Phase 6: `/health` returned OK over the pooled connection. The first request took 3.4 s while Neon woke from idle, and later ones about 280 ms, including the network round trip to the database region. `sslmode=require` was rewritten to `verify-full` against Neon's real certificates without warnings.
 
 ## 0020: Paraglide follows the official TanStack Start example; options live in `paraglide.config.ts`
 
@@ -357,3 +357,51 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - a dev-only `?simulate=error` that throws a deliberately leaky error.
 - **Why:** The patterns get exercised on real, localized content without building ahead into Test CRUD.
 - **Streaming verified by chunk timing:** A browser user agent receives the list, fallback and dehydrated state in the first chunk (79 ms), and the stats in a later chunk (881 ms). Crawler user agents get one complete document, because Start buffers for bots, which is good for SEO. With JS disabled, the fallback stays visible, since streamed content is inserted by inline script.
+
+## 0037: Email provider selection and fail-fast in production
+
+- **What:** `selectEmailProvider()` (`src/server/email/config.ts`) is a pure, tested function:
+  - `EMAIL_PROVIDER=resend` → Resend (the env schema already requires a key).
+  - `EMAIL_PROVIDER=console` → console in development, an error in production.
+  - Unset → Resend if `RESEND_API_KEY` is set; otherwise console in development and an error in production.
+  - "Production" means `import.meta.env.PROD`, fixed at build time.
+  - The boot-time Nitro plugin calls `getEmailProvider()`, so a misconfigured production server refuses to start.
+- **Why:**
+  - A production app that silently prints verification and reset emails to a log is broken in a way nobody notices until users complain.
+  - `NODE_ENV` isn't reliable: `pnpm start` doesn't set it, and a production build could run with it unset.
+  - Verified by booting the production build: `console` and "no provider" both stop with the messages above, and a Resend key boots normally.
+- **Alternatives considered:** Deciding at send time (fails on the first signup, not at deploy). Allowing console in production with a warning (emails lost).
+- **Consequence:** Smoke-testing a production build locally needs `RESEND_API_KEY` set for that run (see the README).
+
+## 0038: React Email 6, rendered in an explicit locale
+
+- **What:**
+  - The unified `react-email` package provides both components and `render` / `toPlainText`.
+  - The five templates share a layout and a typed registry (`EmailPropsMap` → subject builder + sample data).
+  - `renderEmail(id, data, { locale, siteName })` returns subject, HTML and plain text.
+  - Every message call passes `{ locale }` explicitly, rather than reading `getLocale()`.
+- **Why:**
+  - The recipient's language isn't the current request's: an admin action, a background job or an email change can send to someone else. Explicit locale makes that correct by construction.
+  - Plain text is included for accessibility and spam scores.
+- **Devanagari:**
+  - The Nepali layout sets `lang="ne"` and a stack of fonts that ship with each major OS (Nirmala UI, Kohinoor Devanagari, Noto Sans Devanagari, Mangal).
+  - Clients that support web fonts also get Noto Sans Devanagari from the Fontsource CDN.
+  - Verified visually in Chrome: conjuncts and vowel signs shape correctly, and numbers use Devanagari digits.
+  - OTP codes stay in Latin digits so they can be typed on any keyboard.
+- **Alternatives considered:** Tailwind in emails (heavier, and inline style objects are enough here). One template per locale (duplication).
+
+## 0039: The email preview is a Vite dev-server middleware, not an app route
+
+- **What:**
+  - `/dev/emails` is served by `vite/email-preview-plugin.ts` (`apply: "serve"`).
+  - It lists every template × locale with iframes, plus raw HTML and `.txt` URLs.
+  - Templates load through a dedicated runnable Vite environment (`email_preview`).
+- **Why:**
+  - Vite never registers `apply: "serve"` plugins during `vite build`, so production output can't contain the preview.
+  - Verified: the build output has no "dev/emails" or preview code, and `/dev/emails`, `/dev/emails/otp-code/ne` and `/ne/dev/emails` return 404 on the production server.
+  - An app route would sit in the committed route tree. Excluding it only for builds (`routeFileIgnorePattern`) would make `routeTree.gen.ts` differ between dev and build and churn in git.
+  - Start runs its "ssr" environment inside Nitro, where `ssrLoadModule` isn't available, hence the dedicated environment.
+- **Alternatives considered:**
+  - A route guarded with `import.meta.env.DEV` (still shipped as a 404 route).
+  - `react-email`'s own preview server (a second dev server; it wouldn't use the app's Paraglide setup or aliases).
+- **Note:** The index page's labels are English. It's a developer tool, not user-facing; the emails themselves are fully localized.

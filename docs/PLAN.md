@@ -91,6 +91,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── project.inlang/              # inlang settings + paraglide.config.ts (compiler options)
 ├── drizzle/                     # generated SQL migrations (committed)
 ├── public/                      # static assets, self-hosted font files if needed
+├── vite/
+│   └── email-preview-plugin.ts  # dev-server-only /dev/emails (apply: "serve")
 ├── scripts/
 │   └── seed-admin.ts            # creates the first admin user
 ├── .storybook/                  # Storybook config, decorators (locale, theme)
@@ -109,7 +111,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   └── admin/test-crud/ # list, new, $id edit
 │   │   ├── api/
 │   │   │   └── auth/$.ts        # Better Auth handler
-│   │   └── dev/                 # dev-only: email previews, form showcase
+│   │   └── dev/                 # dev-only: form showcase (Phase 7)
 │   ├── server/                  # SERVER-ONLY. Never imported by client code.
 │   │   ├── env.ts               # T3 Env server schema
 │   │   ├── db/
@@ -119,9 +121,13 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   └── schema/          # one file per domain (auth, test-crud)
 │   │   ├── auth/                # Better Auth config and helpers
 │   │   ├── email/
-│   │   │   ├── providers/       # EmailProvider, ConsoleProvider, ResendProvider
-│   │   │   ├── templates/       # React Email templates
-│   │   │   └── send.ts          # provider selection + send helper
+│   │   │   ├── types.ts         # EmailProvider interface, EmailMessage
+│   │   │   ├── providers/       # ConsoleProvider, ResendProvider
+│   │   │   ├── config.ts        # selectEmailProvider() rules + getEmailProvider()
+│   │   │   ├── templates/       # React Email templates + typed registry
+│   │   │   ├── render.ts        # renderEmail(id, data, { locale }) -> subject/html/text
+│   │   │   ├── send.ts          # sendEmail(): render in recipient locale + deliver
+│   │   │   └── preview.ts       # helpers for the dev-only preview
 │   │   ├── analytics/           # posthog-node wrapper
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
 │   ├── middleware/              # Start middleware (isomorphic; outside src/server so start.ts can import it):

@@ -5,6 +5,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
+import { emailPreviewPlugin } from "./vite/email-preview-plugin.ts";
 
 /**
  * Nitro bundles the server output in its own Rolldown pass, where
@@ -67,6 +68,8 @@ export default defineConfig(async ({ command, mode }) => {
 		plugins: [
 			// Options live in project.inlang/paraglide.config.ts (shared with the compile CLI).
 			paraglideVitePlugin({ project: "./project.inlang" }),
+			// Dev server only (apply: "serve"): /dev/emails. Never part of a build.
+			emailPreviewPlugin(),
 			devtools(),
 			nitro({
 				// Validates server env at boot. See the file for why this is a Nitro plugin.

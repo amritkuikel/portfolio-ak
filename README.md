@@ -54,6 +54,14 @@ pnpm dev               # http://localhost:3000
 - **Server functions:** Use `createServerFn().inputValidator(zodInput(schema))`. Throw `AppError(code)` for expected failures. Anything else reaches the client as `INTERNAL`, with details only in the server log.
 - **Guarding server functions:** Add `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` (`src/middleware/auth.ts`). Route guards alone never protect data.
 
+## Email
+
+- **Sending:** Call `sendEmail({ to, template, data, locale })` from server code (`src/server/email/send.ts`). Pass the recipient's language, not the current page's.
+- **Templates:** They live in `src/server/email/templates/` and are registered in `index.ts` with a subject and sample data.
+- **Preview:** In development, open `/dev/emails` to see every template in English and Nepali, as HTML and plain text. The preview only exists on the dev server.
+- **Delivery in development:** Emails are printed to the terminal (console provider) unless `RESEND_API_KEY` is set.
+- **Production:** Resend is required. A production server refuses to start with the console provider or without `RESEND_API_KEY`. To smoke-test a production build locally, set `RESEND_API_KEY` (and clear `EMAIL_PROVIDER`) for that run.
+
 ## Adding shadcn/ui components
 
 ```bash
