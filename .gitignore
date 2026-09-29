@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+
+# build output
+dist
+dist-ssr
+.output
+.vercel
+.nitro
+.tanstack
+.wrangler
+.vinxi
+storybook-static
+coverage
+
+# env (keep .env.example)
+.env
+.env.*
+!.env.example
+*.local
+
+# generated
+src/paraglide
+
+# os / editor
+.DS_Store
+Thumbs.db
+__unconfig*
