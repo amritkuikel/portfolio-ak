@@ -145,7 +145,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── errors/              # error, not-found and pending pages
 │   │   ├── ui/                  # shadcn/ui primitives
 │   │   ├── layout/              # header, footer, admin sidebar, language switcher, theme toggle
-│   │   └── forms/               # form hook, fields, SubmitButton, FormErrorSummary
+│   │   └── forms/               # useAppForm/withForm (index.ts), contexts, field shell (a11y wiring),
+│   │                            #   fields/ (text, number, choice), Form, SubmitButton, FormErrorSummary
 │   ├── lib/
 │   │   ├── client-env.ts        # validated client env (import this)
 │   │   ├── client-env.schema.ts # T3 Env client schema (also used by vite.config.ts)
@@ -172,9 +173,9 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── server.ts                # server entry, Paraglide middleware
 │   └── start.ts                 # createStart: global function middleware
 ├── tests/
-│   ├── setup.ts                 # Testing Library, jsdom, Paraglide locale setup
+│   ├── setup/                   # env.ts (baseline env), dom.ts (jest-dom, cleanup, jsdom polyfills)
 │   ├── unit/                    # schemas, validation, intl, env, provider selection
-│   ├── components/              # every form field, layout components
+│   ├── components/              # every form field (forms/harness.tsx), layout components
 │   ├── server/                  # server functions, guards, auth/admin rejection
 │   ├── email/                   # templates render in both locales
 │   └── i18n/                    # message key parity

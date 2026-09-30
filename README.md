@@ -54,6 +54,34 @@ pnpm dev               # http://localhost:3000
 - **Server functions:** Use `createServerFn().inputValidator(zodInput(schema))`. Throw `AppError(code)` for expected failures. Anything else reaches the client as `INTERNAL`, with details only in the server log.
 - **Guarding server functions:** Add `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` (`src/middleware/auth.ts`). Route guards alone never protect data.
 
+## Forms
+
+Build forms with `useAppForm` from `src/components/forms` and schemas from `src/lib/validation.ts`. The schema helpers return localized messages.
+
+```tsx
+const form = useAppForm({
+	defaultValues: { name: "", price: undefined as number | undefined },
+	validators: formValidators(z.object({ name: required(), price: currency() })),
+	onSubmit: async ({ value }) => save(value),
+});
+
+<form.AppForm>
+	<form.Form>
+		<form.FormErrorSummary />
+		<form.AppField name="name">{(field) => <field.TextField label={m.auth_name_label()} />}</form.AppField>
+		<form.AppField name="price">{(field) => <field.CurrencyField label="…" />}</form.AppField>
+		<form.SubmitButton>{m.account_save()}</form.SubmitButton>
+	</form.Form>
+</form.AppForm>
+```
+
+- **Fields:** `TextField`, `TextareaField`, `EmailField`, `PasswordField`, `NumberField`, `CurrencyField`, `SelectField`, `ComboboxField`, `MultiSelectField`, `RadioGroupField`, `CheckboxField`, `CheckboxGroupField`, `SwitchField`, `UrlField`.
+- **Accessibility:** Every field wires label, description, `aria-invalid` and `aria-describedby`.
+- **When errors show:** Only after a field is left (blurred) or a submit is attempted.
+- **Validation:** `formValidators(schema)` runs the schema on change, blur and submit.
+- **Error summary:** `FormErrorSummary` lists every problem after a failed submit and takes focus. Each entry links to its field.
+- **Numbers:** `NumberField` and `CurrencyField` accept Devanagari digits and thousands separators.
+
 ## Authentication
 
 Better Auth (`src/server/auth/auth.ts`) provides:

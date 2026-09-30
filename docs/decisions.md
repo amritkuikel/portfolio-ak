@@ -493,3 +493,73 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 - **What:** The end-to-end runs used a throwaway embedded Postgres created with UTF-8 encoding. Neon databases are UTF-8 (verified read-only on the project's database).
 - **Why:** Windows' default encoding (WIN1252) rejected the Devanagari name "राम" with error 22P05. It's a test-environment trap, not an app bug, but any self-hosted Postgres for this app must be UTF-8.
+
+## 0050: Form system built on TanStack Form composition and shadcn Field
+
+- **What:**
+  - `src/components/forms` sets up `createFormHookContexts` and `createFormHook`, exporting `useAppForm` and `withForm`, with 14 field components and three form components (`Form`, `SubmitButton`, `FormErrorSummary`).
+  - Every field renders through `useFieldA11y` or `FieldShell`, which provide:
+    - stable ids (a per-form `useId` prefix plus the field name);
+    - a label (`htmlFor`), a description and an error (shadcn `FieldError`, `role="alert"`);
+    - `aria-invalid`, and `aria-describedby` listing the description and the error.
+  - Groups (radio, checkbox group) use `<fieldset>` and `<legend>`.
+- **Why:**
+  - This is the documented TanStack Form composition API: fields get typed state from context, so forms stay terse.
+  - shadcn's `Field` family is the design system's own form layout and accepts Standard Schema issues.
+  - Per-form id prefixes keep two forms on one page from colliding.
+- **Alternatives considered:** react-hook-form (the plan names TanStack Form). Hand-rolled layout (duplicates shadcn).
+
+## 0051: When errors appear, and `formValidators()`
+
+- **What:**
+  - Errors show once a field has been blurred or a submit was attempted, never while the user types into a pristine field.
+  - `formValidators(schema)` applies one schema to `onChange`, `onBlur` and `onSubmit`.
+- **Why:**
+  - With only `onChange`, tabbing past an empty required field never validated it. A test caught this.
+  - Blur covers fields the user skipped, and submit covers untouched ones. Duplicate messages across causes are de-duplicated.
+- **Alternatives considered:** Showing errors immediately (noisy). Validating only on submit (late feedback).
+
+## 0052: FormErrorSummary focuses itself; SubmitButton never blocks
+
+- **What:**
+  - After a failed submit, the summary (`role="alert"`, labelled by its heading) lists each problem as "Label: message", with a link that focuses the field (the first option for groups). The summary takes focus on each failed attempt, but not while the user types a fix.
+  - `SubmitButton` is disabled only while submitting (`aria-busy`, pending label), not while the form is invalid.
+- **Why:** This is the GOV.UK error-summary pattern: keyboard and screen-reader users learn what failed and can jump to it. A disabled submit button gives no feedback about why.
+
+## 0053: Validation helpers return localized messages at validation time
+
+- **What:** `src/lib/validation.ts` provides:
+  - text: `required`, `optionalText`, `email`, `url`;
+  - passwords: `password` with a 0–4 `passwordStrength` score;
+  - numbers: `numberRange`, `currency` (two decimals, non-negative by default);
+  - choices: `choice`, `choices`, `mustAccept`.
+- **How messages work:** They're Zod `error` callbacks that call Paraglide messages, so the same schema reports in the current locale on client and server, with numbers formatted per locale (for example "कम्तीमा ८ अक्षर …"). Tests confirm a schema created in English reports in Nepali after the locale changes.
+- **Why:** One schema for forms and server functions, with no per-locale schemas.
+
+## 0054: Number and currency inputs keep a draft string
+
+- **What:**
+  - `NumberField` and `CurrencyField` keep what the user typed separately from the stored number. `parseLocaleNumber` accepts Devanagari digits, grouping commas and spaces, and yields NaN for garbage, which the schema reports as "Enter a number".
+  - Currency shows the locale's symbol (NPR or नेरू) and reformats to two decimals with local grouping on blur.
+  - Both use `type="text"` with a numeric `inputmode`.
+- **Why:** `<input type="number">` rejects Devanagari digits and grouping, and silently empties invalid input. A draft string also stops partial input like "12." from being clobbered while typing.
+
+## 0055: Local changes to shadcn components
+
+- **What:**
+  - `Field` no longer has `role="group"`.
+  - The `input-group` wrapper and addon lost `role="group"`, and the addon lost its click-to-focus handler.
+  - `FieldError` uses `===` and message keys instead of index keys.
+  - `dialog.tsx` keeps its localized "Close" labels when shadcn adds components that depend on it: the CLI overwrite was reverted from a backup.
+- **Why:**
+  - Biome's a11y rules flagged these as real issues. Labels already name single controls, and genuine groups use `<fieldset>`.
+  - The click-to-focus handler was a mouse-only nicety that needed two lint suppressions.
+- **How to add shadcn components:** Back up `src/components/ui`, run `shadcn add … --overwrite`, restore changed existing files, then fix the CLI's `from "cn"` import.
+
+## 0056: Component tests run in jsdom with a shared harness
+
+- **What:**
+  - Component tests opt in with `// @vitest-environment jsdom`.
+  - `tests/setup/dom.ts` adds jest-dom matchers, cleanup, and stubs for `ResizeObserver`, `scrollIntoView` and pointer capture, which Radix UI and cmdk use but jsdom lacks.
+  - `tests/components/forms/harness.tsx` renders a real `useAppForm` form with one field and checks the accessibility contract (`aria-invalid`, plus `aria-describedby` pointing at the error text).
+- **Why:** The fields are tested through the same form machinery the app uses, including validation timing and the error summary, rather than in isolation.

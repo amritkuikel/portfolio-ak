@@ -207,3 +207,32 @@ export const formatRelativeTimeFrom = (
 	const [unit, seconds] = RELATIVE_STEPS.find(([, size]) => Math.abs(diffSeconds) >= size) ?? ["second", 1];
 	return formatRelativeTime(Math.round(diffSeconds / seconds), unit, options, locale);
 };
+
+// ---------------------------------------------------------------------------
+// Parsing user input
+// ---------------------------------------------------------------------------
+
+const DEVANAGARI_ZERO = 0x0966;
+
+/**
+ * Parses a number typed by a user in either locale: accepts Devanagari digits
+ * (१२,३४५.६७), Latin digits, grouping commas and surrounding spaces. Returns
+ * undefined for empty input and NaN for anything that isn't a plain decimal.
+ */
+export const parseLocaleNumber = (input: string): number | undefined => {
+	const latin = input
+		.trim()
+		.replace(/[\u0966-\u096F]/g, (digit) => String(digit.charCodeAt(0) - DEVANAGARI_ZERO))
+		.replace(/[,\s\u00a0\u202f]/g, "");
+	if (latin === "") return undefined;
+	return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(latin) ? Number(latin) : Number.NaN;
+};
+
+/** The symbol shown next to an amount in `locale` (en: "NPR", ne: "नेरू"). */
+export const currencySymbol = (currency: string = DEFAULT_CURRENCY, locale: Locale = getLocale()): string => {
+	if (locale === "ne") return NE_CURRENCY_SYMBOLS[currency] ?? currency;
+	const part = numberFormat("en", { style: "currency", currency })
+		.formatToParts(0)
+		.find((p) => p.type === "currency");
+	return part?.value ?? currency;
+};

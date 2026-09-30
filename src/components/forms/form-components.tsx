@@ -1,0 +1,128 @@
+import { useStore } from "@tanstack/react-form";
+import { Loader2Icon } from "lucide-react";
+import { type ComponentProps, type ReactNode, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
+import { useFormContext } from "./contexts";
+import { errorMessages } from "./field-shell";
+import { FormMetaProvider, useFormMeta } from "./form-meta";
+
+/**
+ * <form> wired to TanStack Form: prevents the native submit, runs handleSubmit,
+ * disables browser validation bubbles (our messages are localized) and gives
+ * fields a unique id prefix.
+ */
+export function Form({ children, className, ...props }: Omit<ComponentProps<"form">, "onSubmit">) {
+	const form = useFormContext();
+	return (
+		<FormMetaProvider>
+			<form
+				noValidate
+				className={cn("flex flex-col gap-6", className)}
+				onSubmit={(event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					void form.handleSubmit();
+				}}
+				{...props}
+			>
+				{children}
+			</form>
+		</FormMetaProvider>
+	);
+}
+
+/**
+ * Submit button with a pending state. It stays enabled when the form is invalid,
+ * so pressing it reveals every error and the summary (disabled buttons give no feedback).
+ */
+export function SubmitButton({
+	children,
+	pendingLabel,
+	className,
+}: {
+	children: ReactNode;
+	pendingLabel?: string;
+	className?: string;
+}) {
+	const form = useFormContext();
+	const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+	return (
+		<Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting || undefined} className={className}>
+			{isSubmitting ? (
+				<>
+					<Loader2Icon className="animate-spin" aria-hidden />
+					{pendingLabel ?? m.form_submitting()}
+				</>
+			) : (
+				children
+			)}
+		</Button>
+	);
+}
+
+/**
+ * Lists every invalid field after a failed submit, with links that move focus to
+ * the field. Focus jumps to the summary itself so screen reader and keyboard
+ * users learn what went wrong (GOV.UK error summary pattern).
+ */
+export function FormErrorSummary({ title }: { title?: string }) {
+	const form = useFormContext();
+	const meta = useFormMeta();
+	const ref = useRef<HTMLDivElement>(null);
+	const submissionAttempts = useStore(form.store, (state) => state.submissionAttempts);
+	const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+	const fieldMeta = useStore(form.store, (state) => state.fieldMeta);
+
+	const problems = Object.entries(fieldMeta).flatMap(([name, value]) => {
+		const errors: unknown[] =
+			value && typeof value === "object" && "errors" in value && Array.isArray(value.errors) ? value.errors : [];
+		const [message] = errorMessages(errors);
+		const entry = meta.fields.get(name);
+		return message && entry ? [{ name, message, ...entry }] : [];
+	});
+	const visible = submissionAttempts > 0 && !isSubmitting && problems.length > 0;
+
+	// Move focus to the summary after each failed submit attempt. Keyed on attempts and
+	// submitting only, so fixing a field while typing doesn't pull focus back here.
+	const hasProblems = useRef(false);
+	hasProblems.current = problems.length > 0;
+	useEffect(() => {
+		if (submissionAttempts > 0 && !isSubmitting && hasProblems.current) ref.current?.focus();
+	}, [submissionAttempts, isSubmitting]);
+
+	if (!visible) return null;
+
+	const titleId = `${meta.id}-error-summary`;
+	return (
+		<div
+			ref={ref}
+			tabIndex={-1}
+			role="alert"
+			aria-labelledby={titleId}
+			data-testid="form-error-summary"
+			className="rounded-md border border-destructive/40 bg-destructive/5 p-4 outline-none focus-visible:ring-[3px] focus-visible:ring-destructive/30"
+		>
+			<p id={titleId} className="font-medium text-destructive">
+				{title ?? m.form_error_summary_title()}
+			</p>
+			<ul className="mt-2 list-disc ps-5 text-sm">
+				{problems.map((problem) => (
+					<li key={problem.name}>
+						<a
+							href={`#${problem.focusId}`}
+							className="underline underline-offset-4"
+							onClick={(event) => {
+								event.preventDefault();
+								document.getElementById(problem.focusId)?.focus();
+							}}
+						>
+							{problem.label}: {problem.message}
+						</a>
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}
