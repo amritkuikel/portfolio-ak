@@ -1,14 +1,17 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { redirectSearchSchema } from "@/lib/redirect";
+import { localizeHref } from "@/paraglide/runtime";
 
 /**
- * Sign-in pages (login, register; more in Phase 6). Signed-in users are sent
- * on to their ?redirect= target, or home.
+ * Sign-in pages (log in, register, sign-in code, forgot password). Signed-in
+ * users are sent on to their ?redirect= target (a validated same-site path), or
+ * to their account. Pages a signed-in user may still need (verify email, reset
+ * password) live under _public instead.
  */
 export const Route = createFileRoute("/_auth")({
 	validateSearch: redirectSearchSchema,
 	beforeLoad: ({ context, search }) => {
-		if (context.session) throw redirect({ href: search.redirect ?? "/" });
+		if (context.session) throw redirect({ href: localizeHref(search.redirect ?? "/account") });
 	},
 	component: AuthLayout,
 });

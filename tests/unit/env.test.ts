@@ -6,6 +6,8 @@ const validServer = {
 	DATABASE_URL: "postgresql://user:pass@ep-x-123.us-east-2.aws.neon.tech/neondb?sslmode=require",
 	EMAIL_PROVIDER: "console",
 	EMAIL_FROM: "Portfolio <hello@example.com>",
+	BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+	BETTER_AUTH_URL: "http://localhost:3000",
 };
 
 // src/server/env.ts validates process.env when imported, so give it valid values first.
@@ -90,5 +92,50 @@ describe("client env", () => {
 	it("does not expose unprefixed variables", () => {
 		const env = createClientEnv({ VITE_APP_TITLE: "Portfolio", DATABASE_URL: "postgres://x" });
 		expect(Object.keys(env)).toEqual(["VITE_APP_TITLE"]);
+	});
+});
+
+describe("server env: auth", () => {
+	const base = {
+		DATABASE_URL: "postgres://u:p@localhost/db",
+		EMAIL_FROM: "a@b.co",
+		BETTER_AUTH_SECRET: "x".repeat(32),
+		BETTER_AUTH_URL: "http://localhost:3000",
+	};
+	let createServerEnv: typeof import("@/server/env").createServerEnv;
+	beforeAll(async () => {
+		({ createServerEnv } = await import("@/server/env"));
+	});
+	const failure = (env: Record<string, string | undefined>) => {
+		try {
+			createServerEnv(env);
+		} catch (error) {
+			return (error as Error).message;
+		}
+		return "";
+	};
+
+	it("requires a secret of at least 32 characters", () => {
+		expect(failure({ ...base, BETTER_AUTH_SECRET: undefined })).toMatch(/BETTER_AUTH_SECRET: Required/);
+		expect(failure({ ...base, BETTER_AUTH_SECRET: "short" })).toMatch(/BETTER_AUTH_SECRET: Must be at least 32/);
+	});
+
+	it("requires an http(s) BETTER_AUTH_URL", () => {
+		expect(failure({ ...base, BETTER_AUTH_URL: "ftp://example.com" })).toMatch(
+			/BETTER_AUTH_URL: Must be an http\(s\) URL/,
+		);
+	});
+
+	it("needs both Google credentials or neither", () => {
+		expect(failure({ ...base, GOOGLE_CLIENT_ID: "id" })).toMatch(/GOOGLE_CLIENT_SECRET: Set both/);
+		expect(failure({ ...base, GOOGLE_CLIENT_SECRET: "secret" })).toMatch(/GOOGLE_CLIENT_ID: Set both/);
+		expect(createServerEnv({ ...base, GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" }).GOOGLE_CLIENT_ID).toBe(
+			"id",
+		);
+	});
+
+	it("validates optional admin seed values", () => {
+		expect(failure({ ...base, ADMIN_PASSWORD: "too-short" })).toMatch(/ADMIN_PASSWORD/);
+		expect(failure({ ...base, ADMIN_EMAIL: "not-an-email" })).toMatch(/ADMIN_EMAIL/);
 	});
 });

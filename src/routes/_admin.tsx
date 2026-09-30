@@ -1,21 +1,27 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { AppError } from "@/lib/errors";
+import { ensureAdmin } from "@/functions/auth";
+import { isAppError } from "@/lib/errors";
+import { setErrorStatus } from "@/lib/http-status";
 
 /**
- * Admin area. Anonymous visitors go to /login; signed-in non-admins get a
- * FORBIDDEN error page. This guards navigation only: every admin server
- * function also runs requireAdminMiddleware on the server (Phase 6 makes the
- * session real).
+ * Admin area. The role is checked ON THE SERVER on every navigation (ensureAdmin
+ * runs requireAdminMiddleware against the database-backed session), never from
+ * cached client state. Anonymous visitors go to /login with a return URL;
+ * signed-in non-admins get the localized FORBIDDEN error page. Admin server
+ * functions repeat the same middleware check, so the UI can't be bypassed.
  */
 export const Route = createFileRoute("/_admin")({
-	beforeLoad: ({ context, location }) => {
-		if (!context.session) {
-			throw redirect({ to: "/login", search: { redirect: location.href } });
+	beforeLoad: async ({ location }) => {
+		try {
+			return { session: await ensureAdmin() };
+		} catch (error) {
+			if (isAppError(error) && error.code === "UNAUTHORIZED") {
+				throw redirect({ to: "/login", search: { redirect: location.href } });
+			}
+			// Serve the FORBIDDEN page with a real 403 during SSR.
+			await setErrorStatus(error);
+			throw error;
 		}
-		if (context.session.user.role !== "admin") {
-			throw new AppError("FORBIDDEN", "Admin role required");
-		}
-		return { session: context.session };
 	},
 	component: Outlet,
 });

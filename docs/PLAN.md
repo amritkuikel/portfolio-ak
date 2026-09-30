@@ -94,19 +94,21 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── vite/
 │   └── email-preview-plugin.ts  # dev-server-only /dev/emails (apply: "serve")
 ├── scripts/
-│   └── seed-admin.ts            # creates the first admin user
+│   ├── not-installed.mjs        # stub for tools added in later phases
+│   └── seed-admin.mjs           # creates the first admin user (wraps Better Auth create-admin)
 ├── .storybook/                  # Storybook config, decorators (locale, theme)
 ├── src/
 │   ├── routes/
 │   │   ├── __root.tsx           # document shell, head, <html lang>, error/notFound
 │   │   ├── health.tsx           # database health page (Phase 3)
+│   │   ├── _public/verify-email, reset-password  # public: a signed-in user may need them
 │   │   ├── _public/             # public layout: header, footer
 │   │   │   ├── index.tsx
 │   │   │   └── test-crud/
 │   │   │       ├── index.tsx    # SSR card grid
 │   │   │       └── $slug.tsx    # SSR detail page
-│   │   ├── _auth/               # login, register, verify, otp, forgot, reset
-│   │   ├── _authed/             # requires a session (account settings)
+│   │   ├── _auth/               # login, register, sign-in-code (OTP), forgot-password
+│   │   ├── _authed/             # requires a session (account: profile, email, password, sessions)
 │   │   ├── _admin/              # requires admin role (sidebar layout)
 │   │   │   └── admin/test-crud/ # list, new, $id edit
 │   │   ├── api/
@@ -119,7 +121,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── connection-string.ts # sslmode normalisation
 │   │   │   ├── health.ts        # database health check
 │   │   │   └── schema/          # one file per domain (auth, test-crud)
-│   │   ├── auth/                # Better Auth config and helpers
+│   │   ├── auth/                # Better Auth instance, session lookup, email locale, trusted client IP
+│   │   ├── http/                # per-request AppError -> HTTP status record
 │   │   ├── email/
 │   │   │   ├── types.ts         # EmailProvider interface, EmailMessage
 │   │   │   ├── providers/       # ConsoleProvider, ResendProvider
@@ -136,6 +139,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── health.ts
 │   │   └── test-crud.ts
 │   ├── features/
+│   │   ├── auth/                # auth UI, error mapping, validation, session queries
 │   │   └── test-crud/           # schema.ts (shared Zod), queries, collection, components
 │   ├── components/
 │   │   ├── errors/              # error, not-found and pending pages

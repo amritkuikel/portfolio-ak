@@ -13,13 +13,18 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
+import { Route as AuthSignInCodeRouteImport } from './routes/_auth/sign-in-code'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as PublicHealthRouteImport } from './routes/_public/health'
+import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-password'
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
+import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -37,6 +42,11 @@ const PublicRoute = PublicRouteImport.update({
   id: '/_public',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -45,6 +55,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSignInCodeRoute = AuthSignInCodeRouteImport.update({
+  id: '/sign-in-code',
+  path: '/sign-in-code',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthedAccountRoute = AuthedAccountRouteImport.update({
@@ -62,9 +77,19 @@ const PublicHealthRoute = PublicHealthRouteImport.update({
   path: '/health',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicResetPasswordRoute = PublicResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicStackRoute = PublicStackRouteImport.update({
   id: '/stack',
   path: '/stack',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicVerifyEmailRoute = PublicVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => PublicRoute,
 } as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
@@ -72,23 +97,38 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/sign-in-code': typeof AuthSignInCodeRoute
   '/account': typeof AuthedAccountRoute
   '/health': typeof PublicHealthRoute
+  '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
+  '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/sign-in-code': typeof AuthSignInCodeRoute
   '/account': typeof AuthedAccountRoute
   '/health': typeof PublicHealthRoute
+  '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
+  '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof AdminAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -97,33 +137,65 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
+  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
+  '/_auth/sign-in-code': typeof AuthSignInCodeRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_public/health': typeof PublicHealthRoute
+  '/_public/reset-password': typeof PublicResetPasswordRoute
   '/_public/stack': typeof PublicStackRoute
+  '/_public/verify-email': typeof PublicVerifyEmailRoute
   '/_public/': typeof PublicIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/register' | '/account' | '/health' | '/stack' | '/admin/'
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/sign-in-code'
+    | '/account'
+    | '/health'
+    | '/reset-password'
+    | '/stack'
+    | '/verify-email'
+    | '/api/auth/$'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/login' | '/register' | '/account' | '/health' | '/stack' | '/admin'
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/sign-in-code'
+    | '/account'
+    | '/health'
+    | '/reset-password'
+    | '/stack'
+    | '/verify-email'
+    | '/api/auth/$'
+    | '/admin'
   id:
     | '__root__'
     | '/_admin'
     | '/_auth'
     | '/_authed'
     | '/_public'
+    | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/register'
+    | '/_auth/sign-in-code'
     | '/_authed/account'
     | '/_public/health'
+    | '/_public/reset-password'
     | '/_public/stack'
+    | '/_public/verify-email'
     | '/_public/'
+    | '/api/auth/$'
     | '/_admin/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -132,6 +204,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -164,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/login': {
       id: '/_auth/login'
       path: '/login'
@@ -176,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/sign-in-code': {
+      id: '/_auth/sign-in-code'
+      path: '/sign-in-code'
+      fullPath: '/sign-in-code'
+      preLoaderRoute: typeof AuthSignInCodeRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_authed/account': {
@@ -199,11 +286,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicHealthRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/reset-password': {
+      id: '/_public/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof PublicResetPasswordRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/stack': {
       id: '/_public/stack'
       path: '/stack'
       fullPath: '/stack'
       preLoaderRoute: typeof PublicStackRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/verify-email': {
+      id: '/_public/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof PublicVerifyEmailRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_admin/admin/': {
@@ -212,6 +313,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -227,13 +335,17 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuthRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthSignInCodeRoute: typeof AuthSignInCodeRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  AuthSignInCodeRoute: AuthSignInCodeRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -251,13 +363,17 @@ const AuthedRouteWithChildren =
 
 interface PublicRouteChildren {
   PublicHealthRoute: typeof PublicHealthRoute
+  PublicResetPasswordRoute: typeof PublicResetPasswordRoute
   PublicStackRoute: typeof PublicStackRoute
+  PublicVerifyEmailRoute: typeof PublicVerifyEmailRoute
   PublicIndexRoute: typeof PublicIndexRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicHealthRoute: PublicHealthRoute,
+  PublicResetPasswordRoute: PublicResetPasswordRoute,
   PublicStackRoute: PublicStackRoute,
+  PublicVerifyEmailRoute: PublicVerifyEmailRoute,
   PublicIndexRoute: PublicIndexRoute,
 }
 
@@ -269,6 +385,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

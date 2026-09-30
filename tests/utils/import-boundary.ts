@@ -3,7 +3,7 @@ import path from "node:path";
 
 /**
  * Static check for the boundary rule in docs/PLAN.md:
- * code outside `src/server/` and `src/functions/` must never import `src/server/`.
+ * code outside `src/server/`, `src/functions/` and `src/middleware/` must never import `src/server/`.
  * (Server functions may import it; the Start compiler strips their handlers from
  * the client bundle.) Checking direct imports is enough: any client-reachable file
  * that re-exports server code is itself scanned and flagged.
@@ -18,8 +18,17 @@ const IMPORT_RE =
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
 
+// src/middleware may reach src/server only via dynamic import() inside .server(), which the
+// Start compiler strips from client builds (TanStack import protection still checks the build).
 const isAllowedImporter = (file: string) =>
-	file.startsWith("src/server/") || file.startsWith("src/functions/") || file === "src/server.ts";
+	file.startsWith("src/server/") ||
+	file.startsWith("src/functions/") ||
+	file.startsWith("src/middleware/") ||
+	// Server routes (only `server.handlers`, stripped from the client), e.g. the Better Auth API.
+	file.startsWith("src/routes/api/") ||
+	// Isomorphic helper whose server branch (createIsomorphicFn().server) is compiled out of the client.
+	file === "src/lib/http-status.ts" ||
+	file === "src/server.ts";
 
 /** Resolves an import specifier to a repo-relative path, or null for packages. */
 const resolveSpecifier = (file: string, specifier: string): string | null => {

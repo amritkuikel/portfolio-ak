@@ -10,13 +10,18 @@ import { defineConfig } from "@inlang/paraglide-js";
  *
  * Server function RPCs (/_serverFn/...) carry no locale prefix, so they read the
  * page locale from a header set by src/lib/i18n/locale-middleware.ts instead.
+ * Better Auth API calls (/api/auth/...) do the same via the auth client.
  */
 export default defineConfig({
 	outdir: "./src/paraglide",
 	outputStructure: "message-modules",
 	emitTsDeclarations: true,
 	strategy: ["url", "baseLocale"],
-	routeStrategies: [{ match: "/_serverFn/:path(.*)?", strategy: ["custom-header", "baseLocale"] }],
+	routeStrategies: [
+		{ match: "/_serverFn/:path(.*)?", strategy: ["custom-header", "baseLocale"] },
+		// Better Auth API: the auth client sends the same header (src/lib/auth-client.ts).
+		{ match: "/api/auth/:path(.*)?", strategy: ["custom-header", "baseLocale"] },
+	],
 	urlPatterns: [
 		{
 			pattern: "/:path(.*)?",

@@ -8,8 +8,9 @@ import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { LOCALE_HEADER } from "./lib/i18n/locale-header";
 import { defineCustomServerStrategy, toLocale } from "./paraglide/runtime.js";
 import { paraglideMiddleware } from "./paraglide/server.js";
+import { runWithErrorStatus } from "./server/http/error-status";
 
-// Used for /_serverFn/* only (routeStrategies in project.inlang/paraglide.config.ts).
+// Used for /_serverFn/* and /api/auth/* (routeStrategies in project.inlang/paraglide.config.ts).
 // toLocale() rejects anything that isn't a configured locale.
 defineCustomServerStrategy("custom-header", {
 	getLocale: (request) => toLocale(request?.headers.get(LOCALE_HEADER) ?? undefined),
@@ -17,6 +18,7 @@ defineCustomServerStrategy("custom-header", {
 
 export default createServerEntry({
 	fetch(request) {
-		return paraglideMiddleware(request, () => handler.fetch(request));
+		// Pages that fail with an AppError (e.g. FORBIDDEN) get its status instead of 500.
+		return runWithErrorStatus(() => paraglideMiddleware(request, () => handler.fetch(request)));
 	},
 });

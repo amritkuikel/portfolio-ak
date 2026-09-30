@@ -3,10 +3,14 @@ import { AppError } from "@/lib/errors";
 import type { Session } from "@/lib/session";
 
 /**
- * Placeholder session lookup. Phase 6 replaces the body with Better Auth's
- * getSession(headers); the middleware contracts below stay the same.
+ * The session for the current request, from Better Auth. Loaded with a dynamic
+ * import inside `.server()` so this file (which client code reaches through server
+ * function modules) never pulls src/server/** into the client bundle.
  */
-export const resolveSession = async (): Promise<Session | null> => null;
+export const resolveSession = async (): Promise<Session | null> => {
+	const { getServerSession } = await import("@/server/auth/session");
+	return getServerSession();
+};
 
 /** Adds `context.session` (Session | null). Does not reject anonymous calls. */
 export const sessionMiddleware = createMiddleware({ type: "function" }).server(async ({ next }) =>

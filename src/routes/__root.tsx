@@ -6,6 +6,7 @@ import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Toaster } from "@/components/ui/sonner";
+import { sessionQueryOptions } from "@/features/auth/queries";
 import { fontPreloads } from "@/lib/fonts";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
@@ -14,6 +15,11 @@ import type { RouterContext } from "@/router";
 import appCss from "@/styles/app.css?url";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+	// Fill the session slot for every route. On the server this is a per-request
+	// lookup; on the client it comes from the Query cache (see sessionQueryOptions).
+	beforeLoad: async ({ context }) => ({
+		session: await context.queryClient.ensureQueryData(sessionQueryOptions()),
+	}),
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },

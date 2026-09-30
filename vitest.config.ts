@@ -10,6 +10,7 @@ export default defineConfig({
 	test: {
 		include: ["tests/**/*.test.{ts,tsx}"],
 		environment: "node",
+		setupFiles: ["tests/setup/env.ts"],
 		restoreMocks: true,
 		unstubEnvs: true,
 	},

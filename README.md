@@ -54,6 +54,27 @@ pnpm dev               # http://localhost:3000
 - **Server functions:** Use `createServerFn().inputValidator(zodInput(schema))`. Throw `AppError(code)` for expected failures. Anything else reaches the client as `INTERNAL`, with details only in the server log.
 - **Guarding server functions:** Add `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` (`src/middleware/auth.ts`). Route guards alone never protect data.
 
+## Authentication
+
+Better Auth (`src/server/auth/auth.ts`) provides:
+- email and password sign-up with required email verification;
+- email-code (OTP) sign-in;
+- password reset;
+- email change, with a security notice to the old address;
+- password change and session management;
+- optional Google sign-in, which appears only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set;
+- `user` and `admin` roles.
+
+```bash
+pnpm db:migrate                       # creates the auth tables
+pnpm db:seed-admin --email you@example.com --password "at-least-12-chars" --name "You"
+```
+
+- **Seeding an admin:** `db:seed-admin` also reads `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_NAME` from `.env`. Add `--force` if other users already exist.
+- **Protecting data:** Use `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` on server functions. The `_authed` and `_admin` layouts guard navigation, and `_admin` re-checks the role on the server on every visit.
+- **Rate limits:** They are stored in the database and keyed by a trusted client IP (`src/server/auth/client-ip.ts`). Behind a reverse proxy other than Vercel, set that proxy's trusted header there.
+- **Schema changes:** After changing auth plugins, regenerate the schema with `pnpm auth:schema`, then run `pnpm db:generate` and `pnpm db:migrate`.
+
 ## Email
 
 - **Sending:** Call `sendEmail({ to, template, data, locale })` from server code (`src/server/email/send.ts`). Pass the recipient's language, not the current page's.
