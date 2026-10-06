@@ -12,7 +12,9 @@ import {
 	type Db,
 	deleteTestCrud,
 	getImage,
+	getPublishedTestCrud,
 	getTestCrud,
+	listPublishedTestCrud,
 	listTestCrud,
 	setTestCrudStatus,
 	updateTestCrud,
@@ -32,7 +34,8 @@ beforeAll(async () => {
 	await migrate(pglite, { migrationsFolder: "./drizzle" });
 	db = pglite;
 	await db.insert(schema.user).values({ id: USER_ID, name: "Admin", email: "admin@example.com", role: "admin" });
-});
+	// Booting WASM Postgres and applying migrations can take a while under a parallel test run.
+}, 60_000);
 afterAll(() => client.close());
 beforeEach(async () => {
 	await db.delete(schema.testCrud);
@@ -187,5 +190,43 @@ describe("update, status and delete", () => {
 		expect(await deleteTestCrud(db, [a.id, b.id, "00000000-0000-4000-8000-000000000000"])).toBe(2);
 		expect(await imageRows()).toBe(0);
 		expect(await getTestCrud(db, c.id)).not.toBeNull();
+	});
+});
+
+describe("public queries (published only)", () => {
+	beforeEach(async () => {
+		const rows: Array<[string, TestCrudInput["status"], string]> = [
+			["Published old", "published", "2026-01-01T00:00:00Z"],
+			["Draft secret", "draft", "2026-01-02T00:00:00Z"],
+			["Published new", "published", "2026-01-03T00:00:00Z"],
+		];
+		for (const [index, [title, status, at]] of rows.entries()) {
+			await createTestCrud(
+				db,
+				input({ title, slug: `p-${index}`, status, summary: title, body: "<p>Body</p><script>x()</script>" }),
+				{ image: null, userId: USER_ID, now: new Date(at) },
+			);
+		}
+	});
+
+	it("lists only published items, newest first, with search and paging", async () => {
+		const page = await listPublishedTestCrud(db, { q: "", page: 1 }, 10);
+		expect(page.items.map((item) => item.title)).toEqual(["Published new", "Published old"]);
+		expect(page.total).toBe(2);
+		expect((await listPublishedTestCrud(db, { q: "secret", page: 1 }, 10)).total).toBe(0);
+		const paged = await listPublishedTestCrud(db, { q: "", page: 5 }, 1);
+		expect(paged).toMatchObject({ page: 2, pageCount: 2 });
+		expect(paged.items.map((item) => item.title)).toEqual(["Published old"]);
+		// Public DTOs carry no admin-only fields.
+		expect(Object.keys(page.items[0] ?? {}).sort()).toEqual(
+			["imageUrl", "price", "publishedAt", "slug", "summary", "tags", "title"].sort(),
+		);
+	});
+
+	it("returns a published item by slug with sanitized body, and null for drafts or unknown slugs", async () => {
+		const item = await getPublishedTestCrud(db, "p-0");
+		expect(item).toMatchObject({ title: "Published old", body: "<p>Body</p>" });
+		expect(await getPublishedTestCrud(db, "p-1")).toBeNull();
+		expect(await getPublishedTestCrud(db, "nope")).toBeNull();
 	});
 });

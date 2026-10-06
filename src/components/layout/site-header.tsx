@@ -17,17 +17,21 @@ export function SiteHeader() {
 
 	return (
 		<header className="border-b">
-			<div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
+			{/* Wraps onto two rows on narrow screens instead of overflowing. */}
+			<div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
 				{/* Brand name from config (VITE_APP_TITLE), identical in every locale. */}
 				<Link to="/" className="font-semibold tracking-tight">
 					{clientEnv.VITE_APP_TITLE}
 				</Link>
-				<nav aria-label={m.nav_label()} className="flex items-center gap-1">
+				<nav aria-label={m.nav_label()} className="flex flex-wrap items-center gap-1">
 					<Link to="/" className={navLink} activeOptions={{ exact: true }}>
 						{m.nav_home()}
 					</Link>
 					<Link to="/stack" className={navLink}>
 						{m.nav_stack()}
+					</Link>
+					<Link to="/test-crud" className={navLink}>
+						{m.nav_test_crud()}
 					</Link>
 					{session?.user.role === "admin" ? (
 						<Link to="/admin" className={navLink}>
@@ -35,7 +39,7 @@ export function SiteHeader() {
 						</Link>
 					) : null}
 				</nav>
-				<div className="ml-auto flex items-center gap-2">
+				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<LanguageSwitcher />
 					<ThemeToggle />
 					{session ? (

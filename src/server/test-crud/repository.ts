@@ -3,6 +3,9 @@ import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import {
 	imageUrl,
+	type PublicTestCrudCard,
+	type PublicTestCrudDetail,
+	type PublicTestCrudPage,
 	type TestCrudDetail,
 	type TestCrudInput,
 	type TestCrudListInput,
@@ -244,4 +247,57 @@ export async function getImage(db: Db, id: string) {
 		.from(testCrudImage)
 		.where(eq(testCrudImage.id, id));
 	return image ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Public queries: ONLY published rows ever leave these functions.
+// ---------------------------------------------------------------------------
+
+const isPublished = eq(testCrud.status, "published");
+
+const toPublicCard = (row: Row): PublicTestCrudCard => ({
+	slug: row.slug,
+	title: row.title,
+	summary: row.summary,
+	price: row.price,
+	tags: row.tags,
+	imageUrl: imageUrl(row.image),
+	// Published rows always have a date; fall back defensively for hand-edited data.
+	publishedAt: (row.publishedAt ?? row.updatedAt).toISOString(),
+});
+
+export async function listPublishedTestCrud(
+	db: Db,
+	input: { q: string; page: number },
+	pageSize: number,
+): Promise<PublicTestCrudPage> {
+	const filters: SQL[] = [isPublished];
+	if (input.q) {
+		const pattern = likePattern(input.q);
+		const match = or(ilike(testCrud.title, pattern), ilike(testCrud.summary, pattern));
+		if (match) filters.push(match);
+	}
+	const where = and(...filters);
+	const [totals] = await db.select({ total: count() }).from(testCrud).where(where);
+	const total = totals?.total ?? 0;
+	const pageCount = Math.max(1, Math.ceil(total / pageSize));
+	const page = Math.min(input.page, pageCount);
+	const rows = await db
+		.select()
+		.from(testCrud)
+		.where(where)
+		.orderBy(desc(testCrud.publishedAt), asc(testCrud.id))
+		.limit(pageSize)
+		.offset((page - 1) * pageSize);
+	return { items: rows.map(toPublicCard), total, page, pageCount };
+}
+
+/** A published item by slug, or null (missing and draft look the same to the public). */
+export async function getPublishedTestCrud(db: Db, slug: string): Promise<PublicTestCrudDetail | null> {
+	const [row] = await db
+		.select()
+		.from(testCrud)
+		.where(and(eq(testCrud.slug, slug), isPublished));
+	if (!row) return null;
+	return { ...toPublicCard(row), body: sanitizeRichText(row.body), phone: row.phone };
 }

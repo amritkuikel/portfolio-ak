@@ -141,7 +141,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
 │   │   ├── dev.ts               # dev-only helpers (rich-text sanitize preview; refuses in production)
-│   │   └── test-crud.ts         # admin server functions (all behind requireAdminMiddleware)
+│   │   ├── test-crud.ts         # admin server functions (all behind requireAdminMiddleware)
+│   │   └── test-crud-public.ts  # public reads: published items only, drafts are NOT_FOUND
 │   ├── features/
 │   │   ├── auth/                # auth UI, error mapping, validation, session queries
 │   │   ├── dev/                 # dev-only pages (forms showcase)
@@ -169,7 +170,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── fn-input.ts          # zodInput(): Zod -> AppError(BAD_REQUEST) for server fn input
 │   │   ├── session.ts           # Session types (router context, middleware)
 │   │   ├── redirect.ts          # safe ?redirect= validation
-│   │   ├── seo.ts               # page title template
+│   │   ├── seo.ts               # page title template + seo(): canonical, hreflang, Open Graph
 │   │   ├── stores/              # TanStack Store: theme, sidebar, table prefs (cookie-backed, one store per router)
 │   │   ├── db.ts                # TanStack DB client per request + queryClientOf() for query collections
 │   │   ├── analytics.ts         # posthog-js wrapper with consent

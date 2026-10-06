@@ -402,5 +402,22 @@
 	"unsaved_title": "Discard unsaved changes?",
 	"unsaved_body": "You have changes that haven't been saved. If you leave now, they'll be lost.",
 	"unsaved_stay": "Keep editing",
-	"unsaved_leave": "Discard changes"
+	"unsaved_leave": "Discard changes",
+	"nav_test_crud": "Items",
+	"test_crud_public_title": "Items",
+	"test_crud_public_description": "Browse published items: the Test CRUD reference feature, rendered on the server in English and Nepali.",
+	"test_crud_public_search_placeholder": "Search items",
+	"test_crud_public_results": "{count} results for “{q}”",
+	"test_crud_public_empty": "Nothing has been published yet.",
+	"test_crud_public_no_results": "No items match “{q}”.",
+	"test_crud_public_show_all": "Show all items",
+	"test_crud_public_published_on": "Published {date}",
+	"test_crud_public_price": "Price",
+	"test_crud_public_contact": "Contact",
+	"test_crud_public_tags": "Tags",
+	"test_crud_public_all_items": "All items",
+	"test_crud_public_page_title": "Items, page {page}",
+	"test_crud_public_search_title": "Search: {q}",
+	"test_crud_public_loading": "Loading items…",
+	"test_crud_public_read_more": "Read more about {title}"
 }

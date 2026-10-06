@@ -751,3 +751,31 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives:**
   - Mocking Drizzle: misses SQL bugs.
   - A shared test Neon branch: slower, and needs network and credentials in CI.
+
+## 0071: SEO tags come from one helper and a required `VITE_SITE_URL`
+
+- **What:**
+  - `seo({ title, description, path, image, type, noindex })` in `src/lib/seo.ts` returns `head` meta and links: the title template, description, canonical, `hreflang` alternates for every locale plus `x-default` (base locale), and Open Graph tags (`og:locale` and its alternates; `og:image` only when there is an image). It also returns Twitter card tags.
+  - URLs are absolute, built from the new required client variable `VITE_SITE_URL`: an origin only, no path, no trailing slash, http(s). Locale paths come from Paraglide's `localizeHref`, so they follow the same URL strategy as routing.
+  - Canonicals: list page 1 is `/test-crud`, later pages are their own canonical URLs, and search results are `noindex, follow` with the list as canonical. The detail page adds `article:published_time`.
+- **Why:** canonical and hreflang must be absolute, and the request's Host header is not trustworthy, so the origin is configured. Making it required means a deploy without it fails at build or start instead of shipping wrong canonicals.
+- **Verified:**
+  - In dev and the production build: one title, one description and one canonical per page (child heads replace the root defaults).
+  - Nepali pages are canonical at `/ne/...`, with English as `x-default`.
+  - Unit tests cover both locales, noindex and images.
+- **Alternatives:**
+  - Deriving the origin from the request: can't be trusted and differs behind proxies.
+  - Per-route hand-written tags: easy to get inconsistent.
+
+## 0072: Public reads are a separate, published-only path
+
+- **What:**
+  - `src/functions/test-crud-public.ts` (no auth) calls `listPublishedTestCrud` and `getPublishedTestCrud`. Both always filter on `status = 'published'` and return public DTOs that leave out the id, status, creator and timestamps other than `publishedAt`.
+  - A draft and a missing slug both become NOT_FOUND, so the route throws `notFound()` and responds with the localized 404 page and HTTP 404. A malformed slug 404s without a query.
+  - The body is sanitized again on read. Verified with a row written straight into the DB with `<img onerror>`, `<script>` and a `javascript:` link: all were stripped and only the link text remained.
+  - Public query keys live under `["test-crud", "public"]`, which admin writes invalidate.
+- **Verified:**
+  - With JavaScript disabled, the list (12 cards per page, search, pagination) and the detail page render fully.
+  - No console warnings in en or ne, light or dark.
+  - Card widths are fixed (`min-w-0`), and the site header now wraps, so there is no horizontal scroll at 360, 390, 768 or 1280 px.
+- **Alternatives:** Reusing the admin functions with a "public" flag: one mistake would expose drafts.

@@ -19,7 +19,7 @@ pnpm db:migrate
 pnpm dev               # http://localhost:3000
 ```
 
-`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Visit `/health` to confirm the database connection.
+`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Set `VITE_SITE_URL` to the public origin (for example `https://example.com`) in every deployed environment: canonical, hreflang and Open Graph URLs are built from it. Visit `/health` to confirm the database connection.
 
 ## Scripts
 
@@ -110,8 +110,11 @@ Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
 | Server functions | `src/functions/test-crud.ts` | `requireAdminMiddleware` on every function, `.validator()` input, and FormData for file uploads |
 | Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*` | URL-driven table, forms built only from the reusable fields, confirmation dialogs, toasts and the unsaved-changes guard |
+| Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, published items only, localized 404 for drafts, and `seo()` head tags |
 
 Images are stored in Postgres and served from `/api/images/:id` (see decision 0067).
+
+For a public page's head, use `seo({ title, description, path, image })` from `src/lib/seo.ts`. It returns the title, description, canonical URL, `hreflang` alternates for every locale plus `x-default`, and Open Graph and Twitter tags.
 
 ## Authentication
 

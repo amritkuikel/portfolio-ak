@@ -9,6 +9,7 @@ const defaults: Record<string, string> = {
 	BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
 	BETTER_AUTH_URL: "http://localhost:3000",
 	VITE_APP_TITLE: "Portfolio",
+	VITE_SITE_URL: "http://localhost:3000",
 };
 
 for (const [key, value] of Object.entries(defaults)) process.env[key] ??= value;

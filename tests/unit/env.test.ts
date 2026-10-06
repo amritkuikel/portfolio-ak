@@ -80,18 +80,32 @@ describe("server env", () => {
 });
 
 describe("client env", () => {
-	it("accepts a valid title", () => {
-		expect(createClientEnv({ VITE_APP_TITLE: "Portfolio" }).VITE_APP_TITLE).toBe("Portfolio");
+	const valid = { VITE_APP_TITLE: "Portfolio", VITE_SITE_URL: "https://example.com" };
+
+	it("accepts a valid title and site URL", () => {
+		const env = createClientEnv(valid);
+		expect(env.VITE_APP_TITLE).toBe("Portfolio");
+		expect(env.VITE_SITE_URL).toBe("https://example.com");
 	});
 
 	it("fails with a clear message when the title is missing or blank", () => {
-		expect(() => createClientEnv({})).toThrow(/Invalid client environment variables:\n {2}- VITE_APP_TITLE:/);
-		expect(() => createClientEnv({ VITE_APP_TITLE: "   " })).toThrow(/VITE_APP_TITLE/);
+		expect(() => createClientEnv({ VITE_SITE_URL: valid.VITE_SITE_URL })).toThrow(
+			/Invalid client environment variables:\n {2}- VITE_APP_TITLE:/,
+		);
+		expect(() => createClientEnv({ ...valid, VITE_APP_TITLE: "   " })).toThrow(/VITE_APP_TITLE/);
+	});
+
+	it("requires VITE_SITE_URL to be a bare http(s) origin", () => {
+		expect(() => createClientEnv({ VITE_APP_TITLE: "Portfolio" })).toThrow(/VITE_SITE_URL: Required/);
+		expect(() => createClientEnv({ ...valid, VITE_SITE_URL: "example.com" })).toThrow(/VITE_SITE_URL/);
+		expect(() => createClientEnv({ ...valid, VITE_SITE_URL: "https://example.com/" })).toThrow(/Origin only/);
+		expect(() => createClientEnv({ ...valid, VITE_SITE_URL: "https://example.com/app" })).toThrow(/Origin only/);
+		expect(() => createClientEnv({ ...valid, VITE_SITE_URL: "ftp://example.com" })).toThrow(/http/);
 	});
 
 	it("does not expose unprefixed variables", () => {
-		const env = createClientEnv({ VITE_APP_TITLE: "Portfolio", DATABASE_URL: "postgres://x" });
-		expect(Object.keys(env)).toEqual(["VITE_APP_TITLE"]);
+		const env = createClientEnv({ ...valid, DATABASE_URL: "postgres://x" });
+		expect(Object.keys(env).sort()).toEqual(["VITE_APP_TITLE", "VITE_SITE_URL"]);
 	});
 });
 

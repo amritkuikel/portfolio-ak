@@ -24,6 +24,8 @@ const createPageCollection = (input: TestCrudListInput, id: string) =>
 		const queryClient = queryClientOf(client);
 		const refreshLists = async () => {
 			await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
+			// Public pages cached in this tab may now show stale (un)published items.
+			void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
 			// The invalidation above already refetched this page.
 			return { refetch: false };
 		};

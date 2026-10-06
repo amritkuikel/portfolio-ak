@@ -25,6 +25,8 @@ import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
+import { Route as PublicTestCrudIndexRouteImport } from './routes/_public/test-crud/index'
+import { Route as PublicTestCrudSlugRouteImport } from './routes/_public/test-crud/$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
@@ -106,6 +108,16 @@ const PublicDevFormsRoute = PublicDevFormsRouteImport.update({
   path: '/dev/forms',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicTestCrudIndexRoute = PublicTestCrudIndexRouteImport.update({
+  id: '/test-crud/',
+  path: '/test-crud/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicTestCrudSlugRoute = PublicTestCrudSlugRouteImport.update({
+  id: '/test-crud/$slug',
+  path: '/test-crud/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -139,8 +151,10 @@ export interface FileRoutesByFullPath {
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
   '/dev/forms': typeof PublicDevFormsRoute
+  '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/test-crud/': typeof PublicTestCrudIndexRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
@@ -157,8 +171,10 @@ export interface FileRoutesByTo {
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
   '/dev/forms': typeof PublicDevFormsRoute
+  '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/test-crud': typeof PublicTestCrudIndexRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
@@ -180,8 +196,10 @@ export interface FileRoutesById {
   '/_public/verify-email': typeof PublicVerifyEmailRoute
   '/_public/': typeof PublicIndexRoute
   '/_public/dev/forms': typeof PublicDevFormsRoute
+  '/_public/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_public/test-crud/': typeof PublicTestCrudIndexRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
@@ -200,8 +218,10 @@ export interface FileRouteTypes {
     | '/stack'
     | '/verify-email'
     | '/dev/forms'
+    | '/test-crud/$slug'
     | '/api/auth/$'
     | '/admin/'
+    | '/test-crud/'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/admin/test-crud/'
@@ -218,8 +238,10 @@ export interface FileRouteTypes {
     | '/stack'
     | '/verify-email'
     | '/dev/forms'
+    | '/test-crud/$slug'
     | '/api/auth/$'
     | '/admin'
+    | '/test-crud'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/admin/test-crud'
@@ -240,8 +262,10 @@ export interface FileRouteTypes {
     | '/_public/verify-email'
     | '/_public/'
     | '/_public/dev/forms'
+    | '/_public/test-crud/$slug'
     | '/api/auth/$'
     | '/_admin/admin/'
+    | '/_public/test-crud/'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
     | '/_admin/admin/test-crud/'
@@ -369,6 +393,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicDevFormsRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/test-crud/': {
+      id: '/_public/test-crud/'
+      path: '/test-crud'
+      fullPath: '/test-crud/'
+      preLoaderRoute: typeof PublicTestCrudIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/test-crud/$slug': {
+      id: '/_public/test-crud/$slug'
+      path: '/test-crud/$slug'
+      fullPath: '/test-crud/$slug'
+      preLoaderRoute: typeof PublicTestCrudSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -450,6 +488,8 @@ interface PublicRouteChildren {
   PublicVerifyEmailRoute: typeof PublicVerifyEmailRoute
   PublicIndexRoute: typeof PublicIndexRoute
   PublicDevFormsRoute: typeof PublicDevFormsRoute
+  PublicTestCrudSlugRoute: typeof PublicTestCrudSlugRoute
+  PublicTestCrudIndexRoute: typeof PublicTestCrudIndexRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -459,6 +499,8 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicVerifyEmailRoute: PublicVerifyEmailRoute,
   PublicIndexRoute: PublicIndexRoute,
   PublicDevFormsRoute: PublicDevFormsRoute,
+  PublicTestCrudSlugRoute: PublicTestCrudSlugRoute,
+  PublicTestCrudIndexRoute: PublicTestCrudIndexRoute,
 }
 
 const PublicRouteWithChildren =

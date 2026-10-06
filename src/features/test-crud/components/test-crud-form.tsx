@@ -74,6 +74,7 @@ export function TestCrudForm({ item }: { item?: TestCrudDetail }) {
 				saved.current = true;
 				queryClient.setQueryData(testCrudKeys.detail(result.id), result);
 				await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
+				void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
 				toast.success(item ? m.test_crud_toast_saved() : m.test_crud_toast_created());
 				await navigate({ to: "/admin/test-crud" });
 			} catch (error) {

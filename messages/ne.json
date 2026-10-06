@@ -402,5 +402,22 @@
 	"unsaved_title": "सुरक्षित नगरिएका परिवर्तन छोड्ने?",
 	"unsaved_body": "तपाईंका केही परिवर्तन सुरक्षित भएका छैनन्। अहिले छोड्नुभयो भने ती हराउनेछन्।",
 	"unsaved_stay": "सम्पादन जारी राख्नुहोस्",
-	"unsaved_leave": "परिवर्तन छोड्नुहोस्"
+	"unsaved_leave": "परिवर्तन छोड्नुहोस्",
+	"nav_test_crud": "वस्तुहरू",
+	"test_crud_public_title": "वस्तुहरू",
+	"test_crud_public_description": "प्रकाशित वस्तुहरू हेर्नुहोस्: अङ्ग्रेजी र नेपालीमा सर्भरमै तयार हुने टेस्ट CRUD नमुना सुविधा।",
+	"test_crud_public_search_placeholder": "वस्तु खोज्नुहोस्",
+	"test_crud_public_results": "“{q}” का लागि {count} नतिजा",
+	"test_crud_public_empty": "अहिलेसम्म केही प्रकाशित भएको छैन।",
+	"test_crud_public_no_results": "“{q}” सँग मिल्ने वस्तु छैन।",
+	"test_crud_public_show_all": "सबै वस्तु देखाउनुहोस्",
+	"test_crud_public_published_on": "प्रकाशित मिति {date}",
+	"test_crud_public_price": "मूल्य",
+	"test_crud_public_contact": "सम्पर्क",
+	"test_crud_public_tags": "ट्याग",
+	"test_crud_public_all_items": "सबै वस्तु",
+	"test_crud_public_page_title": "वस्तुहरू, पृष्ठ {page}",
+	"test_crud_public_search_title": "खोज: {q}",
+	"test_crud_public_loading": "वस्तुहरू लोड हुँदैछन्…",
+	"test_crud_public_read_more": "{title} बारे थप पढ्नुहोस्"
 }
