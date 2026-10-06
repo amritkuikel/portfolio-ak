@@ -2,7 +2,7 @@
  * Component-test setup (runs for every file; only acts under jsdom).
  * - jest-dom matchers (toBeInTheDocument, toHaveAttribute, …)
  * - unmount rendered trees between tests
- * - browser APIs that Radix UI and cmdk use but jsdom doesn't implement
+ * - browser APIs that Radix UI, cmdk and input-otp use but jsdom doesn't implement
  */
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
@@ -23,4 +23,10 @@ if (typeof window !== "undefined") {
 	proto.hasPointerCapture ??= () => false;
 	proto.setPointerCapture ??= () => {};
 	proto.releasePointerCapture ??= () => {};
+	// input-otp probes for password-manager badges at a point next to the input.
+	document.elementFromPoint ??= () => null;
+	// ProseMirror (Tiptap) measures the selection to scroll it into view.
+	const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+	Range.prototype.getClientRects ??= emptyRects;
+	Range.prototype.getBoundingClientRect ??= () => new DOMRect();
 }

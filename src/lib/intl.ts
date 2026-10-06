@@ -18,6 +18,7 @@ import {
 	NE_NUMBER_LOCALE,
 	NE_RELATIVE,
 	NE_WEEKDAYS,
+	NE_WEEKDAYS_SHORT,
 	type NeRelativeUnit,
 	toDevanagariDigits,
 } from "./intl-ne";
@@ -235,4 +236,33 @@ export const currencySymbol = (currency: string = DEFAULT_CURRENCY, locale: Loca
 		.formatToParts(0)
 		.find((p) => p.type === "currency");
 	return part?.value ?? currency;
+};
+
+// ---------------------------------------------------------------------------
+// Calendar labels and file sizes
+// ---------------------------------------------------------------------------
+
+/** Calendar caption from a local Date: "January 2026" / "२०२६ जनवरी" (CLDR ne puts the year first). */
+export const formatMonthYear = (date: Date, locale: Locale = getLocale()): string =>
+	locale === "ne"
+		? toDevanagariDigits(`${date.getFullYear()} ${NE_MONTHS[date.getMonth()] ?? ""}`)
+		: cached("month-year|en", () => new Intl.DateTimeFormat("en", { year: "numeric", month: "long" })).format(date);
+
+/** Short weekday from a local Date: "Mon" / "सोम". */
+export const formatWeekdayShort = (date: Date, locale: Locale = getLocale()): string =>
+	locale === "ne"
+		? (NE_WEEKDAYS_SHORT[date.getDay()] ?? "")
+		: cached("weekday|en", () => new Intl.DateTimeFormat("en", { weekday: "short" })).format(date);
+
+const BYTE_UNITS = ["B", "KB", "MB", "GB"] as const;
+
+/** "5 MB", "१.५ MB": unit symbols stay Latin in both locales, as in CLDR ne. */
+export const formatBytes = (bytes: number, locale: Locale = getLocale()): string => {
+	let value = bytes;
+	let unit = 0;
+	while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+		value /= 1024;
+		unit += 1;
+	}
+	return `${formatNumber(value, { maximumFractionDigits: unit === 0 ? 0 : 1 }, locale)} ${BYTE_UNITS[unit]}`;
 };

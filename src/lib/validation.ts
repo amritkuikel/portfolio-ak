@@ -6,9 +6,11 @@
  * is using, on the client and on the server. Numbers inside messages are
  * formatted for that language too (e.g. "कम्तीमा ८ ...").
  */
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { z } from "zod";
 import { m } from "@/paraglide/messages";
-import { formatNumber } from "./intl";
+import { type IsoDate, isIsoDate, isoDateInstant } from "./date-only";
+import { formatBytes, formatDate, formatNumber } from "./intl";
 
 const n = (value: number) => formatNumber(value);
 
@@ -118,4 +120,127 @@ export const choices = ({ min = 1 }: { min?: number } = {}) =>
 	z.array(z.string()).min(min, { error: () => m.validation_select_min({ min: n(min) }) });
 
 /** A checkbox that must be ticked (terms, consent). */
-export const mustAccept = () => z.literal(true, { error: () => m.validation_must_accept() });
+export const mustAccept = () =>
+	z
+		.boolean({ error: () => m.validation_must_accept() })
+		.refine((value) => value, { error: () => m.validation_must_accept() });
+
+// ---------------------------------------------------------------------------
+// Phase 7b fields
+// ---------------------------------------------------------------------------
+
+/** E.164 phone number ("+9779812345678"), valid for its country per libphonenumber-js. */
+export const phone = (options: { optional?: boolean } = {}) => {
+	const valid = z.string().refine((value) => isValidPhoneNumber(value), { error: () => m.validation_phone() });
+	const text = z.string({ error: () => m.validation_required() });
+	return options.optional
+		? text.pipe(z.union([z.literal(""), valid]))
+		: text.min(1, { error: () => m.validation_required() }).pipe(valid);
+};
+
+/** A 6-digit one-time code. */
+export const otp = () => z.string().regex(/^\d{6}$/, { error: () => m.validation_otp() });
+
+const dateLabel = (value: IsoDate) => formatDate(isoDateInstant(value), { dateStyle: "medium" });
+
+/** "YYYY-MM-DD" within optional bounds (inclusive). */
+export const isoDate = (bounds: { min?: IsoDate; max?: IsoDate } = {}) => {
+	let schema = z.string({ error: () => m.validation_date() }).refine(isIsoDate, { error: () => m.validation_date() });
+	if (bounds.min !== undefined) {
+		const min = bounds.min;
+		schema = schema.refine((value) => !isIsoDate(value) || value >= min, {
+			error: () => m.validation_date_min({ date: dateLabel(min) }),
+		});
+	}
+	if (bounds.max !== undefined) {
+		const max = bounds.max;
+		schema = schema.refine((value) => !isIsoDate(value) || value <= max, {
+			error: () => m.validation_date_max({ date: dateLabel(max) }),
+		});
+	}
+	return schema;
+};
+
+/** { from, to } as "YYYY-MM-DD", both required, `to` not before `from`. */
+export const dateRange = () =>
+	z
+		.object({ from: z.string().optional(), to: z.string().optional() }, { error: () => m.validation_date_range() })
+		.refine((range) => isIsoDate(range.from) && isIsoDate(range.to), { error: () => m.validation_date_range() })
+		.refine((range) => !range.from || !range.to || range.from <= range.to, {
+			error: () => m.validation_date_order(),
+		});
+
+/** 24-hour "HH:mm". */
+export const time = () =>
+	z
+		.string({ error: () => m.validation_time() })
+		.regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: () => m.validation_time() });
+
+/** Tags: unique, trimmed, each at most `maxLength`, at most `max` of them. */
+export const tags = ({ max = 10, maxLength = 32, min = 0 }: { max?: number; maxLength?: number; min?: number } = {}) =>
+	z
+		.array(
+			z
+				.string()
+				.trim()
+				.min(1)
+				.max(maxLength, { error: () => m.validation_tag_length({ max: n(maxLength) }) }),
+		)
+		.min(min, { error: () => m.validation_select_min({ min: n(min) }) })
+		.max(max, { error: () => m.validation_tags_max({ max: n(max) }) });
+
+/** "#rrggbb" (lower or upper case). */
+export const hexColor = () => z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: () => m.validation_color() });
+
+export type FileRules = {
+	/** Maximum size per file in bytes. */
+	maxBytes: number;
+	/** Accepted MIME types; "image/*" style wildcards allowed. */
+	accept: ReadonlyArray<string>;
+};
+
+export const acceptsType = (type: string, accept: ReadonlyArray<string>) =>
+	accept.some((rule) => (rule.endsWith("/*") ? type.startsWith(rule.slice(0, -1)) : type === rule));
+
+/** Files picked in a FileField/ImageField: size and type per file, count overall. */
+export const files = ({ maxBytes, accept, max = 1, min = 0 }: FileRules & { max?: number; min?: number }) =>
+	z
+		.array(z.instanceof(File))
+		.min(Math.max(min, 0), { error: () => m.validation_file_required() })
+		.max(max, { error: () => m.validation_files_max({ max: n(max) }) })
+		.superRefine((list, ctx) => {
+			for (const file of list) {
+				if (file.size > maxBytes) {
+					ctx.addIssue({
+						code: "custom",
+						message: m.validation_file_too_large({ name: file.name, size: formatBytes(maxBytes) }),
+					});
+				}
+				if (!acceptsType(file.type, accept)) {
+					ctx.addIssue({ code: "custom", message: m.validation_file_type({ name: file.name }) });
+				}
+			}
+		});
+
+/** Visible text of rich-text HTML (tags and entities removed), for length rules. */
+export const richTextPlainText = (html: string) =>
+	html
+		.replace(/<[^>]*>/g, " ")
+		.replace(/&nbsp;|&#160;/g, " ")
+		.replace(/&[a-z]+;|&#\d+;/gi, "x")
+		.replace(/\s+/g, " ")
+		.trim();
+
+/** Rich-text HTML from RichTextField. Length limits apply to the visible text. */
+export const richText = ({ required: isRequired = true, max }: { required?: boolean; max?: number } = {}) => {
+	let schema = z.string();
+	if (isRequired) {
+		schema = schema.refine((value) => richTextPlainText(value).length > 0, { error: () => m.validation_required() });
+	}
+	if (max !== undefined) {
+		schema = schema.refine((value) => richTextPlainText(value).length <= max, {
+			error: () => m.validation_text_max({ max: n(max) }),
+		});
+	}
+	return schema;
+};

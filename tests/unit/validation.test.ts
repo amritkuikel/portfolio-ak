@@ -1,16 +1,27 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { z } from "zod";
 import {
+	acceptsType,
 	choice,
 	choices,
 	currency,
+	dateRange,
 	email,
+	files,
+	hexColor,
+	isoDate,
 	mustAccept,
 	numberRange,
 	optionalText,
+	otp,
 	password,
 	passwordStrength,
+	phone,
 	required,
+	richText,
+	richTextPlainText,
+	tags,
+	time,
 	url,
 } from "@/lib/validation";
 import { overwriteGetLocale } from "@/paraglide/runtime";
@@ -114,5 +125,101 @@ describe("localization", () => {
 		expect(firstError(schema, "")).toBe("This field is required.");
 		overwriteGetLocale(() => "ne");
 		expect(firstError(schema, "")).toBe("यो विवरण आवश्यक छ।");
+	});
+});
+
+describe("phone and otp", () => {
+	it("phone accepts valid E.164 numbers per country and rejects others", () => {
+		expect(phone().parse("+9779812345678")).toBe("+9779812345678");
+		expect(firstError(phone(), "")).toBe("This field is required.");
+		expect(firstError(phone(), "+977123")).toBe("Enter a valid phone number.");
+		expect(phone({ optional: true }).parse("")).toBe("");
+		expect(firstError(phone({ optional: true }), "+1555")).toBe("Enter a valid phone number.");
+	});
+
+	it("otp requires exactly six digits", () => {
+		expect(otp().parse("012345")).toBe("012345");
+		expect(firstError(otp(), "12345")).toBe("Enter the 6-digit code.");
+		expect(firstError(otp(), "12a456")).toBe("Enter the 6-digit code.");
+	});
+});
+
+describe("dates and time", () => {
+	it("isoDate checks the format, real calendar dates and bounds", () => {
+		expect(isoDate().parse("2026-02-28")).toBe("2026-02-28");
+		expect(firstError(isoDate(), "")).toBe("Choose a date.");
+		expect(firstError(isoDate(), "2026-02-30")).toBe("Choose a date.");
+		expect(firstError(isoDate({ min: "2026-01-01" }), "2025-12-31")).toMatch(/^Choose a date on or after Jan 1, 2026/);
+		expect(firstError(isoDate({ max: "2026-01-01" }), "2026-01-02")).toMatch(/^Choose a date on or before/);
+	});
+
+	it("isoDate reports only one error for an empty value with bounds", () => {
+		const result = isoDate({ min: "2020-01-01" }).safeParse("");
+		expect(result.success ? [] : result.error.issues.map((issue) => issue.message)).toEqual(["Choose a date."]);
+	});
+
+	it("dateRange needs both ends in order", () => {
+		expect(dateRange().parse({ from: "2026-01-01", to: "2026-01-05" })).toEqual({
+			from: "2026-01-01",
+			to: "2026-01-05",
+		});
+		expect(firstError(dateRange(), { from: "2026-01-01" })).toBe("Choose a start and an end date.");
+		expect(firstError(dateRange(), { from: "2026-01-05", to: "2026-01-01" })).toBe(
+			"The end date must be on or after the start date.",
+		);
+	});
+
+	it("time is 24-hour HH:mm", () => {
+		expect(time().parse("23:59")).toBe("23:59");
+		expect(firstError(time(), "24:00")).toBe("Enter a time in 24-hour format, like 14:30.");
+		expect(firstError(time(), "9:30")).toBe("Enter a time in 24-hour format, like 14:30.");
+	});
+});
+
+describe("tags and colour", () => {
+	it("tags limits count and length", () => {
+		expect(tags().parse([" a "])).toEqual(["a"]);
+		expect(firstError(tags({ max: 1 }), ["a", "b"])).toBe("Add at most 1 tags.");
+		expect(firstError(tags({ maxLength: 3 }), ["abcd"])).toBe("Each tag can be at most 3 characters.");
+	});
+
+	it("hexColor requires #rrggbb", () => {
+		expect(hexColor().parse("#1E40af")).toBe("#1E40af");
+		expect(firstError(hexColor(), "#fff")).toBe("Enter a color like #1e40af.");
+	});
+});
+
+describe("files", () => {
+	const pdf = new File(["x".repeat(10)], "cv.pdf", { type: "application/pdf" });
+	const big = new File(["x".repeat(2048)], "big.png", { type: "image/png" });
+	const exe = new File(["x"], "run.exe", { type: "application/x-msdownload" });
+	const rules = { maxBytes: 1024, accept: ["application/pdf", "image/*"] };
+
+	it("acceptsType handles exact types and wildcards", () => {
+		expect(acceptsType("image/webp", ["image/*"])).toBe(true);
+		expect(acceptsType("application/pdf", ["image/*"])).toBe(false);
+		expect(acceptsType("application/pdf", ["application/pdf"])).toBe(true);
+	});
+
+	it("checks size, type, minimum and maximum count", () => {
+		expect(files(rules).parse([pdf])).toEqual([pdf]);
+		expect(firstError(files(rules), [big])).toBe("big.png is larger than 1 KB.");
+		expect(firstError(files(rules), [exe])).toBe("run.exe isn't an accepted file type.");
+		expect(firstError(files({ ...rules, min: 1 }), [])).toBe("Choose a file.");
+		expect(firstError(files({ ...rules, max: 1 }), [pdf, pdf])).toBe("Choose at most 1 files.");
+	});
+});
+
+describe("rich text", () => {
+	it("measures visible text, not markup", () => {
+		expect(richTextPlainText("<p>Hi <strong>there</strong></p><p>&amp;</p>")).toBe("Hi there x");
+		expect(richTextPlainText("<p></p><p>&nbsp;</p>")).toBe("");
+	});
+
+	it("richText is required by default and limits visible length", () => {
+		expect(firstError(richText(), "<p></p>")).toBe("This field is required.");
+		expect(richText({ required: false }).parse("")).toBe("");
+		expect(firstError(richText({ max: 3 }), "<p><strong>abcd</strong></p>")).toMatch(/3/);
+		expect(richText({ max: 3 }).parse("<p><strong>abc</strong></p>")).toBe("<p><strong>abc</strong></p>");
 	});
 });

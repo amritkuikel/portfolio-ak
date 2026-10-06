@@ -75,12 +75,15 @@ const form = useAppForm({
 </form.AppForm>
 ```
 
-- **Fields:** `TextField`, `TextareaField`, `EmailField`, `PasswordField`, `NumberField`, `CurrencyField`, `SelectField`, `ComboboxField`, `MultiSelectField`, `RadioGroupField`, `CheckboxField`, `CheckboxGroupField`, `SwitchField`, `UrlField`.
+- **Fields:** `TextField`, `TextareaField`, `EmailField`, `PasswordField`, `NumberField`, `CurrencyField`, `SelectField`, `ComboboxField`, `MultiSelectField`, `RadioGroupField`, `CheckboxField`, `CheckboxGroupField`, `SwitchField`, `UrlField`, `PhoneField`, `OtpField`, `DateField`, `DateRangeField`, `TimeField`, `SliderField`, `TagsInputField`, `ColorField`, `FileField`, `ImageField`, `RichTextField`.
+- **Showcase:** run `pnpm dev` and open `/dev/forms` (or `/ne/dev/forms`) to see and try every field. It returns 404 in production builds.
 - **Accessibility:** Every field wires label, description, `aria-invalid` and `aria-describedby`.
 - **When errors show:** Only after a field is left (blurred) or a submit is attempted.
 - **Validation:** `formValidators(schema)` runs the schema on change, blur and submit.
 - **Error summary:** `FormErrorSummary` lists every problem after a failed submit and takes focus. Each entry links to its field.
 - **Numbers:** `NumberField` and `CurrencyField` accept Devanagari digits and thousands separators.
+- **Stored values:** `PhoneField` stores E.164 (`+9779812345678`, Nepal by default). `DateField` stores `"YYYY-MM-DD"`, `DateRangeField` stores `{ from, to }` and `TimeField` stores `"HH:mm"`. `FileField` and `ImageField` store `File[]`. Validate them with `phone()`, `isoDate()`, `dateRange()`, `time()` and `files({ maxBytes, accept })`.
+- **Rich text:** `RichTextField` (Tiptap) loads only in the browser, and the server renders a placeholder of the same size. Its HTML is untrusted. On the server, pass it through `sanitizeRichText()` (`src/server/rich-text/sanitize.ts`) before storing it and again before sending it to a page, then display it with `<RichTextContent html={safe} />`. That component only accepts the `SafeHtml` type the sanitizer returns.
 
 ## Authentication
 

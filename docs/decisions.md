@@ -563,3 +563,88 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - `tests/setup/dom.ts` adds jest-dom matchers, cleanup, and stubs for `ResizeObserver`, `scrollIntoView` and pointer capture, which Radix UI and cmdk use but jsdom lacks.
   - `tests/components/forms/harness.tsx` renders a real `useAppForm` form with one field and checks the accessibility contract (`aria-invalid`, plus `aria-describedby` pointing at the error text).
 - **Why:** The fields are tested through the same form machinery the app uses, including validation timing and the error summary, rather than in isolation.
+
+## 0057: Phone numbers are stored as E.164 with a separate country picker
+
+- **What:** `PhoneField` pairs a searchable country picker (Nepal +977 by default) with a national-number input. It stores E.164 and validates with libphonenumber-js `isValidPhoneNumber`. Devanagari digits are accepted, and the number is reformatted in national style on blur.
+- **Why:**
+  - E.164 is one unambiguous format for storage, SMS providers and `tel:` links.
+  - Country names come from `Intl.DisplayNames("en")` in both languages. Desktop Chrome has no Nepali region names, so the server and browser would render different text and cause a hydration mismatch.
+- **Alternatives:**
+  - `react-phone-number-input`: brings its own styling and flag assets, and doesn't use our field shell.
+  - A single free-text input: parsing is ambiguous without a country.
+
+## 0058: Date fields store calendar dates as strings
+
+- **What:**
+  - `DateField` stores `"YYYY-MM-DD"` and `DateRangeField` stores `{ from, to }` in that format. `src/lib/date-only.ts` converts them.
+  - Dates are displayed via `isoDateInstant` (noon UTC) and `formatDate` in Asia/Kathmandu.
+  - The picker is react-day-picker 10 (shadcn Calendar) wrapped as `LocalizedCalendar`. Captions, weekdays, digits and day labels come from `src/lib/intl.ts`.
+  - `TimeField` is a text input normalised to `"HH:mm"`, with Devanagari digits in Nepali.
+- **Why:**
+  - A birthday or deadline is a calendar day, not an instant. Storing `Date` objects shifts the day across time zones and serialization.
+  - `<input type="time">` can't show Devanagari digits and differs per browser.
+- **Alternatives:**
+  - A date-fns locale for Nepali: none exists that matches our CLDR data.
+  - The native date input: not localizable and not consistent across browsers.
+
+## 0059: Rich text loads only in the browser, behind a placeholder of the same size
+
+- **What:**
+  - `RichTextField` renders `<ClientOnly fallback={placeholder}>` with `<Suspense fallback={placeholder}>` around `React.lazy(() => import("./rich-text-editor"))`.
+  - The editor uses Tiptap 3 `useEditor({ immediatelyRender: false })`.
+  - The placeholder and the editor share their frame classes (`rich-text-frame.ts`): a 40px toolbar row and a 160px minimum surface.
+- **Measured:** In Chrome, both are 202px tall at the same position in en and ne. CLS is about 0.00001. There are no hydration warnings.
+- **Why:**
+  - ProseMirror needs the DOM. Loading it lazily keeps Tiptap out of the main client bundle and out of the SSR render.
+  - Matching geometry means nothing moves when the editor arrives.
+- **Toolbar:**
+  - Follows the WAI-ARIA toolbar pattern: one tab stop, arrow keys, Home and End.
+  - Toggle buttons use `aria-pressed`.
+  - Unavailable Undo/Redo use `aria-disabled`, not `disabled`, so arrow keys don't skip them.
+- **Alternatives:** Rendering the editor's HTML on the server: Tiptap's SSR output doesn't match the client-mounted editor, so it would cause hydration warnings.
+
+## 0060: Sanitizing rich text on the server, with a SafeHtml brand
+
+- **What:**
+  - `sanitizeRichText()` in `src/server/rich-text/sanitize.ts` uses sanitize-html with an allowlist that exactly matches what the toolbar produces. Allowed tags: p, br, strong, em, u, s, code, pre, h2, h3, ul, ol, li, blockquote, hr, a.
+  - Links allow only href (http, https, mailto) and are forced to `rel="noopener noreferrer nofollow" target="_blank"`. A link that loses its href becomes plain text.
+  - It returns `SafeHtml`, a compile-time brand. `RichTextContent` is the app's only `dangerouslySetInnerHTML`, and it accepts only `SafeHtml`.
+  - The rule: sanitize before storage and again on the server read path before rendering.
+  - The editor additionally only allows http, https and mailto links (`normalizeLinkHref`).
+- **Why:**
+  - Server-side sanitizing can't be bypassed by a modified client. The brand makes rendering unsanitized HTML a type error.
+  - The second pass protects against rows written by older code or directly in the database.
+- **Alternatives:**
+  - DOMPurify in the browser: it adds client weight, and client-side sanitizing alone is bypassable. Rendering in the browser would also need the sanitizer in the client bundle, while sanitizing on the server read path keeps it server-only. In production, sanitize-html and its PostCSS dependency are not in the client bundle (verified).
+
+## 0061: The dev-only showcase is a real route, dropped from production builds
+
+- **What:**
+  - `src/routes/_public/dev/forms.tsx` throws `notFound()` in `beforeLoad` unless `import.meta.env.DEV`. Its component is `import.meta.env.DEV ? FormsShowcase : () => null`.
+  - The showcase module builds its schema and options inside functions, so it has no top-level side effects and the bundler drops it.
+  - `previewRichText`, a dev server function, also refuses outside dev.
+- **Verified:** The production server returns 404 for `/dev/forms` and `/ne/dev/forms`. The build output contains no showcase component or schema.
+- **Why:**
+  - A real route exercises the actual layout, locale routing and hydration.
+  - A static import is used because `lazyRouteComponent` made React log "called use() to suspend … did not call use()" while hydrating this route in dev.
+- **Alternatives:**
+  - Storybook (Task 14): it doesn't exercise SSR or the router.
+  - A Vite `apply: "serve"` plugin, as for `/dev/emails`: it can't render inside the app shell.
+
+## 0062: File fields use the native input plus drag-and-drop, and validate in the schema
+
+- **What:**
+  - `FileField` and `ImageField` keep a visually hidden but focusable `<input type="file">` labelled by the field. A second `<label>` acts as the visible "Choose" button and shows a focus ring through `peer-focus-visible`.
+  - The drop zone is a pointer-only enhancement, with a lint suppression and comment.
+  - The value is `File[]`. `files({ maxBytes, accept, min, max })` reports size and type errors with the file name, localized.
+  - `accept` also narrows the native picker. Image previews use object URLs that are revoked on change and on unmount.
+- **Why:**
+  - The native input gives keyboard users and assistive technology the platform file picker.
+  - Dropped files bypass `accept`, so validation has to live in the schema.
+- **Alternatives:** react-dropzone: it duplicates what roughly 40 lines do here and has its own input handling.
+
+## 0063: `mustAccept()` takes a boolean input
+
+- **What:** `mustAccept()` is now `z.boolean().refine(v => v)` instead of `z.literal(true)`.
+- **Why:** The form's default value is honestly `false`. With a literal input type, every form needed a cast to start unticked. The output and error message are unchanged.

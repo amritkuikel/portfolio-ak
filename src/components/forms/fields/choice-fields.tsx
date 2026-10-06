@@ -71,7 +71,7 @@ type SearchableProps = FieldBaseProps & {
 	emptyText?: string;
 };
 
-function OptionList({
+export function OptionList({
 	listId,
 	options,
 	isSelected,

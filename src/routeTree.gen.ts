@@ -24,6 +24,7 @@ import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AdminRoute = AdminRouteImport.update({
@@ -97,6 +98,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AdminRoute,
 } as any)
+const PublicDevFormsRoute = PublicDevFormsRouteImport.update({
+  id: '/dev/forms',
+  path: '/dev/forms',
+  getParentRoute: () => PublicRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
 }
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof AdminAdminIndexRoute
 }
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/_public/stack': typeof PublicStackRoute
   '/_public/verify-email': typeof PublicVerifyEmailRoute
   '/_public/': typeof PublicIndexRoute
+  '/_public/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
 }
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/dev/forms'
     | '/api/auth/$'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/dev/forms'
     | '/api/auth/$'
     | '/admin'
   id:
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_public/stack'
     | '/_public/verify-email'
     | '/_public/'
+    | '/_public/dev/forms'
     | '/api/auth/$'
     | '/_admin/admin/'
   fileRoutesById: FileRoutesById
@@ -314,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_public/dev/forms': {
+      id: '/_public/dev/forms'
+      path: '/dev/forms'
+      fullPath: '/dev/forms'
+      preLoaderRoute: typeof PublicDevFormsRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -367,6 +386,7 @@ interface PublicRouteChildren {
   PublicStackRoute: typeof PublicStackRoute
   PublicVerifyEmailRoute: typeof PublicVerifyEmailRoute
   PublicIndexRoute: typeof PublicIndexRoute
+  PublicDevFormsRoute: typeof PublicDevFormsRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -375,6 +395,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicStackRoute: PublicStackRoute,
   PublicVerifyEmailRoute: PublicVerifyEmailRoute,
   PublicIndexRoute: PublicIndexRoute,
+  PublicDevFormsRoute: PublicDevFormsRoute,
 }
 
 const PublicRouteWithChildren =

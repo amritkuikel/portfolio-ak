@@ -27,6 +27,9 @@ export const NE_MONTHS = [
 	"डिसेम्बर",
 ] as const;
 
+/** CLDR ne abbreviated weekdays, Sunday first. */
+export const NE_WEEKDAYS_SHORT = ["आइत", "सोम", "मङ्गल", "बुध", "बिहि", "शुक्र", "शनि"] as const;
+
 /** Sunday first, matching Date#getDay(). */
 export const NE_WEEKDAYS = ["आइतबार", "सोमबार", "मङ्गलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"] as const;
 

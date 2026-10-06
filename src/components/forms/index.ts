@@ -23,7 +23,12 @@ import {
 	SelectField,
 	SwitchField,
 } from "./fields/choice-fields";
+import { DateField, DateRangeField, TimeField } from "./fields/date-fields";
+import { FileField, ImageField } from "./fields/file-fields";
+import { ColorField, SliderField, TagsInputField } from "./fields/misc-fields";
 import { CurrencyField, NumberField } from "./fields/number-fields";
+import { OtpField, PhoneField } from "./fields/phone-otp-fields";
+import { RichTextField } from "./fields/rich-text-field";
 import { EmailField, PasswordField, TextareaField, TextField, UrlField } from "./fields/text-fields";
 import { Form, FormErrorSummary, SubmitButton } from "./form-components";
 
@@ -45,6 +50,17 @@ export const { useAppForm, withForm } = createFormHook({
 		CheckboxGroupField,
 		SwitchField,
 		UrlField,
+		PhoneField,
+		OtpField,
+		DateField,
+		DateRangeField,
+		TimeField,
+		SliderField,
+		TagsInputField,
+		ColorField,
+		FileField,
+		ImageField,
+		RichTextField,
 	},
 	formComponents: { Form, SubmitButton, FormErrorSummary },
 });
@@ -57,3 +73,4 @@ export const { useAppForm, withForm } = createFormHook({
 export const formValidators = <TSchema>(schema: TSchema) => ({ onChange: schema, onBlur: schema, onSubmit: schema });
 
 export type { FieldOption } from "./fields/choice-fields";
+export type { DateRangeValue } from "./fields/date-fields";

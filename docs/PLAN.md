@@ -113,7 +113,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   └── admin/test-crud/ # list, new, $id edit
 │   │   ├── api/
 │   │   │   └── auth/$.ts        # Better Auth handler
-│   │   └── dev/                 # dev-only: form showcase (Phase 7)
+│   │   └── _public/dev/forms.tsx # dev-only form showcase (404 + tree-shaken in production)
 │   ├── server/                  # SERVER-ONLY. Never imported by client code.
 │   │   ├── env.ts               # T3 Env server schema
 │   │   ├── db/
@@ -131,22 +131,27 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── render.ts        # renderEmail(id, data, { locale }) -> subject/html/text
 │   │   │   ├── send.ts          # sendEmail(): render in recipient locale + deliver
 │   │   │   └── preview.ts       # helpers for the dev-only preview
+│   │   ├── rich-text/           # sanitize.ts: allowlist sanitizer for rich-text HTML (returns SafeHtml)
 │   │   ├── analytics/           # posthog-node wrapper
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
 │   ├── middleware/              # Start middleware (isomorphic; outside src/server so start.ts can import it):
 │   │                            #   csrf, logging, errors (normalisation), auth (session/user/admin guards)
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
+│   │   ├── dev.ts               # dev-only helpers (rich-text sanitize preview; refuses in production)
 │   │   └── test-crud.ts
 │   ├── features/
 │   │   ├── auth/                # auth UI, error mapping, validation, session queries
+│   │   ├── dev/                 # dev-only pages (forms showcase)
 │   │   └── test-crud/           # schema.ts (shared Zod), queries, collection, components
 │   ├── components/
 │   │   ├── errors/              # error, not-found and pending pages
 │   │   ├── ui/                  # shadcn/ui primitives
 │   │   ├── layout/              # header, footer, admin sidebar, language switcher, theme toggle
 │   │   └── forms/               # useAppForm/withForm (index.ts), contexts, field shell (a11y wiring),
-│   │                            #   fields/ (text, number, choice), Form, SubmitButton, FormErrorSummary
+│   │                            #   fields/ (text, number, choice, phone/otp, date/time, slider/tags/color,
+│   │                            #   file/image, rich text), Form, SubmitButton, FormErrorSummary
+│   │   └── rich-text-content.tsx # renders SafeHtml (the only innerHTML sink)
 │   ├── lib/
 │   │   ├── client-env.ts        # validated client env (import this)
 │   │   ├── client-env.schema.ts # T3 Env client schema (also used by vite.config.ts)
@@ -155,6 +160,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── intl-ne.ts           # portable CLDR ne data (browsers lack ICU ne)
 │   │   ├── i18n/                # locale header + server-function locale middleware
 │   │   ├── validation.ts        # localized Zod helpers
+│   │   ├── date-only.ts         # "YYYY-MM-DD" calendar dates without time-zone drift
+│   │   ├── safe-html.ts         # SafeHtml brand type
 │   │   ├── query.ts             # QueryClient factory (per request on the server)
 │   │   ├── errors.ts            # AppError + serialization adapter
 │   │   ├── fn-input.ts          # zodInput(): Zod -> AppError(BAD_REQUEST) for server fn input
