@@ -18,6 +18,8 @@ type FilePickerProps = FieldBaseProps &
 		multiple?: boolean;
 		/** Renders previews (images) or a file list for the current value. */
 		renderSelection: (files: File[], remove: (file: File) => void) => React.ReactNode;
+		/** Shown instead when nothing is picked (e.g. the currently stored image). */
+		emptySelection?: React.ReactNode;
 	};
 
 /**
@@ -35,6 +37,7 @@ function FilePicker({
 	maxBytes,
 	accept,
 	renderSelection,
+	emptySelection = null,
 }: FilePickerProps) {
 	const field = useFieldContext<File[]>();
 	const a11y = useFieldA11y(label);
@@ -105,7 +108,7 @@ function FilePicker({
 					{m.file_limits({ size: formatBytes(maxBytes), types: typesLabel(accept) })}
 				</p>
 			</div>
-			{files.length > 0 ? renderSelection(files, remove) : null}
+			{files.length > 0 ? renderSelection(files, remove) : emptySelection}
 			<FieldMessages
 				descriptionId={a11y.descriptionId}
 				description={description}
@@ -196,14 +199,45 @@ function ImagePreview({ file, onRemove }: { file: File; onRemove: () => void }) 
 	);
 }
 
-export type ImageFieldProps = FieldBaseProps & Omit<FileRules, "accept"> & { accept?: ReadonlyArray<string> };
+/** An image already stored on the server (edit forms). The form tracks whether it's been removed. */
+export type CurrentImage = { url: string; removed: boolean; onRemove: () => void; onKeep: () => void };
 
-/** A single image with a live preview. Stores File[] (zero or one file). */
-export function ImageField({ accept = ["image/png", "image/jpeg", "image/webp"], ...props }: ImageFieldProps) {
+function CurrentImagePreview({ current }: { current: CurrentImage }) {
+	if (current.removed) {
+		return (
+			<div className="flex items-center justify-between gap-3 rounded-md border border-dashed px-3 py-2 text-sm">
+				<span className="text-muted-foreground">{m.image_will_be_removed()}</span>
+				<Button type="button" variant="outline" size="sm" onClick={current.onKeep}>
+					{m.image_keep_current()}
+				</Button>
+			</div>
+		);
+	}
+	return (
+		<div className="flex items-center gap-3" data-testid="current-image">
+			<img src={current.url} alt={m.image_current_alt()} className="size-20 rounded-md border object-cover" />
+			<Button type="button" variant="outline" size="sm" onClick={current.onRemove}>
+				<XIcon aria-hidden />
+				{m.image_remove_current()}
+			</Button>
+		</div>
+	);
+}
+
+export type ImageFieldProps = FieldBaseProps &
+	Omit<FileRules, "accept"> & {
+		accept?: ReadonlyArray<string>;
+		/** The stored image, shown (with Remove / Keep) while no new file is picked. */
+		current?: CurrentImage | undefined;
+	};
+
+/** A single image with a live preview. Stores File[] (zero or one file); a new file replaces `current`. */
+export function ImageField({ accept = ["image/png", "image/jpeg", "image/webp"], current, ...props }: ImageFieldProps) {
 	return (
 		<FilePicker
 			{...props}
 			accept={accept}
+			emptySelection={current ? <CurrentImagePreview current={current} /> : null}
 			renderSelection={(files, remove) =>
 				files[0] ? <ImagePreview file={files[0]} onRemove={() => remove(files[0] as File)} /> : null
 			}

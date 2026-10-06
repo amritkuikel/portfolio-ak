@@ -26,6 +26,9 @@ import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-e
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
+import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
+import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -108,6 +111,21 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAdminTestCrudIndexRoute = AdminAdminTestCrudIndexRouteImport.update({
+  id: '/admin/test-crud/',
+  path: '/admin/test-crud/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminTestCrudIdRoute = AdminAdminTestCrudIdRouteImport.update({
+  id: '/admin/test-crud/$id',
+  path: '/admin/test-crud/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminTestCrudNewRoute = AdminAdminTestCrudNewRouteImport.update({
+  id: '/admin/test-crud/new',
+  path: '/admin/test-crud/new',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
@@ -123,6 +141,9 @@ export interface FileRoutesByFullPath {
   '/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
+  '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -138,6 +159,9 @@ export interface FileRoutesByTo {
   '/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
+  '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -158,6 +182,9 @@ export interface FileRoutesById {
   '/_public/dev/forms': typeof PublicDevFormsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
+  '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -175,6 +202,9 @@ export interface FileRouteTypes {
     | '/dev/forms'
     | '/api/auth/$'
     | '/admin/'
+    | '/admin/test-crud/$id'
+    | '/admin/test-crud/new'
+    | '/admin/test-crud/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,6 +220,9 @@ export interface FileRouteTypes {
     | '/dev/forms'
     | '/api/auth/$'
     | '/admin'
+    | '/admin/test-crud/$id'
+    | '/admin/test-crud/new'
+    | '/admin/test-crud'
   id:
     | '__root__'
     | '/_admin'
@@ -209,6 +242,9 @@ export interface FileRouteTypes {
     | '/_public/dev/forms'
     | '/api/auth/$'
     | '/_admin/admin/'
+    | '/_admin/admin/test-crud/$id'
+    | '/_admin/admin/test-crud/new'
+    | '/_admin/admin/test-crud/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -340,15 +376,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin/admin/test-crud/': {
+      id: '/_admin/admin/test-crud/'
+      path: '/admin/test-crud'
+      fullPath: '/admin/test-crud/'
+      preLoaderRoute: typeof AdminAdminTestCrudIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/test-crud/$id': {
+      id: '/_admin/admin/test-crud/$id'
+      path: '/admin/test-crud/$id'
+      fullPath: '/admin/test-crud/$id'
+      preLoaderRoute: typeof AdminAdminTestCrudIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/test-crud/new': {
+      id: '/_admin/admin/test-crud/new'
+      path: '/admin/test-crud/new'
+      fullPath: '/admin/test-crud/new'
+      preLoaderRoute: typeof AdminAdminTestCrudNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminTestCrudIdRoute: typeof AdminAdminTestCrudIdRoute
+  AdminAdminTestCrudNewRoute: typeof AdminAdminTestCrudNewRoute
+  AdminAdminTestCrudIndexRoute: typeof AdminAdminTestCrudIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminTestCrudIdRoute: AdminAdminTestCrudIdRoute,
+  AdminAdminTestCrudNewRoute: AdminAdminTestCrudNewRoute,
+  AdminAdminTestCrudIndexRoute: AdminAdminTestCrudIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

@@ -1,0 +1,139 @@
+import { z } from "zod";
+import { formatNumber } from "@/lib/intl";
+import { PAGE_SIZES } from "@/lib/stores/preferences";
+import { currency, files, optionalText, phone, required, richText, tags } from "@/lib/validation";
+import { m } from "@/paraglide/messages";
+import { TEST_CRUD_IMAGE_MAX_BYTES, TEST_CRUD_IMAGE_TYPES, TEST_CRUD_STATUSES, type TestCrudStatus } from "./constants";
+
+export * from "./constants";
+
+// ---------------------------------------------------------------------------
+// Create / update: ONE schema shared by the form (client) and the server functions
+// ---------------------------------------------------------------------------
+
+export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export const slug = () =>
+	z
+		.string()
+		.trim()
+		.min(1, { error: () => m.validation_required() })
+		.max(80, { error: () => m.validation_text_max({ max: formatNumber(80) }) })
+		.regex(SLUG_PATTERN, { error: () => m.validation_slug() });
+
+/** Every editable field except the image (a File, sent alongside in the same FormData). */
+export const testCrudInputSchema = z.object({
+	title: required({ max: 120 }),
+	slug: slug(),
+	summary: optionalText({ max: 280 }),
+	/** Rich-text HTML; the server sanitizes it before storing. */
+	body: richText({ required: false, max: 20_000 }),
+	status: z.enum(TEST_CRUD_STATUSES),
+	price: currency({ max: 10_000_000 }),
+	phone: phone({ optional: true }),
+	tags: tags({ max: 10, maxLength: 32 }),
+});
+export type TestCrudInput = z.output<typeof testCrudInputSchema>;
+
+export const imageRules = { maxBytes: TEST_CRUD_IMAGE_MAX_BYTES, accept: TEST_CRUD_IMAGE_TYPES };
+
+/** The admin form: the shared input plus the image picker and a "remove current image" flag. */
+export const testCrudFormSchema = testCrudInputSchema.extend({
+	image: files({ ...imageRules, max: 1 }),
+	removeImage: z.boolean(),
+});
+export type TestCrudFormValues = z.input<typeof testCrudFormSchema>;
+
+/** Lowercase ASCII slug from a title ("Hello, World!" -> "hello-world"); "" for non-Latin titles. */
+export const slugify = (title: string) =>
+	title
+		.normalize("NFKD")
+		.replace(/[̀-ͯ]/g, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 80)
+		.replace(/-+$/g, "");
+
+// ---------------------------------------------------------------------------
+// Admin list: URL search params == listTestCrud input
+// ---------------------------------------------------------------------------
+
+export const TEST_CRUD_SORTS = ["-updated", "updated", "title", "-title", "price", "-price"] as const;
+export type TestCrudSort = (typeof TEST_CRUD_SORTS)[number];
+
+export const TEST_CRUD_STATUS_FILTERS = ["all", ...TEST_CRUD_STATUSES] as const;
+export type TestCrudStatusFilter = (typeof TEST_CRUD_STATUS_FILTERS)[number];
+
+export const TEST_CRUD_SEARCH_DEFAULTS = { q: "", status: "all", sort: "-updated", page: 1 } as const satisfies {
+	q: string;
+	status: TestCrudStatusFilter;
+	sort: TestCrudSort;
+	page: number;
+};
+
+const pageSize = z.coerce
+	.number()
+	.refine((value) => (PAGE_SIZES as ReadonlyArray<number>).includes(value))
+	.optional()
+	.catch(undefined);
+
+/**
+ * /admin/test-crud search params and the list server function input. Invalid
+ * values are corrected (.catch) rather than rejected. `pageSize` is optional in
+ * the URL; the route falls back to the saved table preference.
+ */
+export const testCrudSearchSchema = z.object({
+	q: z.string().trim().max(80).default(TEST_CRUD_SEARCH_DEFAULTS.q).catch(TEST_CRUD_SEARCH_DEFAULTS.q),
+	status: z
+		.enum(TEST_CRUD_STATUS_FILTERS)
+		.default(TEST_CRUD_SEARCH_DEFAULTS.status)
+		.catch(TEST_CRUD_SEARCH_DEFAULTS.status),
+	sort: z.enum(TEST_CRUD_SORTS).default(TEST_CRUD_SEARCH_DEFAULTS.sort).catch(TEST_CRUD_SEARCH_DEFAULTS.sort),
+	page: z.coerce
+		.number()
+		.int()
+		.min(1)
+		.max(10_000)
+		.default(TEST_CRUD_SEARCH_DEFAULTS.page)
+		.catch(TEST_CRUD_SEARCH_DEFAULTS.page),
+	pageSize,
+});
+export type TestCrudSearch = z.output<typeof testCrudSearchSchema>;
+
+/** What the list server function receives: the search with a resolved page size. */
+export const testCrudListInputSchema = testCrudSearchSchema.extend({
+	pageSize: z.coerce.number().refine((value) => (PAGE_SIZES as ReadonlyArray<number>).includes(value)),
+});
+export type TestCrudListInput = z.output<typeof testCrudListInputSchema>;
+
+export const testCrudIdsSchema = z.object({ ids: z.array(z.uuid()).min(1).max(100) });
+export const testCrudIdSchema = z.object({ id: z.uuid() });
+export const testCrudStatusUpdateSchema = z.object({ id: z.uuid(), status: z.enum(TEST_CRUD_STATUSES) });
+
+// ---------------------------------------------------------------------------
+// DTOs (what crosses the wire; dates as ISO strings)
+// ---------------------------------------------------------------------------
+
+export type TestCrudListItem = {
+	id: string;
+	slug: string;
+	title: string;
+	status: TestCrudStatus;
+	price: number;
+	tags: string[];
+	imageUrl: string | null;
+	publishedAt: string | null;
+	updatedAt: string;
+};
+
+export type TestCrudPage = { items: TestCrudListItem[]; total: number; page: number; pageCount: number };
+
+export type TestCrudDetail = TestCrudListItem & {
+	summary: string;
+	body: string;
+	phone: string | null;
+	createdAt: string;
+};
+
+export const imageUrl = (id: string | null) => (id ? `/api/images/${id}` : null);

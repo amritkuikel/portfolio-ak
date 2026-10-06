@@ -79,6 +79,8 @@ export default defineConfig(async ({ command, mode }) => {
 			nitro({
 				// Validates server env at boot. See the file for why this is a Nitro plugin.
 				plugins: ["./src/server/plugins/validate-env.ts"],
+				// A Nitro route, not a Start server route, so <img> requests reach it in dev too.
+				routes: { "/api/images/:id": { handler: "./src/server/routes/images.ts", method: "GET" } },
 				rolldownConfig: {
 					onwarn(warning, warn) {
 						if (NITRO_IGNORED_CODES.has(warning.code ?? "")) return;

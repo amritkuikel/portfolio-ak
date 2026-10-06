@@ -98,6 +98,21 @@ Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
   - These are saved in cookies, so the server renders them on the first byte, with no theme flash and no hydration mismatch.
 - **Form state:** TanStack Form. **URL state** (filters, page): Zod search params.
 
+## Test CRUD: the template for new features
+
+`/admin/test-crud` is the reference feature. To build a new one, copy its shape:
+
+| Layer | File | What it shows |
+| --- | --- | --- |
+| Table | `src/server/db/schema/test-crud.ts` | Drizzle table. Then run `pnpm db:generate` and `pnpm db:migrate`. |
+| Shared schema | `src/features/test-crud/schema.ts` | One Zod schema for the form and the server, plus list search params and DTOs |
+| Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
+| Server functions | `src/functions/test-crud.ts` | `requireAdminMiddleware` on every function, `.validator()` input, and FormData for file uploads |
+| Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
+| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*` | URL-driven table, forms built only from the reusable fields, confirmation dialogs, toasts and the unsaved-changes guard |
+
+Images are stored in Postgres and served from `/api/images/:id` (see decision 0067).
+
 ## Authentication
 
 Better Auth (`src/server/auth/auth.ts`) provides:

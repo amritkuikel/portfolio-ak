@@ -1,16 +1,22 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutDashboardIcon, type LucideIcon, PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
+import {
+	DatabaseIcon,
+	LayoutDashboardIcon,
+	type LucideIcon,
+	PanelLeftCloseIcon,
+	PanelLeftOpenIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/lib/stores/hooks";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-type NavItem = { to: "/admin"; label: () => string; icon: LucideIcon; exact?: boolean };
+type NavItem = { to: "/admin" | "/admin/test-crud"; label: () => string; icon: LucideIcon; exact?: boolean };
 
-// Test CRUD adds its entry here in Phase 9.
 const NAV: ReadonlyArray<NavItem> = [
 	{ to: "/admin", label: m.admin_nav_dashboard, icon: LayoutDashboardIcon, exact: true },
+	{ to: "/admin/test-crud", label: m.admin_nav_test_crud, icon: DatabaseIcon },
 ];
 
 const SIDEBAR_ID = "admin-sidebar";

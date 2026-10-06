@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { FileField, ImageField } from "@/components/forms/fields/file-fields";
 import { files } from "@/lib/validation";
@@ -121,5 +122,46 @@ describe("ImageField", () => {
 		drop([pdf("doc.pdf")]);
 		await screen.findByText("doc.pdf isn't an accepted file type.");
 		expectInvalid(input, "doc.pdf isn't an accepted file type.");
+	});
+});
+
+describe("ImageField with a stored image", () => {
+	it("shows the current image until a new one is picked, and lets the form remove or keep it", async () => {
+		function WithStoredImage() {
+			const [removed, setRemoved] = useState(false);
+			return (
+				<ImageField
+					label="Photo"
+					maxBytes={2 * KB}
+					current={{
+						url: "/api/images/abc",
+						removed,
+						onRemove: () => setRemoved(true),
+						onKeep: () => setRemoved(false),
+					}}
+				/>
+			);
+		}
+		const { user } = renderField(<WithStoredImage />, {
+			defaultValue: [],
+			schema: files({ maxBytes: 2 * KB, accept: ["image/png"] }),
+		});
+		expect(screen.getByRole("img", { name: "Current image" })).toHaveAttribute("src", "/api/images/abc");
+		await user.click(screen.getByRole("button", { name: "Remove image" }));
+		expect(screen.queryByRole("img", { name: "Current image" })).not.toBeInTheDocument();
+		expect(screen.getByText("The current image will be removed when you save.")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Keep image" }));
+		expect(screen.getByRole("img", { name: "Current image" })).toBeInTheDocument();
+	});
+
+	it("a newly picked image replaces the current preview", async () => {
+		const current = { url: "/api/images/abc", removed: false, onRemove: vi.fn(), onKeep: vi.fn() };
+		const { user } = renderField(<ImageField label="Photo" maxBytes={2 * KB} current={current} />, {
+			defaultValue: [],
+			schema: files({ maxBytes: 2 * KB, accept: ["image/png"] }),
+		});
+		await user.upload(screen.getByLabelText("Photo"), png("new.png"));
+		expect(screen.queryByTestId("current-image")).not.toBeInTheDocument();
+		expect(screen.getByRole("img", { name: "Preview of new.png" })).toBeInTheDocument();
 	});
 });

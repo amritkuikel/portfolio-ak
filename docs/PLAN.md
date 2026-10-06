@@ -110,7 +110,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── _auth/               # login, register, sign-in-code (OTP), forgot-password
 │   │   ├── _authed/             # requires a session (account: profile, email, password, sessions)
 │   │   ├── _admin/              # requires admin role (sidebar layout)
-│   │   │   └── admin/test-crud/ # list, new, $id edit
+│   │   │   └── admin/test-crud/ # index (list), new, $id (edit)
 │   │   ├── api/
 │   │   │   └── auth/$.ts        # Better Auth handler
 │   │   └── _public/dev/forms.tsx # dev-only form showcase (404 + tree-shaken in production)
@@ -132,6 +132,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── send.ts          # sendEmail(): render in recipient locale + deliver
 │   │   │   └── preview.ts       # helpers for the dev-only preview
 │   │   ├── rich-text/           # sanitize.ts: allowlist sanitizer for rich-text HTML (returns SafeHtml)
+│   │   ├── test-crud/           # repository.ts (Drizzle queries, injectable db), image.ts (signature checks)
+│   │   ├── routes/              # Nitro routes (images.ts: GET /api/images/:id), registered in vite.config.ts
 │   │   ├── analytics/           # posthog-node wrapper
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
 │   ├── middleware/              # Start middleware (isomorphic; outside src/server so start.ts can import it):
@@ -139,11 +141,11 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
 │   │   ├── dev.ts               # dev-only helpers (rich-text sanitize preview; refuses in production)
-│   │   └── test-crud.ts
+│   │   └── test-crud.ts         # admin server functions (all behind requireAdminMiddleware)
 │   ├── features/
 │   │   ├── auth/                # auth UI, error mapping, validation, session queries
 │   │   ├── dev/                 # dev-only pages (forms showcase)
-│   │   └── test-crud/           # schema.ts (shared Zod), queries, collection, components
+│   │   └── test-crud/           # constants, schema.ts (shared Zod + DTOs), queries, collection (TanStack DB), components/
 │   ├── components/
 │   │   ├── errors/              # error, not-found and pending pages
 │   │   ├── ui/                  # shadcn/ui primitives
