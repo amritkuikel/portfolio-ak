@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import type { DbClient } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
@@ -7,6 +8,7 @@ import { ErrorPage } from "./components/errors/error-page";
 import { NotFoundPage } from "./components/errors/not-found-page";
 import { PendingPage } from "./components/errors/pending-page";
 import { createDbClient } from "./lib/db";
+import { sentryDsn } from "./lib/observability/sentry";
 import { createQueryClient } from "./lib/query";
 import type { Session } from "./lib/session";
 import { createPreferencesStore, type PreferencesStore } from "./lib/stores/preferences";
@@ -54,6 +56,9 @@ export function getRouter() {
 	// Official integration: dehydrates the QueryClient into the SSR stream,
 	// hydrates it on the client and wraps the app in QueryClientProvider.
 	setupRouterSsrQueryIntegration({ router, queryClient });
+
+	// Navigation performance traces in the browser (only when Sentry is on).
+	if (!router.isServer && sentryDsn) Sentry.addIntegration(Sentry.tanstackRouterBrowserTracingIntegration(router));
 
 	// Official TanStack DB integration, applied after the Query one because it
 	// wraps the existing dehydrate/hydrate/Wrap: adds <DbProvider>, streams live

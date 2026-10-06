@@ -56,6 +56,10 @@ export const serverEnvSchema = {
 	ADMIN_EMAIL: z.email().optional(),
 	ADMIN_PASSWORD: z.string().min(12, "Use at least 12 characters for the admin password.").optional(),
 	ADMIN_NAME: z.string().trim().min(1).optional(),
+	// Sentry source map upload during `pnpm build` (all three or none). Never needed at runtime.
+	SENTRY_AUTH_TOKEN: z.string().trim().min(1).optional(),
+	SENTRY_ORG: z.string().trim().min(1).optional(),
+	SENTRY_PROJECT: z.string().trim().min(1).optional(),
 };
 
 export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) =>
@@ -71,6 +75,14 @@ export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) 
 						code: "custom",
 						path: [env.GOOGLE_CLIENT_ID ? "GOOGLE_CLIENT_SECRET" : "GOOGLE_CLIENT_ID"],
 						message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither.",
+					});
+				}
+				const sentryUpload = [env.SENTRY_AUTH_TOKEN, env.SENTRY_ORG, env.SENTRY_PROJECT].filter(Boolean).length;
+				if (sentryUpload !== 0 && sentryUpload !== 3) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["SENTRY_AUTH_TOKEN"],
+						message: "Set SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT together, or none of them.",
 					});
 				}
 				if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {

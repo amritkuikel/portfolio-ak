@@ -19,7 +19,12 @@ export const PREFERENCE_COOKIES = {
 	theme: "theme",
 	sidebar: "sidebar",
 	tables: "table-prefs",
+	analytics: "analytics-consent",
 } as const;
+
+/** Analytics consent. "unset" shows the banner; nothing is tracked unless "granted". */
+export const ANALYTICS_CONSENT = ["unset", "granted", "denied"] as const;
+export type AnalyticsConsent = (typeof ANALYTICS_CONSENT)[number];
 
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 
@@ -38,9 +43,15 @@ export type Preferences = {
 	theme: ThemePreference;
 	sidebarCollapsed: boolean;
 	tables: Record<string, TablePreferences>;
+	analyticsConsent: AnalyticsConsent;
 };
 
-export const DEFAULT_PREFERENCES: Preferences = { theme: "system", sidebarCollapsed: false, tables: {} };
+export const DEFAULT_PREFERENCES: Preferences = {
+	theme: "system",
+	sidebarCollapsed: false,
+	tables: {},
+	analyticsConsent: "unset",
+};
 
 const parseJson = (text: string | undefined): unknown => {
 	if (!text) return undefined;
@@ -55,10 +66,12 @@ const parseJson = (text: string | undefined): unknown => {
 export const parsePreferences = (cookies: Readonly<Record<string, string | undefined>>): Preferences => {
 	const theme = z.enum(THEMES).safeParse(cookies[PREFERENCE_COOKIES.theme]);
 	const tables = tablesSchema.safeParse(parseJson(cookies[PREFERENCE_COOKIES.tables]));
+	const consent = z.enum(["granted", "denied"]).safeParse(cookies[PREFERENCE_COOKIES.analytics]);
 	return {
 		theme: theme.success ? theme.data : DEFAULT_PREFERENCES.theme,
 		sidebarCollapsed: cookies[PREFERENCE_COOKIES.sidebar] === "collapsed",
 		tables: tables.success ? tables.data : DEFAULT_PREFERENCES.tables,
+		analyticsConsent: consent.success ? consent.data : "unset",
 	};
 };
 
@@ -90,6 +103,13 @@ export const writePreferenceCookie = (name: string, value: string) => {
 	document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${ONE_YEAR}; SameSite=Lax${secure}`;
 };
 
+/** Deletes a preference cookie (browser only). */
+export const clearPreferenceCookie = (name: string) => {
+	if (typeof document === "undefined") return;
+	// biome-ignore lint/suspicious/noDocumentCookie: the Cookie Store API is not available in Firefox/Safari; these are non-sensitive UI preferences.
+	document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+};
+
 const withTable = (
 	tables: Preferences["tables"],
 	tableId: string,
@@ -108,6 +128,12 @@ export const createPreferencesStore = (initial: Preferences) =>
 			setSidebarCollapsed: (sidebarCollapsed: boolean) => {
 				setState((state) => ({ ...state, sidebarCollapsed }));
 				writePreferenceCookie(PREFERENCE_COOKIES.sidebar, sidebarCollapsed ? "collapsed" : "open");
+			},
+			/** "unset" brings the banner back (cookie removed); the choice itself is remembered for a year. */
+			setAnalyticsConsent: (analyticsConsent: AnalyticsConsent) => {
+				setState((state) => ({ ...state, analyticsConsent }));
+				if (analyticsConsent === "unset") clearPreferenceCookie(PREFERENCE_COOKIES.analytics);
+				else writePreferenceCookie(PREFERENCE_COOKIES.analytics, analyticsConsent);
 			},
 			setTablePageSize: (tableId: string, pageSize: number) => {
 				setState((state) => ({ ...state, tables: withTable(state.tables, tableId, (t) => ({ ...t, pageSize })) }));

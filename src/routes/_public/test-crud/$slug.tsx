@@ -2,10 +2,12 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { ArrowLeftIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Badge } from "@/components/ui/badge";
 import { publicTestCrudDetailQueryOptions } from "@/features/test-crud/queries";
 import { testCrudSlugParamSchema } from "@/features/test-crud/schema";
+import { track } from "@/lib/analytics";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
 import { formatCurrency, formatDate } from "@/lib/intl";
@@ -46,6 +48,14 @@ function PublicDetailPage() {
 	const { slug } = Route.useParams();
 	const { data: item } = useSuspenseQuery(publicTestCrudDetailQueryOptions(slug));
 	const phone = item.phone ? parsePhoneNumberFromString(item.phone) : undefined;
+
+	// Once per item shown (StrictMode runs effects twice in dev). A no-op without analytics consent.
+	const viewed = useRef<string | null>(null);
+	useEffect(() => {
+		if (viewed.current === item.slug) return;
+		viewed.current = item.slug;
+		track("test_crud_viewed", { slug: item.slug });
+	}, [item.slug]);
 
 	return (
 		<main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:py-14">

@@ -1,5 +1,7 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { type AppErrorCode, isAppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
@@ -26,6 +28,12 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	const router = useRouter();
 	const queryErrorReset = useQueryErrorResetBoundary();
 	const requestId = isAppError(error) ? error.requestId : undefined;
+
+	// Render/loader errors in the browser. AppErrors are expected or already reported
+	// on the server (see sentry.ts); a no-op without a DSN.
+	useEffect(() => {
+		if (!isAppError(error)) Sentry.captureException(error);
+	}, [error]);
 
 	const retry = () => {
 		queryErrorReset.reset();

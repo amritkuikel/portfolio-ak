@@ -13,6 +13,7 @@ import {
 import { AppError } from "@/lib/errors";
 import { zodInput } from "@/lib/fn-input";
 import { requireAdminMiddleware } from "@/middleware/auth";
+import { captureServerEvent } from "@/server/analytics/posthog";
 import { db } from "@/server/db/client";
 import { validateImage } from "@/server/test-crud/image";
 import {
@@ -78,7 +79,9 @@ export const createTestCrud = createServerFn({ method: "POST" })
 	.validator((data: FormData) => parseSaveForm(expectFormData(data)))
 	.handler(async ({ data, context }): Promise<TestCrudDetail> => {
 		const image = data.image ? await validateImage(data.image) : null;
-		return createRow(db, data.input, { image, userId: context.user.id });
+		const created = await createRow(db, data.input, { image, userId: context.user.id });
+		await captureServerEvent("test_crud_created", context.user.id, { item_id: created.id, status: created.status });
+		return created;
 	});
 
 export const updateTestCrud = createServerFn({ method: "POST" })
@@ -87,20 +90,34 @@ export const updateTestCrud = createServerFn({ method: "POST" })
 		const form = expectFormData(data);
 		return { ...parseSaveForm(form), id: zodInput(testCrudIdSchema).parse({ id: String(form.get("id")) }).id };
 	})
-	.handler(async ({ data }): Promise<TestCrudDetail> => {
+	.handler(async ({ data, context }): Promise<TestCrudDetail> => {
 		let image: ImageChange = { kind: "keep" };
 		if (data.image) image = { kind: "replace", image: await validateImage(data.image) };
 		else if (data.removeImage) image = { kind: "remove" };
-		return updateRow(db, data.id, data.input, { image });
+		const updated = await updateRow(db, data.id, data.input, { image });
+		await captureServerEvent("test_crud_updated", context.user.id, { item_id: updated.id, change: "edit" });
+		return updated;
 	});
 
 export const setTestCrudStatusFn = createServerFn({ method: "POST" })
 	.middleware([requireAdminMiddleware])
 	.validator(zodInput(testCrudStatusUpdateSchema))
-	.handler(({ data }): Promise<TestCrudListItem> => setTestCrudStatus(db, data.id, data.status));
+	.handler(async ({ data, context }): Promise<TestCrudListItem> => {
+		const updated = await setTestCrudStatus(db, data.id, data.status);
+		await captureServerEvent("test_crud_updated", context.user.id, {
+			item_id: updated.id,
+			change: "status",
+			status: updated.status,
+		});
+		return updated;
+	});
 
 /** Deletes one or many (bulk delete). Missing ids are ignored; returns how many were deleted. */
 export const deleteTestCrudFn = createServerFn({ method: "POST" })
 	.middleware([requireAdminMiddleware])
 	.validator(zodInput(testCrudIdsSchema))
-	.handler(async ({ data }): Promise<{ deleted: number }> => ({ deleted: await deleteTestCrud(db, data.ids) }));
+	.handler(async ({ data, context }): Promise<{ deleted: number }> => {
+		const deleted = await deleteTestCrud(db, data.ids);
+		if (deleted > 0) await captureServerEvent("test_crud_deleted", context.user.id, { count: deleted });
+		return { deleted };
+	});

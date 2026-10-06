@@ -4,6 +4,9 @@
  * during SSR. The original request is passed on because the router does its own
  * URL de-localization (see router.tsx); passing the rewritten one causes loops.
  */
+// Sentry must initialise before anything else on the server.
+import "./instrument.server";
+import { wrapFetchWithSentry } from "@sentry/tanstackstart-react";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { LOCALE_HEADER } from "./lib/i18n/locale-header";
 import { defineCustomServerStrategy, toLocale } from "./paraglide/runtime.js";
@@ -16,9 +19,12 @@ defineCustomServerStrategy("custom-header", {
 	getLocale: (request) => toLocale(request?.headers.get(LOCALE_HEADER) ?? undefined),
 });
 
-export default createServerEntry({
-	fetch(request) {
-		// Pages that fail with an AppError (e.g. FORBIDDEN) get its status instead of 500.
-		return runWithErrorStatus(() => paraglideMiddleware(request, () => handler.fetch(request)));
-	},
-});
+export default createServerEntry(
+	// Request tracing + capture (a pass-through when Sentry isn't initialised).
+	wrapFetchWithSentry({
+		fetch(request: Request) {
+			// Pages that fail with an AppError (e.g. FORBIDDEN) get its status instead of 500.
+			return runWithErrorStatus(() => paraglideMiddleware(request, () => handler.fetch(request)));
+		},
+	}),
+);

@@ -419,5 +419,14 @@
 	"test_crud_public_page_title": "वस्तुहरू, पृष्ठ {page}",
 	"test_crud_public_search_title": "खोज: {q}",
 	"test_crud_public_loading": "वस्तुहरू लोड हुँदैछन्…",
-	"test_crud_public_read_more": "{title} बारे थप पढ्नुहोस्"
+	"test_crud_public_read_more": "{title} बारे थप पढ्नुहोस्",
+	"consent_title": "यो साइट सुधार्न सहयोग गर्नुहोस्",
+	"consent_body": "तपाईंको अनुमति भए हामी कुन पृष्ठ हेरिन्छन् भनेर बुझ्न PostHog विश्लेषण प्रयोग गर्छौँ। तपाईंले अनुमति नदिएसम्म केही ट्र्याक गरिँदैन, र जुनसुकै बेला मन बदल्न सक्नुहुन्छ।",
+	"consent_accept": "विश्लेषण अनुमति दिनुहोस्",
+	"consent_decline": "पर्दैन",
+	"consent_settings_on": "विश्लेषण: अनुमति छ (बदल्नुहोस्)",
+	"consent_settings_off": "विश्लेषण: बन्द (बदल्नुहोस्)",
+	"home_items_cta_title": "नमुना सुविधा हेर्नुहोस्",
+	"home_items_cta_body": "टेस्ट CRUD एडमिनबाट प्रकाशित वस्तुहरू हेर्नुहोस्, तपाईंकै भाषामा सर्भरमा तयार गरिएका।",
+	"home_items_cta_link": "वस्तुहरू हेर्नुहोस्"
 }

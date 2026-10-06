@@ -8,7 +8,7 @@ import {
 } from "@/lib/stores/preferences";
 
 const clearCookies = () => {
-	for (const name of ["theme", "sidebar", "table-prefs"]) {
+	for (const name of ["theme", "sidebar", "table-prefs", "analytics-consent"]) {
 		// biome-ignore lint/suspicious/noDocumentCookie: test cleanup of the cookies the store writes.
 		document.cookie = `${name}=; Path=/; Max-Age=0`;
 	}
@@ -31,6 +31,7 @@ describe("parsePreferences", () => {
 			theme: "dark",
 			sidebarCollapsed: true,
 			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
+			analyticsConsent: "unset",
 		});
 	});
 
@@ -64,8 +65,21 @@ describe("preferences store", () => {
 			theme: "dark",
 			sidebarCollapsed: true,
 			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
+			analyticsConsent: "unset",
 		});
 		// A fresh store built from the cookies (what the next request does) restores everything.
 		expect(parsePreferences(parseCookieHeader(document.cookie))).toEqual(store.state);
+	});
+});
+
+describe("analytics consent cookie", () => {
+	it("persists granted/denied and removes the cookie when reset to unset", () => {
+		const store = createPreferencesStore(DEFAULT_PREFERENCES);
+		store.actions.setAnalyticsConsent("granted");
+		expect(parsePreferences(parseCookieHeader(document.cookie)).analyticsConsent).toBe("granted");
+		store.actions.setAnalyticsConsent("denied");
+		expect(parsePreferences(parseCookieHeader(document.cookie)).analyticsConsent).toBe("denied");
+		store.actions.setAnalyticsConsent("unset");
+		expect(document.cookie).not.toContain("analytics-consent");
 	});
 });

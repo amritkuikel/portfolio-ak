@@ -419,5 +419,14 @@
 	"test_crud_public_page_title": "Items, page {page}",
 	"test_crud_public_search_title": "Search: {q}",
 	"test_crud_public_loading": "Loading items…",
-	"test_crud_public_read_more": "Read more about {title}"
+	"test_crud_public_read_more": "Read more about {title}",
+	"consent_title": "Help us improve this site",
+	"consent_body": "With your permission we use PostHog analytics to see which pages are visited. Nothing is tracked unless you allow it, and you can change your mind at any time.",
+	"consent_accept": "Allow analytics",
+	"consent_decline": "No thanks",
+	"consent_settings_on": "Analytics: allowed (change)",
+	"consent_settings_off": "Analytics: off (change)",
+	"home_items_cta_title": "See the reference feature",
+	"home_items_cta_body": "Browse items published through the Test CRUD admin, rendered on the server in your language.",
+	"home_items_cta_link": "Browse items"
 }

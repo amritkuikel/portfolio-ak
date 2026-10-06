@@ -105,7 +105,8 @@ describe("client env", () => {
 
 	it("does not expose unprefixed variables", () => {
 		const env = createClientEnv({ ...valid, DATABASE_URL: "postgres://x" });
-		expect(Object.keys(env).sort()).toEqual(["VITE_APP_TITLE", "VITE_SITE_URL"]);
+		expect(Object.keys(env).every((key) => key.startsWith("VITE_"))).toBe(true);
+		expect(env).not.toHaveProperty("DATABASE_URL");
 	});
 });
 

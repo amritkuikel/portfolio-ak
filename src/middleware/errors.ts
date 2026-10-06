@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
 import { z } from "zod";
@@ -28,6 +29,9 @@ export const normalizeServerError = (error: unknown, requestId: string): unknown
 		return new AppError("BAD_REQUEST", "Invalid input", { fieldErrors: zodFieldErrors(error), requestId });
 	}
 
+	// The only place unexpected server-function errors reach Sentry: here the original
+	// error (and stack) still exists. The request id matches what the user is shown.
+	Sentry.captureException(error, { tags: { requestId } });
 	logServerFn("error", {
 		requestId,
 		error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error),

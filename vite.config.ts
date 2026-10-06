@@ -1,4 +1,5 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import { sentryTanstackStart } from "@sentry/tanstackstart-react/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -99,6 +100,19 @@ export default defineConfig(async ({ command, mode }) => {
 				},
 			}),
 			viteReact(),
+			// Source map upload to Sentry (must be last). Only when all three build
+			// variables are set, so builds without Sentry stay silent and offline.
+			...(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+				? sentryTanstackStart({
+						org: process.env.SENTRY_ORG,
+						project: process.env.SENTRY_PROJECT,
+						authToken: process.env.SENTRY_AUTH_TOKEN,
+						telemetry: false,
+						// Server-function errors are captured in normalizeServerError; keep
+						// middleware wrapping explicit (start.ts) instead of build-time magic.
+						autoInstrumentMiddleware: false,
+					})
+				: []),
 		],
 	};
 });

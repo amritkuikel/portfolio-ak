@@ -4,6 +4,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ReactNode } from "react";
 import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
+import { ConsentBanner, ObservabilitySync } from "@/components/layout/observability";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
 import { Toaster } from "@/components/ui/sonner";
@@ -55,6 +56,8 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">{children}</div>
 				<ThemeSync />
+				<ObservabilitySync />
+				<ConsentBanner />
 				<Toaster theme={theme} />
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}

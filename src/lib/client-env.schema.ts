@@ -31,6 +31,12 @@ export const clientEnvSchema = {
 			(value) => !URL.canParse(value) || /^https?:$/.test(new URL(value).protocol),
 			"Must start with http:// or https://.",
 		),
+
+	// Observability (all optional). Unset = that service is off and makes no network calls.
+	// Sentry DSNs and PostHog project keys are public by design (they only allow sending data).
+	VITE_SENTRY_DSN: z.url("Must be the DSN URL from Sentry project settings.").optional(),
+	VITE_POSTHOG_KEY: z.string().trim().startsWith("phc_", "PostHog project API keys start with 'phc_'.").optional(),
+	VITE_POSTHOG_HOST: z.url("Must be your PostHog ingest host, e.g. https://eu.i.posthog.com.").optional(),
 };
 
 export const createClientEnv = (runtimeEnv: Record<string, string | boolean | number | undefined>) =>

@@ -779,3 +779,67 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - No console warnings in en or ne, light or dark.
   - Card widths are fixed (`min-w-0`), and the site header now wraps, so there is no horizontal scroll at 360, 390, 768 or 1280 px.
 - **Alternatives:** Reusing the admin functions with a "public" flag: one mistake would expose drafts.
+
+## 0073: Sentry via `@sentry/tanstackstart-react` 11.4.0 (beta, pinned), off without a DSN
+
+- **What:**
+  - The official SDK is pinned to an exact version because it is beta. Initialisation follows Sentry's manual setup for serverless hosts:
+    - `src/instrument.client.ts` is imported first by a custom `src/client.tsx`.
+    - `src/instrument.server.ts` is imported first by `src/server.ts`, which wraps the entry in `wrapFetchWithSentry`.
+    - `sentryGlobalRequestMiddleware` runs first in `start.ts`.
+    - `tanstackRouterBrowserTracingIntegration` is added in `getRouter()` in the browser.
+  - Both sides share `sentryOptions()`: `environment` is the Vite mode, `tracesSampleRate` is 1 in dev and 0.1 in prod, and `sendDefaultPii: false`.
+  - One DSN variable, `VITE_SENTRY_DSN`. DSNs are public by design.
+- **Where errors are captured:**
+  - Unexpected server-function errors are captured in `normalizeServerError` while the original error still exists, tagged with the `requestId` shown to the user. They are not captured by an outer function middleware, which would only see the generic INTERNAL `AppError`.
+  - `beforeSend` drops every `AppError` (4xx are expected; INTERNAL was already reported) and strips `user.ip_address`, which the server SDK adds even with `sendDefaultPii: false`.
+  - The route error page captures non-`AppError` client errors.
+  - `Sentry.setUser({ id })` follows the session; it is cleared on logout.
+- **Source maps:** `sentryTanstackStart()` is added to Vite only when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are all set (validated together), with `telemetry: false` and `autoInstrumentMiddleware: false` (the middleware is wired explicitly). Not verified end to end: there is no Sentry account in this environment.
+- **Verified** against a local fake ingest:
+  - A client error arrived with the user id.
+  - A server-function failure arrived once, with a readable stack (`functions/stack.ts:17`), the `requestId` tag and no IP address.
+  - Without a DSN, the production build made no external requests.
+- **Consent:** Sentry is error monitoring, not product analytics, so it is not tied to the analytics consent banner. It sends no PII beyond the user id. Error message text is not scrubbed by the app; enable Sentry's server-side data scrubbing (the default) and avoid putting secrets in error messages.
+- **Alternatives:**
+  - The `--import` flag setup: not available on Vercel functions.
+  - Session Replay: left out for privacy and bundle size. Add `replayIntegration()` if wanted.
+
+## 0074: PostHog is opt-in; consent is a cookie, and posthog-js loads only after "yes"
+
+- **What:**
+  - `analyticsConsent` (`unset` / `granted` / `denied`) lives in the preferences store and the `analytics-consent` cookie, so the server renders the banner (or not) and the page doesn't shift after hydration.
+  - The banner is shown only when `VITE_POSTHOG_KEY` is set and the choice is `unset`. A footer link reopens it.
+  - `posthog-js` is a dynamic import started only by "Allow analytics". Before that there is no PostHog code, cookie or request.
+  - Configuration: no autocapture, no session recording, no surveys, `person_profiles: identified_only`, and pageviews sent on router navigation.
+  - Withdrawing consent calls `opt_out_capturing()` and `reset()` and deletes PostHog's cookie and localStorage.
+  - Server events (posthog-node, `captureImmediate`, `disableGeoip`) are sent only when the request carries `analytics-consent=granted`.
+  - Test CRUD events:
+    - Created, updated (edit or status change) and deleted are sent from the admin server functions, with the admin's user id as the distinct id.
+    - Viewed is sent from the public detail page, once per item.
+- **Verified** against the fake ingest, with a normal user agent: posthog-js drops events from headless Chrome as bots, which hid events in the first run.
+  - Before consent: no browser requests to PostHog, and posthog-js not loaded.
+  - After "Allow": `$pageview`, then `test_crud_viewed`, `$identify` with the user id on login, and the server's `test_crud_updated` with the admin's id.
+  - After logout, events use a new anonymous id.
+  - "No thanks" stops sending and removes `ph_*` storage.
+  - With no key, nothing was requested.
+- **Alternatives:**
+  - Initialising PostHog with `opt_out_capturing_by_default`: the SDK still loads and may make config requests before consent.
+  - Cookieless mode: weaker funnels, and still a consent question in many jurisdictions.
+
+## 0075: Feature flags are evaluated on the server and shipped with the page
+
+- **What:**
+  - `getHomeFlags` (a server function) calls `posthog.getFeatureFlag(key, distinctId, { sendFeatureFlagEvents: false, disableGeoip: true })` with a 1.5 s timeout. Missing key, `false`, `undefined`, `"control"` or any failure means off.
+  - The home loader awaits it into the Query cache, which is dehydrated with the SSR HTML, so the server and the hydrated client render the same branch.
+  - The distinct id is the visitor's PostHog id read from PostHog's cookie, but only with consent. Otherwise every visitor is evaluated as `"anonymous"`, so no per-visitor identifier leaves the server before consent and no flag-call event is recorded.
+  - Example flag: `home-items-cta` shows a call-to-action card on the home page.
+- **Verified:** with the flag on at the fake ingest, the card was in the SSR HTML and still present after hydration, with no console warnings. With no key it was absent in both.
+- **Alternatives:**
+  - Client-side `posthog.isFeatureEnabled`: renders a default first and then flips, unless bootstrapped. It also needs posthog-js before consent.
+  - Local evaluation with a personal API key: faster, but another secret. Revisit at scale.
+
+## 0076: CSP and ad blockers (deferred to Task 16)
+
+- **What:** Sentry (`*.ingest.sentry.io` or a tunnel) and PostHog (`VITE_POSTHOG_HOST`, plus its assets host for posthog-js extensions) must be added to the Content Security Policy in Task 16. The inline theme script needs the router's nonce.
+- **Why noted now:** both SDKs fail silently when blocked. A managed tunnel (`sentryTanstackStart({ tunnelRoute })`) and a PostHog reverse proxy are options if ad blockers become a problem.

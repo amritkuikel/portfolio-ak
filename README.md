@@ -116,6 +116,22 @@ Images are stored in Postgres and served from `/api/images/:id` (see decision 00
 
 For a public page's head, use `seo({ title, description, path, image })` from `src/lib/seo.ts`. It returns the title, description, canonical URL, `hreflang` alternates for every locale plus `x-default`, and Open Graph and Twitter tags.
 
+## Observability: Sentry and PostHog
+
+Both are optional. If their variables are unset they are off completely: nothing is initialised or downloaded, no consent banner is shown, and no network calls are made.
+
+- **Sentry** (`VITE_SENTRY_DSN`): errors and traces in the browser (`src/instrument.client.ts`) and on the server (`src/instrument.server.ts`).
+  - Unexpected server-function errors are reported once, with the original stack and the `requestId` the user sees.
+  - Expected `AppError`s (4xx) are not reported.
+  - Only the user id is attached: no email, and the IP address is stripped.
+  - Source maps are uploaded on `pnpm build` when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are all set.
+- **PostHog** (`VITE_POSTHOG_KEY`, optional `VITE_POSTHOG_HOST`): opt-in only. A consent banner (with a footer link to change the choice later) stores the choice in a cookie.
+  - Before consent `posthog-js` isn't loaded and the server sends no events.
+  - After consent: pageviews on navigation, `identify` on login, `reset` on logout, and the Test CRUD events `test_crud_created`, `test_crud_updated` and `test_crud_deleted` (server) and `test_crud_viewed` (browser).
+- **Feature flags** are evaluated on the server (`src/functions/feature-flags.ts`) and SSR'd through the Query cache, so server and client render the same thing.
+  - Example: create a boolean flag `home-items-cta` in PostHog to show a call to action on the home page.
+  - Before consent, flags are evaluated with a shared anonymous id and never record `$feature_flag_called`.
+
 ## Authentication
 
 Better Auth (`src/server/auth/auth.ts`) provides:

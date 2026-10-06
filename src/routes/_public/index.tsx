@@ -1,15 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRightIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { homeFlagsQueryOptions } from "@/features/flags/queries";
 import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/_public/")({ component: Home });
+export const Route = createFileRoute("/_public/")({
+	// Feature flags are evaluated on the server and SSR'd with the page (see feature-flags.ts).
+	loader: ({ context }) => context.queryClient.ensureQueryData(homeFlagsQueryOptions()),
+	component: Home,
+});
 
 // Fixed sample values: identical on server and client, so formatting can't cause hydration mismatches.
 const SAMPLE_DATE = "2026-01-15T10:30:00Z";
 const SAMPLE_NOW = "2026-01-18T10:30:00Z";
 
 function Home() {
+	const { data: flags } = useSuspenseQuery(homeFlagsQueryOptions());
 	const rows = [
 		{ label: m.intl_date(), value: formatDate(SAMPLE_DATE, { dateStyle: "full" }) },
 		{ label: m.intl_number(), value: formatNumber(1234567.89) },
@@ -23,6 +32,22 @@ function Home() {
 				<h1 className="font-semibold text-4xl tracking-tight">{m.home_title()}</h1>
 				<p className="text-lg text-muted-foreground">{m.home_intro()}</p>
 			</div>
+			{flags.showItemsCta ? (
+				<Card data-testid="items-cta" className="border-primary/40">
+					<CardHeader>
+						<CardTitle>{m.home_items_cta_title()}</CardTitle>
+						<CardDescription>{m.home_items_cta_body()}</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button asChild>
+							<Link to="/test-crud">
+								{m.home_items_cta_link()}
+								<ArrowRightIcon aria-hidden />
+							</Link>
+						</Button>
+					</CardContent>
+				</Card>
+			) : null}
 			<Card>
 				<CardHeader>
 					<CardTitle>{m.intl_preview_title()}</CardTitle>
