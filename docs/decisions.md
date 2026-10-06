@@ -648,3 +648,60 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 - **What:** `mustAccept()` is now `z.boolean().refine(v => v)` instead of `z.literal(true)`.
 - **Why:** The form's default value is honestly `false`. With a literal input type, every form needed a cast to start unticked. The output and error message are unchanged.
+
+## 0064: When to use TanStack DB, Query or Store, and the rest
+
+| State | Tool | Example in this app |
+| --- | --- | --- |
+| Server data you **read** (lists, details, stats) | **TanStack Query**, using `queryOptions` and `ensureQueryData` in loaders. It is SSR-dehydrated by the official integration. | `/stack` list and stats, session (`sessionQueryOptions`) |
+| Server data you **edit** in place and want instant feedback (optimistic, with rollback) | **TanStack DB query collection**, backed by Query, with live queries over it | Test CRUD admin table (Task 11): edit, delete and bulk delete update instantly and roll back when the server function fails |
+| Client-only **UI preferences** shared across components and persisted | **TanStack Store** (`src/lib/stores`) | Theme, admin sidebar collapsed, table page size and hidden columns |
+| Values being typed into a form | **TanStack Form** | Every form (`useAppForm`) |
+| Shareable, bookmarkable view state | **URL search params** (Zod `validateSearch`) | `/stack?q=&sort=&page=`, and Test CRUD filters later |
+| Local, one-component state | `useState` | Popover open, password visibility |
+
+- **Rules of thumb:**
+  - Never copy server data into a Store. Query or DB own it.
+  - Don't use DB for read-only pages. Query is simpler and is already SSR-hydrated.
+  - Don't put view state in a Store if a link should reproduce it. Use the URL.
+- **Alternatives considered:**
+  - Query alone with `onMutate` and manual cache patching: workable, but every feature re-implements optimistic updates and rollback. DB makes that the default.
+  - Zustand or React context for preferences: TanStack Store is in the stack, has fine-grained `useSelector` subscriptions, and supports actions.
+
+## 0065: Preferences live in cookies, with one store per router
+
+- **What:**
+  - `createPreferencesStore(readPreferences())` is created in `getRouter()`, so there is one per request on the server and one per tab in the browser, exposed as `context.preferences`.
+  - `readPreferences` is a `createIsomorphicFn`. It reads `getCookies()` on the server and `document.cookie` in the browser, so both renders start from the same values.
+  - Store actions write `theme`, `sidebar` and `table-prefs` cookies (one year, `SameSite=Lax`, `Secure` on https, not httpOnly because the browser writes them).
+  - Values are parsed with Zod. Tampered values fall back to defaults, and page sizes are limited to an allowlist.
+- **Theme without a flash:**
+  - An explicit "dark" is rendered by the server as `<html class="dark">`.
+  - "system" is resolved before first paint by a tiny inline `ScriptOnce` script in `<head>` (emitted in the SSR HTML only, removes itself, supports a CSP nonce for Task 16).
+  - `ThemeSync` then keeps the class in sync and follows OS changes.
+  - `<html>` has `suppressHydrationWarning`, needed only because that script may add the class before hydration.
+  - `color-scheme` is set per theme so native controls match.
+- **Verified in Chrome** (dev server):
+  - With a dark cookie, or "system" on a dark OS, `.dark` and the dark background are already applied when `<body>` is first parsed.
+  - Choosing Dark in the menu and hard-reloading also shows no light frame.
+  - Production SSR renders `class="dark"` for the dark cookie and falls back to "system" for a tampered cookie.
+  - Sidebar: collapsing persists, the JS-off server render shows it collapsed (56px), and it is still collapsed after a reload.
+  - There were no console warnings in either locale.
+- **Why cookies:** `localStorage` is invisible to the server. The server would render defaults and the client would correct them after hydration, causing a flash or a hydration mismatch. The store must not be module-level, because on the server it would be shared between visitors.
+- **Alternatives:**
+  - `localStorage` plus a blocking script for everything: it still can't render the sidebar width or page size on the server.
+  - A server function to set cookies: an extra round trip for a purely cosmetic change.
+
+## 0066: TanStack DB uses the official router integration and has its own chunk
+
+- **What:**
+  - `getRouter()` creates a `DbClient` with the request's `QueryClient` as a dependency (`src/lib/db.ts`, `queryClientOf`). It wraps the router with `routerWithDbClient` from `@tanstack/react-router-with-db` 0.1.0, after `setupRouterSsrQueryIntegration`, because it chains the existing `dehydrate`, `hydrate` and `Wrap`.
+  - Feature collections are module-level descriptors (`collectionOptions(id, factory)`) that each DbClient materializes separately, so SSR requests never share rows. Tests cover this.
+  - A `tanstack-db` client chunk group (alongside `react-vendor`) keeps the entry chunk under Vite's 500 kB warning: entry 299 kB, DB 284 kB, 84 kB gzipped.
+- **Why:**
+  - This is the officially documented Start integration. It streams live queries rendered during SSR and hydrates them.
+  - Mutation handlers that throw make DB roll back the optimistic change, which is exactly what Test CRUD's admin needs. `tests/unit/db-collection.test.ts` shows it.
+- **Costs and risks:**
+  - The DB runtime loads on every page, about 84 kB gzipped and cached separately.
+  - Both packages are pre-1.0. Query collections still auto-refetch after a handler unless it returns `{ refetch: false }`, and that changes at 1.0. Pin versions and re-check on upgrade.
+- **Alternatives:** Creating the DbClient only on admin routes: it has no official SSR path and would duplicate the provider wiring.

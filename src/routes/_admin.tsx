@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { AdminLayout } from "@/components/layout/admin-sidebar";
 import { ensureAdmin } from "@/functions/auth";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
@@ -23,5 +24,13 @@ export const Route = createFileRoute("/_admin")({
 			throw error;
 		}
 	},
-	component: Outlet,
+	component: AdminShell,
 });
+
+function AdminShell() {
+	return (
+		<AdminLayout>
+			<Outlet />
+		</AdminLayout>
+	);
+}

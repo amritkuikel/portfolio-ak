@@ -85,6 +85,19 @@ const form = useAppForm({
 - **Stored values:** `PhoneField` stores E.164 (`+9779812345678`, Nepal by default). `DateField` stores `"YYYY-MM-DD"`, `DateRangeField` stores `{ from, to }` and `TimeField` stores `"HH:mm"`. `FileField` and `ImageField` store `File[]`. Validate them with `phone()`, `isoDate()`, `dateRange()`, `time()` and `files({ maxBytes, accept })`.
 - **Rich text:** `RichTextField` (Tiptap) loads only in the browser, and the server renders a placeholder of the same size. Its HTML is untrusted. On the server, pass it through `sanitizeRichText()` (`src/server/rich-text/sanitize.ts`) before storing it and again before sending it to a page, then display it with `<RichTextContent html={safe} />`. That component only accepts the `SafeHtml` type the sanitizer returns.
 
+## State: Query, DB and Store
+
+Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
+
+- **Server data you read:** TanStack Query, using `queryOptions` plus `ensureQueryData` in loaders. Example: `/stack`.
+- **Server data you edit with instant feedback:** a TanStack DB query collection. It is backed by Query, so optimistic changes roll back on failure. Define the collection as in `src/lib/db.ts` and read it with `useLiveQuery`. Test CRUD (Task 11) is the first real collection. `tests/unit/db-collection.test.ts` shows the optimistic-update and rollback behaviour.
+- **Client UI preferences:** the TanStack Store in `src/lib/stores`:
+  - `useTheme()` gives light, dark or system.
+  - `useSidebar()` controls the admin sidebar.
+  - `useTablePreferences(id)` stores page size and hidden columns.
+  - These are saved in cookies, so the server renders them on the first byte, with no theme flash and no hydration mismatch.
+- **Form state:** TanStack Form. **URL state** (filters, page): Zod search params.
+
 ## Authentication
 
 Better Auth (`src/server/auth/auth.ts`) provides:

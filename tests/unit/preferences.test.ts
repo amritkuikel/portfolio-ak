@@ -1,0 +1,71 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from "vitest";
+import {
+	createPreferencesStore,
+	DEFAULT_PREFERENCES,
+	parseCookieHeader,
+	parsePreferences,
+} from "@/lib/stores/preferences";
+
+const clearCookies = () => {
+	for (const name of ["theme", "sidebar", "table-prefs"]) {
+		// biome-ignore lint/suspicious/noDocumentCookie: test cleanup of the cookies the store writes.
+		document.cookie = `${name}=; Path=/; Max-Age=0`;
+	}
+};
+afterEach(clearCookies);
+
+describe("parsePreferences", () => {
+	it("defaults when no cookies are set", () => {
+		expect(parsePreferences({})).toEqual(DEFAULT_PREFERENCES);
+	});
+
+	it("reads valid cookies", () => {
+		expect(
+			parsePreferences({
+				theme: "dark",
+				sidebar: "collapsed",
+				"table-prefs": JSON.stringify({ "test-crud": { pageSize: 50, hiddenColumns: ["price"] } }),
+			}),
+		).toEqual({
+			theme: "dark",
+			sidebarCollapsed: true,
+			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
+		});
+	});
+
+	it("ignores tampered or malformed values", () => {
+		expect(parsePreferences({ theme: "neon", sidebar: "yes", "table-prefs": "{not json" })).toEqual(
+			DEFAULT_PREFERENCES,
+		);
+		// Page sizes outside the allowed list and odd table ids are rejected as a whole.
+		expect(parsePreferences({ "table-prefs": JSON.stringify({ t: { pageSize: 5000 } }) }).tables).toEqual({});
+		expect(parsePreferences({ "table-prefs": JSON.stringify({ "<script>": {} }) }).tables).toEqual({});
+	});
+});
+
+describe("parseCookieHeader", () => {
+	it("splits, trims and decodes; first value wins; bad encodings stay raw", () => {
+		expect(parseCookieHeader("a=1; b=x%20y;c=%E0%A4; a=2; junk")).toEqual({ a: "1", b: "x y", c: "%E0%A4" });
+	});
+});
+
+describe("preferences store", () => {
+	it("updates state and persists each preference to a cookie the server can read", () => {
+		const store = createPreferencesStore(DEFAULT_PREFERENCES);
+		store.actions.setTheme("dark");
+		store.actions.setSidebarCollapsed(true);
+		store.actions.setTablePageSize("test-crud", 50);
+		store.actions.setColumnVisible("test-crud", "price", false);
+		store.actions.setColumnVisible("test-crud", "slug", false);
+		store.actions.setColumnVisible("test-crud", "slug", true);
+
+		expect(store.state).toEqual({
+			theme: "dark",
+			sidebarCollapsed: true,
+			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
+		});
+		// A fresh store built from the cookies (what the next request does) restores everything.
+		expect(parsePreferences(parseCookieHeader(document.cookie))).toEqual(store.state);
+	});
+});

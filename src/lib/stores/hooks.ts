@@ -1,0 +1,44 @@
+import { useRouter } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
+import type { Preferences, TablePreferences } from "./preferences";
+
+/** The router's preferences store (one per request on the server, one per tab in the browser). */
+export const usePreferencesStore = () => useRouter().options.context.preferences;
+
+/** Subscribes to a slice of the preferences; re-renders only when that slice changes. */
+export const usePreferences = <T>(selector: (preferences: Preferences) => T) =>
+	useSelector(usePreferencesStore(), selector);
+
+export const useTheme = () => {
+	const store = usePreferencesStore();
+	return { theme: usePreferences((state) => state.theme), setTheme: store.actions.setTheme };
+};
+
+export const useSidebar = () => {
+	const store = usePreferencesStore();
+	const collapsed = usePreferences((state) => state.sidebarCollapsed);
+	return {
+		collapsed,
+		setCollapsed: store.actions.setSidebarCollapsed,
+		toggle: () => store.actions.setSidebarCollapsed(!collapsed),
+	};
+};
+
+const NO_TABLE: TablePreferences = {};
+
+/**
+ * Persisted settings for one table (Test CRUD admin list and future tables).
+ * `defaults.pageSize` applies until the user picks one.
+ */
+export const useTablePreferences = (tableId: string, defaults: { pageSize: number } = { pageSize: 20 }) => {
+	const store = usePreferencesStore();
+	const table = usePreferences((state) => state.tables[tableId] ?? NO_TABLE);
+	const hiddenColumns = table.hiddenColumns ?? [];
+	return {
+		pageSize: table.pageSize ?? defaults.pageSize,
+		hiddenColumns,
+		isColumnVisible: (column: string) => !hiddenColumns.includes(column),
+		setPageSize: (pageSize: number) => store.actions.setTablePageSize(tableId, pageSize),
+		setColumnVisible: (column: string, visible: boolean) => store.actions.setColumnVisible(tableId, column, visible),
+	};
+};

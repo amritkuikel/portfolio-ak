@@ -5,10 +5,12 @@ import type { ReactNode } from "react";
 import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { fontPreloads } from "@/lib/fonts";
 import { pageTitle } from "@/lib/seo";
+import { usePreferences } from "@/lib/stores/hooks";
 import { m } from "@/paraglide/messages";
 import { getLocale, getTextDirection } from "@/paraglide/runtime";
 import type { RouterContext } from "@/router";
@@ -41,15 +43,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootDocument({ children }: { children: ReactNode }) {
 	const locale = getLocale();
+	const theme = usePreferences((preferences) => preferences.theme);
 	return (
-		<html lang={locale} dir={getTextDirection(locale)}>
+		// suppressHydrationWarning: SystemThemeScript may add class="dark" before hydration (this element only).
+		<html lang={locale} dir={getTextDirection(locale)} {...themeHtmlProps(theme)} suppressHydrationWarning>
 			<head>
+				<SystemThemeScript />
 				<HeadContent />
 			</head>
 			<body className="flex min-h-dvh flex-col">
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">{children}</div>
-				<Toaster />
+				<ThemeSync />
+				<Toaster theme={theme} />
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}
 					plugins={[{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> }]}

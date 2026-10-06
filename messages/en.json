@@ -317,5 +317,13 @@
 	"showcase_attachments": "Attachments",
 	"showcase_avatar": "Profile photo",
 	"showcase_body": "Article body",
-	"showcase_preview": "Sanitized preview"
+	"showcase_preview": "Sanitized preview",
+	"theme_label": "Theme",
+	"theme_light": "Light",
+	"theme_dark": "Dark",
+	"theme_system": "System",
+	"admin_sidebar_label": "Admin navigation",
+	"admin_sidebar_collapse": "Collapse sidebar",
+	"admin_sidebar_expand": "Expand sidebar",
+	"admin_nav_dashboard": "Dashboard"
 }

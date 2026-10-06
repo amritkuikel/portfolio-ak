@@ -317,5 +317,13 @@
 	"showcase_attachments": "संलग्न फाइलहरू",
 	"showcase_avatar": "प्रोफाइल फोटो",
 	"showcase_body": "लेखको मुख्य भाग",
-	"showcase_preview": "सुरक्षित पूर्वावलोकन"
+	"showcase_preview": "सुरक्षित पूर्वावलोकन",
+	"theme_label": "रङ्ग",
+	"theme_light": "उज्यालो",
+	"theme_dark": "अँध्यारो",
+	"theme_system": "यन्त्रअनुसार",
+	"admin_sidebar_label": "एडमिन नेभिगेसन",
+	"admin_sidebar_collapse": "साइडबार सानो पार्नुहोस्",
+	"admin_sidebar_expand": "साइडबार ठूलो पार्नुहोस्",
+	"admin_nav_dashboard": "ड्यासबोर्ड"
 }

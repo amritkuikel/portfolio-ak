@@ -1,7 +1,7 @@
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from "lucide-react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-// Theme is passed in by the caller. Phase 8 wires it to the theme store (next-themes is Next.js-specific).
+// Theme is passed in by the caller (the root route reads it from the preferences store; next-themes is Next.js-specific).
 const Toaster = ({ theme = "system", ...props }: ToasterProps) => {
 	return (
 		<Sonner

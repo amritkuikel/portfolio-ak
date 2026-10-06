@@ -58,6 +58,11 @@ export default defineConfig(async ({ command, mode }) => {
 										name: "react-vendor",
 										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:react|react-dom|scheduler)\//,
 									},
+									{
+										// TanStack DB is loaded with the router (routerWithDbClient), same reasoning.
+										name: "tanstack-db",
+										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@tanstack\/(?:db|db-ivm|react-db|query-db-collection|react-router-with-db)\//,
+									},
 								],
 							},
 						},

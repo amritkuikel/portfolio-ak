@@ -5,6 +5,7 @@ import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { clientEnv } from "@/lib/client-env";
 import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeToggle } from "./theme";
 
 const navLink =
 	"rounded-md px-2 py-1 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[status=active]:font-medium data-[status=active]:text-foreground";
@@ -36,6 +37,7 @@ export function SiteHeader() {
 				</nav>
 				<div className="ml-auto flex items-center gap-2">
 					<LanguageSwitcher />
+					<ThemeToggle />
 					{session ? (
 						<>
 							<Link to="/account" className={navLink} data-testid="nav-account">
