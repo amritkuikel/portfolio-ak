@@ -6,10 +6,10 @@ import {
 	testCrudPublicSearchSchema,
 	testCrudSlugParamSchema,
 } from "@/features/test-crud/schema";
-import { AppError } from "@/lib/errors";
 import { zodInput } from "@/lib/fn-input";
 import { db } from "@/server/db/client";
-import { getPublishedTestCrud, listPublishedTestCrud } from "@/server/test-crud/repository";
+import { listPublishedTestCrud } from "@/server/test-crud/repository";
+import { getPublishedOrThrow } from "@/server/test-crud/service";
 
 /**
  * Public Test CRUD reads. No auth: the repository functions only ever return
@@ -21,8 +21,4 @@ export const listPublicTestCrud = createServerFn({ method: "GET" })
 
 export const getPublicTestCrud = createServerFn({ method: "GET" })
 	.validator(zodInput(testCrudSlugParamSchema))
-	.handler(async ({ data }): Promise<PublicTestCrudDetail> => {
-		const item = await getPublishedTestCrud(db, data.slug);
-		if (!item) throw new AppError("NOT_FOUND", "Test CRUD item not found");
-		return item;
-	});
+	.handler(({ data }): Promise<PublicTestCrudDetail> => getPublishedOrThrow(db, data.slug));

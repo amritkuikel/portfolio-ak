@@ -33,6 +33,7 @@ pnpm dev               # http://localhost:3000
 | `pnpm check:fix` | Apply Biome fixes and formatting. |
 | `pnpm test` | Run the unit, component and server tests once (Vitest project `unit`). |
 | `pnpm test:watch` | Run the unit project in watch mode. |
+| `pnpm test:coverage` | Unit run with v8 coverage (`coverage/`, HTML included), then a per-area table. |
 | `pnpm test:storybook` | Render every story in headless Chrome, twice (English/light, then Nepali/dark), run play functions and fail on any a11y violation. Uses the installed Chrome. |
 | `pnpm db:generate` | Generate a SQL migration in `drizzle/` from schema changes. |
 | `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
@@ -40,6 +41,23 @@ pnpm dev               # http://localhost:3000
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
+
+## Testing
+
+| What | Where | Run with |
+| --- | --- | --- |
+| Zod schemas and validation helpers | `tests/unit/validation.test.ts`, `test-crud-schema.test.ts`, `test-crud-form-data.test.ts` | `pnpm test` |
+| Every form field (jsdom, accessibility contract) | `tests/components/forms/` | `pnpm test` |
+| Test CRUD server logic (real SQL on PGlite) | `tests/server/test-crud-service.test.ts`, `test-crud-repository.test.ts` | `pnpm test` |
+| Auth and admin rejection | `tests/server/auth-middleware.test.ts`, `route-guards.test.ts`, `test-crud-functions.test.ts` | `pnpm test` |
+| Global guards (CSRF, logging, error normalisation, locale) | `tests/server/guards.test.ts` | `pnpm test` |
+| Email templates in both locales, provider selection | `tests/email/`, `tests/server/email-provider.test.ts` | `pnpm test` |
+| i18n key parity and locale routing | `tests/i18n/` | `pnpm test` |
+| Env validation and the server/client boundary | `tests/unit/env.test.ts`, `tests/server/env-*.test.ts` | `pnpm test` |
+| Stories: interactions and a11y, in en/light and ne/dark | `src/**/*.stories.tsx` | `pnpm test:storybook` |
+
+- **Server functions:** they only run inside the TanStack Start runtime, so each one is a thin wrapper around a plain function in `src/server/**` that takes an injected `db`. Test those functions with `createTestDb()` (`tests/utils/test-db.ts`: PGlite with the real migrations).
+- **Coverage:** `pnpm test:coverage` writes `coverage/index.html` and prints coverage by area: schemas & validation, form fields, server functions, guards, email, i18n, env, and overall.
 
 ## Storybook
 

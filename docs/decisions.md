@@ -876,3 +876,35 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - Light theme `--muted-foreground` darkened from `oklch(0.552 …)` to `oklch(0.5 …)`. Muted text on `--muted` (selected table rows) measured 4.39:1.
   - The theme menu, table row actions and column picker use `DropdownMenu modal={false}`. The modal default `aria-hide`s the rest of the page while it still contains focusable elements, which axe flags (`aria-hidden-focus`). For small menus that close on Escape or an outside click, non-modal is the better pattern.
 - **Why:** these were real defects in the app, caught by running axe in both themes and both languages, not only in Storybook.
+
+## 0080: Server-function logic lives in plain functions; coverage is reported per area
+
+- **What:**
+  - `createServerFn` handlers only run inside the TanStack Start runtime. Calling one under Vitest fails with "No Start context found in AsyncLocalStorage", and faking that context means importing an internal package.
+  - So the Test CRUD server functions are now one-line wrappers:
+    - The work lives in `src/server/test-crud/service.ts`, plain functions over an injected `db`: image change selection, validation, the NOT_FOUND mapping and the analytics events.
+    - The create/update wire format lives in `src/features/test-crud/form-data.ts`. `toFormData` (used by the form) and `parseSaveForm`/`parseUpdateForm` (used by the validators) sit side by side, so a round-trip test proves they agree.
+  - Tests:
+    - The service runs against PGlite with the real migrations (`tests/utils/test-db.ts`).
+    - Route guards (`_authed`, `_auth`, `_admin`) are tested through their `beforeLoad`.
+    - The global middleware (CSRF, request logging, error normalisation, locale header) is tested through its server/client steps.
+  - Admin-only access is proven by three things together: the middleware tests, the static check that every Test CRUD function uses `requireAdminMiddleware`, and the live replay recorded in 0070.
+  - `pnpm test:coverage`: v8 coverage of `src/**` (excluding generated Paraglide output, the route tree and stories), with text, JSON summary and HTML reporters. `scripts/coverage-report.mjs` then prints line, branch and function coverage for the plan's areas plus the overall total.
+- **Result** (334 unit tests):
+
+  | Area | Lines | Branches | Functions |
+  | --- | --- | --- | --- |
+  | Schemas & validation | 94.9% | 92.7% | 87.0% |
+  | Form fields | 90.8% | 81.3% | 87.1% |
+  | Server functions | 77.2% | 81.0% | 66.2% |
+  | Guards | 94.3% | 84.5% | 89.5% |
+  | Email | 84.3% | 73.7% | 75.9% |
+  | i18n | 100% | 87.1% | 100% |
+  | Env | 97.7% | 78.0% | 100% |
+
+  Overall is 57.8% of lines, because route pages and UI composition are exercised by the Storybook browser tests and live checks, not by this run.
+- **Why not merge the browser coverage too:** it would make `pnpm test:coverage` depend on Chrome and roughly triple its time. The Storybook run stays a separate gate.
+- **Known gap:** the `src/functions/*` wrapper files show 0%. They can't execute outside Start, and their contents are a middleware list, a validator and a single call.
+- **Alternatives:**
+  - Mocking `@tanstack/start-storage-context`: depends on internals.
+  - An HTTP-level test harness against a running server: the live checks already do this, and it's too slow for every run.

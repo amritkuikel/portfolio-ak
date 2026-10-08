@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
 import { m } from "@/paraglide/messages";
+import { toFormData } from "../form-data";
 import { testCrudKeys } from "../queries";
 import {
 	imageRules,
@@ -21,7 +22,6 @@ import {
 	TEST_CRUD_STATUSES,
 	type TestCrudDetail,
 	type TestCrudFormValues,
-	type TestCrudInput,
 	testCrudFormSchema,
 } from "../schema";
 import { STATUS_LABELS } from "./test-crud-table";
@@ -38,18 +38,6 @@ const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => (
 	image: [],
 	removeImage: false,
 });
-
-/** FormData for createTestCrud / updateTestCrud: shared-schema JSON + optional file. */
-const toFormData = (value: TestCrudFormValues, id: string | undefined) => {
-	const { image, removeImage, ...fields } = value;
-	const data = new FormData();
-	data.set("data", JSON.stringify(fields satisfies Record<keyof TestCrudInput, unknown>));
-	const [file] = image;
-	if (file) data.set("image", file);
-	if (removeImage) data.set("removeImage", "1");
-	if (id) data.set("id", id);
-	return data;
-};
 
 /**
  * Create and edit form, built only from the reusable fields. The same Zod schema

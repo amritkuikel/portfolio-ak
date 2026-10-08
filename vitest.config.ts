@@ -16,6 +16,21 @@ export default defineConfig({
 	plugins: [paraglideVitePlugin({ project: "./project.inlang" })],
 	resolve: { tsconfigPaths: true },
 	test: {
+		// `pnpm test:coverage`: v8 coverage of the app code, then a per-area table
+		// (scripts/coverage-report.mjs). Generated code and stories are not measured.
+		coverage: {
+			provider: "v8",
+			include: ["src/**/*.{ts,tsx}"],
+			exclude: [
+				"src/paraglide/**",
+				"src/routeTree.gen.ts",
+				"src/**/*.stories.tsx",
+				"src/components/forms/story-harness.tsx",
+				"src/**/*.d.ts",
+			],
+			reporter: ["text-summary", "json-summary", "html"],
+			reportsDirectory: "coverage",
+		},
 		projects: [
 			{
 				// `pnpm test`: unit, component (jsdom) and server tests.

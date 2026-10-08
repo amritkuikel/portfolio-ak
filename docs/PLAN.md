@@ -94,7 +94,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── vite/
 │   └── email-preview-plugin.ts  # dev-server-only /dev/emails (apply: "serve")
 ├── scripts/
-│   └── seed-admin.mjs           # creates the first admin user (wraps Better Auth create-admin)
+│   ├── seed-admin.mjs           # creates the first admin user (wraps Better Auth create-admin)
+│   └── coverage-report.mjs      # per-area coverage table (pnpm test:coverage)
 ├── .storybook/                 # main.ts, own vite.config.ts, preview (locale/theme toolbar), mocks/, vitest setups
 ├── src/
 │   ├── routes/
@@ -131,7 +132,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   │   ├── send.ts          # sendEmail(): render in recipient locale + deliver
 │   │   │   └── preview.ts       # helpers for the dev-only preview
 │   │   ├── rich-text/           # sanitize.ts: allowlist sanitizer for rich-text HTML (returns SafeHtml)
-│   │   ├── test-crud/           # repository.ts (Drizzle queries, injectable db), image.ts (signature checks)
+│   │   ├── test-crud/           # repository.ts (Drizzle queries), service.ts (server fn logic), image.ts (signature checks)
 │   │   ├── routes/              # Nitro routes (images.ts: GET /api/images/:id), registered in vite.config.ts
 │   │   ├── analytics/           # posthog.ts: consent-gated server events + SSR feature flags (posthog-node)
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
@@ -146,7 +147,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── features/
 │   │   ├── auth/                # auth UI, error mapping, validation, session queries
 │   │   ├── dev/                 # dev-only pages (forms showcase)
-│   │   └── test-crud/           # constants, schema.ts (shared Zod + DTOs), queries, collection (TanStack DB), components/
+│   │   └── test-crud/           # constants, schema.ts (shared Zod + DTOs), form-data.ts (create/update wire format),
+│   │                            #   queries, collection (TanStack DB), components/
 │   ├── components/
 │   │   ├── errors/              # error, not-found and pending pages
 │   │   ├── ui/                  # shadcn/ui primitives
@@ -192,7 +194,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   ├── setup/                   # env.ts (baseline env), dom.ts (jest-dom, cleanup, jsdom polyfills)
 │   ├── unit/                    # schemas, validation, intl, env, provider selection
 │   ├── components/              # every form field (forms/harness.tsx), layout components
-│   ├── server/                  # server functions, guards, auth/admin rejection
+│   ├── server/                  # server logic (PGlite), guards, route guards, auth/admin rejection, email providers
 │   ├── email/                   # templates render in both locales
 │   └── i18n/                    # message key parity
 ├── .env.example

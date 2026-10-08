@@ -21,7 +21,8 @@
 		"i18n:compile": "paraglide-js compile --project ./project.inlang --silent",
 		"db:seed-admin": "node scripts/seed-admin.mjs",
 		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts",
-		"test:storybook": "vitest run --project storybook && vitest run --project storybook-dark-ne"
+		"test:storybook": "vitest run --project storybook && vitest run --project storybook-dark-ne",
+		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.mjs"
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.6",
@@ -94,6 +95,7 @@
 		"@vitejs/plugin-react": "^6.1.1",
 		"@vitest/browser": "5.0.3",
 		"@vitest/browser-playwright": "5.0.3",
+		"@vitest/coverage-v8": "5.0.3",
 		"auth": "^1.7.6",
 		"drizzle-kit": "^0.31.11",
 		"jsdom": "^30.1.1",
