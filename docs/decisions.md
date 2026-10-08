@@ -2,6 +2,94 @@
 
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
+<details>
+<summary>Index (82 entries)</summary>
+
+- [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
+- [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
+- [0003](#0003-scaffold-with-the-official-tanstack-cli-biome-vercel-shadcn-add-ons): Scaffold with the official TanStack CLI (Biome, Vercel, shadcn add-ons)
+- [0004](#0004-nitro-is-the-server-build-the-vercel-preset-is-auto-detected): Nitro is the server build; the Vercel preset is auto-detected
+- [0005](#0005-only-use-client-warnings-from-dependencies-are-filtered-in-the-nitro-build): Only "use client" warnings from dependencies are filtered in the Nitro build
+- [0006](#0006-import-alias-is-not-the-starters): Import alias is `@/`, not the starter's `#/`
+- [0007](#0007-self-hosted-fonts-with-preloads-and-metric-matched-fallbacks): Self-hosted fonts with preloads and metric-matched fallbacks
+- [0008](#0008-next-themes-removed-from-the-shadcn-sonner-component): `next-themes` removed from the shadcn Sonner component
+- [0009](#0009-tanstack-router-cli-removed-the-route-tree-is-committed): TanStack router CLI removed; the route tree is committed
+- [0010](#0010-prettier-remains-only-as-a-transitive-dependency): Prettier remains only as a transitive dependency
+- [0011](#0011-when-and-where-env-is-validated): When and where env is validated
+- [0012](#0012-client-schema-lives-in-its-own-file-client-env-files-avoid-the-client-name): Client schema lives in its own file; client env files avoid the `*.client.*` name
+- [0013](#0013-three-layers-keep-server-only-code-off-the-client): Three layers keep server-only code off the client
+- [0014](#0014-env-validation-details): Env validation details
+- [0015](#0015-neon-driver-is-node-postgres-tcp-with-a-small-pool-and-attachdatabasepool): Neon driver is node-postgres (TCP) with a small pool and `attachDatabasePool`
+- [0016](#0016-drizzle-stable-045x-not-the-10-release-candidate): Drizzle stable 0.45.x, not the 1.0 release candidate
+- [0017](#0017-sslmoderequire-is-rewritten-to-verify-full): `sslmode=require` is rewritten to `verify-full`
+- [0018](#0018-migrations-use-the-direct-url-and-start-from-an-empty-baseline): Migrations use the direct URL and start from an empty baseline
+- [0019](#0019-the-health-check-hides-failure-details-from-clients): The health check hides failure details from clients
+- [0020](#0020-paraglide-follows-the-official-tanstack-start-example-options-live-in-paraglideconfigts): Paraglide follows the official TanStack Start example; options live in `paraglide.config.ts`
+- [0021](#0021-locale-strategy-is-url-only-for-pages-english-unprefixed-nepali-under-ne): Locale strategy is URL-only for pages; English unprefixed, Nepali under `/ne`
+- [0022](#0022-server-functions-receive-the-page-locale-in-a-header): Server functions receive the page locale in a header
+- [0023](#0023-the-language-switcher-uses-plain-links-to-localized-urls): The language switcher uses plain links to localized URLs
+- [0024](#0024-nepali-formatting-never-uses-icu-ne-data): Nepali formatting never uses ICU `ne` data
+- [0025](#0025-dates-render-in-a-fixed-app-time-zone-relative-time-takes-an-explicit-now): Dates render in a fixed app time zone; relative time takes an explicit `now`
+- [0026](#0026-devanagari-font-preloads-only-on-nepali-pages-no-preloads-in-dev): Devanagari font preloads only on Nepali pages; no preloads in dev
+- [0027](#0027-react-is-split-into-its-own-client-chunk): React is split into its own client chunk
+- [0028](#0028-how-no-hydration-warnings-was-verified): How "no hydration warnings" was verified
+- [0029](#0029-windows-checkouts-need-a-short-path): Windows checkouts need a short path
+- [0030](#0030-tanstack-query-via-the-official-ssr-integration-with-a-60-second-staletime): TanStack Query via the official SSR integration, with a 60-second `staleTime`
+- [0031](#0031-one-apperror-shape-normalised-by-middleware-and-serialised-with-an-adapter): One `AppError` shape, normalised by middleware and serialised with an adapter
+- [0032](#0032-zodinput-instead-of-passing-zod-schemas-straight-to-inputvalidator): `zodInput()` instead of passing Zod schemas straight to `inputValidator`
+- [0033](#0033-middleware-lives-in-srcmiddleware-not-srcservermiddleware): Middleware lives in `src/middleware/`, not `src/server/middleware/`
+- [0034](#0034-csrf-protection-for-server-functions): CSRF protection for server functions
+- [0035](#0035-layout-routes-guards-and-the-session-slot): Layout routes, guards and the session slot
+- [0036](#0036-stack-is-the-phase-5-reference-page): `/stack` is the Phase 5 reference page
+- [0037](#0037-email-provider-selection-and-fail-fast-in-production): Email provider selection and fail-fast in production
+- [0038](#0038-react-email-6-rendered-in-an-explicit-locale): React Email 6, rendered in an explicit locale
+- [0039](#0039-the-email-preview-is-a-vite-dev-server-middleware-not-an-app-route): The email preview is a Vite dev-server middleware, not an app route
+- [0040](#0040-better-auth-configuration): Better Auth configuration
+- [0041](#0041-auth-emails-are-sent-in-the-users-language-in-the-background): Auth emails are sent in the user's language, in the background
+- [0042](#0042-email-change-notice-to-the-old-address): Email-change notice to the old address
+- [0043](#0043-session-in-the-router-context-via-tanstack-query-admin-checked-on-the-server): Session in the router context via TanStack Query; admin checked on the server
+- [0044](#0044-apperror-status-codes-survive-ssr): AppError status codes survive SSR
+- [0045](#0045-rate-limits-keyed-by-a-trusted-client-ip): Rate limits keyed by a trusted client IP
+- [0046](#0046-auth-pages-and-placement): Auth pages and placement
+- [0047](#0047-the-admin-seed-wraps-better-auths-create-admin): The admin seed wraps Better Auth's `create-admin`
+- [0048](#0048-better-auths-env-name-appears-in-the-client-bundle): Better Auth's env *name* appears in the client bundle
+- [0049](#0049-local-e2e-database-must-be-utf-8): Local e2e database must be UTF-8
+- [0050](#0050-form-system-built-on-tanstack-form-composition-and-shadcn-field): Form system built on TanStack Form composition and shadcn Field
+- [0051](#0051-when-errors-appear-and-formvalidators): When errors appear, and `formValidators()`
+- [0052](#0052-formerrorsummary-focuses-itself-submitbutton-never-blocks): FormErrorSummary focuses itself; SubmitButton never blocks
+- [0053](#0053-validation-helpers-return-localized-messages-at-validation-time): Validation helpers return localized messages at validation time
+- [0054](#0054-number-and-currency-inputs-keep-a-draft-string): Number and currency inputs keep a draft string
+- [0055](#0055-local-changes-to-shadcn-components): Local changes to shadcn components
+- [0056](#0056-component-tests-run-in-jsdom-with-a-shared-harness): Component tests run in jsdom with a shared harness
+- [0057](#0057-phone-numbers-are-stored-as-e164-with-a-separate-country-picker): Phone numbers are stored as E.164 with a separate country picker
+- [0058](#0058-date-fields-store-calendar-dates-as-strings): Date fields store calendar dates as strings
+- [0059](#0059-rich-text-loads-only-in-the-browser-behind-a-placeholder-of-the-same-size): Rich text loads only in the browser, behind a placeholder of the same size
+- [0060](#0060-sanitizing-rich-text-on-the-server-with-a-safehtml-brand): Sanitizing rich text on the server, with a SafeHtml brand
+- [0061](#0061-the-dev-only-showcase-is-a-real-route-dropped-from-production-builds): The dev-only showcase is a real route, dropped from production builds
+- [0062](#0062-file-fields-use-the-native-input-plus-drag-and-drop-and-validate-in-the-schema): File fields use the native input plus drag-and-drop, and validate in the schema
+- [0063](#0063-mustaccept-takes-a-boolean-input): `mustAccept()` takes a boolean input
+- [0064](#0064-when-to-use-tanstack-db-query-or-store-and-the-rest): When to use TanStack DB, Query or Store, and the rest
+- [0065](#0065-preferences-live-in-cookies-with-one-store-per-router): Preferences live in cookies, with one store per router
+- [0066](#0066-tanstack-db-uses-the-official-router-integration-and-has-its-own-chunk): TanStack DB uses the official router integration and has its own chunk
+- [0067](#0067-uploaded-images-are-stored-in-postgres-and-served-by-a-nitro-route): Uploaded images are stored in Postgres and served by a Nitro route
+- [0068](#0068-the-admin-list-is-url-driven-query-owns-ssr-and-a-db-collection-owns-optimism): The admin list is URL-driven; Query owns SSR and a DB collection owns optimism
+- [0069](#0069-server-functions-use-validator-and-report-field-errors-the-form-can-show): Server functions use `.validator()` and report field errors the form can show
+- [0070](#0070-testing-data-access-against-pglite-and-how-admin-only-access-is-verified): Testing data access against PGlite, and how admin-only access is verified
+- [0071](#0071-seo-tags-come-from-one-helper-and-a-required-vitesiteurl): SEO tags come from one helper and a required `VITE_SITE_URL`
+- [0072](#0072-public-reads-are-a-separate-published-only-path): Public reads are a separate, published-only path
+- [0073](#0073-sentry-via-sentrytanstackstart-react-1140-beta-pinned-off-without-a-dsn): Sentry via `@sentry/tanstackstart-react` 11.4.0 (beta, pinned), off without a DSN
+- [0074](#0074-posthog-is-opt-in-consent-is-a-cookie-and-posthog-js-loads-only-after-yes): PostHog is opt-in; consent is a cookie, and posthog-js loads only after "yes"
+- [0075](#0075-feature-flags-are-evaluated-on-the-server-and-shipped-with-the-page): Feature flags are evaluated on the server and shipped with the page
+- [0076](#0076-csp-and-ad-blockers-deferred-to-task-16): CSP and ad blockers (deferred to Task 16)
+- [0077](#0077-storybook-has-its-own-vite-config-and-replaces-server-modules-wholesale): Storybook has its own Vite config and replaces server modules wholesale
+- [0078](#0078-stories-are-tests-two-browser-passes-a11y-violations-fail): Stories are tests: two browser passes, a11y violations fail
+- [0079](#0079-accessibility-fixes-found-by-the-stories): Accessibility fixes found by the stories
+- [0080](#0080-server-function-logic-lives-in-plain-functions-coverage-is-reported-per-area): Server-function logic lives in plain functions; coverage is reported per area
+- [0081](#0081-security-headers-static-headers-via-nitro-a-per-request-csp-nonce-via-start-middleware): Security headers: static headers via Nitro, a per-request CSP nonce via Start middleware
+- [0082](#0082-final-review-fixes-accessibility-responsiveness-layout-stability): Final review fixes (accessibility, responsiveness, layout stability)
+
+</details>
+
 ---
 
 ## 0001: Project has its own git repository
@@ -908,3 +996,42 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives:**
   - Mocking `@tanstack/start-storage-context`: depends on internals.
   - An HTTP-level test harness against a running server: the live checks already do this, and it's too slow for every run.
+
+## 0081: Security headers: static headers via Nitro, a per-request CSP nonce via Start middleware
+
+- **What:**
+  - **Every response** (pages, assets, `/api/images`) gets static headers through Nitro `routeRules`:
+    - `Strict-Transport-Security: max-age=63072000; includeSubDomains`
+    - `X-Content-Type-Options: nosniff`
+    - `Referrer-Policy: strict-origin-when-cross-origin`
+    - `Permissions-Policy` with camera, microphone, geolocation, payment, usb and browsing-topics disabled
+    - `X-Frame-Options: DENY`
+    - `Cross-Origin-Opener-Policy: same-origin`
+  - **HTML pages** get a Content-Security-Policy from `securityHeadersMiddleware` (`src/middleware/security-headers.ts`), production only:
+    - A fresh 128-bit nonce per request goes into the request context. `getRouter()` passes it to `ssr.nonce` via `getGlobalStartContext()`, so Start's inline hydration scripts, its entry module script and the `ScriptOnce` theme script all carry it.
+    - `script-src 'nonce-…' 'strict-dynamic'` (no `unsafe-inline`, no `unsafe-eval`).
+    - `style-src 'self' 'unsafe-inline'`, because Radix positions popovers with style attributes.
+    - `img-src 'self' data: blob:`, for image previews.
+    - `connect-src 'self'` plus the Sentry DSN's origin and the PostHog host, only when configured.
+    - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
+  - **Zod jitless:** Zod 4 probes `new Function` to decide whether to JIT-compile schemas, and the CSP correctly blocks it. `src/lib/zod-config.ts` sets `z.config({ jitless: true })`. It's imported first by both entries and by `client-env.schema.ts`, because code splitting runs the env schema (parsed at import time) before the entry's own imports.
+- **Verified on the production build:**
+  - All headers are present on an HTML page, a JS asset and the image route, and every inline script has the nonce.
+  - 204 page loads (17 pages × en/ne × light/dark × 390/768/1280 px) had zero `securitypolicyviolation` events.
+  - A separate build with Sentry and PostHog pointed at a local ingest still sent `$pageview`, `test_crud_viewed` and a Sentry error under the enforced CSP, with no violations or blocked requests.
+  - Unit tests cover the policy builder and the middleware.
+- **Why production only:** Vite's dev server and the TanStack Devtools inject scripts without a nonce.
+- **Alternatives:**
+  - A hash-based CSP: Start's inline scripts change per render.
+  - `'unsafe-inline'` scripts: would defeat the point.
+  - Headers in `vercel.json`: not portable, and no per-request nonce.
+
+## 0082: Final review fixes (accessibility, responsiveness, layout stability)
+
+- **Method:** axe-core (WCAG 2.0/2.1/2.2 A and AA, plus best practice), a horizontal-overflow check and console/CSP capture on every page (anonymous, user and admin) in both locales, both themes and three widths. Plus keyboard Tab walks and CLS measurements with an empty cache.
+- **Fixes:**
+  - **Contrast:** the disabled pagination step on `/test-crud` was `opacity-50` (3.73:1). It now uses the muted text colour with `aria-disabled`.
+  - **Admin on phones:** the search field had a fixed width (`w-64`), so it now fills the row below `sm`. The sidebar is icon-only below `md` regardless of the saved preference, because a 224 px sidebar on a 390 px screen left too little room.
+  - **Rich-text toolbar:** it scrolls sideways on narrow screens. Its height is unchanged, so it still matches the SSR placeholder.
+  - **Layout shift on `/test-crud`** (0.03): the card's `aspect-[16/9]` box grew to the image's own aspect when it loaded. The image is now absolutely positioned over a clipped box, and title and summary reserve fixed line counts. CLS is now ≤ 0.0004 on every measured page, in both locales, at phone and desktop widths.
+- **Result:** 204/204 page loads with no axe violations, no overflow, no CSP violations and no console errors (the 404 page's own 404 aside). Every Tab stop has a visible focus indicator; cards use a `focus-within` ring.

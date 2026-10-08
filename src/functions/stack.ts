@@ -10,7 +10,7 @@ import { queryStack } from "@/server/stack/query";
  * so the server re-validates whatever the client sends.
  */
 export const listStack = createServerFn({ method: "GET" })
-	.inputValidator(zodInput(stackSearchSchema))
+	.validator(zodInput(stackSearchSchema))
 	.handler(({ data }): StackPage => {
 		if (data.simulate === "error" && import.meta.env.DEV) {
 			// Deliberately leaky message: errorNormalizationMiddleware must hide it from the client.

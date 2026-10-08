@@ -14,7 +14,9 @@ export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCar
 	const Heading = `h${headingLevel}` as const;
 	return (
 		<article className="group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-shadow focus-within:ring-[3px] focus-within:ring-ring/50 hover:shadow-md">
-			<div className="aspect-[16/9] bg-muted">
+			{/* The box's ratio alone sets its height; the image is laid over it, so an image of
+			    any shape (even before it loads) can't change the card's size. */}
+			<div className="relative aspect-[16/9] overflow-hidden bg-muted">
 				{item.imageUrl ? (
 					<img
 						src={item.imageUrl}
@@ -23,7 +25,7 @@ export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCar
 						decoding="async"
 						width={640}
 						height={360}
-						className="size-full object-cover"
+						className="absolute inset-0 size-full object-cover"
 					/>
 				) : (
 					<div className="flex size-full items-center justify-center">
@@ -32,7 +34,9 @@ export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCar
 				)}
 			</div>
 			<div className="flex flex-1 flex-col gap-3 p-4">
-				<Heading className="font-semibold text-lg leading-snug tracking-tight">
+				{/* Fixed line counts (clamped and reserved): the card height no longer depends on
+				    where text wraps, so the web-font swap can't shift the grid. */}
+				<Heading className="line-clamp-2 min-h-[2lh] font-semibold text-lg leading-snug tracking-tight">
 					<Link
 						to="/test-crud/$slug"
 						params={{ slug: item.slug }}
@@ -41,7 +45,7 @@ export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCar
 						{item.title}
 					</Link>
 				</Heading>
-				{item.summary ? <p className="line-clamp-3 text-muted-foreground text-sm">{item.summary}</p> : null}
+				{item.summary ? <p className="line-clamp-3 min-h-[3lh] text-muted-foreground text-sm">{item.summary}</p> : null}
 				<div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-sm">
 					<span className="font-medium tabular-nums">{formatCurrency(item.price)}</span>
 					<time dateTime={item.publishedAt} className="text-muted-foreground">

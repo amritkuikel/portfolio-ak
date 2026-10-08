@@ -134,7 +134,13 @@ function PageLink({
 }) {
 	const className = "inline-flex h-9 items-center rounded-md border px-3 hover:bg-accent";
 	// A disabled step is plain text, not a dead link.
-	if (disabled) return <span className={`${className} pointer-events-none opacity-50`}>{children}</span>;
+	if (disabled) {
+		return (
+			<span aria-disabled="true" className={`${className} pointer-events-none text-muted-foreground`}>
+				{children}
+			</span>
+		);
+	}
 	return (
 		<Link
 			from={Route.fullPath}

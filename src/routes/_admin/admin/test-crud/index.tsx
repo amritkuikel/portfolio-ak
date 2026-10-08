@@ -155,9 +155,9 @@ function TestCrudAdminPage() {
 			</header>
 
 			<div className="flex flex-wrap items-end gap-3">
-				<search>
-					<form onSubmit={onSearch} className="flex items-end gap-2">
-						<div className="flex flex-col gap-1.5">
+				<search className="w-full sm:w-auto">
+					<form onSubmit={onSearch} className="flex w-full items-end gap-2 sm:w-auto">
+						<div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-none">
 							<Label htmlFor="test-crud-q">{m.test_crud_search_label()}</Label>
 							<Input
 								id="test-crud-q"
@@ -166,7 +166,7 @@ function TestCrudAdminPage() {
 								defaultValue={search.q}
 								key={search.q}
 								placeholder={m.test_crud_search_placeholder()}
-								className="w-64"
+								className="w-full sm:w-64"
 							/>
 						</div>
 						<Button type="submit" variant="secondary">

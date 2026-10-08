@@ -6,6 +6,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
+import { STATIC_SECURITY_HEADERS } from "./src/lib/csp.ts";
 import { emailPreviewPlugin } from "./vite/email-preview-plugin.ts";
 
 /**
@@ -82,6 +83,9 @@ export default defineConfig(async ({ command, mode }) => {
 				plugins: ["./src/server/plugins/validate-env.ts"],
 				// A Nitro route, not a Start server route, so <img> requests reach it in dev too.
 				routes: { "/api/images/:id": { handler: "./src/server/routes/images.ts", method: "GET" } },
+				// Security headers on every response (pages, assets, API). The CSP is per
+				// request (nonce) and is added by src/middleware/security-headers.ts.
+				routeRules: { "/**": { headers: STATIC_SECURITY_HEADERS } },
 				rolldownConfig: {
 					onwarn(warning, warn) {
 						if (NITRO_IGNORED_CODES.has(warning.code ?? "")) return;

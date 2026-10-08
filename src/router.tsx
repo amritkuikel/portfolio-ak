@@ -1,9 +1,12 @@
+// Must run before any schema is used (CSP: no eval). See the file.
+import "./lib/zod-config";
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { DbClient } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { routerWithDbClient } from "@tanstack/react-router-with-db";
+import { getGlobalStartContext } from "@tanstack/react-start";
 import { ErrorPage } from "./components/errors/error-page";
 import { NotFoundPage } from "./components/errors/not-found-page";
 import { PendingPage } from "./components/errors/pending-page";
@@ -38,6 +41,9 @@ export function getRouter() {
 	const router = createTanStackRouter({
 		routeTree,
 		context: { queryClient, dbClient, preferences, session: null } satisfies RouterContext,
+		// Per-request CSP nonce (security-headers middleware) for Start's inline scripts
+		// and ScriptOnce. Only meaningful during SSR; undefined in the browser.
+		ssr: { nonce: typeof window === "undefined" ? getGlobalStartContext()?.nonce : undefined },
 		scrollRestoration: true,
 		defaultPreload: "intent",
 		// Let TanStack Query decide freshness for preloaded data.

@@ -34,7 +34,8 @@ export function AdminSidebar() {
 		<aside
 			className={cn(
 				"flex shrink-0 flex-col gap-1 border-e p-2 transition-[width] motion-reduce:transition-none",
-				collapsed ? "w-14" : "w-56",
+				// Always icon-only on phones: a 224px sidebar would leave too little room for content.
+				collapsed ? "w-14" : "w-14 md:w-56",
 			)}
 			data-collapsed={collapsed || undefined}
 			data-testid="admin-sidebar"
@@ -62,7 +63,7 @@ export function AdminSidebar() {
 								className="flex h-9 items-center gap-3 rounded-md px-2.5 text-muted-foreground text-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[status=active]:bg-accent data-[status=active]:font-medium data-[status=active]:text-foreground"
 							>
 								<item.icon className="size-4 shrink-0" aria-hidden />
-								<span className={cn(collapsed && "sr-only")}>{item.label()}</span>
+								<span className={cn(collapsed ? "sr-only" : "max-md:sr-only")}>{item.label()}</span>
 							</Link>
 						</li>
 					))}

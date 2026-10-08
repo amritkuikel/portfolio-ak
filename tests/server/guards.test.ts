@@ -135,3 +135,36 @@ describe("error normalisation middleware", () => {
 		expect(failure).toMatchObject({ code: "INTERNAL", requestId: "req-2", message: "Internal error" });
 	});
 });
+
+describe("security headers middleware", () => {
+	const run = async (contentType: string) => {
+		const { securityHeadersMiddleware } = await import("@/middleware/security-headers");
+		let nonce = "";
+		const result = (await stepOf(
+			securityHeadersMiddleware,
+			"server",
+		)({
+			next: async (options: { context: { nonce: string } }) => {
+				nonce = options.context.nonce;
+				return { response: new Response("<html></html>", { headers: { "content-type": contentType } }) };
+			},
+		})) as { response: Response };
+		return { nonce, csp: result.response.headers.get("content-security-policy") };
+	};
+
+	it("gives every request a fresh 128-bit nonce for the router", async () => {
+		const first = await run("text/html");
+		const second = await run("text/html");
+		expect(atob(first.nonce)).toHaveLength(16);
+		expect(first.nonce).not.toBe(second.nonce);
+	});
+
+	it("sends the CSP with that nonce on HTML responses in production only", async () => {
+		expect((await run("text/html; charset=utf-8")).csp).toBeNull(); // dev/test: Vite injects unsigned scripts
+		vi.stubEnv("PROD", true);
+		const html = await run("text/html; charset=utf-8");
+		expect(html.csp).toContain(`'nonce-${html.nonce}'`);
+		expect(html.csp).toContain("frame-ancestors 'none'");
+		expect((await run("application/json")).csp).toBeNull();
+	});
+});

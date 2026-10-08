@@ -137,7 +137,7 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── analytics/           # posthog.ts: consent-gated server events + SSR feature flags (posthog-node)
 │   │   └── plugins/             # Nitro plugins run at boot (validate-env.ts)
 │   ├── middleware/              # Start middleware (isomorphic; outside src/server so start.ts can import it):
-│   │                            #   csrf, logging, errors (normalisation), auth (session/user/admin guards)
+│   │                            #   security-headers (CSP nonce), csrf, logging, errors, auth (session/user/admin guards)
 │   ├── functions/               # createServerFn definitions, grouped by feature
 │   │   ├── health.ts
 │   │   ├── feature-flags.ts     # server-evaluated PostHog flags (SSR-safe)
@@ -174,6 +174,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 │   │   ├── session.ts           # Session types (router context, middleware)
 │   │   ├── redirect.ts          # safe ?redirect= validation
 │   │   ├── seo.ts               # page title template + seo(): canonical, hreflang, Open Graph
+│   │   ├── csp.ts               # Content-Security-Policy builder + static security headers
+│   │   ├── zod-config.ts        # Zod jitless mode (CSP forbids eval); imported first
 │   │   ├── stores/              # TanStack Store: theme, sidebar, table prefs (cookie-backed, one store per router)
 │   │   ├── db.ts                # TanStack DB client per request + queryClientOf() for query collections
 │   │   ├── analytics.ts         # posthog-js wrapper: loaded only after consent
@@ -470,46 +472,46 @@ Each phase lists **Scope**, **Deliverables** and **Acceptance criteria**. Every 
 
 ## 5. Definition of Done (whole project)
 
-Each item must be verified with evidence such as command output, a test name or a described manual check. Nothing is assumed.
+Each item must be verified with evidence such as command output, a test name or a described manual check. Nothing is assumed. All items were verified in Phase 12; the evidence is in the final summary and docs/decisions.md 0081–0082.
 
 **Rendering & SSR**
-- [ ] All public pages render complete, readable content with JavaScript disabled.
-- [ ] No hydration warnings in the browser console on any page, in either locale or theme.
-- [ ] The streaming example works.
+- [x] All public pages render complete, readable content with JavaScript disabled.
+- [x] No hydration warnings in the browser console on any page, in either locale or theme.
+- [x] The streaming example works.
 
 **Internationalisation**
-- [ ] `en` and `ne` message files have identical keys (test passes).
-- [ ] No hardcoded user-facing strings in UI, emails, validation or meta.
-- [ ] `<html lang>`, canonical and `hreflang` tags are correct per locale.
-- [ ] Dates, numbers, NPR currency and relative times format per locale.
-- [ ] Devanagari renders correctly with no font-swap layout shift.
+- [x] `en` and `ne` message files have identical keys (test passes).
+- [x] No hardcoded user-facing strings in UI, emails, validation or meta.
+- [x] `<html lang>`, canonical and `hreflang` tags are correct per locale.
+- [x] Dates, numbers, NPR currency and relative times format per locale.
+- [x] Devanagari renders correctly with no font-swap layout shift.
 
 **Theming & UX**
-- [ ] Light, dark and system themes work with no flash on load.
-- [ ] Every page is usable at mobile, tablet and desktop widths.
+- [x] Light, dark and system themes work with no flash on load.
+- [x] Every page is usable at mobile, tablet and desktop widths.
 
 **Accessibility**
-- [ ] The Storybook a11y addon reports no violations on any story.
-- [ ] Every form field has a label, description, `aria-invalid`, `aria-describedby` and error text.
-- [ ] Keyboard navigation and visible focus work on all interactive elements. FormErrorSummary receives focus on a failed submit.
+- [x] The Storybook a11y addon reports no violations on any story.
+- [x] Every form field has a label, description, `aria-invalid`, `aria-describedby` and error text.
+- [x] Keyboard navigation and visible focus work on all interactive elements. FormErrorSummary receives focus on a failed submit.
 
 **Security**
-- [ ] No secrets or server-only modules in the client bundle (boundary test passes and a build output search is clean).
-- [ ] Admin server functions reject non-admins on the server.
-- [ ] Auth endpoints are rate limited.
-- [ ] Rich text is sanitized before storage and on render.
-- [ ] Security headers are present on production responses, and the CSP allows only required origins.
-- [ ] Dev-only routes (email preview, form showcase) are unreachable in production.
+- [x] No secrets or server-only modules in the client bundle (boundary test passes and a build output search is clean).
+- [x] Admin server functions reject non-admins on the server.
+- [x] Auth endpoints are rate limited.
+- [x] Rich text is sanitized before storage and on render.
+- [x] Security headers are present on production responses, and the CSP allows only required origins.
+- [x] Dev-only routes (email preview, form showcase) are unreachable in production.
 
 **Observability**
-- [ ] Sentry and PostHog no-op cleanly when keys are absent.
-- [ ] No analytics before consent.
+- [x] Sentry and PostHog no-op cleanly when keys are absent.
+- [x] No analytics before consent.
 
 **Quality gates**
-- [ ] `pnpm typecheck`, `pnpm check`, `pnpm test`, `pnpm build` and `pnpm build-storybook` are all green with no warnings.
-- [ ] No `any`, no `@ts-ignore`, no unexplained lint suppressions (verified by search).
-- [ ] Migrations are committed and apply cleanly to an empty database.
-- [ ] README and `docs/decisions.md` are complete and accurate.
+- [x] `pnpm typecheck`, `pnpm check`, `pnpm test`, `pnpm build` and `pnpm build-storybook` are all green with no warnings.
+- [x] No `any`, no `@ts-ignore`, no unexplained lint suppressions (verified by search).
+- [x] Migrations are committed and apply cleanly to an empty database.
+- [x] README and `docs/decisions.md` are complete and accurate.
 
 ---
 

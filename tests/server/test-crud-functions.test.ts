@@ -4,18 +4,25 @@ import { TEST_CRUD_IMAGE_MAX_BYTES } from "@/features/test-crud/constants";
 import { AppError } from "@/lib/errors";
 import { sniffImageType, validateImage } from "@/server/test-crud/image";
 
-describe("Test CRUD server functions", () => {
+/**
+ * Admin-only server function files. Add a new feature's admin functions file here
+ * (README, "Test CRUD: the template for new features", step 4).
+ */
+const ADMIN_FUNCTION_FILES: Record<string, number> = { "src/functions/test-crud.ts": 6 };
+
+describe("admin server functions", () => {
 	// The middleware itself is tested in auth-middleware.test.ts (anonymous -> UNAUTHORIZED,
-	// user -> FORBIDDEN). This guards that no Test CRUD function skips it. The live
-	// check (401/403 over HTTP) is in the Task 11 report.
-	it("every server function runs requireAdminMiddleware first", () => {
-		const source = readFileSync("src/functions/test-crud.ts", "utf8");
-		const definitions = source.split("createServerFn(").slice(1);
-		expect(definitions.length).toBe(6);
-		for (const definition of definitions) {
-			expect(definition).toMatch(/^\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireAdminMiddleware\]\)/);
-		}
-	});
+	// user -> FORBIDDEN). This guards that no admin function skips it. The live check
+	// (401/403 over HTTP) is recorded in docs/decisions.md 0070.
+	for (const [file, expected] of Object.entries(ADMIN_FUNCTION_FILES)) {
+		it(`every function in ${file} runs requireAdminMiddleware first`, () => {
+			const definitions = readFileSync(file, "utf8").split("createServerFn(").slice(1);
+			expect(definitions.length).toBe(expected);
+			for (const definition of definitions) {
+				expect(definition).toMatch(/^\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireAdminMiddleware\]\)/);
+			}
+		});
+	}
 });
 
 describe("image validation", () => {

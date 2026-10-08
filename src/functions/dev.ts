@@ -9,7 +9,7 @@ import { sanitizeRichText } from "@/server/rich-text/sanitize";
  * stored/rendered form of editor output can be inspected. Refuses in production.
  */
 export const previewRichText = createServerFn({ method: "POST" })
-	.inputValidator(zodInput(z.object({ html: z.string().max(100_000) })))
+	.validator(zodInput(z.object({ html: z.string().max(100_000) })))
 	.handler(({ data }) => {
 		if (!import.meta.env.DEV) throw new AppError("NOT_FOUND", "Not found");
 		return { html: sanitizeRichText(data.html) };

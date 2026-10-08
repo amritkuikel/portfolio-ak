@@ -2,7 +2,9 @@
 
 A bilingual (English + Nepali), server-rendered portfolio app built on TanStack Start.
 
-The full plan, phases and Definition of Done live in [docs/PLAN.md](docs/PLAN.md). Non-obvious choices are recorded in [docs/decisions.md](docs/decisions.md). This README is completed in Phase 12.
+Public pages render fully on the server (and without JavaScript), every string, email, validation message, meta tag and formatted value exists in both languages, and an admin area manages content. **Test CRUD** is the reference feature to copy for new ones.
+
+The plan, phases and Definition of Done are in [docs/PLAN.md](docs/PLAN.md). Every non-obvious choice is recorded in [docs/decisions.md](docs/decisions.md).
 
 ## Requirements
 
@@ -14,12 +16,74 @@ The full plan, phases and Definition of Done live in [docs/PLAN.md](docs/PLAN.md
 
 ```bash
 pnpm install
-cp .env.example .env   # then fill in real values
-pnpm db:migrate
-pnpm dev               # http://localhost:3000
+cp .env.example .env    # then fill in real values (see "Environment variables")
+pnpm db:migrate         # create the tables in your Neon database
+pnpm db:seed-admin --email you@example.com --password "at-least-12-chars" --name "You"
+pnpm dev                # http://localhost:3000
 ```
 
+Sign in at `/login` with the admin account, then open `/admin/test-crud`.
+
 `pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Set `VITE_SITE_URL` to the public origin (for example `https://example.com`) in every deployed environment: canonical, hreflang and Open Graph URLs are built from it. Visit `/health` to confirm the database connection.
+
+## Environment variables
+
+Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib/client-env.schema.ts`). Only `VITE_` variables reach the browser.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `VITE_APP_TITLE` | yes | Site name in the header and `<title>`. |
+| `VITE_SITE_URL` | yes | Public origin, e.g. `https://example.com`, used for canonical, hreflang and Open Graph URLs. |
+| `DATABASE_URL` | yes | Neon **pooled** connection string. |
+| `DATABASE_URL_UNPOOLED` | no | Neon direct connection, used for migrations. Falls back to `DATABASE_URL`. |
+| `BETTER_AUTH_SECRET` | yes | 32+ random characters (`openssl rand -base64 32`). Signs sessions. |
+| `BETTER_AUTH_URL` | yes | The app's public URL, used for auth callbacks and links in emails. |
+| `EMAIL_FROM` | yes | Sender, e.g. `Portfolio <hello@example.com>`. |
+| `EMAIL_PROVIDER` | prod | `console` (dev) or `resend`. Production refuses to start with `console`. |
+| `RESEND_API_KEY` | with Resend | Resend API key (`re_…`). |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | Enable "Continue with Google" (both or neither). |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | no | Defaults for `pnpm db:seed-admin`. |
+| `VITE_SENTRY_DSN` | no | Turns Sentry on (browser + server). |
+| `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` | no | Turn PostHog on (opt-in, behind the consent banner). |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | no | Upload source maps to Sentry during `pnpm build` (all three or none). |
+
+## Architecture
+
+```
+src/
+  routes/        file routes: _public (site), _auth (sign-in pages), _authed (account), _admin (admin area)
+  features/      feature code: schema (shared Zod), queries, collections, components (auth, test-crud, flags)
+  functions/     server functions (createServerFn): thin wrappers with middleware + validation
+  server/        SERVER-ONLY: env, db (Drizzle), auth (Better Auth), email, repositories/services, Nitro routes
+  middleware/    Start middleware: security headers + CSP nonce, CSRF, logging, error normalisation, auth guards
+  components/    ui/ (shadcn), forms/ (field library), layout/ (header, footer, sidebar, theme, consent)
+  lib/           isomorphic helpers: intl, validation, seo, errors, stores, analytics, db client wiring
+```
+
+**A request, end to end:** the server entry (`src/server.ts`) starts Sentry and resolves the locale (Paraglide).
+1. Request middleware adds the security headers and the CSP nonce, and checks CSRF for server functions.
+2. The router matches the route; `beforeLoad` guards check the session (`_authed`) or ask the server for the admin role (`_admin`).
+3. The **loader** calls `queryClient.ensureQueryData(...)`, which calls a **server function**.
+4. The server function runs its **middleware** (locale, logging, error normalisation, `requireAdminMiddleware`) and its **validator** (the shared Zod schema), then its handler. The handler calls a service or repository in `src/server/**` that talks to Postgres through **Drizzle**.
+5. The result is rendered on the server, streamed as HTML with the Query cache dehydrated, and hydrated in the browser without refetching. Admin lists then use a **TanStack DB** collection over the same query for optimistic edits with rollback.
+
+## Security
+
+- **Headers on every response** (Nitro `routeRules`, `src/lib/csp.ts`): `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation and others off), `X-Frame-Options: DENY` and `Cross-Origin-Opener-Policy`.
+- **Content-Security-Policy on HTML pages** (production), with a fresh nonce per request:
+  - Only nonce-bearing scripts run (`'strict-dynamic'` lets them load their own chunks).
+  - No `eval`. Zod runs in jitless mode.
+  - `connect-src` allows only the same origin plus the configured Sentry and PostHog hosts.
+  - Also `frame-ancestors 'none'` and `object-src 'none'`.
+- **Server-only code** (`src/server/**`, `*.server.*`) can't be imported by client code: TanStack Start import protection and `tests/server/env-boundary.test.ts` enforce it.
+- **Auth:** every admin server function runs `requireAdminMiddleware`. Auth endpoints are rate limited, and server functions reject cross-site calls (CSRF).
+- **Content:** rich text is sanitized on the server before it's stored and again when read. Uploaded images are type-checked from their bytes.
+
+## Deployment (Vercel)
+
+1. Create a Neon database and set every required variable from the table above in Vercel, including `VITE_SITE_URL` (your domain), `EMAIL_PROVIDER=resend` and `RESEND_API_KEY`.
+2. Run `pnpm db:migrate` against the production database (from CI or locally with `DATABASE_URL_UNPOOLED`), then `pnpm db:seed-admin`.
+3. Deploy. `pnpm build` produces the Vercel output through Nitro. The server validates its environment on boot and refuses to start if something is missing.
 
 ## Scripts
 
@@ -39,6 +103,7 @@ pnpm dev               # http://localhost:3000
 | `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
 | `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
 | `pnpm db:studio` | Open Drizzle Studio. |
+| `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
 
@@ -130,7 +195,18 @@ Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
 
 ## Test CRUD: the template for new features
 
-`/admin/test-crud` is the reference feature. To build a new one, copy its shape:
+`/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. To add a feature, say "projects":
+
+1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
+2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params and the DTO types.
+3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `db`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
+4. **Server functions:** `src/functions/projects.ts`, with `.middleware([requireAdminMiddleware])` on every admin function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add the file to `ADMIN_FUNCTION_FILES` in `tests/server/test-crud-functions.test.ts`.
+5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
+6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx`.
+7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
+8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`.
+
+The Test CRUD files for each layer:
 
 | Layer | File | What it shows |
 | --- | --- | --- |

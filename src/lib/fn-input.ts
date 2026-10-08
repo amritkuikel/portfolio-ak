@@ -14,7 +14,7 @@ export const zodFieldErrors = (error: z.ZodError): FieldErrors => {
 };
 
 /**
- * Wraps a Zod schema for createServerFn().inputValidator().
+ * Wraps a Zod schema for createServerFn().validator().
  *
  * Start runs Standard Schema validators itself and throws a plain Error with a
  * JSON dump of the issues. This wrapper exposes `parse` instead, so invalid
