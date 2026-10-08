@@ -10,17 +10,18 @@
 		"typecheck": "pnpm i18n:compile && tsc --noEmit",
 		"check": "biome check --error-on-warnings",
 		"check:fix": "biome check --write",
-		"test": "vitest run",
-		"test:watch": "vitest",
+		"test": "vitest run --project unit",
+		"test:watch": "vitest --project unit",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
-		"storybook": "node scripts/not-installed.mjs storybook \"Phase 11 (Storybook)\"",
-		"build-storybook": "node scripts/not-installed.mjs build-storybook \"Phase 11 (Storybook)\"",
+		"storybook": "storybook dev -p 6006 --no-open",
+		"build-storybook": "storybook build",
 		"i18n:compile": "paraglide-js compile --project ./project.inlang --silent",
 		"db:seed-admin": "node scripts/seed-admin.mjs",
-		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts"
+		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts",
+		"test:storybook": "vitest run --project storybook && vitest run --project storybook-dark-ne"
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.6",
@@ -75,6 +76,9 @@
 		"@biomejs/biome": "2.4.5",
 		"@electric-sql/pglite": "^0.5.8",
 		"@inlang/paraglide-js": "^2.25.4",
+		"@storybook/addon-a11y": "10.6.1",
+		"@storybook/addon-vitest": "10.6.1",
+		"@storybook/react-vite": "10.6.1",
 		"@tailwindcss/typography": "^0.5.20",
 		"@tanstack/devtools-vite": "^0.8.5",
 		"@testing-library/dom": "^10.4.2",
@@ -88,12 +92,16 @@
 		"@types/react-dom": "^19.3.0",
 		"@types/sanitize-html": "^2.16.2",
 		"@vitejs/plugin-react": "^6.1.1",
+		"@vitest/browser": "5.0.3",
+		"@vitest/browser-playwright": "5.0.3",
 		"auth": "^1.7.6",
 		"drizzle-kit": "^0.31.11",
 		"jsdom": "^30.1.1",
+		"playwright": "1.64.0",
+		"storybook": "10.6.1",
 		"typescript": "^6.0.3",
 		"vite": "^8.3.1",
-		"vitest": "^5.0.2"
+		"vitest": "^5.0.3"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [

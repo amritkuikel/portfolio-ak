@@ -182,7 +182,8 @@ export function TestCrudTable({
 								</TableCell>
 							) : null}
 							<TableCell>
-								<DropdownMenu>
+								{/* Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click). */}
+								<DropdownMenu modal={false}>
 									<DropdownMenuTrigger asChild>
 										<Button variant="ghost" size="icon" aria-label={m.test_crud_row_actions({ title: row.title })}>
 											<MoreHorizontalIcon aria-hidden />

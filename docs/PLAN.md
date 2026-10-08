@@ -94,9 +94,8 @@ Exact file names follow the official starter where it differs. Folder responsibi
 ├── vite/
 │   └── email-preview-plugin.ts  # dev-server-only /dev/emails (apply: "serve")
 ├── scripts/
-│   ├── not-installed.mjs        # stub for tools added in later phases
 │   └── seed-admin.mjs           # creates the first admin user (wraps Better Auth create-admin)
-├── .storybook/                  # Storybook config, decorators (locale, theme)
+├── .storybook/                 # main.ts, own vite.config.ts, preview (locale/theme toolbar), mocks/, vitest setups
 ├── src/
 │   ├── routes/
 │   │   ├── __root.tsx           # document shell, head, <html lang>, error/notFound

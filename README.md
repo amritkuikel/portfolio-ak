@@ -31,13 +31,25 @@ pnpm dev               # http://localhost:3000
 | `pnpm typecheck` | TypeScript in strict mode, no emit. |
 | `pnpm check` | Biome lint + format check. Warnings fail the run. |
 | `pnpm check:fix` | Apply Biome fixes and formatting. |
-| `pnpm test` | Run the Vitest suite once. |
-| `pnpm test:watch` | Run Vitest in watch mode. |
+| `pnpm test` | Run the unit, component and server tests once (Vitest project `unit`). |
+| `pnpm test:watch` | Run the unit project in watch mode. |
+| `pnpm test:storybook` | Render every story in headless Chrome, twice (English/light, then Nepali/dark), run play functions and fail on any a11y violation. Uses the installed Chrome. |
 | `pnpm db:generate` | Generate a SQL migration in `drizzle/` from schema changes. |
 | `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
 | `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
 | `pnpm db:studio` | Open Drizzle Studio. |
-| `pnpm storybook`, `pnpm build-storybook` | Stubs until Storybook is added in Phase 11. |
+| `pnpm storybook` | Storybook dev server on http://localhost:6006. |
+| `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
+
+## Storybook
+
+Stories live next to their components (`*.stories.tsx`). They cover every form field, the form error summary, the layout components (header, footer, admin sidebar, language switcher and theme menu), the login form, and the Test CRUD card, table, dialog and form.
+
+- **Toolbar:** language (English or नेपाली) and theme (light or dark), applied the way the app applies them.
+- **App context:** each story is wrapped in the app's providers: TanStack Router with memory history, Query, the TanStack DB client and the preferences store (`.storybook/app-providers.tsx`). Stories set the session, preferences and initial URL through `parameters.app`.
+- **No server:** Storybook uses its own Vite config (`.storybook/vite.config.ts`). Server functions (`@/functions/*`) and the Better Auth client are swapped for local mocks (`.storybook/mocks/`), so no database or network is involved and no real keys are read.
+- **Accessibility:** the a11y addon runs on every story and fails it on any violation (`parameters.a11y.test = "error"`). `pnpm test:storybook` enforces this, together with the play-function interaction tests (login form, Test CRUD form, table, field errors).
+- **For a new component:** add `component.stories.tsx`, wrap form fields in `FieldStory` (`src/components/forms/story-harness.tsx`), and add a `play` function for anything interactive.
 
 ## Internationalisation (English + Nepali)
 

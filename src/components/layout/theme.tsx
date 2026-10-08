@@ -70,8 +70,9 @@ const isTheme = (value: string): value is ThemePreference => (THEMES as Readonly
 export function ThemeToggle() {
 	const { theme, setTheme } = useTheme();
 	const Icon = ICONS[theme];
+	// Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click).
 	return (
-		<DropdownMenu>
+		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"

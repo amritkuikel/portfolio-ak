@@ -196,7 +196,8 @@ function TestCrudAdminPage() {
 						</SelectContent>
 					</Select>
 				</div>
-				<DropdownMenu>
+				{/* Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click). */}
+				<DropdownMenu modal={false}>
 					<DropdownMenuTrigger asChild>
 						<Button variant="outline" className="ms-auto">
 							<Columns3Icon aria-hidden />

@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!**/src/routeTree.gen.ts", "!**/pnpm-lock.yaml"]
+		"includes": ["**", "!**/src/routeTree.gen.ts", "!**/pnpm-lock.yaml", "!**/.claude", "!**/storybook-static"]
 	},
 	"formatter": {
 		"enabled": true,
