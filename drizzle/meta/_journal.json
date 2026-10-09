@@ -22,6 +22,13 @@
 			"when": 1791278640487,
 			"tag": "0002_test_crud",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1791526875704,
+			"tag": "0003_test_crud_filter_indexes",
+			"breakpoints": true
 		}
 	]
 }

@@ -1,6 +1,16 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { allOf, countRows, likePattern, orderBySort, paginate, textSearch } from "@/server/db/list";
+import {
+	allOf,
+	countRows,
+	dateRange,
+	likePattern,
+	numberRange,
+	orderBySort,
+	overlapsAny,
+	paginate,
+	textSearch,
+} from "@/server/db/list";
 import { testCrud } from "@/server/db/schema";
 import { createTestDb } from "../utils/test-db";
 
@@ -57,6 +67,44 @@ describe("allOf", () => {
 		expect(allOf(undefined, undefined)).toBeUndefined();
 		const where = allOf(undefined, eq(testCrud.status, "published"), textSearch("o", [testCrud.title]));
 		expect(await titles(where)).toEqual(["Dhaka Topi", "Momo"]);
+	});
+});
+
+describe("range and array filters", () => {
+	it("numberRange is inclusive with optional ends", async () => {
+		expect(await titles(numberRange(testCrud.price, 150, 300))).toEqual(["Momo", "Tea"]);
+		expect(await titles(numberRange(testCrud.price, 301, undefined))).toEqual(["Dhaka Topi"]);
+		expect(numberRange(testCrud.price, undefined, undefined)).toBeUndefined();
+	});
+
+	it("overlapsAny matches rows sharing any value; [] is no filter", async () => {
+		await env.db
+			.update(testCrud)
+			.set({ tags: ["food"] })
+			.where(eq(testCrud.slug, "momo"));
+		await env.db
+			.update(testCrud)
+			.set({ tags: ["drink", "food"] })
+			.where(eq(testCrud.slug, "tea"));
+		expect(await titles(overlapsAny(testCrud.tags, ["drink", "hat"]))).toEqual(["Tea"]);
+		expect(await titles(overlapsAny(testCrud.tags, ["food"]))).toEqual(["Momo", "Tea"]);
+		expect(overlapsAny(testCrud.tags, [])).toBeUndefined();
+	});
+
+	it("dateRange compares calendar days in the given time zone", async () => {
+		await env.db
+			.update(testCrud)
+			.set({ updatedAt: new Date("2026-09-01T18:20:00Z") })
+			.where(eq(testCrud.slug, "momo"));
+		await env.db
+			.update(testCrud)
+			.set({ updatedAt: new Date("2026-09-01T18:10:00Z") })
+			.where(eq(testCrud.slug, "tea"));
+		// 18:20 UTC is already 2 Sep in Nepal; 18:10 UTC is still 1 Sep.
+		expect(await titles(dateRange(testCrud.updatedAt, "2026-09-02", "2026-09-02"))).toEqual(["Momo"]);
+		expect(await titles(dateRange(testCrud.updatedAt, "2026-09-01", "2026-09-01"))).toEqual(["Tea"]);
+		// The same instants are both 1 Sep in UTC.
+		expect(await titles(dateRange(testCrud.updatedAt, "2026-09-01", "2026-09-01", "UTC"))).toEqual(["Momo", "Tea"]);
 	});
 });
 

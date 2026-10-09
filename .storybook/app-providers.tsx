@@ -9,6 +9,7 @@ import {
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { sessionQueryOptions } from "../src/features/auth/queries";
 import { createDbClient } from "../src/lib/db";
+import { parseSearch, stringifySearch } from "../src/lib/search";
 import type { Session } from "../src/lib/session";
 import { createPreferencesStore, DEFAULT_PREFERENCES, type Preferences } from "../src/lib/stores/preferences";
 import { deLocalizeUrl, localizeUrl } from "../src/paraglide/runtime";
@@ -50,7 +51,9 @@ function createStoryRouter({ session = null, preferences, route = "/" }: AppPara
 				preferences: createPreferencesStore({ ...DEFAULT_PREFERENCES, theme, ...preferences }),
 				session,
 			} satisfies RouterContext,
-			// Same locale URL handling as the app: Links in Nepali point at /ne/...
+			// Same URL handling as the app: repeated-key arrays, and Links in Nepali point at /ne/...
+			parseSearch,
+			stringifySearch,
 			rewrite: { input: ({ url }) => deLocalizeUrl(url), output: ({ url }) => localizeUrl(url) },
 		}),
 	};

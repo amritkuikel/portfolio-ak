@@ -1,6 +1,8 @@
 import "@tanstack/react-start/server-only";
-import { type AnyColumn, and, asc, count, desc, ilike, or, type SQL } from "drizzle-orm";
+import { type AnyColumn, and, arrayOverlaps, asc, count, desc, gte, ilike, lt, lte, or, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
+import { dayRangeInZone } from "@/lib/date-only";
+import { APP_TIME_ZONE } from "@/lib/intl";
 import { type Paged, pageWindow, parseSort } from "@/lib/list";
 import type { Db } from "./types";
 
@@ -26,6 +28,28 @@ export const allOf = (...filters: ReadonlyArray<SQL | undefined>): SQL | undefin
 	const present = filters.filter((filter): filter is SQL => filter !== undefined);
 	return present.length > 0 ? and(...present) : undefined;
 };
+
+/** `min <= column <= max`, either side optional; undefined when both are absent. */
+export const numberRange = (column: AnyColumn, min: number | undefined, max: number | undefined) =>
+	allOf(min === undefined ? undefined : gte(column, min), max === undefined ? undefined : lte(column, max));
+
+/**
+ * Calendar days `from`..`to` (inclusive, "YYYY-MM-DD") on a timestamp column, in the
+ * app's time zone. Compared as instants, so an index on the column still applies.
+ */
+export const dateRange = (
+	column: AnyColumn,
+	from: string | undefined,
+	to: string | undefined,
+	timeZone = APP_TIME_ZONE,
+) => {
+	const { start, end } = dayRangeInZone(from, to, timeZone);
+	return allOf(start ? gte(column, start) : undefined, end ? lt(column, end) : undefined);
+};
+
+/** An array column sharing at least one value with `values` (`&&`, GIN-indexable); undefined for []. */
+export const overlapsAny = (column: AnyColumn, values: ReadonlyArray<string>) =>
+	values.length === 0 ? undefined : arrayOverlaps(column, [...values]);
 
 /**
  * ORDER BY for a sort value ("price" or "-price") over a whitelist of sortable

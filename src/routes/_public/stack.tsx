@@ -1,12 +1,12 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Await, createFileRoute, Link, stripSearchParams, useNavigate } from "@tanstack/react-router";
-import type { FormEvent } from "react";
+import { Await, createFileRoute, Link, stripSearchParams } from "@tanstack/react-router";
+import { FilterBar } from "@/components/filters/filter-bar";
+import { SearchFilter } from "@/components/filters/filters";
 import { Pagination } from "@/components/navigation/pagination";
+import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { ListSkeleton, PageHeaderSkeleton } from "@/components/page/skeletons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { stackListQueryOptions } from "@/features/stack/queries";
 import {
 	STACK_PAGE_SIZE,
@@ -18,7 +18,9 @@ import {
 import { getStackStats } from "@/functions/stack";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatNumber } from "@/lib/intl";
+import { loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
+import { useListQuery } from "@/lib/use-list-query";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -27,9 +29,10 @@ export const Route = createFileRoute("/_public/stack")({
 	// Keep URLs clean: default values are removed from generated links.
 	search: { middlewares: [stripSearchParams(STACK_SEARCH_DEFAULTS)] },
 	loaderDeps: ({ search }) => search,
-	loader: async ({ context: { queryClient }, deps }) => {
-		// Awaited: the list is part of the SSR HTML and hydrates the Query cache.
-		await queryClient.ensureQueryData(stackListQueryOptions(deps));
+	loader: async ({ context: { queryClient }, deps, cause }) => {
+		// SSR and entering: awaited, so the list is part of the HTML and hydrates the Query
+		// cache. A new search keeps the current list until the new one arrives (loadList).
+		await loadList(queryClient, stackListQueryOptions(deps), cause);
 		// Not awaited: streamed to the client when ready (deferred).
 		return { stats: getStackStats() };
 	},
@@ -49,16 +52,10 @@ const SORT_LABELS: Record<StackSort, () => string> = {
 
 function StackPage() {
 	const search = Route.useSearch();
-	const navigate = useNavigate({ from: Route.fullPath });
-	const { data } = useSuspenseQuery(stackListQueryOptions(search));
+	const { data, busy, error } = useListQuery(stackListQueryOptions(search));
 	const { stats } = Route.useLoaderData();
-
-	// Without JS the form does a normal GET to this URL; with JS we navigate client-side.
-	const onSearch = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		const q = String(new FormData(event.currentTarget).get("q") ?? "");
-		void navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
-	};
+	if (error && !data) throw error;
+	if (!data) return <StackPending />;
 
 	return (
 		<Page className="gap-8">
@@ -85,26 +82,19 @@ function StackPage() {
 			</section>
 
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-				<search className="w-full max-w-md">
-					<form onSubmit={onSearch} className="flex items-end gap-2">
-						<div className="flex flex-1 flex-col gap-1.5">
-							<label htmlFor="stack-q" className="font-medium text-sm">
-								{m.stack_search_label()}
-							</label>
-							<Input
-								id="stack-q"
-								name="q"
-								type="search"
-								defaultValue={search.q}
-								key={search.q}
-								placeholder={m.stack_search_placeholder()}
-							/>
-						</div>
-						{/* Carry the current sort through a no-JS submit. */}
-						<input type="hidden" name="sort" value={search.sort} />
-						<Button type="submit">{m.stack_search_submit()}</Button>
-					</form>
-				</search>
+				<FilterBar
+					values={search}
+					preserve={["sort"]}
+					submitLabel={m.stack_search_submit()}
+					className="w-full max-w-md"
+				>
+					<SearchFilter
+						label={m.stack_search_label()}
+						value={search.q}
+						placeholder={m.stack_search_placeholder()}
+						className="flex-1 sm:w-auto"
+					/>
+				</FilterBar>
 
 				<nav aria-label={m.stack_sort_label()} className="flex items-center gap-1 text-sm">
 					<span className="mr-1 text-muted-foreground">{m.stack_sort_label()}</span>
@@ -130,16 +120,22 @@ function StackPage() {
 			</p>
 
 			{data.items.length === 0 ? (
-				<div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-8">
-					<p>{m.stack_empty({ query: search.q })}</p>
-					<Button asChild variant="outline">
-						<Link from={Route.fullPath} search={(prev) => ({ ...prev, q: "", page: 1 })}>
-							{m.stack_clear_search()}
-						</Link>
-					</Button>
-				</div>
+				<EmptyState
+					description={m.stack_empty({ query: search.q })}
+					action={
+						<Button asChild variant="outline">
+							<Link from={Route.fullPath} search={(prev) => ({ ...prev, q: "", page: 1 })}>
+								{m.stack_clear_search()}
+							</Link>
+						</Button>
+					}
+				/>
 			) : (
-				<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="stack-list">
+				<ul
+					className="grid gap-4 transition-opacity aria-busy:opacity-60 motion-reduce:transition-none sm:grid-cols-2 lg:grid-cols-3"
+					aria-busy={busy || undefined}
+					data-testid="stack-list"
+				>
 					{data.items.map((item) => (
 						<li key={item.id}>
 							<Card className="h-full">

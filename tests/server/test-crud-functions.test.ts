@@ -8,7 +8,7 @@ import { sniffImageType, validateImage } from "@/server/test-crud/image";
  * Admin-only server function files. Add a new feature's admin functions file here
  * (README, "Test CRUD: the template for new features", step 4).
  */
-const ADMIN_FUNCTION_FILES: Record<string, number> = { "src/functions/test-crud.ts": 6 };
+const ADMIN_FUNCTION_FILES: Record<string, number> = { "src/functions/test-crud.ts": 7 };
 
 describe("admin server functions", () => {
 	// The middleware itself is tested in auth-middleware.test.ts (anonymous -> UNAUTHORIZED,

@@ -34,3 +34,63 @@ export const fromIsoDate = (value: string | undefined): Date | undefined => {
  * calendar day in every time zone from UTC-11 to UTC+11 (Nepal is UTC+5:45).
  */
 export const isoDateInstant = (value: IsoDate): Date => new Date(`${value}T12:00:00Z`);
+
+/** Offset of `timeZone` from UTC at `instant`, in milliseconds (positive east of UTC). */
+const zoneOffset = (instant: number, timeZone: string): number => {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone,
+		hourCycle: "h23",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	}).formatToParts(new Date(instant));
+	const field = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+	const asUtc = Date.UTC(
+		field("year"),
+		field("month") - 1,
+		field("day"),
+		field("hour"),
+		field("minute"),
+		field("second"),
+	);
+	return asUtc - (instant - (instant % 1000));
+};
+
+/** The instant a calendar day starts in `timeZone` ("2026-09-01" in Nepal -> 2026-08-31T18:15:00Z). */
+export const startOfDayInZone = (value: IsoDate, timeZone: string): Date | undefined => {
+	const match = ISO_DATE.exec(value);
+	if (!match) return undefined;
+	const [, year, month, day] = match;
+	const midnightUtc = Date.UTC(Number(year), Number(month) - 1, Number(day));
+	// Two passes: the offset at the guessed instant, then at the corrected one (DST edges).
+	const first = midnightUtc - zoneOffset(midnightUtc, timeZone);
+	return new Date(midnightUtc - zoneOffset(first, timeZone));
+};
+
+/**
+ * An inclusive range of calendar days as instants: `start` is when `from` begins,
+ * `end` (exclusive) is when the day after `to` begins. Either side may be open.
+ */
+export const dayRangeInZone = (
+	from: IsoDate | undefined,
+	to: IsoDate | undefined,
+	timeZone: string,
+): { start?: Date; end?: Date } => {
+	const start = from ? startOfDayInZone(from, timeZone) : undefined;
+	let end: Date | undefined;
+	if (to) {
+		const toStart = startOfDayInZone(to, timeZone);
+		// The next calendar day, computed on the date (days can be 23 or 25 hours long).
+		const next = toStart ? new Date(Date.UTC(...dateParts(to), 0) + 86_400_000) : undefined;
+		end = next ? startOfDayInZone(next.toISOString().slice(0, 10), timeZone) : undefined;
+	}
+	return { ...(start ? { start } : {}), ...(end ? { end } : {}) };
+};
+
+const dateParts = (value: IsoDate): [number, number, number] => {
+	const [year, month, day] = value.split("-").map(Number);
+	return [year ?? 1970, (month ?? 1) - 1, day ?? 1];
+};

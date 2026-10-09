@@ -13,6 +13,7 @@ import {
 } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { toFormData } from "../form-data";
 import { STATUS_LABELS } from "../labels";
@@ -44,7 +45,19 @@ const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => (
  * validates here and on the server; server-only failures (slug taken, image
  * rejected) come back as field errors on the matching fields.
  */
-export function TestCrudForm({ item }: { item?: TestCrudDetail }) {
+export function TestCrudForm({
+	item,
+	onSaved,
+	onCancel,
+	className,
+}: {
+	item?: TestCrudDetail;
+	/** After a successful save (default: go to the list). The edit dialog closes itself instead. */
+	onSaved?: (saved: TestCrudDetail) => void;
+	/** Replaces the "Back to list" link with a button (the edit dialog's close). */
+	onCancel?: () => void;
+	className?: string;
+}) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const saved = useRef(false);
@@ -63,8 +76,10 @@ export function TestCrudForm({ item }: { item?: TestCrudDetail }) {
 				queryClient.setQueryData(testCrudKeys.detail(result.id), result);
 				await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
 				void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
+				void queryClient.invalidateQueries({ queryKey: testCrudKeys.tags() });
 				toast.success(item ? m.test_crud_toast_saved() : m.test_crud_toast_created());
-				await navigate({ to: "/admin/test-crud" });
+				if (onSaved) onSaved(result);
+				else await navigate({ to: "/admin/test-crud" });
 			} catch (error) {
 				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
 			}
@@ -76,7 +91,7 @@ export function TestCrudForm({ item }: { item?: TestCrudDetail }) {
 	return (
 		<form.AppForm>
 			<UnsavedChangesGuard when={() => !saved.current && !form.state.isDefaultValue} />
-			<form.Form className="flex max-w-3xl flex-col gap-6" data-testid="test-crud-form">
+			<form.Form className={cn("flex max-w-3xl flex-col gap-6", className)} data-testid="test-crud-form">
 				<form.FormErrorSummary />
 				<form.AppField
 					name="title"
@@ -150,9 +165,15 @@ export function TestCrudForm({ item }: { item?: TestCrudDetail }) {
 					<form.SubmitButton pendingLabel={m.test_crud_saving()}>
 						{item ? m.test_crud_save() : m.test_crud_create()}
 					</form.SubmitButton>
-					<Button variant="ghost" asChild>
-						<Link to="/admin/test-crud">{m.test_crud_back()}</Link>
-					</Button>
+					{onCancel ? (
+						<Button type="button" variant="ghost" onClick={onCancel}>
+							{m.common_cancel()}
+						</Button>
+					) : (
+						<Button variant="ghost" asChild>
+							<Link to="/admin/test-crud">{m.test_crud_back()}</Link>
+						</Button>
+					)}
 				</div>
 			</form.Form>
 		</form.AppForm>

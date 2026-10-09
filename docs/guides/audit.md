@@ -16,8 +16,8 @@ Decision numbers refer to [decisions.md](../decisions.md).
 | Search params and lists | Fixed | One shared list contract on both sides (0084). |
 | Page structure and UI reuse | Fixed | Shared `Page`, `PageHeader`, `Breadcrumbs`, `DataTable`, `Pagination`, `ConfirmDialog`, `EmptyState`, skeletons (0085). |
 | Breadcrumbs | Fixed | From route `staticData` on every admin page and every public section and detail page (0083). |
-| Filters | Later (Task 19) | Only `q` and `status` exist, and the search form is repeated on 3 pages. Task 19 adds `FilterBar`, multi-value and range filters, and route masking. |
-| Path params | Later (Task 19) | Validated inside loaders with `safeParse` → 404. Task 19 moves them to the route `params` option. |
+| Filters | Fixed (Task 19) | Shared `FilterBar`, filter controls and chips, used on all 3 list pages. Test CRUD filters by status, tags, price range, published dates and image (0088, 0093). |
+| Path params | Fixed (Task 19) | `params.parse` + `parseParams` on the route: invalid params give the localized 404 (0092). |
 | Forms | Keep | `useAppForm` and the field library: one Zod schema for the client and server, server field errors, an error summary and an unsaved-changes guard. |
 | State: Query / DB / Store | Keep | Query for server state (SSR-dehydrated), TanStack DB for optimistic list edits, Store and cookies for preferences, so the server renders the user's choices. |
 | i18n | Keep + fixed | Paraglide URL strategy, so every page exists in both locales. Unused keys are now a test failure (0087). |
@@ -52,12 +52,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 
 ### Scheduled
 
-- **Task 19:**
-  - A `FilterBar` and filter primitives.
-  - One `SearchField`, replacing the three search forms.
-  - Richer Test CRUD filters.
-  - Route masking examples.
-  - Route-level `params` validation.
+- **Task 19 (done):** filters, search helpers, list loading without pending screens (0089), the admin guard round trip (0090), route masking (0091), param validation (0092).
 - **Task 20:**
   - A permission catalog, roles and the matrix UI.
   - `requirePermission` replacing `requireAdminMiddleware` where a finer permission applies.

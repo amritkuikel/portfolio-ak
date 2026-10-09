@@ -44,6 +44,8 @@ export type DataTableProps<Row> = {
 	rowActions?: (row: Row) => ReactNode;
 	/** Shown instead of the table when there are no rows. */
 	empty?: ReactNode;
+	/** New rows are loading (a filter or page change); the current ones are dimmed meanwhile. */
+	busy?: boolean;
 	"data-testid"?: string;
 };
 
@@ -70,13 +72,14 @@ export function DataTable<Row>({
 	bulkActions,
 	rowActions,
 	empty,
+	busy = false,
 	"data-testid": testId,
 }: DataTableProps<Row>) {
 	const preferences = useTablePreferences(tableId);
 	const visible = columns.filter((column) => !column.hideable || preferences.isColumnVisible(column.id));
 	const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
 
-	if (rows.length === 0 && empty) return <>{empty}</>;
+	if (rows.length === 0 && empty) return <div aria-busy={busy || undefined}>{empty}</div>;
 
 	const ids = rows.map(getRowId);
 	// Only rows still on this page count (after a delete, a filter or a page change).
@@ -91,7 +94,10 @@ export function DataTable<Row>({
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div
+			className="flex flex-col gap-3 transition-opacity aria-busy:opacity-60 motion-reduce:transition-none"
+			aria-busy={busy || undefined}
+		>
 			{bulkActions && selected.length > 0 ? (
 				<div
 					className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm"

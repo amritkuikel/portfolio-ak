@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getTestCrud, listTestCrud } from "@/functions/test-crud";
+import { getTestCrud, listTestCrud, listTestCrudTags } from "@/functions/test-crud";
 import { getPublicTestCrud, listPublicTestCrud } from "@/functions/test-crud-public";
 import type { TestCrudListInput, TestCrudPublicSearch } from "./schema";
 
@@ -12,6 +12,7 @@ export const testCrudKeys = {
 	all: ["test-crud"] as const,
 	lists: () => [...testCrudKeys.all, "list"] as const,
 	list: (input: TestCrudListInput) => [...testCrudKeys.lists(), input] as const,
+	tags: () => [...testCrudKeys.all, "tags"] as const,
 	details: () => [...testCrudKeys.all, "detail"] as const,
 	detail: (id: string) => [...testCrudKeys.details(), id] as const,
 	/** Public reads are separate from admin ones: they only ever contain published rows. */
@@ -24,6 +25,13 @@ export const testCrudListQueryOptions = (input: TestCrudListInput) =>
 	queryOptions({
 		queryKey: testCrudKeys.list(input),
 		queryFn: () => listTestCrud({ data: input }),
+	});
+
+/** Tag filter options; refreshed with the lists (saving an item can add tags). */
+export const testCrudTagsQueryOptions = () =>
+	queryOptions({
+		queryKey: testCrudKeys.tags(),
+		queryFn: () => listTestCrudTags(),
 	});
 
 export const testCrudDetailQueryOptions = (id: string) =>

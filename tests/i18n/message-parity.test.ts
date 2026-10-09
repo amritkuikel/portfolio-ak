@@ -45,10 +45,14 @@ describe("i18n message files", () => {
 		expect(mismatched).toEqual([]);
 	});
 
-	it("ne messages are actually translated (not copied English), except language endonyms", () => {
+	it("ne messages are actually translated (not copied English), except endonyms and pure formats", () => {
 		const ne = load("ne");
 		const allowedIdentical = new Set(["language_en", "language_ne"]);
-		const untranslated = Object.keys(base).filter((key) => !allowedIdentical.has(key) && ne[key] === base[key]);
+		// Pure formats ("{label}: {value}") have no words to translate.
+		const wordless = (value: string) => !/\p{L}/u.test(value.replace(/\{\w+\}/g, ""));
+		const untranslated = Object.keys(base).filter(
+			(key) => !allowedIdentical.has(key) && !wordless(base[key] ?? "") && ne[key] === base[key],
+		);
 		expect(untranslated).toEqual([]);
 	});
 });

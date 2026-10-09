@@ -1,13 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useSearch } from "@tanstack/react-router";
-import { expect, waitFor } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { DataTable } from "@/components/data-table";
 import { createTestCrud } from "@/functions/test-crud";
 import { m } from "@/paraglide/messages";
 import { sampleDetail, sampleItems, samplePublicCard } from "../../../../.storybook/mocks/data";
 import { TEST_CRUD_TABLE_ID } from "../schema";
 import { testCrudColumns } from "./admin-columns";
+import { TestCrudEditDialog } from "./edit-dialog";
 import { PublicCard, PublicCardSkeleton } from "./public-card";
+import { TestCrudQuickView } from "./quick-view";
 import { TestCrudForm } from "./test-crud-form";
 
 const meta = { title: "Test CRUD", component: TestCrudForm } satisfies Meta<typeof TestCrudForm>;
@@ -29,6 +31,31 @@ export const Card: Story = {
 			</li>
 		</ul>
 	),
+};
+
+/** With the "Quick view" button (a masked link: its href is the item's own page). */
+export const CardWithQuickView: Story = {
+	parameters: { app: { route: "/test-crud" } },
+	render: () => (
+		<div className="max-w-sm">
+			<PublicCard item={samplePublicCard} quickView />
+		</div>
+	),
+	play: async ({ canvas }) => {
+		const link = canvas.getByRole("link", { name: m.test_crud_quick_view_of({ title: samplePublicCard.title }) });
+		await expect(link.getAttribute("href")?.endsWith(`/test-crud/${samplePublicCard.slug}`)).toBe(true);
+	},
+};
+
+/** The quick-view dialog over the grid (?view=<slug>). */
+export const QuickView: Story = {
+	parameters: { app: { route: `/test-crud?view=${samplePublicCard.slug}` } },
+	render: () => <TestCrudQuickView slug={samplePublicCard.slug} />,
+	play: async ({ canvasElement }) => {
+		const dialog = within(canvasElement.ownerDocument.body);
+		await expect(await dialog.findByRole("heading", { name: samplePublicCard.title })).toBeVisible();
+		await expect(dialog.getByRole("link", { name: m.test_crud_open_full_page() })).toBeVisible();
+	},
 };
 
 export const CardSkeleton: Story = {
@@ -91,6 +118,19 @@ export const TableWithHiddenColumns: Story = {
 // ---------------------------------------------------------------------------
 // Create / edit form
 // ---------------------------------------------------------------------------
+
+/** The admin edit form in a dialog over the list (?edit=<id>, shown as /admin/test-crud/<id>). */
+export const EditDialog: Story = {
+	parameters: { app: { route: `/admin/test-crud?edit=${sampleDetail.id}` } },
+	render: () => <TestCrudEditDialog id={sampleDetail.id} />,
+	play: async ({ canvasElement }) => {
+		const dialog = within(canvasElement.ownerDocument.body);
+		await expect(await dialog.findByRole("textbox", { name: m.test_crud_field_title() })).toHaveValue(
+			sampleDetail.title,
+		);
+		await expect(dialog.getByRole("button", { name: m.common_cancel() })).toBeVisible();
+	},
+};
 
 export const NewItem: Story = { parameters: { app: { route: "/admin/test-crud/new" } } };
 

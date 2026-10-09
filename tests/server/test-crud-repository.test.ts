@@ -16,6 +16,7 @@ import {
 	getTestCrud,
 	listPublishedTestCrud,
 	listTestCrud,
+	listTestCrudTags,
 	setTestCrudStatus,
 	updateTestCrud,
 } from "@/server/test-crud/repository";
@@ -122,7 +123,7 @@ describe("listTestCrud", () => {
 		}
 	});
 	const list = (overrides: Partial<Parameters<typeof listTestCrud>[1]> = {}) =>
-		listTestCrud(db, { q: "", status: "all", sort: "title", page: 1, pageSize: 10, ...overrides });
+		listTestCrud(db, { q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides });
 
 	it("paginates with totals and clamps out-of-range pages", async () => {
 		const first = await list({ pageSize: 2 });
@@ -146,6 +147,76 @@ describe("listTestCrud", () => {
 		expect((await list({ q: "%" })).total).toBe(1);
 		expect((await list({ q: "item-3" })).items.map((item) => item.title)).toEqual(["Delta dates"]);
 		expect((await list({ q: "zzz" })).total).toBe(0);
+	});
+});
+
+describe("listTestCrud filters", () => {
+	// Published times are chosen around Nepal midnight (18:15 UTC) to check that date
+	// filters use calendar days in the app time zone, not UTC days.
+	const rows: Array<[string, string[], number, string | null, boolean]> = [
+		["Momo", ["food", "nepal"], 300, "2026-09-01T18:20:00Z", true], // 2 Sep in Nepal
+		["Tea", ["drink"], 150, "2026-09-01T18:10:00Z", false], // 1 Sep in Nepal
+		["Topi", ["clothing", "nepal"], 900, "2026-10-15T06:00:00Z", true],
+		["Draft dal", ["food"], 50, null, false],
+	];
+	beforeEach(async () => {
+		for (const [index, [title, tags, price, publishedAt, image]] of rows.entries()) {
+			const created = await createTestCrud(
+				db,
+				input({ title, slug: `row-${index}`, tags, price, status: publishedAt ? "published" : "draft" }),
+				{ image: image ? png() : null, userId: USER_ID },
+			);
+			await db
+				.update(schema.testCrud)
+				.set({ publishedAt: publishedAt ? new Date(publishedAt) : null })
+				.where(eq(schema.testCrud.id, created.id));
+		}
+	});
+	const titles = async (overrides: Partial<Parameters<typeof listTestCrud>[1]>) =>
+		(
+			await listTestCrud(db, { q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides })
+		).items.map((item) => item.title);
+
+	it("tags match any of the selected tags", async () => {
+		expect(await titles({ tags: ["nepal"] })).toEqual(["Momo", "Topi"]);
+		expect(await titles({ tags: ["drink", "clothing"] })).toEqual(["Tea", "Topi"]);
+		expect(await titles({ tags: ["unused"] })).toEqual([]);
+	});
+
+	it("price range is inclusive and either end is optional", async () => {
+		expect(await titles({ priceMin: 150, priceMax: 300 })).toEqual(["Momo", "Tea"]);
+		expect(await titles({ priceMin: 301 })).toEqual(["Topi"]);
+		expect(await titles({ priceMax: 50 })).toEqual(["Draft dal"]);
+	});
+
+	it("published dates are whole days in Nepal time (drafts never match)", async () => {
+		expect(await titles({ from: "2026-09-02", to: "2026-09-02" })).toEqual(["Momo"]);
+		expect(await titles({ to: "2026-09-01" })).toEqual(["Tea"]);
+		expect(await titles({ from: "2026-09-01" })).toEqual(["Momo", "Tea", "Topi"]);
+	});
+
+	it("has-image filters both ways", async () => {
+		expect(await titles({ hasImage: true })).toEqual(["Momo", "Topi"]);
+		expect(await titles({ hasImage: false })).toEqual(["Draft dal", "Tea"]);
+	});
+
+	it("filters combine with AND, together with search and status", async () => {
+		expect(await titles({ tags: ["food"], status: "published", priceMax: 500, q: "mo" })).toEqual(["Momo"]);
+		const page = await listTestCrud(db, {
+			q: "",
+			status: "all",
+			tags: ["nepal"],
+			hasImage: true,
+			sort: "-price",
+			page: 1,
+			pageSize: 10,
+		});
+		expect(page).toMatchObject({ total: 2, pageCount: 1 });
+		expect(page.items.map((item) => item.title)).toEqual(["Topi", "Momo"]);
+	});
+
+	it("lists every tag in use, alphabetically", async () => {
+		expect(await listTestCrudTags(db)).toEqual(["clothing", "drink", "food", "nepal"]);
 	});
 });
 

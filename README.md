@@ -57,7 +57,8 @@ src/
   server/        SERVER-ONLY: env, db (Drizzle), auth (Better Auth), email, repositories/services, Nitro routes
   middleware/    Start middleware: security headers + CSP nonce, CSRF, logging, error normalisation, auth guards
   components/    generic UI: ui/ (shadcn), page/ (Page, PageHeader, Breadcrumbs, EmptyState, skeletons),
-                 data-table/ (DataTable, columns menu), navigation/ (Pagination, SearchLink), dialogs/ (ConfirmDialog),
+                 data-table/ (DataTable, columns menu), filters/ (FilterBar, filter controls, chips),
+                 navigation/ (Pagination, SearchLink, useCloseOverlay), dialogs/ (ConfirmDialog),
                  forms/ (field library), layout/ (header, footer, sidebar, theme, consent)
   lib/           isomorphic helpers: list contract, breadcrumbs, intl, validation, seo, errors, stores, analytics, zod
 ```
@@ -217,8 +218,8 @@ The Test CRUD files for each layer:
 | Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
 | Server functions | `src/functions/test-crud.ts` | `requireAdminMiddleware` on every function, `.validator()` input, and FormData for file uploads |
 | Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
-| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*` | The shared `DataTable` with Test CRUD's column definitions (`admin-columns.tsx`), URL sorting and paging, bulk actions, `ConfirmDialog`, forms built only from the reusable fields, toasts and the unsaved-changes guard |
-| Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, published items only, localized 404 for drafts, and `seo()` head tags |
+| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
+| Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
 
 Images are stored in Postgres and served from `/api/images/:id` (see decision 0067).
 

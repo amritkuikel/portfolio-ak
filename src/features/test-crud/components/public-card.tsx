@@ -4,13 +4,23 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 import type { PublicTestCrudCard } from "../schema";
+import { QuickViewButton } from "./masked-links";
 
 /**
  * One published item. The title link is stretched over the card, so the whole
  * card is clickable while screen readers hear a single link with the title.
  * The image box has a fixed aspect ratio, so cards don't jump as images load.
  */
-export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCard; headingLevel?: 2 | 3 }) {
+export function PublicCard({
+	item,
+	headingLevel = 2,
+	quickView = false,
+}: {
+	item: PublicTestCrudCard;
+	headingLevel?: 2 | 3;
+	/** Adds a "Quick view" button that opens the item in a dialog over the list (masked route). */
+	quickView?: boolean;
+}) {
 	const Heading = `h${headingLevel}` as const;
 	return (
 		<article className="group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-shadow focus-within:ring-[3px] focus-within:ring-ring/50 hover:shadow-md">
@@ -33,6 +43,7 @@ export function PublicCard({ item, headingLevel = 2 }: { item: PublicTestCrudCar
 					</div>
 				)}
 			</div>
+			{quickView ? <QuickViewButton slug={item.slug} title={item.title} /> : null}
 			<div className="flex flex-1 flex-col gap-3 p-4">
 				{/* Fixed line counts (clamped and reserved): the card height no longer depends on
 				    where text wraps, so the web-font swap can't shift the grid. */}

@@ -11,6 +11,7 @@ import { PendingPage } from "./components/errors/pending-page";
 import { createDbClient } from "./lib/db";
 import { sentryDsn } from "./lib/observability/sentry";
 import { createQueryClient } from "./lib/query";
+import { parseSearch, stringifySearch } from "./lib/search";
 import type { Session } from "./lib/session";
 import { createPreferencesStore, type PreferencesStore } from "./lib/stores/preferences";
 import { readPreferences } from "./lib/stores/read-preferences";
@@ -42,6 +43,10 @@ export function getRouter() {
 		// Per-request CSP nonce (security-headers middleware) for Start's inline scripts
 		// and ScriptOnce. Only meaningful during SSR; undefined in the browser.
 		ssr: { nonce: typeof window === "undefined" ? getGlobalStartContext()?.nonce : undefined },
+		// Arrays in the URL are repeated keys (tags=a&tags=b), exactly what a plain GET
+		// form submits, so filter URLs look the same with and without JavaScript.
+		parseSearch,
+		stringifySearch,
 		scrollRestoration: true,
 		defaultPreload: "intent",
 		// Let TanStack Query decide freshness for preloaded data.

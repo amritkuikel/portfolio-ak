@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
 	imageUrl,
 	type PublicTestCrudCard,
@@ -14,7 +14,16 @@ import {
 } from "@/features/test-crud/schema";
 import { AppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
-import { allOf, countRows, orderBySort, paginate, textSearch } from "@/server/db/list";
+import {
+	allOf,
+	countRows,
+	dateRange,
+	numberRange,
+	orderBySort,
+	overlapsAny,
+	paginate,
+	textSearch,
+} from "@/server/db/list";
 import { testCrud, testCrudImage } from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
 import { sanitizeRichText } from "@/server/rich-text/sanitize";
@@ -60,6 +69,10 @@ export async function listTestCrud(db: Db, input: TestCrudListInput): Promise<Te
 	const where = allOf(
 		input.status === "all" ? undefined : eq(testCrud.status, input.status),
 		textSearch(input.q, [testCrud.title, testCrud.slug, testCrud.summary]),
+		overlapsAny(testCrud.tags, input.tags),
+		numberRange(testCrud.price, input.priceMin, input.priceMax),
+		dateRange(testCrud.publishedAt, input.from, input.to),
+		input.hasImage === undefined ? undefined : input.hasImage ? isNotNull(testCrud.image) : isNull(testCrud.image),
 	);
 	const order = orderBySort(input.sort, SORT_COLUMNS, { tiebreaker: testCrud.id, fallback: "updated" });
 	// Out-of-range pages are clamped (e.g. after deleting the last row of the last page).
@@ -78,6 +91,16 @@ export async function listTestCrud(db: Db, input: TestCrudListInput): Promise<Te
 		},
 		toListItem,
 	);
+}
+
+/** Every tag in use, alphabetical (options for the tag filter). */
+export async function listTestCrudTags(db: Db): Promise<string[]> {
+	const rows = await db
+		.selectDistinct({ tag: sql<string>`unnest(${testCrud.tags})` })
+		.from(testCrud)
+		.orderBy(sql`1`)
+		.limit(200);
+	return rows.map((row) => row.tag);
 }
 
 export async function getTestCrud(db: Db, id: string): Promise<TestCrudDetail | null> {

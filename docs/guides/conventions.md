@@ -12,7 +12,8 @@ src/
     ui/                   shadcn primitives (Button, Table, Dialog…). Generated; adjust sparingly.
     page/                 Page, PageHeader, Breadcrumbs, EmptyState, PageHeaderSkeleton, ListSkeleton
     data-table/           DataTable, DataTableColumnsMenu, DataTableSkeleton
-    navigation/           Pagination, SearchLink
+    navigation/           Pagination, SearchLink, useCloseOverlay (masked dialogs)
+    filters/              FilterBar + Search/Select/MultiSelect/Boolean/NumberRange/DateRange filters, ActiveFilters chips
     dialogs/              ConfirmDialog
     forms/                useAppForm + the field library (see the forms showcase at /dev/forms)
     layout/               Site header/footer, admin sidebar, theme, consent banner
@@ -22,13 +23,15 @@ src/
     constants.ts labels.ts  Enum values and their localized labels
     queries.ts            Query keys + queryOptions
     collection.ts         TanStack DB collection (optimistic list edits)
-    components/           Feature components: columns (admin-columns.tsx), form, cards
+    filters.tsx           The list's filter controls + chips (features/test-crud/filters.tsx)
+    components/           Feature components: columns (admin-columns.tsx), form, cards, masked links, dialogs
   functions/<name>.ts     Server functions: middleware + validator + a one-line call into src/server
   server/                 SERVER-ONLY (import protection + tests enforce it)
     db/                   client, schema/, types.ts (Db, Tx), list.ts (SQL list helpers)
     <name>/               repository.ts (Drizzle over an injected Db) and service.ts (logic, I/O)
   middleware/             Start middleware (security headers, CSRF, auth, logging, errors)
-  lib/                    Isomorphic helpers: list contract, breadcrumbs, seo, intl, validation, errors, stores, zod
+  lib/                    Isomorphic helpers: list contract (list.ts), filter params + URL serialization (search.ts),
+                          loadList/useListQuery, breadcrumbs, seo, intl, date-only, validation, errors, stores, zod
 ```
 
 **Naming:** files are kebab-case and components PascalCase. Server-only modules live under `src/server/` or are named `*.server.ts`. Stories sit next to their component as `*.stories.tsx`. Tests live in `tests/`:
@@ -61,7 +64,8 @@ export const projectColumns: ReadonlyArray<DataTableColumn<ProjectListItem>> = [
 // routes/_admin/admin/projects/index.tsx
 <Page width="admin">
 	<PageHeader title={m.projects_title()} description={…} actions={<NewProjectButton />} />
-	{/* filters (Task 19: FilterBar) */}
+	<FilterBar values={search} preserve={["sort", "pageSize"]}>{/* filter controls */}</FilterBar>
+	<ActiveFilters chips={projectFilterChips(search)} clearAll={CLEAR_FILTERS} />
 	<DataTableColumnsMenu tableId={PROJECT_TABLE_ID} columns={projectColumns} />
 	<DataTable
 		tableId={PROJECT_TABLE_ID} rows={rows} columns={projectColumns}
@@ -92,6 +96,8 @@ export async function listProjects(db: Db, input: ProjectListInput): Promise<Pro
 }
 ```
 
+Filters, the loader (`loadList` + `useListQuery`) and record dialogs (route masking) are covered step by step in [search-filters-masking.md](search-filters-masking.md).
+
 Public lists use `<Page width="wide">`, `<PageHeader size="display" breadcrumbsJsonLd>`, a card grid, `<EmptyState>` and `<Pagination layout="center" hideWhenSingle />`. Pending states use `PageHeaderSkeleton` with `ListSkeleton` or `DataTableSkeleton`, matching the page's footprint.
 
 ## Breadcrumbs
@@ -113,6 +119,7 @@ loader: async (…) => { const item = await queryClient.ensureQueryData(…); re
 ## Rules
 
 - **Everything renders on the server.** Loaders `await queryClient.ensureQueryData(...)` and components read the data with `useSuspenseQuery`. Never fetch first-paint data in an effect.
+- **Lists keep their results while a new search loads:** `loadList` in the loader, `useListQuery` in the page (never a pending screen for a filter change).
 - **The URL is the state** for search, filters, sort and page. Change it with `<SearchLink patch>`, `<Link search>` or `navigate({ search })`, never with local state. Defaults are stripped with `stripSearchParams`.
 - **Read messages at render time.** Never put `m.foo()` (or JSX containing it) in a module-level constant. On the server it would freeze the first request's locale. Use a component or a function, or pass the message function itself (`header: m.foo`).
 - **Return little from loaders.** Data already travels in the Query cache; return only what `head` or `staticData` need.

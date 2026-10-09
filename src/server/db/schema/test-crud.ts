@@ -48,6 +48,9 @@ export const testCrud = pgTable(
 	(table) => [
 		index("test_crud_status_published_idx").on(table.status, table.publishedAt),
 		index("test_crud_updated_idx").on(table.updatedAt),
+		// List filters: tags (any of, `&&`) and price range.
+		index("test_crud_tags_idx").using("gin", table.tags),
+		index("test_crud_price_idx").on(table.price),
 	],
 );
 

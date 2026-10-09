@@ -6,6 +6,9 @@ import { sampleDetail, sampleItems } from "../data";
 export const listTestCrud = fn(
 	async (): Promise<TestCrudPage> => ({ items: sampleItems, total: sampleItems.length, page: 1, pageCount: 1 }),
 ).mockName("listTestCrud");
+export const listTestCrudTags = fn(async (): Promise<string[]> => ["drink", "food", "nepal"]).mockName(
+	"listTestCrudTags",
+);
 export const getTestCrud = fn(async (): Promise<TestCrudDetail> => sampleDetail).mockName("getTestCrud");
 export const createTestCrud = fn(
 	async (_options: { data: FormData }): Promise<TestCrudDetail> => sampleDetail,

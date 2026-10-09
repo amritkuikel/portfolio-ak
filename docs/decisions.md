@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (87 entries)</summary>
+<summary>Index (93 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -93,6 +93,12 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0085](#0085-reusable-page-building-blocks-feature-code-is-columns-filters-and-actions): Reusable page building blocks; feature code is columns, filters and actions
 - [0086](#0086-zod-resolves-to-a-configured-module-jitless-before-any-schema-exists): `zod` resolves to a configured module (jitless before any schema exists)
 - [0087](#0087-story-tests-need-no-setup-file-unused-messages-fail-the-build): Story tests need no setup file; unused messages fail the build
+- [0088](#0088-filters-are-one-get-form-of-native-controls-arrays-are-repeated-keys): Filters are one GET form of native controls; arrays are repeated keys
+- [0089](#0089-search-driven-lists-keep-showing-results-while-new-ones-load): Search-driven lists keep showing results while new ones load
+- [0090](#0090-the-admin-guard-checks-the-server-when-entering-the-area-not-on-every-inner-navigation): The admin guard checks the server when entering the area, not on every inner navigation
+- [0091](#0091-route-masking-for-the-edit-dialog-and-quick-view-masked-links-always-unmask-on-reload): Route masking for the edit dialog and quick view; masked links always unmask on reload
+- [0092](#0092-path-params-are-validated-by-the-route-paramsparse-not-in-loaders): Path params are validated by the route (`params.parse`), not in loaders
+- [0093](#0093-date-filters-are-calendar-days-in-the-app-time-zone-compared-as-instants): Date filters are calendar days in the app time zone, compared as instants
 </details>
 
 ---
@@ -534,7 +540,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:**
   - The root `beforeLoad` fills `context.session` from `sessionQueryOptions()` (the `getSession` server function, cached for 60 s on the client), and sign-in, sign-out and account changes invalidate it.
   - `_authed` redirects to `/login?redirect=<path>`.
-  - `_admin` calls the `ensureAdmin` server function (`requireAdminMiddleware`) on every navigation instead of trusting the cached context. Anonymous visitors are redirected to login; signed-in non-admins get the FORBIDDEN page.
+  - `_admin` calls the `ensureAdmin` server function (`requireAdminMiddleware`) on every navigation instead of trusting the cached context. Anonymous visitors are redirected to login; signed-in non-admins get the FORBIDDEN page. *(Revised by 0090: on entering the admin area and on every SSR request; inner navigations reuse the loaded admin session.)*
 - **Why:** One session lookup per SSR request, and no extra RPC on client navigations for ordinary pages. The admin area gets a server decision each time. Data safety never depends on these guards, because server functions carry their own middleware.
 - **Alternatives considered:** Calling `getSession` in every `beforeLoad` (an RPC per navigation). Trusting the cached role for `_admin` (fails the plan's "checks the role on the server").
 
@@ -1075,3 +1081,54 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 - **What:** `addon-vitest` applies the preview and addon annotations itself (Storybook ≥ 10.3), so `.storybook/vitest.setup*.ts` were removed. The Nepali/dark pass is selected with a `STORYBOOK_VARIANT` define (`vitest.config.ts`), and `.storybook/preview.tsx` reads it for `initialGlobals`. A `VariantProbe` story asserts each pass really runs in its locale and theme. `tests/i18n/message-usage.test.ts` fails when a message key is referenced nowhere. The 19 dead keys found (16 replaced by shared `table_*`/`pagination_*`/`common_*` keys, plus 3 that were already unused) were deleted. jsdom gets a `scrollTo` stub, which silences "Not implemented" noise from router scroll restoration.
 - **Why:** These clear two notices that printed on every test run, and keep the message files from collecting dead translations.
+
+## 0088: Filters are one GET form of native controls; arrays are repeated keys
+
+- **What:**
+  - **The form:** `<FilterBar>` (`src/components/filters/`) is a `<form method="get">` with no `action`, so it submits to the current URL in any locale. It wraps native controls: `SearchFilter`, `SelectFilter` (a styled native `<select>`, `ui/native-select.tsx`), `MultiSelectFilter` (checkboxes in a `<details>` dropdown), `BooleanFilter`, `NumberRangeFilter` and `DateRangeFilter` (`<input type="date">`).
+  - **With JavaScript:** a change updates the URL at once. Text, number and date inputs wait 400 ms and replace the history entry. The page resets to 1, and the `preserve`d params (sort, page size) are kept. Controls are uncontrolled and re-synced from the URL after back/forward, a chip or "Clear all", skipping the field being typed in.
+  - **Chips:** `<ActiveFilters>` shows one removable chip per applied filter, plus "Clear all". These are links (`SearchLink`).
+  - **URL format:** the router's `stringifySearch` (`src/lib/search.ts`) writes arrays as repeated keys (`tags=a&tags=b`), the format HTML forms submit; parsing already reads them as arrays.
+  - **Params:** `arrayParam`, `numberParam`, `dateParam` and `booleanParam` accept what forms send (empty means "not set"), and `.catch` bad values.
+- **Why:** The same URL comes out with or without JavaScript, filters render on the server, and every state can be shared. Native controls work before hydration. The Radix Select, used for the old status filter, did nothing without JS. A `<details>` dropdown opens without JS and floats, so opening it causes no layout shift.
+- **Alternatives considered:**
+  - TanStack's default JSON arrays (`tags=%5B%22a%22%5D`): unreadable, and different from what a form submits.
+  - Controlled inputs keyed by URL value: remounting while typing loses focus.
+  - Radix popovers: they need JS.
+  - A localized date picker: its native counterpart needs no JS and is accessible; dates still show localized in the chips.
+
+## 0089: Search-driven lists keep showing results while new ones load
+
+- **What:** List loaders call `loadList(queryClient, options, cause)` (`src/lib/query.ts`). On SSR and when entering the route, it awaits the data as before. When only the search changes on the same route (`cause: "stay"`), it prefetches without awaiting, so the navigation commits immediately. Pages read the data with `useListQuery` (`src/lib/use-list-query.ts`): `useQuery` with `placeholderData: keepPreviousData`. Its `busy` flag also covers the router's own pending state. The table and grids dim (`aria-busy`) while busy. Parameters that only open a dialog (`edit`, `view`) are left out of `loaderDeps`.
+- **Why:** A loaderDeps change creates a new match. If loading takes longer than `pendingMs`, the router swaps in the pending component, which unmounted the filter being typed in and moved the page. Measured with 2.5 s of latency: before, a skeleton flash and lost focus; after, focus and text are kept and the old rows dim until the new ones arrive.
+- **Alternatives considered:** Raising `pendingMs`, which only delays the flash. Disabling the pending component, which would also remove it when entering a route.
+
+## 0090: The admin guard checks the server when entering the area, not on every inner navigation
+
+- **What:** `_admin`'s `beforeLoad` calls the `ensureAdmin` server function on SSR and whenever the admin area is entered. On navigations inside it (`cause: "stay"`), it reuses the session the root route already loaded, if that session is an admin's; otherwise it still asks the server. This revises the "on every navigation" rule of decision 0043.
+- **Why:** Every filter change paid a full round trip before the list could even start loading. That doubled the latency and, on slow networks, triggered the pending screen (0089). The guard is a UX gate. The security boundary is `requireAdminMiddleware` on every admin server function, which still runs on every call, so a revoked admin gets FORBIDDEN on the next data request. Task 20 (RBAC) builds on the same split.
+
+## 0091: Route masking for the edit dialog and quick view; masked links always unmask on reload
+
+- **What:**
+  - **Admin "Quick edit":** opens the edit form in a dialog over the list. The real location is `/admin/test-crud?edit=<id>`; the address bar shows `/admin/test-crud/<id>`.
+  - **Public "Quick view":** opens over the grid. The real location is `/test-crud?view=<slug>`; it shows the canonical `/test-crud/<slug>`.
+  - **The links** (`features/test-crud/components/masked-links.tsx`) pass `mask: { …, unmaskOnReload: true }`, and their href is the masked URL.
+  - **Closing** (`useCloseOverlay`) goes back in history when it can, otherwise it removes the param.
+  - **Data:** the dialogs load with `useQuery` and show inline skeletons. The edit form gained `onSaved`/`onCancel`.
+- **Why:**
+  - **SSR:** masks persist in history state, and by default a reload keeps them. The server never sees history state, though: it renders the masked URL, so the client must render the same page or hydration breaks. `unmaskOnReload` makes reload, sharing, new tabs and no-JS clicks all land on the full page.
+  - **Closing:** going back means Back after closing doesn't reopen the dialog, and the list underneath (filters, scroll) is exactly as it was.
+- **Verified:**
+  - **jsdom:** href, masked address, Back/Forward and a fresh load of the masked URL.
+  - **Production:** open, save, Escape, Back/Forward, reload to the full page, and axe on the open dialogs.
+
+## 0092: Path params are validated by the route (`params.parse`), not in loaders
+
+- **What:** `/admin/test-crud/$id` (UUID) and `/test-crud/$slug` (slug pattern) use `params: { parse: (raw) => parseParams(schema, raw) }`. `parseParams` returns the parsed params, or `false` so the route doesn't match. The loaders no longer re-check.
+- **Why:** This is TanStack Router's documented contract: `false` means "no match", so the request falls through to the localized not-found page with a real 404 status, and loaders and components get typed params. Verified: `/test-crud/Not_A_Slug` and `/admin/test-crud/not-a-uuid` return 404.
+
+## 0093: Date filters are calendar days in the app time zone, compared as instants
+
+- **What:** `?from=`/`?to=` are `YYYY-MM-DD`. `dayRangeInZone` (`src/lib/date-only.ts`) turns them into `[start of from, start of the day after to)` in `APP_TIME_ZONE` (Asia/Kathmandu), using Intl offsets (correct across DST, tested with New York). `dateRange(column, from, to)` (`src/server/db/list.ts`) compares the timestamp column with those instants. Also added: `numberRange`, `overlapsAny` (array `&&`) and a GIN index on `test_crud.tags` plus a B-tree index on `price` (migration 0003).
+- **Why:** Dates are displayed in Nepal time (0025), so "published on 2 Sep" must mean the Nepal day, not the UTC day: 18:20 UTC on 1 Sep is already 2 Sep in Nepal, and the tests cover that edge. Comparing instants keeps indexes usable, which `AT TIME ZONE` on the column would not.

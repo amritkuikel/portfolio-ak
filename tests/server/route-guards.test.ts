@@ -74,15 +74,34 @@ describe("_auth (login, register, ...)", () => {
 });
 
 describe("_admin (admin area)", () => {
-	it("asks the server on every navigation and passes the admin session on", async () => {
+	it("navigations inside the area reuse the loaded admin session (no round trip)", async () => {
+		const admin = session("admin");
+		expect(await beforeLoad(adminRoute)({ location, cause: "stay", context: { session: admin } })).toEqual({
+			session: admin,
+		});
+		expect(ensureAdmin).not.toHaveBeenCalled();
+	});
+
+	it("still asks the server inside the area when the loaded session isn't an admin's", async () => {
+		ensureAdmin.mockRejectedValue(new AppError("FORBIDDEN"));
+		const error = await thrown(() =>
+			beforeLoad(adminRoute)({ location, cause: "stay", context: { session: session("user") } }),
+		);
+		expect(error).toMatchObject({ code: "FORBIDDEN" });
+		expect(ensureAdmin).toHaveBeenCalledOnce();
+	});
+
+	it("asks the server when entering the area (and on every SSR request) and passes the session on", async () => {
 		ensureAdmin.mockResolvedValue(session("admin"));
-		expect(await beforeLoad(adminRoute)({ location })).toEqual({ session: session("admin") });
+		expect(await beforeLoad(adminRoute)({ location, cause: "enter", context: { session: null } })).toEqual({
+			session: session("admin"),
+		});
 		expect(ensureAdmin).toHaveBeenCalledOnce();
 	});
 
 	it("redirects anonymous visitors (UNAUTHORIZED) to /login with a return URL", async () => {
 		ensureAdmin.mockRejectedValue(new AppError("UNAUTHORIZED"));
-		const error = await thrown(() => beforeLoad(adminRoute)({ location }));
+		const error = await thrown(() => beforeLoad(adminRoute)({ location, cause: "enter", context: { session: null } }));
 		expect(isRedirect(error)).toBe(true);
 		expect((error as { options: unknown }).options).toMatchObject({
 			to: "/login",
@@ -93,7 +112,9 @@ describe("_admin (admin area)", () => {
 	it("rethrows FORBIDDEN for signed-in non-admins, with the 403 status recorded for SSR", async () => {
 		const forbidden = new AppError("FORBIDDEN");
 		ensureAdmin.mockRejectedValue(forbidden);
-		expect(await thrown(() => beforeLoad(adminRoute)({ location }))).toBe(forbidden);
+		expect(await thrown(() => beforeLoad(adminRoute)({ location, cause: "enter", context: { session: null } }))).toBe(
+			forbidden,
+		);
 		expect(setErrorStatus).toHaveBeenCalledWith(forbidden);
 	});
 });

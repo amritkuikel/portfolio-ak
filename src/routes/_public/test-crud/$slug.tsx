@@ -13,13 +13,15 @@ import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
 import { formatCurrency, formatDate } from "@/lib/intl";
+import { parseParams } from "@/lib/search";
 import { seo } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/test-crud/$slug")({
+	// Not a valid slug -> can't exist: the route doesn't match, so the localized 404
+	// is served without a query.
+	params: { parse: (raw) => parseParams(testCrudSlugParamSchema, raw) },
 	loader: async ({ context, params }) => {
-		// Not a valid slug -> can't exist; answer the localized 404 without a query.
-		if (!testCrudSlugParamSchema.safeParse(params).success) throw notFound();
 		try {
 			const item = await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
 			// Only what head() and the breadcrumb need: the full item (with its body) already

@@ -12,7 +12,7 @@ import {
 import { zodInput } from "@/lib/fn-input";
 import { requireAdminMiddleware } from "@/middleware/auth";
 import { db } from "@/server/db/client";
-import { listTestCrud as listRows } from "@/server/test-crud/repository";
+import { listTestCrud as listRows, listTestCrudTags as listTags } from "@/server/test-crud/repository";
 import { createItem, deleteItems, getItemOrThrow, setItemStatus, updateItem } from "@/server/test-crud/service";
 
 /**
@@ -27,6 +27,11 @@ export const listTestCrud = createServerFn({ method: "GET" })
 	.middleware([requireAdminMiddleware])
 	.validator(zodInput(testCrudListInputSchema))
 	.handler(({ data }): Promise<TestCrudPage> => listRows(db, data));
+
+/** Tags in use, for the list's tag filter. */
+export const listTestCrudTags = createServerFn({ method: "GET" })
+	.middleware([requireAdminMiddleware])
+	.handler((): Promise<string[]> => listTags(db));
 
 export const getTestCrud = createServerFn({ method: "GET" })
 	.middleware([requireAdminMiddleware])

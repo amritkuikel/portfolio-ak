@@ -26,6 +26,8 @@ const createPageCollection = (input: TestCrudListInput, id: string) =>
 			await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
 			// Public pages cached in this tab may now show stale (un)published items.
 			void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
+			// Deleting rows can retire tags from the tag filter.
+			void queryClient.invalidateQueries({ queryKey: testCrudKeys.tags() });
 			// The invalidation above already refetched this page.
 			return { refetch: false };
 		};
