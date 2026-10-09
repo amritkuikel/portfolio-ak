@@ -4,7 +4,7 @@ A bilingual (English + Nepali), server-rendered portfolio app built on TanStack 
 
 Public pages render fully on the server (and without JavaScript), every string, email, validation message, meta tag and formatted value exists in both languages, and an admin area manages content. **Test CRUD** is the reference feature to copy for new ones.
 
-The plan, phases and Definition of Done are in [docs/PLAN.md](docs/PLAN.md). Every non-obvious choice is recorded in [docs/decisions.md](docs/decisions.md).
+The plan, phases and Definition of Done are in [docs/PLAN.md](docs/PLAN.md). Every non-obvious choice is recorded in [docs/decisions.md](docs/decisions.md). Start with [CLAUDE.md](CLAUDE.md) (commands, golden rules, solved pitfalls), then the guides in [docs/guides/](docs/guides/): [conventions](docs/guides/conventions.md) (file map, building blocks, list-page recipe) and the [setup audit](docs/guides/audit.md).
 
 ## Requirements
 
@@ -56,8 +56,10 @@ src/
   functions/     server functions (createServerFn): thin wrappers with middleware + validation
   server/        SERVER-ONLY: env, db (Drizzle), auth (Better Auth), email, repositories/services, Nitro routes
   middleware/    Start middleware: security headers + CSP nonce, CSRF, logging, error normalisation, auth guards
-  components/    ui/ (shadcn), forms/ (field library), layout/ (header, footer, sidebar, theme, consent)
-  lib/           isomorphic helpers: intl, validation, seo, errors, stores, analytics, db client wiring
+  components/    generic UI: ui/ (shadcn), page/ (Page, PageHeader, Breadcrumbs, EmptyState, skeletons),
+                 data-table/ (DataTable, columns menu), navigation/ (Pagination, SearchLink), dialogs/ (ConfirmDialog),
+                 forms/ (field library), layout/ (header, footer, sidebar, theme, consent)
+  lib/           isomorphic helpers: list contract, breadcrumbs, intl, validation, seo, errors, stores, analytics, zod
 ```
 
 **A request, end to end:** the server entry (`src/server.ts`) starts Sentry and resolves the locale (Paraglide).
@@ -198,11 +200,11 @@ Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
 `/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. To add a feature, say "projects":
 
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
-2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params and the DTO types.
-3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `db`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
+2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
+3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
 4. **Server functions:** `src/functions/projects.ts`, with `.middleware([requireAdminMiddleware])` on every admin function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add the file to `ADMIN_FUNCTION_FILES` in `tests/server/test-crud-functions.test.ts`.
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
-6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx`.
+6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `Pagination`, `EmptyState` and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
 7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
 8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`.
 
@@ -215,7 +217,7 @@ The Test CRUD files for each layer:
 | Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
 | Server functions | `src/functions/test-crud.ts` | `requireAdminMiddleware` on every function, `.validator()` input, and FormData for file uploads |
 | Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
-| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*` | URL-driven table, forms built only from the reusable fields, confirmation dialogs, toasts and the unsaved-changes guard |
+| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*` | The shared `DataTable` with Test CRUD's column definitions (`admin-columns.tsx`), URL sorting and paging, bulk actions, `ConfirmDialog`, forms built only from the reusable fields, toasts and the unsaved-changes guard |
 | Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, published items only, localized 404 for drafts, and `seo()` head tags |
 
 Images are stored in Postgres and served from `/api/images/:id` (see decision 0067).

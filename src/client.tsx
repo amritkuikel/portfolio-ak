@@ -1,5 +1,4 @@
-// Zod must be in jitless mode before any schema runs (CSP: no eval); then Sentry.
-import "./lib/zod-config";
+// Sentry first, so it can instrument everything after it. (Zod is configured by src/lib/zod.ts.)
 import "./instrument.client";
 
 import { StartClient } from "@tanstack/react-start/client";

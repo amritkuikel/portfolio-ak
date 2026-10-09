@@ -18,6 +18,9 @@ if (typeof window !== "undefined") {
 	}
 	globalThis.ResizeObserver ??= ResizeObserverStub;
 
+	// The router restores scroll position on navigation; jsdom has no layout to scroll.
+	window.scrollTo = () => {};
+
 	const proto = window.HTMLElement.prototype;
 	proto.scrollIntoView ??= () => {};
 	proto.hasPointerCapture ??= () => false;

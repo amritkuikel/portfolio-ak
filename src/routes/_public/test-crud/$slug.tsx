@@ -1,13 +1,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import { ArrowLeftIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
+import { Page } from "@/components/page/page";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Badge } from "@/components/ui/badge";
 import { publicTestCrudDetailQueryOptions } from "@/features/test-crud/queries";
 import { testCrudSlugParamSchema } from "@/features/test-crud/schema";
 import { track } from "@/lib/analytics";
+import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
 import { formatCurrency, formatDate } from "@/lib/intl";
@@ -19,7 +21,11 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 		// Not a valid slug -> can't exist; answer the localized 404 without a query.
 		if (!testCrudSlugParamSchema.safeParse(params).success) throw notFound();
 		try {
-			return await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
+			const item = await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
+			// Only what head() and the breadcrumb need: the full item (with its body) already
+			// travels to the browser in the Query cache, so returning it would send it twice.
+			const { title, summary, imageUrl, publishedAt } = item;
+			return { title, summary, imageUrl, publishedAt };
 		} catch (error) {
 			// Missing and draft slugs are indistinguishable to the public: both 404.
 			if (isAppError(error) && error.code === "NOT_FOUND") throw notFound();
@@ -27,6 +33,7 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 			throw error;
 		}
 	},
+	staticData: { breadcrumb: loaderTitleCrumb },
 	head: ({ loaderData, params }) => {
 		if (!loaderData) return {};
 		const tags = seo({
@@ -58,14 +65,8 @@ function PublicDetailPage() {
 	}, [item.slug]);
 
 	return (
-		<main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:py-14">
-			<Link
-				to="/test-crud"
-				className="inline-flex w-fit items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
-			>
-				<ArrowLeftIcon className="size-4" aria-hidden />
-				{m.test_crud_public_all_items()}
-			</Link>
+		<Page width="narrow">
+			<Breadcrumbs jsonLd />
 			<article className="flex flex-col gap-6">
 				<header className="flex flex-col gap-3">
 					<h1 className="font-semibold text-3xl leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
@@ -113,6 +114,6 @@ function PublicDetailPage() {
 				</dl>
 				{item.body ? <RichTextContent html={item.body} className="max-w-none text-base" /> : null}
 			</article>
-		</main>
+		</Page>
 	);
 }

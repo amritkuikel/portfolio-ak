@@ -1,6 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Await, createFileRoute, Link, stripSearchParams, useNavigate } from "@tanstack/react-router";
 import type { FormEvent } from "react";
+import { Pagination } from "@/components/navigation/pagination";
+import { Page, PageHeader } from "@/components/page/page";
+import { ListSkeleton, PageHeaderSkeleton } from "@/components/page/skeletons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +16,7 @@ import {
 	stackSearchSchema,
 } from "@/features/stack/schema";
 import { getStackStats } from "@/functions/stack";
+import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatNumber } from "@/lib/intl";
 import { pageTitle } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -29,6 +33,7 @@ export const Route = createFileRoute("/_public/stack")({
 		// Not awaited: streamed to the client when ready (deferred).
 		return { stats: getStackStats() };
 	},
+	staticData: { breadcrumb: staticCrumb(m.stack_title) },
 	head: () => ({
 		meta: [{ title: pageTitle(m.stack_title()) }, { name: "description", content: m.stack_description() }],
 	}),
@@ -56,11 +61,8 @@ function StackPage() {
 	};
 
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12">
-			<header className="flex flex-col gap-2">
-				<h1 className="font-semibold text-3xl tracking-tight">{m.stack_title()}</h1>
-				<p className="text-muted-foreground">{m.stack_description()}</p>
-			</header>
+		<Page className="gap-8">
+			<PageHeader size="display" title={m.stack_title()} description={m.stack_description()} breadcrumbsJsonLd />
 
 			<section aria-labelledby="stack-stats" className="rounded-lg border p-4">
 				<h2 id="stack-stats" className="font-medium">
@@ -163,52 +165,22 @@ function StackPage() {
 				</ul>
 			)}
 
-			{data.pageCount > 1 ? (
-				<nav aria-label={m.pagination_label()} className="flex items-center justify-between gap-4">
-					<PageLink page={data.page - 1} disabled={data.page <= 1}>
-						{m.pagination_previous()}
-					</PageLink>
-					<span className="text-muted-foreground text-sm">
-						{m.pagination_status({ page: formatNumber(data.page), total: formatNumber(data.pageCount) })}
-					</span>
-					<PageLink page={data.page + 1} disabled={data.page >= data.pageCount}>
-						{m.pagination_next()}
-					</PageLink>
-				</nav>
-			) : null}
-		</main>
-	);
-}
-
-function PageLink({ page, disabled, children }: { page: number; disabled: boolean; children: string }) {
-	if (disabled) {
-		return (
-			<Button variant="outline" disabled>
-				{children}
-			</Button>
-		);
-	}
-	return (
-		<Button asChild variant="outline">
-			<Link from={Route.fullPath} search={(prev) => ({ ...prev, page })}>
-				{children}
-			</Link>
-		</Button>
+			<Pagination page={data.page} pageCount={data.pageCount} layout="center" hideWhenSingle />
+		</Page>
 	);
 }
 
 /** Skeleton shown while a client-side navigation loads the list. */
 function StackPending() {
 	return (
-		<main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12" aria-busy="true">
+		<Page className="gap-8" aria-busy="true">
 			<output className="sr-only">{m.pending_loading()}</output>
-			<div className="h-9 w-48 animate-pulse rounded-md bg-muted" />
-			<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{Array.from({ length: STACK_PAGE_SIZE }, (_, index) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list; items have no identity.
-					<li key={index} className="h-40 animate-pulse rounded-xl bg-muted" />
-				))}
-			</ul>
-		</main>
+			<PageHeaderSkeleton size="display" />
+			<ListSkeleton
+				count={STACK_PAGE_SIZE}
+				item={<div className="h-40 w-full animate-pulse rounded-xl bg-muted" />}
+				className="gap-4 sm:grid-cols-2 lg:grid-cols-3"
+			/>
+		</Page>
 	);
 }

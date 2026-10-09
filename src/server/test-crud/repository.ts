@@ -1,6 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
 	imageUrl,
 	type PublicTestCrudCard,
@@ -11,13 +10,13 @@ import {
 	type TestCrudListInput,
 	type TestCrudListItem,
 	type TestCrudPage,
-	type TestCrudSort,
 	type TestCrudStatus,
 } from "@/features/test-crud/schema";
 import { AppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
-import type * as schema from "@/server/db/schema";
+import { allOf, countRows, orderBySort, paginate, textSearch } from "@/server/db/list";
 import { testCrud, testCrudImage } from "@/server/db/schema";
+import type { Db, Tx } from "@/server/db/types";
 import { sanitizeRichText } from "@/server/rich-text/sanitize";
 import type { ValidImage } from "./image";
 
@@ -26,23 +25,13 @@ import type { ValidImage } from "./image";
  * same code runs against Neon (node-postgres) in the app and PGlite in tests.
  * Server functions (src/functions/test-crud.ts) add auth, validation and I/O.
  */
-export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type { Db } from "@/server/db/types";
 
 /** What to do with the stored image on update. */
 export type ImageChange = { kind: "keep" } | { kind: "remove" } | { kind: "replace"; image: ValidImage };
 
-const SORTS: Readonly<Record<TestCrudSort, SQL[]>> = {
-	"-updated": [desc(testCrud.updatedAt), asc(testCrud.id)],
-	updated: [asc(testCrud.updatedAt), asc(testCrud.id)],
-	title: [asc(testCrud.title), asc(testCrud.id)],
-	"-title": [desc(testCrud.title), asc(testCrud.id)],
-	price: [asc(testCrud.price), asc(testCrud.id)],
-	"-price": [desc(testCrud.price), asc(testCrud.id)],
-};
-
-/** Escapes LIKE wildcards so a search for "100%" means the literal text. */
-const likePattern = (text: string) => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+/** Sortable fields of the admin list (TEST_CRUD_SORTS); the id breaks ties so pages never overlap. */
+const SORT_COLUMNS = { updated: testCrud.updatedAt, title: testCrud.title, price: testCrud.price };
 
 type Row = typeof testCrud.$inferSelect;
 
@@ -68,28 +57,27 @@ const toDetail = (row: Row): TestCrudDetail => ({
 });
 
 export async function listTestCrud(db: Db, input: TestCrudListInput): Promise<TestCrudPage> {
-	const filters: SQL[] = [];
-	if (input.status !== "all") filters.push(eq(testCrud.status, input.status));
-	if (input.q) {
-		const pattern = likePattern(input.q);
-		const match = or(ilike(testCrud.title, pattern), ilike(testCrud.slug, pattern), ilike(testCrud.summary, pattern));
-		if (match) filters.push(match);
-	}
-	const where = filters.length > 0 ? and(...filters) : undefined;
-
-	const [totals] = await db.select({ total: count() }).from(testCrud).where(where);
-	const total = totals?.total ?? 0;
-	const pageCount = Math.max(1, Math.ceil(total / input.pageSize));
+	const where = allOf(
+		input.status === "all" ? undefined : eq(testCrud.status, input.status),
+		textSearch(input.q, [testCrud.title, testCrud.slug, testCrud.summary]),
+	);
+	const order = orderBySort(input.sort, SORT_COLUMNS, { tiebreaker: testCrud.id, fallback: "updated" });
 	// Out-of-range pages are clamped (e.g. after deleting the last row of the last page).
-	const page = Math.min(input.page, pageCount);
-	const rows = await db
-		.select()
-		.from(testCrud)
-		.where(where)
-		.orderBy(...SORTS[input.sort])
-		.limit(input.pageSize)
-		.offset((page - 1) * input.pageSize);
-	return { items: rows.map(toListItem), total, page, pageCount };
+	return paginate(
+		input,
+		{
+			count: () => countRows(db, testCrud, where),
+			rows: ({ limit, offset }) =>
+				db
+					.select()
+					.from(testCrud)
+					.where(where)
+					.orderBy(...order)
+					.limit(limit)
+					.offset(offset),
+		},
+		toListItem,
+	);
 }
 
 export async function getTestCrud(db: Db, id: string): Promise<TestCrudDetail | null> {
@@ -271,25 +259,22 @@ export async function listPublishedTestCrud(
 	input: { q: string; page: number },
 	pageSize: number,
 ): Promise<PublicTestCrudPage> {
-	const filters: SQL[] = [isPublished];
-	if (input.q) {
-		const pattern = likePattern(input.q);
-		const match = or(ilike(testCrud.title, pattern), ilike(testCrud.summary, pattern));
-		if (match) filters.push(match);
-	}
-	const where = and(...filters);
-	const [totals] = await db.select({ total: count() }).from(testCrud).where(where);
-	const total = totals?.total ?? 0;
-	const pageCount = Math.max(1, Math.ceil(total / pageSize));
-	const page = Math.min(input.page, pageCount);
-	const rows = await db
-		.select()
-		.from(testCrud)
-		.where(where)
-		.orderBy(desc(testCrud.publishedAt), asc(testCrud.id))
-		.limit(pageSize)
-		.offset((page - 1) * pageSize);
-	return { items: rows.map(toPublicCard), total, page, pageCount };
+	const where = allOf(isPublished, textSearch(input.q, [testCrud.title, testCrud.summary]));
+	return paginate(
+		{ page: input.page, pageSize },
+		{
+			count: () => countRows(db, testCrud, where),
+			rows: ({ limit, offset }) =>
+				db
+					.select()
+					.from(testCrud)
+					.where(where)
+					.orderBy(desc(testCrud.publishedAt), asc(testCrud.id))
+					.limit(limit)
+					.offset(offset),
+		},
+		toPublicCard,
+	);
 }
 
 /** A published item by slug, or null (missing and draft look the same to the public). */

@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { STACK_PAGE_SIZE, type StackItem, type StackPage, type StackSearch } from "@/features/stack/schema";
+import { paginateArray } from "@/lib/list";
 import type { Locale } from "@/paraglide/runtime";
 import { CATEGORY_LABELS, STACK } from "./data";
 
@@ -29,9 +30,6 @@ export const queryStack = (search: StackSearch, locale: Locale): StackPage => {
 		return search.sort === "-name" ? -byName : byName;
 	});
 
-	const pageCount = Math.max(1, Math.ceil(items.length / STACK_PAGE_SIZE));
 	// Out-of-range pages are clamped rather than returning an empty page.
-	const page = Math.min(search.page, pageCount);
-	const start = (page - 1) * STACK_PAGE_SIZE;
-	return { items: items.slice(start, start + STACK_PAGE_SIZE), total: items.length, page, pageCount };
+	return paginateArray(items, search.page, STACK_PAGE_SIZE);
 };

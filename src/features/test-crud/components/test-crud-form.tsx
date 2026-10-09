@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
 import { m } from "@/paraglide/messages";
 import { toFormData } from "../form-data";
+import { STATUS_LABELS } from "../labels";
 import { testCrudKeys } from "../queries";
 import {
 	imageRules,
@@ -24,7 +25,6 @@ import {
 	type TestCrudFormValues,
 	testCrudFormSchema,
 } from "../schema";
-import { STATUS_LABELS } from "./test-crud-table";
 
 const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => ({
 	title: item?.title ?? "",

@@ -9,7 +9,8 @@ const meta = { title: "Forms/Rich text", component: RichTextField } satisfies Me
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Tiptap loads in the browser (the server renders a same-size placeholder). */
+/** Tiptap loads in the browser (the server renders a same-size placeholder). Its first, cold load in a
+ * parallel story run can take well over 10s, hence the generous wait. */
 export const RichText: Story = {
 	args: { label: "" },
 	render: () => (
@@ -18,7 +19,7 @@ export const RichText: Story = {
 		</FieldStory>
 	),
 	play: async ({ canvas }) => {
-		const editor = await canvas.findByRole("textbox", { name: m.showcase_body() }, { timeout: 10_000 });
+		const editor = await canvas.findByRole("textbox", { name: m.showcase_body() }, { timeout: 20_000 });
 		await expect(editor).toHaveAttribute("contenteditable", "true");
 		await expect(canvas.getByRole("toolbar", { name: m.rt_toolbar() })).toBeVisible();
 	},

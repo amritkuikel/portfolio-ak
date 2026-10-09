@@ -8,6 +8,7 @@ import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
 import { STATIC_SECURITY_HEADERS } from "./src/lib/csp.ts";
 import { emailPreviewPlugin } from "./vite/email-preview-plugin.ts";
+import { zodAlias } from "./vite/zod-alias.ts";
 
 /**
  * Nitro bundles the server output in its own Rolldown pass, where
@@ -46,7 +47,7 @@ export default defineConfig(async ({ command, mode }) => {
 	await validateEnv(command, mode);
 
 	return {
-		resolve: { tsconfigPaths: true },
+		resolve: { tsconfigPaths: true, alias: [zodAlias] },
 		environments: {
 			client: {
 				build: {

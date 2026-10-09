@@ -4,8 +4,7 @@
  * during SSR. The original request is passed on because the router does its own
  * URL de-localization (see router.tsx); passing the rewritten one causes loops.
  */
-// Zod in jitless mode before any schema runs (matches the browser), then Sentry.
-import "./lib/zod-config";
+// Sentry first, so it sees everything after it. (Zod is configured by src/lib/zod.ts.)
 import "./instrument.server";
 import { wrapFetchWithSentry } from "@sentry/tanstackstart-react";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";

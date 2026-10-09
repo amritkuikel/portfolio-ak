@@ -1,29 +1,23 @@
 import { useDbClient, useLiveQuery } from "@tanstack/react-db";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, stripSearchParams, useNavigate } from "@tanstack/react-router";
-import { Columns3Icon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { errorMessage } from "@/components/errors/error-page";
+import { Pagination } from "@/components/navigation/pagination";
+import { EmptyState } from "@/components/page/empty-state";
+import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuLabel,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { testCrudPageCollection } from "@/features/test-crud/collection";
-import { DeleteDialog, type DeleteRequest } from "@/features/test-crud/components/delete-dialog";
-import {
-	COLUMN_LABELS,
-	HIDEABLE_COLUMNS,
-	STATUS_LABELS,
-	TestCrudTable,
-} from "@/features/test-crud/components/test-crud-table";
+import { testCrudColumns } from "@/features/test-crud/components/admin-columns";
+import { STATUS_FILTER_LABELS } from "@/features/test-crud/labels";
 import { testCrudListQueryOptions } from "@/features/test-crud/queries";
 import {
 	TEST_CRUD_SEARCH_DEFAULTS,
@@ -64,16 +58,27 @@ export const Route = createFileRoute("/_admin/admin/test-crud/")({
 			testCrudListQueryOptions(listInput(deps, savedPageSize(context.preferences.state))),
 		),
 	head: () => ({ meta: [{ title: pageTitle(m.test_crud_title()) }] }),
+	pendingComponent: TestCrudAdminPending,
 	component: TestCrudAdminPage,
 });
 
-const STATUS_FILTER_LABELS: Record<TestCrudStatusFilter, () => string> = {
-	all: m.test_crud_status_all,
-	...STATUS_LABELS,
-};
-
 const isStatusFilter = (value: string): value is TestCrudStatusFilter =>
 	(TEST_CRUD_STATUS_FILTERS as ReadonlyArray<string>).includes(value);
+
+/** What the user asked to delete: one row (named in the dialog) or a selection. */
+type DeleteRequest = { ids: string[]; title?: string; done?: () => void };
+
+/** A component, not a constant: messages must be read at render time (per request locale). */
+function NewItemButton() {
+	return (
+		<Button asChild>
+			<Link to="/admin/test-crud/new">
+				<PlusIcon aria-hidden />
+				{m.test_crud_new()}
+			</Link>
+		</Button>
+	);
+}
 
 function TestCrudAdminPage() {
 	const search = Route.useSearch();
@@ -98,16 +103,16 @@ function TestCrudAdminPage() {
 		});
 	}, [live.isReady, live.state, page.items]);
 
-	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [pendingDelete, setPendingDelete] = useState<DeleteRequest | null>(null);
-	const selectedOnPage = rows.filter((row) => selected.has(row.id)).map((row) => row.id);
 
 	const reportFailure = (error: unknown) =>
 		toast.error(m.test_crud_toast_failed(), { description: errorMessage(error) });
 
-	const confirmDelete = ({ ids }: DeleteRequest) => {
+	const confirmDelete = () => {
+		if (!pendingDelete) return;
+		const { ids, done } = pendingDelete;
 		setPendingDelete(null);
-		setSelected(new Set());
+		done?.();
 		const tx = collection.delete(ids);
 		tx.isPersisted.promise.then(
 			() =>
@@ -134,25 +139,18 @@ function TestCrudAdminPage() {
 	const onSearch = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		const q = String(new FormData(event.currentTarget).get("q") ?? "");
-		setSelected(new Set());
 		void navigate({ search: (prev) => ({ ...prev, q, page: 1 }) });
 	};
 	const filtered = search.q !== "" || search.status !== "all";
+	const single = pendingDelete?.ids.length === 1 && pendingDelete.title !== undefined;
 
 	return (
-		<main className="flex flex-col gap-6 px-4 py-8 sm:px-6">
-			<header className="flex flex-wrap items-end justify-between gap-4">
-				<div className="flex flex-col gap-1">
-					<h1 className="font-semibold text-2xl tracking-tight">{m.test_crud_title()}</h1>
-					<p className="text-muted-foreground text-sm">{m.test_crud_admin_description()}</p>
-				</div>
-				<Button asChild>
-					<Link to="/admin/test-crud/new">
-						<PlusIcon aria-hidden />
-						{m.test_crud_new()}
-					</Link>
-				</Button>
-			</header>
+		<Page width="admin">
+			<PageHeader
+				title={m.test_crud_title()}
+				description={m.test_crud_admin_description()}
+				actions={<NewItemButton />}
+			/>
 
 			<div className="flex flex-wrap items-end gap-3">
 				<search className="w-full sm:w-auto">
@@ -180,7 +178,6 @@ function TestCrudAdminPage() {
 						value={search.status}
 						onValueChange={(value) => {
 							if (!isStatusFilter(value)) return;
-							setSelected(new Set());
 							void navigate({ search: (prev) => ({ ...prev, status: value, page: 1 }) });
 						}}
 					>
@@ -196,163 +193,103 @@ function TestCrudAdminPage() {
 						</SelectContent>
 					</Select>
 				</div>
-				{/* Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click). */}
-				<DropdownMenu modal={false}>
-					<DropdownMenuTrigger asChild>
-						<Button variant="outline" className="ms-auto">
-							<Columns3Icon aria-hidden />
-							{m.test_crud_columns()}
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuLabel>{m.test_crud_columns()}</DropdownMenuLabel>
-						{HIDEABLE_COLUMNS.map((column) => (
-							<DropdownMenuCheckboxItem
-								key={column}
-								checked={table.isColumnVisible(column)}
-								onCheckedChange={(checked) => table.setColumnVisible(column, checked === true)}
-								onSelect={(event) => event.preventDefault()}
-							>
-								{COLUMN_LABELS[column]()}
-							</DropdownMenuCheckboxItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<DataTableColumnsMenu tableId={TEST_CRUD_TABLE_ID} columns={testCrudColumns} className="ms-auto" />
 			</div>
 
-			{selectedOnPage.length > 0 ? (
-				<div
-					className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm"
-					data-testid="bulk-bar"
-				>
-					<span aria-live="polite">{m.test_crud_selected({ count: formatNumber(selectedOnPage.length) })}</span>
-					<Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-						{m.test_crud_clear_selection()}
-					</Button>
-					<Button
-						variant="destructive"
-						size="sm"
-						className="ms-auto"
-						onClick={() => setPendingDelete({ ids: selectedOnPage })}
-					>
+			<DataTable
+				tableId={TEST_CRUD_TABLE_ID}
+				rows={rows}
+				columns={testCrudColumns}
+				getRowId={(row) => row.id}
+				getRowLabel={(row) => row.title}
+				sort={search.sort}
+				data-testid="test-crud-table"
+				bulkActions={({ ids, clear }) => (
+					<Button variant="destructive" size="sm" onClick={() => setPendingDelete({ ids, done: clear })}>
 						{m.test_crud_delete_selected()}
 					</Button>
-				</div>
-			) : null}
-
-			{rows.length === 0 ? (
-				<div
-					className="flex flex-col items-center gap-3 rounded-md border border-dashed p-10 text-center"
-					data-testid="empty"
-				>
-					<p className="text-muted-foreground">{filtered ? m.test_crud_empty_filtered() : m.test_crud_empty()}</p>
-					{filtered ? (
-						<Button variant="outline" asChild>
-							<Link to="/admin/test-crud" search={{ pageSize: search.pageSize }}>
-								{m.test_crud_clear_filters()}
+				)}
+				rowActions={(row) => (
+					<>
+						<DropdownMenuItem asChild>
+							<Link to="/admin/test-crud/$id" params={{ id: row.id }}>
+								{m.test_crud_edit()}
 							</Link>
-						</Button>
-					) : (
-						<Button asChild>
-							<Link to="/admin/test-crud/new">{m.test_crud_new()}</Link>
-						</Button>
-					)}
-				</div>
-			) : (
-				<TestCrudTable
-					rows={rows}
-					sort={search.sort}
-					sortLink={(sort, label) => (
-						<Link
-							from={Route.fullPath}
-							search={(prev) => ({ ...prev, sort, page: 1 })}
-							className="font-medium hover:underline"
+						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={() => setStatus(row, row.status === "published" ? "draft" : "published")}>
+							{row.status === "published" ? m.test_crud_unpublish() : m.test_crud_publish()}
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							variant="destructive"
+							onSelect={() => setPendingDelete({ ids: [row.id], title: row.title })}
 						>
-							{label}
-						</Link>
-					)}
-					isVisible={table.isColumnVisible}
-					selected={selected}
-					onSelectedChange={setSelected}
-					onDelete={(row) => setPendingDelete({ ids: [row.id], title: row.title })}
-					onSetStatus={setStatus}
-				/>
-			)}
+							{m.test_crud_delete()}
+						</DropdownMenuItem>
+					</>
+				)}
+				empty={
+					<EmptyState
+						data-testid="empty"
+						description={filtered ? m.test_crud_empty_filtered() : m.test_crud_empty()}
+						action={
+							filtered ? (
+								<Button variant="outline" asChild>
+									<Link to="/admin/test-crud" search={{ pageSize: search.pageSize }}>
+										{m.test_crud_clear_filters()}
+									</Link>
+								</Button>
+							) : (
+								<NewItemButton />
+							)
+						}
+					/>
+				}
+			/>
 
 			<Pagination
-				search={search}
 				page={page.page}
 				pageCount={page.pageCount}
 				total={page.total}
-				pageSize={input.pageSize}
-				onPageSize={(size) => {
-					table.setPageSize(size);
-					setSelected(new Set());
-					void navigate({ search: (prev) => ({ ...prev, pageSize: size, page: 1 }) });
+				pageSize={{
+					value: input.pageSize,
+					options: PAGE_SIZES,
+					onChange: (size) => {
+						table.setPageSize(size);
+						void navigate({ search: (prev) => ({ ...prev, pageSize: size, page: 1 }) });
+					},
 				}}
 			/>
 
-			<DeleteDialog request={pendingDelete} onCancel={() => setPendingDelete(null)} onConfirm={confirmDelete} />
-		</main>
+			<ConfirmDialog
+				open={pendingDelete !== null}
+				destructive
+				title={
+					single
+						? m.test_crud_delete_title()
+						: m.test_crud_bulk_delete_title({ count: formatNumber(pendingDelete?.ids.length ?? 0) })
+				}
+				description={
+					single ? m.test_crud_delete_body({ title: pendingDelete?.title ?? "" }) : m.test_crud_bulk_delete_body()
+				}
+				confirmLabel={m.test_crud_confirm_delete()}
+				onConfirm={confirmDelete}
+				onCancel={() => setPendingDelete(null)}
+			/>
+		</Page>
 	);
 }
 
-function Pagination({
-	search,
-	page,
-	pageCount,
-	total,
-	pageSize,
-	onPageSize,
-}: {
-	search: TestCrudSearch;
-	page: number;
-	pageCount: number;
-	total: number;
-	pageSize: number;
-	onPageSize: (size: number) => void;
-}) {
-	const link =
-		"inline-flex h-9 items-center rounded-md border px-3 text-sm aria-disabled:pointer-events-none aria-disabled:opacity-50";
+/** Same layout as the page while a client-side navigation (filter, sort, page) loads. */
+function TestCrudAdminPending() {
 	return (
-		<nav aria-label={m.test_crud_pagination()} className="flex flex-wrap items-center gap-3 text-sm">
-			<span className="text-muted-foreground">{m.test_crud_total({ count: formatNumber(total) })}</span>
-			<div className="ms-auto flex items-center gap-2">
-				<Label htmlFor="test-crud-page-size" className="font-normal text-muted-foreground">
-					{m.test_crud_page_size()}
-				</Label>
-				<Select value={String(pageSize)} onValueChange={(value) => onPageSize(Number(value))}>
-					<SelectTrigger id="test-crud-page-size" className="w-20">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{PAGE_SIZES.map((size) => (
-							<SelectItem key={size} value={String(size)}>
-								{formatNumber(size)}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
-			<span>{m.test_crud_page_of({ page: formatNumber(page), count: formatNumber(pageCount) })}</span>
-			<Link
-				from={Route.fullPath}
-				search={{ ...search, page: Math.max(1, page - 1) }}
-				className={link}
-				aria-disabled={page <= 1 || undefined}
-				tabIndex={page <= 1 ? -1 : undefined}
-			>
-				{m.test_crud_prev()}
-			</Link>
-			<Link
-				from={Route.fullPath}
-				search={{ ...search, page: Math.min(pageCount, page + 1) }}
-				className={link}
-				aria-disabled={page >= pageCount || undefined}
-				tabIndex={page >= pageCount ? -1 : undefined}
-			>
-				{m.test_crud_next()}
-			</Link>
-		</nav>
+		<Page width="admin">
+			<PageHeader
+				title={m.test_crud_title()}
+				description={m.test_crud_admin_description()}
+				actions={<NewItemButton />}
+			/>
+			<DataTableSkeleton columns={5} rows={8} />
+		</Page>
 	);
 }

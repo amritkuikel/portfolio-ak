@@ -1,7 +1,15 @@
 import { z } from "zod";
 import { formatNumber } from "@/lib/intl";
+import {
+	bulkIdsSchema,
+	enumParam,
+	type Paged,
+	pageParam,
+	pageSizeParam,
+	resolvedPageSize,
+	searchParam,
+} from "@/lib/list";
 import type { SafeHtml } from "@/lib/safe-html";
-import { PAGE_SIZES } from "@/lib/stores/preferences";
 import { currency, files, optionalText, phone, required, richText, tags } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { TEST_CRUD_IMAGE_MAX_BYTES, TEST_CRUD_IMAGE_TYPES, TEST_CRUD_STATUSES, type TestCrudStatus } from "./constants";
@@ -73,42 +81,25 @@ export const TEST_CRUD_SEARCH_DEFAULTS = { q: "", status: "all", sort: "-updated
 	page: number;
 };
 
-const pageSize = z.coerce
-	.number()
-	.refine((value) => (PAGE_SIZES as ReadonlyArray<number>).includes(value))
-	.optional()
-	.catch(undefined);
-
 /**
  * /admin/test-crud search params and the list server function input. Invalid
  * values are corrected (.catch) rather than rejected. `pageSize` is optional in
  * the URL; the route falls back to the saved table preference.
  */
 export const testCrudSearchSchema = z.object({
-	q: z.string().trim().max(80).default(TEST_CRUD_SEARCH_DEFAULTS.q).catch(TEST_CRUD_SEARCH_DEFAULTS.q),
-	status: z
-		.enum(TEST_CRUD_STATUS_FILTERS)
-		.default(TEST_CRUD_SEARCH_DEFAULTS.status)
-		.catch(TEST_CRUD_SEARCH_DEFAULTS.status),
-	sort: z.enum(TEST_CRUD_SORTS).default(TEST_CRUD_SEARCH_DEFAULTS.sort).catch(TEST_CRUD_SEARCH_DEFAULTS.sort),
-	page: z.coerce
-		.number()
-		.int()
-		.min(1)
-		.max(10_000)
-		.default(TEST_CRUD_SEARCH_DEFAULTS.page)
-		.catch(TEST_CRUD_SEARCH_DEFAULTS.page),
-	pageSize,
+	q: searchParam(),
+	status: enumParam(TEST_CRUD_STATUS_FILTERS, TEST_CRUD_SEARCH_DEFAULTS.status),
+	sort: enumParam(TEST_CRUD_SORTS, TEST_CRUD_SEARCH_DEFAULTS.sort),
+	page: pageParam(),
+	pageSize: pageSizeParam(),
 });
 export type TestCrudSearch = z.output<typeof testCrudSearchSchema>;
 
 /** What the list server function receives: the search with a resolved page size. */
-export const testCrudListInputSchema = testCrudSearchSchema.extend({
-	pageSize: z.coerce.number().refine((value) => (PAGE_SIZES as ReadonlyArray<number>).includes(value)),
-});
+export const testCrudListInputSchema = testCrudSearchSchema.extend({ pageSize: resolvedPageSize() });
 export type TestCrudListInput = z.output<typeof testCrudListInputSchema>;
 
-export const testCrudIdsSchema = z.object({ ids: z.array(z.uuid()).min(1).max(100) });
+export const testCrudIdsSchema = bulkIdsSchema(100);
 export const testCrudIdSchema = z.object({ id: z.uuid() });
 export const testCrudStatusUpdateSchema = z.object({ id: z.uuid(), status: z.enum(TEST_CRUD_STATUSES) });
 
@@ -128,7 +119,7 @@ export type TestCrudListItem = {
 	updatedAt: string;
 };
 
-export type TestCrudPage = { items: TestCrudListItem[]; total: number; page: number; pageCount: number };
+export type TestCrudPage = Paged<TestCrudListItem>;
 
 export type TestCrudDetail = TestCrudListItem & {
 	summary: string;
@@ -148,16 +139,7 @@ export const TEST_CRUD_PUBLIC_PAGE_SIZE = 12;
 export const TEST_CRUD_PUBLIC_SEARCH_DEFAULTS = { q: "", page: 1 } as const satisfies { q: string; page: number };
 
 /** /test-crud search params and the public list input. Invalid values are corrected. */
-export const testCrudPublicSearchSchema = z.object({
-	q: z.string().trim().max(80).default(TEST_CRUD_PUBLIC_SEARCH_DEFAULTS.q).catch(TEST_CRUD_PUBLIC_SEARCH_DEFAULTS.q),
-	page: z.coerce
-		.number()
-		.int()
-		.min(1)
-		.max(10_000)
-		.default(TEST_CRUD_PUBLIC_SEARCH_DEFAULTS.page)
-		.catch(TEST_CRUD_PUBLIC_SEARCH_DEFAULTS.page),
-});
+export const testCrudPublicSearchSchema = z.object({ q: searchParam(), page: pageParam() });
 export type TestCrudPublicSearch = z.output<typeof testCrudPublicSearchSchema>;
 
 /** Slug route param; anything that isn't a valid slug can't exist. */
@@ -173,7 +155,7 @@ export type PublicTestCrudCard = {
 	publishedAt: string;
 };
 
-export type PublicTestCrudPage = { items: PublicTestCrudCard[]; total: number; page: number; pageCount: number };
+export type PublicTestCrudPage = Paged<PublicTestCrudCard>;
 
 export type PublicTestCrudDetail = PublicTestCrudCard & {
 	/** Sanitized on the server (sanitizeRichText); render with <RichTextContent>. */

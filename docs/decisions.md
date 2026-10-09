@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (82 entries)</summary>
+<summary>Index (87 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -88,6 +88,11 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0081](#0081-security-headers-static-headers-via-nitro-a-per-request-csp-nonce-via-start-middleware): Security headers: static headers via Nitro, a per-request CSP nonce via Start middleware
 - [0082](#0082-final-review-fixes-accessibility-responsiveness-layout-stability): Final review fixes (accessibility, responsiveness, layout stability)
 
+- [0083](#0083-breadcrumbs-come-from-route-staticdata-labels-resolved-at-render-time): Breadcrumbs come from route `staticData`, labels resolved at render time
+- [0084](#0084-one-list-contract-shared-by-url-server-function-and-repository): One list contract, shared by URL, server function and repository
+- [0085](#0085-reusable-page-building-blocks-feature-code-is-columns-filters-and-actions): Reusable page building blocks; feature code is columns, filters and actions
+- [0086](#0086-zod-resolves-to-a-configured-module-jitless-before-any-schema-exists): `zod` resolves to a configured module (jitless before any schema exists)
+- [0087](#0087-story-tests-need-no-setup-file-unused-messages-fail-the-build): Story tests need no setup file; unused messages fail the build
 </details>
 
 ---
@@ -1014,7 +1019,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
     - `img-src 'self' data: blob:`, for image previews.
     - `connect-src 'self'` plus the Sentry DSN's origin and the PostHog host, only when configured.
     - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
-  - **Zod jitless:** Zod 4 probes `new Function` to decide whether to JIT-compile schemas, and the CSP correctly blocks it. `src/lib/zod-config.ts` sets `z.config({ jitless: true })`. It's imported first by both entries and by `client-env.schema.ts`, because code splitting runs the env schema (parsed at import time) before the entry's own imports.
+  - **Zod jitless:** Zod 4 probes `new Function` to decide whether to JIT-compile schemas, and the CSP correctly blocks it. `src/lib/zod-config.ts` sets `z.config({ jitless: true })`. It's imported first by both entries and by `client-env.schema.ts`, because code splitting runs the env schema (parsed at import time) before the entry's own imports. *(Superseded by 0086: `zod` now resolves to a configured module, because import order alone proved fragile.)*
 - **Verified on the production build:**
   - All headers are present on an HTML page, a JS asset and the image route, and every inline script has the nonce.
   - 204 page loads (17 pages × en/ne × light/dark × 390/768/1280 px) had zero `securitypolicyviolation` events.
@@ -1035,3 +1040,38 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Rich-text toolbar:** it scrolls sideways on narrow screens. Its height is unchanged, so it still matches the SSR placeholder.
   - **Layout shift on `/test-crud`** (0.03): the card's `aspect-[16/9]` box grew to the image's own aspect when it loaded. The image is now absolutely positioned over a clipped box, and title and summary reserve fixed line counts. CLS is now ≤ 0.0004 on every measured page, in both locales, at phone and desktop widths.
 - **Result:** 204/204 page loads with no axe violations, no overflow, no CSP violations and no console errors (the 404 page's own 404 aside). Every Tab stop has a visible focus indicator; cards use a `focus-within` ring.
+
+## 0083: Breadcrumbs come from route `staticData`, labels resolved at render time
+
+- **What:** A route joins the trail by declaring `staticData: { breadcrumb }` (typed by declaration merging on `StaticDataRouteOption` in `src/lib/breadcrumbs.ts`). `staticCrumb(m.x)` gives a fixed, localized label. `loaderTitleCrumb` reads the `title` returned by the route's loader (detail pages). Sections get a `route.tsx` layout (`/_admin/admin`, `/_admin/admin/test-crud`, `/_public/test-crud`) whose only job is naming the section. `_public` names "Home". `<Breadcrumbs>` builds the trail from `useMatches()` and merges a layout with its index route (same path, deeper label wins). `jsonLd` also emits a schema.org `BreadcrumbList` with absolute, localized URLs. `<PageHeader>` shows the trail by default.
+- **Why:** TanStack Router's documented breadcrumb pattern walks the matched routes. The trail then needs no per-page code, renders identically on the server and the client (no shift), and follows the URL structure. Labels are functions, not strings, so they're read in the request's locale at render time. Detail loaders return only `{ title, … }`, not the item: the item already travels in the Query cache, and returning it from the loader would serialize it twice.
+- **Alternatives considered:** `beforeLoad` context (`getTitle`), as in the router-context guide. It runs before the loader, so it can't name a detail page from its data. Per-page `items` props: repetitive and easy to forget. They remain available (`<Breadcrumbs items>`) for pages whose trail doesn't follow the URL, and for stories.
+
+## 0084: One list contract, shared by URL, server function and repository
+
+- **What:** `src/lib/list.ts` defines the list params every list uses: `searchParam()` (`q`), `enumParam(values, fallback)` (`sort`, status filters), `pageParam()`, `pageSizeParam()` (optional in the URL, so it falls back to the saved table preference) and `resolvedPageSize()` (server input). It also defines `Paged<T>`, `parseSort`, `pageWindow` (clamping and offset), `paginateArray` and `bulkIdsSchema`. The server half, `src/server/db/list.ts`, has `textSearch` (ILIKE with escaped wildcards), `allOf`, `orderBySort` (a whitelist of columns plus a unique tiebreaker), `countRows` and `paginate`. The Test CRUD and stack schemas and repositories are rebuilt on them. `Db`/`Tx` moved to `src/server/db/types.ts`.
+- **Why:** The same rules (forgiving URL parsing, page clamping, literal search, stable ordering) were written out per feature. The frontend building blocks (`<DataTable sort>`, `<Pagination>`, `<SearchLink>`) read and write exactly these params, so the backend must agree on them in one place. `paginate` takes `count`/`rows` callbacks rather than a table, so each repository keeps fully typed Drizzle queries.
+- **Alternatives considered:** A generic `paginate(db, table, …)` that builds the select itself. Typing the row shape across arbitrary tables needs casts. Cursor pagination: not needed at this scale, and page numbers are what admin users expect.
+
+## 0085: Reusable page building blocks; feature code is columns, filters and actions
+
+- **What:** These live in `src/components/`:
+  - `page/`: `Page` (standard widths), `PageHeader` (breadcrumbs, h1, description, actions), `Breadcrumbs`, `EmptyState`, `PageHeaderSkeleton` and `ListSkeleton`
+  - `data-table/`: `DataTable<Row>` (typed columns, URL sort links with `aria-sort`, row selection with a bulk bar, a row-actions menu, column visibility from the table preference cookie, empty state), `DataTableColumnsMenu` and `DataTableSkeleton`
+  - `navigation/`: `Pagination` (URL-driven; disabled steps are text) and `SearchLink` (a link to the current page with search params changed; works without JS)
+  - `dialogs/ConfirmDialog`
+
+  Test CRUD's admin list now defines only its columns (`features/test-crud/components/admin-columns.tsx`), its actions and its data wiring. The bespoke table, delete dialog and three hand-written paginations were removed. The admin dashboard became a section index.
+- **Why:** Part 2 rule: reuse before writing. Every list gets the same accessibility (sort state, labelled checkboxes, focus to Cancel in confirmations), the same SSR and no-JS behaviour, and the same look.
+- **Alternatives considered:** TanStack Table. Sorting, paging and filtering happen on the server here, so a headless table engine would add a dependency for column visibility and selection, both of which are a few lines. It can still be adopted inside `DataTable` later without changing its props.
+
+## 0086: `zod` resolves to a configured module (jitless before any schema exists)
+
+- **What:** The bare specifier `zod` is aliased (`vite/zod-alias.ts`, used by the app, Storybook and Vitest configs) to `src/lib/zod.ts`, which imports `zod/v4`, calls `z.config({ jitless: true })` and re-exports everything. The side-effect module `src/lib/zod-config.ts` and its "import first" lines in the entries are gone. `tests/unit/zod-config.test.ts` guards it.
+- **Why:** In Zod 4.6, creating a `z.object` already runs the eval probe (not just the first parse). After this task's refactor, Rolldown evaluated the chunk with the preferences and list schemas before the chunk that set jitless, and every page reported a CSP `eval` violation. "Import it first" depends on chunk order. Being the module that `zod` resolves to makes it an ES-module guarantee.
+- **Alternatives considered:** Importing the config in every file with module-level schemas: easy to forget. Allowing `'unsafe-eval'` in the CSP: no.
+
+## 0087: Story tests need no setup file; unused messages fail the build
+
+- **What:** `addon-vitest` applies the preview and addon annotations itself (Storybook ≥ 10.3), so `.storybook/vitest.setup*.ts` were removed. The Nepali/dark pass is selected with a `STORYBOOK_VARIANT` define (`vitest.config.ts`), and `.storybook/preview.tsx` reads it for `initialGlobals`. A `VariantProbe` story asserts each pass really runs in its locale and theme. `tests/i18n/message-usage.test.ts` fails when a message key is referenced nowhere. The 19 dead keys found (16 replaced by shared `table_*`/`pagination_*`/`common_*` keys, plus 3 that were already unused) were deleted. jsdom gets a `scrollTo` stub, which silences "Not implemented" noise from router scroll restoration.
+- **Why:** These clear two notices that printed on every test run, and keep the message files from collecting dead translations.

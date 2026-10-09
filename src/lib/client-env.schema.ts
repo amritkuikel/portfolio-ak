@@ -1,5 +1,3 @@
-// First: client env is parsed at import time, the earliest schema use in the browser.
-import "./zod-config.ts";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 import { throwEnvError } from "./env.shared.ts";

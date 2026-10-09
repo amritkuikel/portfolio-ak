@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { expect, fn, waitFor } from "storybook/test";
+import { useSearch } from "@tanstack/react-router";
+import { expect, waitFor } from "storybook/test";
+import { DataTable } from "@/components/data-table";
 import { createTestCrud } from "@/functions/test-crud";
 import { m } from "@/paraglide/messages";
 import { sampleDetail, sampleItems, samplePublicCard } from "../../../../.storybook/mocks/data";
-import type { TestCrudSort } from "../schema";
-import { DeleteDialog } from "./delete-dialog";
+import { TEST_CRUD_TABLE_ID } from "../schema";
+import { testCrudColumns } from "./admin-columns";
 import { PublicCard, PublicCardSkeleton } from "./public-card";
 import { TestCrudForm } from "./test-crud-form";
-import { HIDEABLE_COLUMNS, type HideableColumn, TestCrudTable } from "./test-crud-table";
 
 const meta = { title: "Test CRUD", component: TestCrudForm } satisfies Meta<typeof TestCrudForm>;
 export default meta;
@@ -43,23 +43,18 @@ export const CardSkeleton: Story = {
 // Admin table
 // ---------------------------------------------------------------------------
 
-function TableDemo({ hidden = [] }: { hidden?: HideableColumn[] }) {
-	const [selected, setSelected] = useState<Set<string>>(new Set());
-	const [sort, setSort] = useState<TestCrudSort>("-updated");
+/** The admin list's real columns in the shared DataTable; sort comes from the URL like on the page. */
+function TableDemo() {
+	const { sort } = useSearch({ strict: false });
 	return (
-		<TestCrudTable
+		<DataTable
+			tableId={TEST_CRUD_TABLE_ID}
 			rows={sampleItems}
-			sort={sort}
-			sortLink={(next, label) => (
-				<button type="button" className="font-medium hover:underline" onClick={() => setSort(next)}>
-					{label}
-				</button>
-			)}
-			isVisible={(column) => !hidden.includes(column)}
-			selected={selected}
-			onSelectedChange={setSelected}
-			onDelete={fn()}
-			onSetStatus={fn()}
+			columns={testCrudColumns}
+			getRowId={(row) => row.id}
+			getRowLabel={(row) => row.title}
+			sort={typeof sort === "string" ? sort : "-updated"}
+			bulkActions={() => null}
 		/>
 	);
 }
@@ -68,24 +63,29 @@ export const Table: Story = {
 	parameters: { app: { route: "/admin/test-crud" } },
 	render: () => <TableDemo />,
 	play: async ({ canvas, userEvent }) => {
-		await userEvent.click(canvas.getByRole("checkbox", { name: m.test_crud_select_all() }));
+		await userEvent.click(canvas.getByRole("checkbox", { name: m.table_select_all() }));
 		for (const item of sampleItems) {
-			await expect(canvas.getByRole("checkbox", { name: m.test_crud_select_row({ title: item.title }) })).toBeChecked();
+			await expect(canvas.getByRole("checkbox", { name: m.table_select_row({ label: item.title }) })).toBeChecked();
 		}
-		await userEvent.click(canvas.getByRole("button", { name: m.test_crud_col_title() }));
-		await expect(canvas.getByRole("columnheader", { name: new RegExp(m.test_crud_col_title()) })).toHaveAttribute(
-			"aria-sort",
-			"ascending",
+		await userEvent.click(canvas.getByRole("link", { name: m.test_crud_col_title() }));
+		await waitFor(() =>
+			expect(canvas.getByRole("columnheader", { name: new RegExp(m.test_crud_col_title()) })).toHaveAttribute(
+				"aria-sort",
+				"ascending",
+			),
 		);
 	},
 };
 
+/** Only the status column left visible (saved preference). */
 export const TableWithHiddenColumns: Story = {
-	render: () => <TableDemo hidden={HIDEABLE_COLUMNS.filter((column) => column !== "status")} />,
-};
-
-export const DeleteConfirmation: Story = {
-	render: () => <DeleteDialog request={{ ids: ["1"], title: "Momo Kitchen" }} onCancel={fn()} onConfirm={fn()} />,
+	parameters: {
+		app: {
+			route: "/admin/test-crud",
+			preferences: { tables: { [TEST_CRUD_TABLE_ID]: { hiddenColumns: ["image", "price", "tags", "updated"] } } },
+		},
+	},
+	render: () => <TableDemo />,
 };
 
 // ---------------------------------------------------------------------------

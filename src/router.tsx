@@ -1,5 +1,3 @@
-// Must run before any schema is used (CSP: no eval). See the file.
-import "./lib/zod-config";
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { DbClient } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";

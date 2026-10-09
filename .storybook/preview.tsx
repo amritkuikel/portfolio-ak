@@ -6,6 +6,14 @@ import { type AppParameters, AppProviders } from "./app-providers";
 
 type Theme = "light" | "dark";
 
+/**
+ * The Vitest "storybook-dark-ne" project defines STORYBOOK_VARIANT to run every
+ * story a second time in Nepali with the dark theme (vitest.config.ts).
+ */
+const variant: string | undefined = import.meta.env.STORYBOOK_VARIANT;
+export const INITIAL_GLOBALS =
+	variant === "dark-ne" ? { locale: "ne", theme: "dark" } : { locale: "en", theme: "light" };
+
 /** Toolbar: language (en/ne) and theme (light/dark), applied like the app does. */
 const withLocaleAndTheme: Decorator = (Story, context) => {
 	const locale = (context.globals.locale ?? "en") as Locale;
@@ -48,7 +56,7 @@ const preview: Preview = {
 			},
 		},
 	},
-	initialGlobals: { locale: "en", theme: "light" },
+	initialGlobals: INITIAL_GLOBALS,
 	parameters: {
 		layout: "padded",
 		// Accessibility violations fail the story (in the Vitest run and the a11y panel).

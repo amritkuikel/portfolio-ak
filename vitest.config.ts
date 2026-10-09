@@ -6,15 +6,23 @@ import tailwindcss from "@tailwindcss/vite";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { storybookAliases, storybookEnv } from "./.storybook/aliases.ts";
+import { zodAlias } from "./vite/zod-alias.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** Storybook env for story tests; `variant` selects the locale/theme pass (see .storybook/preview.tsx). */
+const storybookDefines = (variant: "default" | "dark-ne") =>
+	Object.fromEntries([
+		...Object.entries(storybookEnv).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
+		["import.meta.env.STORYBOOK_VARIANT", JSON.stringify(variant)],
+	]);
 
 // Separate from vite.config.ts so tests don't run the app's env validation,
 // Nitro or TanStack Start plugins. Each test supplies the env it needs.
 export default defineConfig({
 	// Compiles messages before tests run (options from project.inlang/paraglide.config.ts).
 	plugins: [paraglideVitePlugin({ project: "./project.inlang" })],
-	resolve: { tsconfigPaths: true },
+	resolve: { tsconfigPaths: true, alias: [zodAlias] },
 	test: {
 		// `pnpm test:coverage`: v8 coverage of the app code, then a per-area table
 		// (scripts/coverage-report.mjs). Generated code and stories are not measured.
@@ -47,12 +55,11 @@ export default defineConfig({
 			{
 				// `pnpm test:storybook`: every story renders in real Chrome; play functions
 				// run and the a11y addon fails the story on any violation. English, light theme.
+				// addon-vitest applies the preview and addon annotations itself (no setup file).
 				extends: true,
 				plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") }), tailwindcss()],
 				resolve: { alias: storybookAliases },
-				define: Object.fromEntries(
-					Object.entries(storybookEnv).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
-				),
+				define: storybookDefines("default"),
 				test: {
 					name: "storybook",
 					// Rendering in a real browser is slower than jsdom; give stories (Tiptap, axe) room.
@@ -64,7 +71,6 @@ export default defineConfig({
 						provider: playwright({ launchOptions: { channel: "chrome" } }),
 						instances: [{ browser: "chromium" }],
 					},
-					setupFiles: [".storybook/vitest.setup.ts"],
 				},
 			},
 			{
@@ -72,9 +78,7 @@ export default defineConfig({
 				extends: true,
 				plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") }), tailwindcss()],
 				resolve: { alias: storybookAliases },
-				define: Object.fromEntries(
-					Object.entries(storybookEnv).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
-				),
+				define: storybookDefines("dark-ne"),
 				test: {
 					name: "storybook-dark-ne",
 					// Rendering in a real browser is slower than jsdom; give stories (Tiptap, axe) room.
@@ -86,7 +90,6 @@ export default defineConfig({
 						provider: playwright({ launchOptions: { channel: "chrome" } }),
 						instances: [{ browser: "chromium" }],
 					},
-					setupFiles: [".storybook/vitest.setup.dark-ne.ts"],
 				},
 			},
 		],
