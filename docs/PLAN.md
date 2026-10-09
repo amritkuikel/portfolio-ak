@@ -528,3 +528,175 @@ The final summary uses exactly these sections, in this order:
 7. **Known limitations and deferred work.** Everything not done or only partly done, with the reason.
 8. **Recommended next steps.** A short, prioritised list.
 9. **How to run.** The minimal commands to install, migrate, seed an admin and start the app.
+
+---
+
+## 7. Part 2: admin platform, RBAC, attachments, SEO and developer docs (Tasks 17–24)
+
+Part 2 builds on the finished Part 1 app. It turns Test CRUD's one-off admin pieces into a reusable admin platform, adds role-based permissions that admins can edit, Cloudinary attachments, complete SEO, and documentation that lets any future session (human or AI) work on the app without re-discovering how it fits together.
+
+### Part 2 rules (in addition to section 1's global rules)
+
+- **Reuse before writing:** a page is assembled from shared building blocks (page header, breadcrumbs, data table, filter bar, pagination, dialogs, empty states, form fields). Feature code only adds columns, filters and fields. If a pattern appears twice, it becomes a component in `src/components/`.
+- **Everything is SSR:** every page renders its real content on the server. No client-only data fetching for first paint, no hydration warnings, no console errors or warnings, and layout shift ≤ 0.01 on every page (measured with an empty cache).
+- **Server is the authority:** permissions, validation and ownership are checked on the server for every server function and route. The UI only hides what the server would refuse anyway.
+- **Docs move with code:** every task updates `CLAUDE.md` and the relevant guide in `docs/guides/` in the same commit.
+- **Each task ends** with the section 1 gates, plus `pnpm test:storybook`, a browser review of the pages it touched (en/ne × light/dark × 390/768/1280: axe, overflow, console, CLS), a commit and a short report.
+
+| Task | Phase | Name |
+| --- | --- | --- |
+| 17 | 13 | Part 2 plan (this section) |
+| 18 | 14 | Setup audit + reusable admin/page building blocks |
+| 19 | 15 | Filters, search params and route masking |
+| 20 | 16 | RBAC: permissions, roles and the admin permission matrix |
+| 21 | 17 | Attachments with Cloudinary |
+| 22 | 18 | SEO everywhere |
+| 23 | 19 | Module examples (how to use each piece in a page) |
+| 24 | 20 | Developer docs, final verification and summary |
+
+### Phase 14: Setup audit + reusable building blocks (Task 18)
+
+**Deliverables**
+- **Audit:** a written review (`docs/guides/audit.md`) of every module against current official docs and best practice: routing and loaders, Query/DB/Store use, forms, i18n, auth, env, server functions, errors, observability, testing and file structure. Each finding has a verdict (keep, fix, improve) and a fix in this task or a named later task.
+- **Folder structure:** a documented convention, with code moved to match it:
+  - `src/components/` holds generic UI only
+  - `src/features/<name>/` holds schema, queries, collection, components, columns and filters
+  - `src/server/<name>/` holds repository and service
+  - `src/functions/<name>.ts` holds thin server functions
+- **Reusable components**, each with stories and tests:
+  - `PageHeader`: title, description, actions, breadcrumbs.
+  - `Breadcrumbs`: driven by route `staticData`/loader data, localized, a `<nav aria-label>` with `aria-current`, emitting `BreadcrumbList` JSON-LD on public pages.
+  - `DataTable`: generic over the row type with column definitions; sortable headers bound to URL search; row selection with a bulk-action bar; column visibility from table preferences; loading skeleton and empty state; responsive.
+  - `Pagination`: one component for admin and public, URL-driven, works without JS.
+  - `ConfirmDialog`, `EmptyState`, `ListSkeleton`.
+- **Refactor:** Test CRUD admin and public pages are rebuilt from these components with no behaviour change. Breadcrumbs appear on every admin page and on public detail pages.
+
+**Acceptance criteria**
+- The Test CRUD list page's feature code is only column, filter and action definitions plus data wiring.
+- All previous tests and stories pass, with new stories for every new component.
+- The audit document lists every module with a verdict.
+
+### Phase 15: Filters, search params and route masking (Task 19)
+
+**Deliverables**
+- A reusable `FilterBar` with filter primitives: text search (debounced, also works as a plain GET form without JS), select, multi-select, boolean, number range, date range, and active-filter chips with "clear all".
+- Typed search-param helpers (`src/lib/search.ts`): Zod-based parsing with defaults and `.catch()`, stripping defaults from URLs, preserving params across navigation, arrays and ranges in the URL, and a schema-to-loader-deps pattern.
+- Test CRUD admin filters: status, tags, price range, published date range, has image. Each is URL-driven, SSR'd and supported by the repository (indexed where needed).
+- TanStack Router **route masking**, two worked examples:
+  - Opening an item's edit form from the admin list as a dialog over the list, with the URL masked to `/admin/test-crud/$id` (reload or share opens the full page).
+  - A public "quick view" of an item over the grid, masked to its canonical `/test-crud/$slug`.
+- Path params validated with Zod (`params.parse`), with localized 404 for invalid params.
+
+**Acceptance criteria**
+- Every filter combination is shareable by URL, survives reload, renders on the server and works with JS disabled (search, select and pagination).
+- Masked routes show the masked URL. Reload, back/forward and opening in a new tab behave correctly.
+- Tests cover search parsing, filter-to-query translation in the repository (PGlite) and both masking flows.
+
+### Phase 16: RBAC: permissions, roles and the permission matrix (Task 20)
+
+**Deliverables**
+- Research the current Better Auth access-control options (admin plugin roles, `createAccessControl`, dynamic roles). Choose and record either Better Auth-native or app-level tables, keeping Better Auth sessions as the source of identity.
+- **Permission catalog in code:** resources and actions, e.g. `test-crud:read|create|update|publish|delete`, `users:read|update`, `roles:manage`, `attachments:upload|delete`. Each has a localized label and description.
+- **Data model:** `roles` (system roles `admin` and `user` plus custom roles), `role_permissions` and user to role assignment. Migration and seed. `admin` always has every permission and cannot be locked out.
+- **Server:**
+  - `requirePermission(...)` middleware for server functions, replacing `requireAdminMiddleware` where a finer permission applies.
+  - Route guards by permission.
+  - Permissions resolved per request and cached for the request; all checks happen on the server.
+- **Client:** `useCan(permission)` and `<Can permission>`, which hide navigation, buttons and actions the user can't use. Admin sidebar items are filtered by permission.
+- **Admin UI:**
+  - A Users page (DataTable with filters; assign roles; ban and unban).
+  - A Roles page (create, rename and delete custom roles).
+  - A permission matrix: roles as columns, permissions grouped by resource as rows, checkboxes with a select-all per resource, saved with an optimistic update and rollback.
+- **Tests:** middleware, guards, matrix save, escalation attempts (a user granting themselves `roles:manage`, editing system roles), and a live 403 replay.
+
+**Acceptance criteria**
+- An admin can create a role "Editor", tick `test-crud:read/create/update` in the matrix, assign it to a user, and that user can then do exactly those things in the UI and on the server, and nothing else.
+- Removing a permission takes effect on that user's next request.
+
+### Phase 17: Attachments with Cloudinary (Task 21)
+
+**Deliverables**
+- Research the current Cloudinary docs for signed direct uploads, the Node SDK, transformations and deletion.
+- Optional env vars `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` (server-only), plus a public `VITE_CLOUDINARY_CLOUD_NAME`. Attachments are disabled cleanly when they're unset.
+- **Upload flow:**
+  1. The browser asks a server function for a signature, which checks the `attachments:upload` permission and the type, size and folder rules.
+  2. The browser uploads directly to Cloudinary, with progress and the option to cancel.
+  3. A server function verifies the upload with the Cloudinary API before writing an `attachments` row.
+  4. The attachment is linked to an entity.
+- **Data model:** an `attachments` table holding `public_id`, resource type, format, bytes, width/height, alt text, owner, the entity it's linked to, and created/deleted timestamps.
+- **Lifecycle:** deletion removes the asset from Cloudinary, and a scheduled cleanup removes orphans.
+- **Reusable UI:** `AttachmentField`/`ImageField` integration (single and multiple, drag and drop, reorder, alt text), an attachment list/gallery, and responsive `<Image>` delivery with Cloudinary transformations (`srcset`, `f_auto`, `q_auto`) and a fixed aspect ratio (no layout shift).
+- **Migration:** Test CRUD's Postgres-stored image moves to Cloudinary attachments, and a gallery is added. CSP updated for Cloudinary's upload and delivery hosts.
+- **Tests:** signature, verification, permission checks, orphan cleanup and the UI flow (with Cloudinary mocked). Live-verified against a real Cloudinary account if credentials are provided; otherwise the gap is reported.
+
+**Acceptance criteria**
+- An admin can upload, reorder, add alt text to and delete images on a Test CRUD item. The public page serves optimized responsive images with no layout shift.
+- Uploads without permission, of the wrong type or too large are refused by the server.
+
+### Phase 18: SEO everywhere (Task 22)
+
+**Deliverables**
+- An audit of every route's head tags. Every page has a localized title and description; private pages (auth, account, admin, dev) get `noindex`.
+- `sitemap.xml` (dynamic: static pages plus published items, with hreflang alternates and `lastmod`) and `robots.txt` (points to the sitemap and disallows admin and API routes), both as server routes.
+- JSON-LD:
+  - `WebSite` and `Organization` on the home page
+  - `BreadcrumbList` wherever breadcrumbs appear
+  - an appropriate type for Test CRUD items (`Product` or `Article`)
+  - validated against the schema.org types
+- A default Open Graph image and per-item OG images (Cloudinary transformation once Phase 17 exists). Twitter cards, `theme-color`, favicon set and web manifest.
+- An `seo()` helper extension for JSON-LD and robots. A test runs across every route and asserts title, description, canonical, hreflang and robots rules.
+
+**Acceptance criteria**
+- Every indexable page in both locales has a unique title and description, a canonical, hreflang (en, ne, x-default), Open Graph and valid JSON-LD.
+- Private pages are `noindex` and are absent from the sitemap.
+
+### Phase 19: Module examples (Task 23)
+
+**Deliverables**
+- A dev-only `/dev/examples` index linking one small, real page per module. Each page shows the recommended pattern, and the matching guide links to its source:
+  - loader + Query (SSR, no refetch)
+  - streaming with `Await`
+  - search params + filters
+  - route masking
+  - forms (simple and with server field errors)
+  - DataTable + bulk actions
+  - TanStack DB optimistic update and rollback
+  - Store preferences
+  - permissions (`useCan`, guarded server function)
+  - attachments upload
+  - SEO head + JSON-LD
+  - i18n + Intl formatting
+  - error and not-found handling
+  - analytics consent and feature flags
+- Every example page is SSR'd, has stories or tests where it adds value, and returns 404 in production builds.
+
+**Acceptance criteria**
+- Each example page has no axe violations, no console warnings and no layout shift, and is unreachable in production.
+
+### Phase 20: Developer docs, final verification and summary (Task 24)
+
+**Deliverables**
+- A root `CLAUDE.md` (the entry point for future AI sessions) covering:
+  - the stack and versions
+  - commands
+  - the folder map
+  - golden rules (SSR, i18n, server-only, permissions, reuse)
+  - "how to add a feature"
+  - where everything lives
+  - pitfalls already solved (Windows path length, CSP/Zod jitless, Nitro image route, Start runtime-only server functions)
+- `docs/guides/`: architecture, conventions and file structure, routing/data/server functions, search params and masking, forms, tables and filters, RBAC, attachments, SEO, i18n, state (Query/DB/Store), testing (unit, PGlite, Storybook, coverage), observability, security, and deployment. Each guide is short, links to its example page and code, and is kept accurate.
+- The README links to the guides.
+- A full verification run across every page (the Part 1 review method, extended to the new pages), all gates, and the Part 2 Definition of Done with evidence. The final summary uses the section 6 format.
+
+### Part 2 Definition of Done
+
+- [ ] Admin and public pages are built from the shared building blocks. Breadcrumbs appear on every admin page and on public detail pages.
+- [ ] Every list has URL-driven, SSR'd filters, sorting and pagination; search and pagination work without JS.
+- [ ] Route masking examples work across reload, back/forward and new tab.
+- [ ] RBAC: the permission matrix edits role permissions, the server enforces every permission, and the UI reflects them. Escalation tests pass.
+- [ ] Attachments: Cloudinary signed uploads with server-side verification, permissions, cleanup and responsive delivery with no layout shift.
+- [ ] SEO: every page has correct head tags. Sitemap, robots and JSON-LD are valid; private pages are noindex.
+- [ ] A dev-only example page exists for every module, and it returns 404 in production.
+- [ ] `CLAUDE.md` and `docs/guides/*` are complete and accurate.
+- [ ] Every page in both locales and themes at 3 widths: no axe violations, no overflow, no console errors or warnings, no hydration warnings, and CLS ≤ 0.01.
+- [ ] All gates are green with no warnings: typecheck, check, test, test:storybook, build and build-storybook.
