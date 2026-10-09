@@ -1,0 +1,63 @@
+# Attachments (images on Cloudinary)
+
+How images are uploaded, stored, shown and deleted, and how to add images to a new feature. Decisions 0098–0099 explain the choices.
+
+## Setup
+
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` (all three, server-only). Optional settings:
+
+- `CLOUDINARY_FOLDER`: the public_id prefix (default `portfolio`).
+- `CRON_SECRET`: turns on the daily cleanup job (`vercel.json` schedules `/api/cron/attachments`; Vercel Cron sends the bearer token).
+
+Without the Cloudinary variables, uploads are refused with a clear message and items show placeholders. The CSP allows Cloudinary's hosts only when it's configured.
+
+Moving Part 1 images (stored in Postgres): `pnpm attachments:import-legacy --dry-run`, then without `--dry-run`.
+
+## The flow
+
+1. **Sign:** the browser calls `signImageUpload({ scope })` (needs `attachments:upload`). The server picks the `public_id` and signs it together with the allowed formats.
+2. **Upload:** the browser POSTs the file straight to Cloudinary (`uploadImage` in `features/attachments/upload.ts`: progress, cancel).
+3. **Confirm:** `confirmImageUpload` reads the asset back with the Admin API, checks its format and size, and records a *pending* attachment owned by the uploader. It returns an `ImageAsset`.
+4. **Save:** the item's own save links the pending uploads (`syncEntityAttachments`) in order, with their alt text, in the item's transaction. Images the item no longer lists are marked removed and their assets deleted.
+5. **Clean up:** removed rows and day-old pending uploads are deleted by `/api/cron/attachments` (and right away, when Cloudinary answers).
+
+## Showing images
+
+The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thumb`, each with `src`/`srcSet` using `f_auto,q_auto`. Render it with `CloudImage`:
+
+```tsx
+<div className="relative aspect-[16/9] overflow-hidden">
+	<CloudImage image={item.image} variant="cover" sizes="(min-width: 1024px) 352px, 100vw"
+		loading="lazy" className="absolute inset-0 size-full object-cover" />
+</div>
+```
+
+- **Layout:** put "cover" images in a 16:9 box; width and height attributes are always set (no layout shift).
+- **`sizes`:** pass it to match the displayed width.
+- **Main image:** use `loading="eager" fetchPriority="high"` for the largest image on a page.
+- **Alt text:** decorative images (a card whose link text names it) get `alt=""`.
+
+## Adding images to a feature ("projects")
+
+1. **Scope:** add `"projects"` to `UPLOAD_SCOPES` (`features/attachments/constants.ts`).
+2. **Schema:** `images: z.array(attachmentRefSchema).max(N)` in the input. The form uses `{ id, alt, preview }` items (see `formImageSchema` and `toTestCrudInput` in Test CRUD).
+3. **Repository:**
+   - Inside create and update transactions, call `syncEntityAttachments(tx, { entityType: "projects", entityId, ownerId }, input.images)`.
+   - On delete, call `removeForEntities(tx, "projects", ids)`.
+   - Read images with `listForEntities` and `toImageAsset(store, row)`.
+   - Pass the store (`imageStore`) through from the server function.
+4. **Service:** after update or delete, `purge(db, store, removed)`.
+5. **Form:** `<form.AppField name="images">{() => <AttachmentsField label=… scope="projects" max={N} onBusyChange=… />}</form.AppField>`, with an `onSubmit` validator that refuses while uploads are running (see `TestCrudForm`).
+6. **Pages:** `CloudImage` as above. The `og:image` is `item.image?.cover.src`.
+
+## Rules (server-side)
+
+- Uploads need `attachments:upload`. Linking happens under the item's own permission (e.g. `test-crud:update`).
+- Only the uploader's own pending uploads, or images already on that item, can be linked; anything else is a `BAD_REQUEST` with a clear message.
+- Allowed formats: JPEG, PNG, WebP, AVIF, GIF (Cloudinary enforces the signed `allowed_formats`). Maximum size: 10 MB, checked after upload; oversized assets are deleted.
+
+## Testing
+
+- **Server:** `tests/utils/fake-cloudinary.ts` runs the real client over a fake `fetch` that behaves like Cloudinary's API: signed destroy, Admin API with Basic auth, and `put()` standing in for the browser's upload. See `tests/server/attachments.test.ts` (flow, rules, cleanup, the documented signature examples) and `test-crud-*.test.ts`.
+- **Editor:** `tests/components/attachments/attachments-field.test.tsx` stubs `XMLHttpRequest`: upload with progress, cancel, discard, concurrent uploads, permissions.
+- **Stories:** `features/attachments/components/attachments.stories.tsx`.

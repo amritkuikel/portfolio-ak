@@ -10,12 +10,12 @@ export const listTestCrudTags = fn(async (): Promise<string[]> => ["drink", "foo
 	"listTestCrudTags",
 );
 export const getTestCrud = fn(async (): Promise<TestCrudDetail> => sampleDetail).mockName("getTestCrud");
-export const createTestCrud = fn(
-	async (_options: { data: FormData }): Promise<TestCrudDetail> => sampleDetail,
-).mockName("createTestCrud");
-export const updateTestCrud = fn(
-	async (_options: { data: FormData }): Promise<TestCrudDetail> => sampleDetail,
-).mockName("updateTestCrud");
+export const createTestCrud = fn(async (_options: { data: unknown }): Promise<TestCrudDetail> => sampleDetail).mockName(
+	"createTestCrud",
+);
+export const updateTestCrud = fn(async (_options: { data: unknown }): Promise<TestCrudDetail> => sampleDetail).mockName(
+	"updateTestCrud",
+);
 export const setTestCrudStatusFn = fn(
 	async (): Promise<TestCrudListItem> => sampleItems[0] as TestCrudListItem,
 ).mockName("setTestCrudStatusFn");

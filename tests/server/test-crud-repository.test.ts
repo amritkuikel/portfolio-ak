@@ -1,17 +1,16 @@
 import { PGlite } from "@electric-sql/pglite";
-import { count, eq } from "drizzle-orm";
+import { count, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TestCrudInput } from "@/features/test-crud/schema";
-import { AppError } from "@/lib/errors";
+import { AppError, FORM_ERROR_KEY } from "@/lib/errors";
+import { insertPending } from "@/server/attachments/repository";
 import * as schema from "@/server/db/schema";
-import type { ValidImage } from "@/server/test-crud/image";
 import {
 	createTestCrud,
 	type Db,
 	deleteTestCrud,
-	getImage,
 	getPublishedTestCrud,
 	getTestCrud,
 	listPublishedTestCrud,
@@ -20,6 +19,7 @@ import {
 	setTestCrudStatus,
 	updateTestCrud,
 } from "@/server/test-crud/repository";
+import { createFakeCloudinary } from "../utils/fake-cloudinary";
 
 /**
  * Runs the repository against a real (in-process) Postgres with the committed
@@ -40,7 +40,7 @@ beforeAll(async () => {
 afterAll(() => client.close());
 beforeEach(async () => {
 	await db.delete(schema.testCrud);
-	await db.delete(schema.testCrudImage);
+	await db.delete(schema.attachment);
 });
 
 const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
@@ -52,17 +52,48 @@ const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
 	price: 1250.5,
 	phone: "+9779812345678",
 	tags: ["nepal", "demo"],
+	images: [],
 	...overrides,
 });
-const png = (): ValidImage => ({ mimeType: "image/png", data: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]) });
-const imageRows = async () => (await db.select({ total: count() }).from(schema.testCrudImage))[0]?.total;
+const cloud = createFakeCloudinary();
+const store = cloud.store;
+const opts = (extra: { now?: Date; userId?: string } = {}) => ({ userId: USER_ID, store, ...extra });
+let uploads = 0;
+/** A verified pending upload by `ownerId` (what confirmUpload records). */
+const pending = async (ownerId = USER_ID) => {
+	uploads++;
+	const row = await insertPending(
+		db,
+		{
+			publicId: `portfolio/test-crud/u${uploads}`,
+			version: 1700000000 + uploads,
+			resourceType: "image",
+			format: "png",
+			bytes: 1000,
+			width: 1600,
+			height: 900,
+		},
+		ownerId,
+	);
+	return { id: row.id, alt: "" };
+};
+const liveAttachments = async () =>
+	(await db.select({ total: count() }).from(schema.attachment).where(isNull(schema.attachment.deletedAt)))[0]?.total;
 
 describe("create and read", () => {
-	it("stores every column, sanitizes the body and links the creator and image", async () => {
-		const created = await createTestCrud(db, input({ body: '<p onclick="x()">Hi<script>alert(1)</script></p>' }), {
-			image: png(),
-			userId: USER_ID,
-		});
+	it("stores every column, sanitizes the body and links the creator and images in order", async () => {
+		const [one, two] = [await pending(), await pending()];
+		const created = await createTestCrud(
+			db,
+			input({
+				body: '<p onclick="x()">Hi<script>alert(1)</script></p>',
+				images: [
+					{ id: two.id, alt: "Second upload, shown first" },
+					{ id: one.id, alt: "" },
+				],
+			}),
+			opts(),
+		);
 		expect(created).toMatchObject({
 			title: "First item",
 			slug: "first-item",
@@ -73,35 +104,67 @@ describe("create and read", () => {
 			body: "<p>Hi</p>",
 			publishedAt: null,
 		});
-		expect(created.imageUrl).toMatch(/^\/api\/images\/[0-9a-f-]{36}$/);
+		expect(created.images.map((image) => [image.id, image.alt])).toEqual([
+			[two.id, "Second upload, shown first"],
+			[one.id, ""],
+		]);
+		// The cover is the first image; URLs are Cloudinary delivery URLs with transformations.
+		expect(created.image?.id).toBe(two.id);
+		expect(created.image?.cover.src).toMatch(
+			/^https:\/\/res\.cloudinary\.test\/demo\/image\/upload\/c_fill,g_auto,ar_16:9,w_960,f_auto,q_auto\/v\d+\/portfolio\/test-crud\/u2$/,
+		);
+		expect(created.image?.full.srcSet.split(", ")).toHaveLength(6);
 		const [row] = await db.select().from(schema.testCrud).where(eq(schema.testCrud.id, created.id));
 		expect(row?.createdBy).toBe(USER_ID);
 		expect(row?.body).toBe("<p>Hi</p>");
-		const image = await getImage(db, created.imageUrl?.split("/").pop() ?? "");
-		expect(image?.mimeType).toBe("image/png");
-		expect([...(image?.data ?? [])]).toEqual([...png().data]);
-		expect(await getTestCrud(db, created.id)).toEqual(created);
+		expect(await getTestCrud(db, created.id, store)).toEqual(created);
+		// Without a configured store the item still loads, with no images.
+		expect((await getTestCrud(db, created.id, null))?.images).toEqual([]);
 	});
 
 	it("sets published_at when created as published", async () => {
 		const now = new Date("2026-10-01T10:00:00Z");
-		const created = await createTestCrud(db, input({ status: "published" }), { image: null, userId: USER_ID, now });
+		const created = await createTestCrud(db, input({ status: "published" }), opts({ now }));
 		expect(created.publishedAt).toBe(now.toISOString());
 	});
 
 	it("rejects a duplicate slug with a CONFLICT field error", async () => {
-		await createTestCrud(db, input(), { image: null, userId: USER_ID });
-		const error = await createTestCrud(db, input({ title: "Other" }), { image: null, userId: USER_ID }).catch(
+		await createTestCrud(db, input(), opts());
+		const upload = await pending();
+		const error = await createTestCrud(db, input({ title: "Other", images: [upload] }), opts()).catch(
 			(caught: unknown) => caught,
 		);
 		expect(error).toBeInstanceOf(AppError);
 		expect(error).toMatchObject({ code: "CONFLICT", fieldErrors: { slug: ["Another item already uses this slug."] } });
-		// The failed transaction stored no image either.
-		expect(await imageRows()).toBe(0);
+		// The failed transaction linked nothing: the upload is still pending.
+		const [row] = await db.select().from(schema.attachment).where(eq(schema.attachment.id, upload.id));
+		expect(row?.entityType).toBeNull();
 	});
 
 	it("returns null for unknown ids", async () => {
-		expect(await getTestCrud(db, "00000000-0000-4000-8000-000000000000")).toBeNull();
+		expect(await getTestCrud(db, "00000000-0000-4000-8000-000000000000", store)).toBeNull();
+	});
+
+	it("refuses images that aren't the user's own pending uploads or already this item's", async () => {
+		await db
+			.insert(schema.user)
+			.values({ id: "someone-else", name: "S", email: "s@example.com" })
+			.onConflictDoNothing();
+		const someoneElses = await pending("someone-else");
+		const error = await createTestCrud(db, input({ images: [someoneElses] }), opts()).catch(
+			(caught: unknown) => caught,
+		);
+		expect(error).toMatchObject({ code: "BAD_REQUEST" });
+		expect((error as AppError).fieldErrors?.[FORM_ERROR_KEY]?.[0]).toBe(
+			"One of the images can't be used here. Remove it and upload it again.",
+		);
+		const mine = await pending();
+		const first = await createTestCrud(db, input({ slug: "first", images: [mine] }), opts());
+		// Another item can't take an image that belongs to the first one.
+		await expect(createTestCrud(db, input({ slug: "second", images: [mine] }), opts())).rejects.toMatchObject({
+			code: "BAD_REQUEST",
+		});
+		expect((await getTestCrud(db, first.id, store))?.images).toHaveLength(1);
 	});
 });
 
@@ -116,14 +179,14 @@ describe("listTestCrud", () => {
 		];
 		for (const [index, [title, status, price]] of items.entries()) {
 			await createTestCrud(db, input({ title, slug: `item-${index}`, status, price, summary: "" }), {
-				image: null,
 				userId: USER_ID,
+				store,
 				now: new Date(Date.UTC(2026, 0, index + 1)),
 			});
 		}
 	});
 	const list = (overrides: Partial<Parameters<typeof listTestCrud>[1]> = {}) =>
-		listTestCrud(db, { q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides });
+		listTestCrud(db, { q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides }, store);
 
 	it("paginates with totals and clamps out-of-range pages", async () => {
 		const first = await list({ pageSize: 2 });
@@ -163,8 +226,15 @@ describe("listTestCrud filters", () => {
 		for (const [index, [title, tags, price, publishedAt, image]] of rows.entries()) {
 			const created = await createTestCrud(
 				db,
-				input({ title, slug: `row-${index}`, tags, price, status: publishedAt ? "published" : "draft" }),
-				{ image: image ? png() : null, userId: USER_ID },
+				input({
+					title,
+					slug: `row-${index}`,
+					tags,
+					price,
+					status: publishedAt ? "published" : "draft",
+					images: image ? [await pending()] : [],
+				}),
+				opts(),
 			);
 			await db
 				.update(schema.testCrud)
@@ -174,7 +244,11 @@ describe("listTestCrud filters", () => {
 	});
 	const titles = async (overrides: Partial<Parameters<typeof listTestCrud>[1]>) =>
 		(
-			await listTestCrud(db, { q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides })
+			await listTestCrud(
+				db,
+				{ q: "", status: "all", tags: [], sort: "title", page: 1, pageSize: 10, ...overrides },
+				store,
+			)
 		).items.map((item) => item.title);
 
 	it("tags match any of the selected tags", async () => {
@@ -202,17 +276,15 @@ describe("listTestCrud filters", () => {
 
 	it("filters combine with AND, together with search and status", async () => {
 		expect(await titles({ tags: ["food"], status: "published", priceMax: 500, q: "mo" })).toEqual(["Momo"]);
-		const page = await listTestCrud(db, {
-			q: "",
-			status: "all",
-			tags: ["nepal"],
-			hasImage: true,
-			sort: "-price",
-			page: 1,
-			pageSize: 10,
-		});
+		const page = await listTestCrud(
+			db,
+			{ q: "", status: "all", tags: ["nepal"], hasImage: true, sort: "-price", page: 1, pageSize: 10 },
+			store,
+		);
 		expect(page).toMatchObject({ total: 2, pageCount: 1 });
 		expect(page.items.map((item) => item.title)).toEqual(["Topi", "Momo"]);
+		// List items carry their cover.
+		expect(page.items.every((item) => item.image !== null)).toBe(true);
 	});
 
 	it("lists every tag in use, alphabetically", async () => {
@@ -221,46 +293,59 @@ describe("listTestCrud filters", () => {
 });
 
 describe("update, status and delete", () => {
-	it("updates fields and replaces the image, deleting the old one", async () => {
-		const created = await createTestCrud(db, input(), { image: png(), userId: USER_ID });
-		const updated = await updateTestCrud(db, created.id, input({ title: "Renamed", tags: [] }), {
-			image: { kind: "replace", image: { mimeType: "image/webp", data: new Uint8Array([1]) } },
-		});
-		expect(updated).toMatchObject({ title: "Renamed", tags: [] });
-		expect(updated.imageUrl).not.toBe(created.imageUrl);
-		expect(await imageRows()).toBe(1);
-		const removed = await updateTestCrud(db, created.id, input(), { image: { kind: "remove" } });
-		expect(removed.imageUrl).toBeNull();
-		expect(await imageRows()).toBe(0);
+	it("updates fields, reorders images, updates alt text and marks dropped images removed", async () => {
+		const [a, b] = [await pending(), await pending()];
+		const created = await createTestCrud(db, input({ images: [a, b] }), opts());
+		const c = await pending();
+		const { item, removed } = await updateTestCrud(
+			db,
+			created.id,
+			input({ title: "Renamed", tags: [], images: [c, { id: a.id, alt: "Now described" }] }),
+			opts(),
+		);
+		expect(item).toMatchObject({ title: "Renamed", tags: [] });
+		expect(item.images.map((image) => [image.id, image.alt])).toEqual([
+			[c.id, ""],
+			[a.id, "Now described"],
+		]);
+		expect(removed.map((row) => row.id)).toEqual([b.id]);
+		expect(await liveAttachments()).toBe(2);
+		const cleared = await updateTestCrud(db, created.id, input(), opts());
+		expect(cleared.item.image).toBeNull();
+		expect(await liveAttachments()).toBe(0);
 	});
 
 	it("keeps the first publish date while published and clears it on unpublish", async () => {
-		const created = await createTestCrud(db, input(), { image: null, userId: USER_ID });
+		const created = await createTestCrud(db, input(), opts());
 		const first = new Date("2026-02-01T00:00:00Z");
-		expect((await setTestCrudStatus(db, created.id, "published", first)).publishedAt).toBe(first.toISOString());
-		const edited = await updateTestCrud(db, created.id, input({ status: "published" }), {
-			image: { kind: "keep" },
-			now: new Date("2026-03-01T00:00:00Z"),
-		});
-		expect(edited.publishedAt).toBe(first.toISOString());
-		expect((await setTestCrudStatus(db, created.id, "draft")).publishedAt).toBeNull();
+		expect((await setTestCrudStatus(db, created.id, "published", store, first)).publishedAt).toBe(first.toISOString());
+		const edited = await updateTestCrud(
+			db,
+			created.id,
+			input({ status: "published" }),
+			opts({ now: new Date("2026-03-01T00:00:00Z") }),
+		);
+		expect(edited.item.publishedAt).toBe(first.toISOString());
+		expect((await setTestCrudStatus(db, created.id, "draft", store)).publishedAt).toBeNull();
 	});
 
 	it("reports NOT_FOUND for unknown ids", async () => {
 		const missing = "00000000-0000-4000-8000-000000000000";
-		await expect(setTestCrudStatus(db, missing, "published")).rejects.toMatchObject({ code: "NOT_FOUND" });
-		await expect(updateTestCrud(db, missing, input(), { image: { kind: "keep" } })).rejects.toMatchObject({
+		await expect(setTestCrudStatus(db, missing, "published", store)).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(updateTestCrud(db, missing, input(), opts())).rejects.toMatchObject({
 			code: "NOT_FOUND",
 		});
 	});
 
-	it("deletes one or many rows with their images and reports the count", async () => {
-		const a = await createTestCrud(db, input({ slug: "a" }), { image: png(), userId: USER_ID });
-		const b = await createTestCrud(db, input({ slug: "b" }), { image: png(), userId: USER_ID });
-		const c = await createTestCrud(db, input({ slug: "c" }), { image: null, userId: USER_ID });
-		expect(await deleteTestCrud(db, [a.id, b.id, "00000000-0000-4000-8000-000000000000"])).toBe(2);
-		expect(await imageRows()).toBe(0);
-		expect(await getTestCrud(db, c.id)).not.toBeNull();
+	it("deletes one or many rows, marks their images removed and reports the count", async () => {
+		const a = await createTestCrud(db, input({ slug: "a", images: [await pending()] }), opts());
+		const b = await createTestCrud(db, input({ slug: "b", images: [await pending()] }), opts());
+		const c = await createTestCrud(db, input({ slug: "c" }), opts());
+		const result = await deleteTestCrud(db, [a.id, b.id, "00000000-0000-4000-8000-000000000000"]);
+		expect(result.deleted).toBe(2);
+		expect(result.removed).toHaveLength(2);
+		expect(await liveAttachments()).toBe(0);
+		expect(await getTestCrud(db, c.id, store)).not.toBeNull();
 	});
 });
 
@@ -275,29 +360,29 @@ describe("public queries (published only)", () => {
 			await createTestCrud(
 				db,
 				input({ title, slug: `p-${index}`, status, summary: title, body: "<p>Body</p><script>x()</script>" }),
-				{ image: null, userId: USER_ID, now: new Date(at) },
+				opts({ now: new Date(at) }),
 			);
 		}
 	});
 
 	it("lists only published items, newest first, with search and paging", async () => {
-		const page = await listPublishedTestCrud(db, { q: "", page: 1 }, 10);
+		const page = await listPublishedTestCrud(db, { q: "", page: 1 }, 10, store);
 		expect(page.items.map((item) => item.title)).toEqual(["Published new", "Published old"]);
 		expect(page.total).toBe(2);
-		expect((await listPublishedTestCrud(db, { q: "secret", page: 1 }, 10)).total).toBe(0);
-		const paged = await listPublishedTestCrud(db, { q: "", page: 5 }, 1);
+		expect((await listPublishedTestCrud(db, { q: "secret", page: 1 }, 10, store)).total).toBe(0);
+		const paged = await listPublishedTestCrud(db, { q: "", page: 5 }, 1, store);
 		expect(paged).toMatchObject({ page: 2, pageCount: 2 });
 		expect(paged.items.map((item) => item.title)).toEqual(["Published old"]);
 		// Public DTOs carry no admin-only fields.
 		expect(Object.keys(page.items[0] ?? {}).sort()).toEqual(
-			["imageUrl", "price", "publishedAt", "slug", "summary", "tags", "title"].sort(),
+			["image", "price", "publishedAt", "slug", "summary", "tags", "title"].sort(),
 		);
 	});
 
 	it("returns a published item by slug with sanitized body, and null for drafts or unknown slugs", async () => {
-		const item = await getPublishedTestCrud(db, "p-0");
+		const item = await getPublishedTestCrud(db, "p-0", store);
 		expect(item).toMatchObject({ title: "Published old", body: "<p>Body</p>" });
-		expect(await getPublishedTestCrud(db, "p-1")).toBeNull();
-		expect(await getPublishedTestCrud(db, "nope")).toBeNull();
+		expect(await getPublishedTestCrud(db, "p-1", store)).toBeNull();
+		expect(await getPublishedTestCrud(db, "nope", store)).toBeNull();
 	});
 });

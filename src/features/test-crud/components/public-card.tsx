@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { formatCurrency, formatDate } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 import type { PublicTestCrudCard } from "../schema";
@@ -27,14 +28,14 @@ export function PublicCard({
 			{/* The box's ratio alone sets its height; the image is laid over it, so an image of
 			    any shape (even before it loads) can't change the card's size. */}
 			<div className="relative aspect-[16/9] overflow-hidden bg-muted">
-				{item.imageUrl ? (
-					<img
-						src={item.imageUrl}
+				{item.image ? (
+					<CloudImage
+						image={item.image}
+						variant="cover"
+						// Decorative here: the card's title link names it.
 						alt=""
 						loading="lazy"
-						decoding="async"
-						width={640}
-						height={360}
+						sizes="(min-width: 1024px) 352px, (min-width: 640px) 50vw, 100vw"
 						className="absolute inset-0 size-full object-cover"
 					/>
 				) : (

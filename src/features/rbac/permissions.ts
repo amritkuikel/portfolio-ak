@@ -11,6 +11,8 @@ export const PERMISSION_CATALOG = {
 	"test-crud": ["read", "create", "update", "publish", "delete"],
 	users: ["read", "update", "ban"],
 	roles: ["read", "manage"],
+	/** Images go into an item through its own save (test-crud:create/update); uploading needs this too. */
+	attachments: ["upload"],
 } as const;
 
 type Catalog = typeof PERMISSION_CATALOG;

@@ -3,14 +3,16 @@
  *
  * Scripts: only those carrying this request's nonce ('strict-dynamic' lets them
  * load their own chunks, e.g. route code, Tiptap, posthog-js), so injected
- * <script> tags can't run. Network: same origin plus the configured Sentry and
- * PostHog hosts. Styles allow inline style attributes (Radix positions popovers
+ * <script> tags can't run. Network: same origin plus the configured Sentry,
+ * PostHog and Cloudinary upload hosts. Images: same origin plus Cloudinary delivery. Styles allow inline style attributes (Radix positions popovers
  * with them); stylesheets themselves are same-origin.
  */
 export type CspOptions = {
 	nonce: string;
-	/** Extra origins the browser may send data to (Sentry ingest, PostHog). */
+	/** Extra origins the browser may send data to (Sentry ingest, PostHog, Cloudinary uploads). */
 	connectOrigins?: ReadonlyArray<string>;
+	/** Extra origins images may load from (Cloudinary delivery). */
+	imgOrigins?: ReadonlyArray<string>;
 	/** Adds upgrade-insecure-requests (production only; it would break http://localhost). */
 	upgradeInsecureRequests?: boolean;
 };
@@ -24,12 +26,17 @@ export const originOf = (url: string | undefined): string | null => {
 	}
 };
 
-export function buildCsp({ nonce, connectOrigins = [], upgradeInsecureRequests = false }: CspOptions): string {
+export function buildCsp({
+	nonce,
+	connectOrigins = [],
+	imgOrigins = [],
+	upgradeInsecureRequests = false,
+}: CspOptions): string {
 	const directives: Record<string, ReadonlyArray<string>> = {
 		"default-src": ["'self'"],
 		"script-src": [`'nonce-${nonce}'`, "'strict-dynamic'"],
 		"style-src": ["'self'", "'unsafe-inline'"],
-		"img-src": ["'self'", "data:", "blob:"],
+		"img-src": ["'self'", "data:", "blob:", ...imgOrigins],
 		"font-src": ["'self'"],
 		"connect-src": ["'self'", ...connectOrigins],
 		"object-src": ["'none'"],

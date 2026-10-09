@@ -27,7 +27,7 @@ export const Card: Story = {
 				<PublicCard item={samplePublicCard} />
 			</li>
 			<li className="flex">
-				<PublicCard item={{ ...samplePublicCard, slug: "no-image", title: "Dhaka Topi", imageUrl: null, tags: [] }} />
+				<PublicCard item={{ ...samplePublicCard, slug: "no-image", title: "Dhaka Topi", image: null, tags: [] }} />
 			</li>
 		</ul>
 	),
@@ -154,7 +154,7 @@ export const NewItemValidation: Story = {
 	},
 };
 
-/** Fill the form like an admin: the slug follows the title and one FormData request is sent. */
+/** Fill the form like an admin: the slug follows the title and one request is sent. */
 export const CreatesItem: Story = {
 	parameters: { app: { route: "/admin/test-crud/new" } },
 	play: async ({ canvas, userEvent }) => {
@@ -168,16 +168,19 @@ export const CreatesItem: Story = {
 		await userEvent.type(canvas.getByLabelText(new RegExp(`^${m.test_crud_field_tags()}`)), "food{Enter}");
 		await userEvent.click(canvas.getByRole("button", { name: m.test_crud_create() }));
 
-		await waitFor(() => expect(createTestCrud).toHaveBeenCalledOnce());
-		const [{ data }] = (createTestCrud as unknown as { mock: { calls: Array<[{ data: FormData }]> } }).mock
-			.calls[0] ?? [{ data: new FormData() }];
-		await expect(JSON.parse(String(data.get("data")))).toMatchObject({
-			title: "Momo Kitchen Deluxe",
-			slug: "momo-kitchen-deluxe",
-			summary: "Dumplings.",
-			status: "published",
-			price: 1250.5,
-			tags: ["food"],
-		});
+		// One JSON request: the fields, and images as attachment ids (none here).
+		await waitFor(() =>
+			expect(createTestCrud).toHaveBeenCalledWith({
+				data: expect.objectContaining({
+					title: "Momo Kitchen Deluxe",
+					slug: "momo-kitchen-deluxe",
+					summary: "Dumplings.",
+					status: "published",
+					price: 1250.5,
+					tags: ["food"],
+					images: [],
+				}),
+			}),
+		);
 	},
 };

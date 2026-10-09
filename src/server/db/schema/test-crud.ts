@@ -9,8 +9,10 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataTyp
 export const testCrudStatus = pgEnum("test_crud_status", TEST_CRUD_STATUSES);
 
 /**
- * Uploaded images, stored in Postgres (see docs/decisions.md 0067). Served by
- * /api/images/$id with immutable caching: a replaced image gets a new id.
+ * LEGACY (Part 1): images stored in Postgres. Images are Cloudinary attachments
+ * now (attachments.ts); nothing in the app reads this table any more. Kept only so
+ * `pnpm attachments:import-legacy` can move existing images; drop it (and
+ * test_crud.image) in a migration once that has run (docs/decisions.md 0098).
  */
 export const testCrudImage = pgTable("test_crud_image", {
 	id: uuid().primaryKey().defaultRandom(),
@@ -36,6 +38,7 @@ export const testCrud = pgTable(
 		/** E.164 or null. */
 		phone: text(),
 		tags: text().array().notNull().default(sql`'{}'::text[]`),
+		/** LEGACY: see testCrudImage. Unused by the app. */
 		image: uuid().references(() => testCrudImage.id, { onDelete: "set null" }),
 		publishedAt: timestamp({ withTimezone: true }),
 		createdBy: text().references(() => user.id, { onDelete: "set null" }),

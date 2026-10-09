@@ -1,4 +1,3 @@
-import { useStore } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef } from "react";
@@ -12,19 +11,20 @@ import {
 	useAppForm,
 } from "@/components/forms";
 import { Button } from "@/components/ui/button";
+import { AttachmentsField } from "@/features/attachments/components/attachments-field";
+import { TEST_CRUD_MAX_IMAGES } from "@/features/attachments/constants";
 import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { toFormData } from "../form-data";
 import { STATUS_LABELS } from "../labels";
 import { testCrudKeys } from "../queries";
 import {
-	imageRules,
 	slugify,
 	TEST_CRUD_STATUSES,
 	type TestCrudDetail,
 	type TestCrudFormValues,
 	testCrudFormSchema,
+	toTestCrudInput,
 } from "../schema";
 
 const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => ({
@@ -36,8 +36,7 @@ const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => (
 	price: item?.price ?? 0,
 	phone: item?.phone ?? "",
 	tags: item?.tags ?? [],
-	image: [],
-	removeImage: false,
+	images: (item?.images ?? []).map((preview) => ({ id: preview.id, alt: preview.alt, preview })),
 });
 
 /**
@@ -61,6 +60,8 @@ export function TestCrudForm({
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const saved = useRef(false);
+	/** Image uploads in progress (submitting waits for them). */
+	const uploading = useRef(false);
 	// New items: the slug follows the title until the user edits it themselves.
 	const slugEdited = useRef(Boolean(item));
 
@@ -70,8 +71,10 @@ export function TestCrudForm({
 		listeners: { onChange: clearServerErrorOnChange },
 		onSubmit: async ({ value, formApi }) => {
 			try {
-				const data = toFormData(value, item?.id);
-				const result = item ? await updateTestCrud({ data }) : await createTestCrud({ data });
+				const input = toTestCrudInput(testCrudFormSchema.parse(value));
+				const result = item
+					? await updateTestCrud({ data: { ...input, id: item.id } })
+					: await createTestCrud({ data: input });
 				saved.current = true;
 				queryClient.setQueryData(testCrudKeys.detail(result.id), result);
 				await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
@@ -85,7 +88,6 @@ export function TestCrudForm({
 			}
 		},
 	});
-	const removeImage = useStore(form.store, (state) => state.values.removeImage);
 	const statusOptions = TEST_CRUD_STATUSES.map((status) => ({ value: status, label: STATUS_LABELS[status]() }));
 
 	return (
@@ -141,23 +143,18 @@ export function TestCrudForm({
 				<form.AppField name="tags">
 					{(field) => <field.TagsInputField label={m.test_crud_field_tags()} optional />}
 				</form.AppField>
-				<form.AppField name="image">
-					{(field) => (
-						<field.ImageField
+				<form.AppField
+					name="images"
+					validators={{ onSubmit: () => (uploading.current ? m.attachments_field_wait() : undefined) }}
+				>
+					{() => (
+						<AttachmentsField
 							label={m.test_crud_field_image()}
-							optional
-							maxBytes={imageRules.maxBytes}
-							accept={imageRules.accept}
-							current={
-								item?.imageUrl
-									? {
-											url: item.imageUrl,
-											removed: removeImage,
-											onRemove: () => form.setFieldValue("removeImage", true),
-											onKeep: () => form.setFieldValue("removeImage", false),
-										}
-									: undefined
-							}
+							scope="test-crud"
+							max={TEST_CRUD_MAX_IMAGES}
+							onBusyChange={(busy) => {
+								uploading.current = busy;
+							}}
 						/>
 					)}
 				</form.AppField>

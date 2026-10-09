@@ -60,6 +60,25 @@ export const serverEnvSchema = {
 	SENTRY_AUTH_TOKEN: z.string().trim().min(1).optional(),
 	SENTRY_ORG: z.string().trim().min(1).optional(),
 	SENTRY_PROJECT: z.string().trim().min(1).optional(),
+	// Cloudinary (attachments). All three or none; without them uploads are disabled.
+	CLOUDINARY_CLOUD_NAME: z
+		.string()
+		.trim()
+		.regex(/^[a-z0-9_-]+$/i, "Use the cloud name from the Cloudinary console.")
+		.optional(),
+	CLOUDINARY_API_KEY: z.string().trim().regex(/^\d+$/, "Cloudinary API keys are numeric.").optional(),
+	CLOUDINARY_API_SECRET: z.string().trim().min(10).optional(),
+	/** Top-level folder (public_id prefix) for this app's uploads. */
+	CLOUDINARY_FOLDER: z
+		.string()
+		.trim()
+		.regex(/^[a-z0-9_-]+$/i)
+		.default("portfolio"),
+	/** API and delivery hosts; override only for a proxy or a local stand-in. */
+	CLOUDINARY_API_BASE: z.url().default("https://api.cloudinary.com"),
+	CLOUDINARY_DELIVERY_BASE: z.url().default("https://res.cloudinary.com"),
+	/** Bearer token for scheduled jobs (/api/cron/*); Vercel Cron sends it. Unset: the routes answer 404. */
+	CRON_SECRET: z.string().trim().min(16).optional(),
 };
 
 export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) =>
@@ -83,6 +102,17 @@ export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) 
 						code: "custom",
 						path: ["SENTRY_AUTH_TOKEN"],
 						message: "Set SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT together, or none of them.",
+					});
+				}
+				const cloudinary = [env.CLOUDINARY_CLOUD_NAME, env.CLOUDINARY_API_KEY, env.CLOUDINARY_API_SECRET].filter(
+					Boolean,
+				).length;
+				if (cloudinary !== 0 && cloudinary !== 3) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["CLOUDINARY_CLOUD_NAME"],
+						message:
+							"Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET together, or none of them.",
 					});
 				}
 				if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {

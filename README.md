@@ -46,6 +46,9 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 | `VITE_SENTRY_DSN` | no | Turns Sentry on (browser + server). |
 | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` | no | Turn PostHog on (opt-in, behind the consent banner). |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | no | Upload source maps to Sentry during `pnpm build` (all three or none). |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | no | Image uploads (all three or none; server-only). Without them items have no images. See [docs/guides/attachments.md](docs/guides/attachments.md). |
+| `CLOUDINARY_FOLDER` | no | public_id prefix for uploads (default `portfolio`). |
+| `CRON_SECRET` | no | Bearer token for `/api/cron/*` (Vercel Cron, `vercel.json`); unset, the routes answer 404. |
 
 ## Architecture
 
@@ -107,6 +110,7 @@ src/
 | `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
+| `pnpm attachments:import-legacy` | Move Part 1 images from Postgres to Cloudinary (`--dry-run` to preview). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
 
@@ -114,7 +118,8 @@ src/
 
 | What | Where | Run with |
 | --- | --- | --- |
-| Zod schemas and validation helpers | `tests/unit/validation.test.ts`, `test-crud-schema.test.ts`, `test-crud-form-data.test.ts` | `pnpm test` |
+| Zod schemas and validation helpers | `tests/unit/validation.test.ts`, `test-crud-schema.test.ts`, `search.test.ts` | `pnpm test` |
+| Attachments (Cloudinary flow, rules, cleanup) | `tests/server/attachments.test.ts`, `tests/components/attachments/*` (fake Cloudinary API) | `pnpm test` |
 | Every form field (jsdom, accessibility contract) | `tests/components/forms/` | `pnpm test` |
 | Test CRUD server logic (real SQL on PGlite) | `tests/server/test-crud-service.test.ts`, `test-crud-repository.test.ts` | `pnpm test` |
 | Auth and admin rejection | `tests/server/auth-middleware.test.ts`, `route-guards.test.ts`, `test-crud-functions.test.ts` | `pnpm test` |
@@ -221,7 +226,7 @@ The Test CRUD files for each layer:
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
 | Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
 
-Images are stored in Postgres and served from `/api/images/:id` (see decision 0067).
+Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098). Part 1 images stored in Postgres move with `pnpm attachments:import-legacy`.
 
 For a public page's head, use `seo({ title, description, path, image })` from `src/lib/seo.ts`. It returns the title, description, canonical URL, `hreflang` alternates for every locale plus `x-default`, and Open Graph and Twitter tags.
 

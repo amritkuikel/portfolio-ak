@@ -1,3 +1,4 @@
+import type { ImageAsset } from "../../src/features/attachments/schema";
 import { ALL_PERMISSIONS } from "../../src/features/rbac/permissions";
 import type { RoleSummary, UserListItem } from "../../src/features/rbac/schema";
 import type { PublicTestCrudCard, TestCrudDetail, TestCrudListItem } from "../../src/features/test-crud/schema";
@@ -21,6 +22,17 @@ export const sampleEditor: Session = {
 
 export const sampleImage = "/favicon.svg";
 
+/** A local stand-in for a Cloudinary image (stories never hit the network). */
+export const sampleImageAsset: ImageAsset = {
+	id: "6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0aaa",
+	alt: "A plate of steamed momo",
+	width: 1600,
+	height: 900,
+	full: { src: sampleImage, srcSet: `${sampleImage} 1600w` },
+	cover: { src: sampleImage, srcSet: `${sampleImage} 1600w` },
+	thumb: sampleImage,
+};
+
 export const sampleItems: TestCrudListItem[] = [
 	{
 		id: "6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0001",
@@ -29,7 +41,7 @@ export const sampleItems: TestCrudListItem[] = [
 		status: "published",
 		price: 1250.5,
 		tags: ["food", "nepal"],
-		imageUrl: sampleImage,
+		image: sampleImageAsset,
 		publishedAt: "2026-09-01T08:00:00.000Z",
 		updatedAt: "2026-09-20T10:30:00.000Z",
 	},
@@ -40,7 +52,7 @@ export const sampleItems: TestCrudListItem[] = [
 		status: "draft",
 		price: 450,
 		tags: ["drink"],
-		imageUrl: null,
+		image: null,
 		publishedAt: null,
 		updatedAt: "2026-09-18T07:15:00.000Z",
 	},
@@ -51,7 +63,7 @@ export const sampleItems: TestCrudListItem[] = [
 		status: "published",
 		price: 1800,
 		tags: [],
-		imageUrl: null,
+		image: null,
 		publishedAt: "2026-08-10T12:00:00.000Z",
 		updatedAt: "2026-09-02T09:45:00.000Z",
 	},
@@ -60,6 +72,7 @@ export const sampleItems: TestCrudListItem[] = [
 const [first] = sampleItems;
 export const sampleDetail: TestCrudDetail = {
 	...(first as TestCrudListItem),
+	images: [sampleImageAsset],
 	summary: "Hand-made dumplings from Kathmandu.",
 	body: "<h2>Menu</h2><p>Steamed <strong>momo</strong> with tomato achar.</p>",
 	phone: "+9779812345678",
@@ -72,7 +85,7 @@ export const samplePublicCard: PublicTestCrudCard = {
 	summary: "Hand-made dumplings from Kathmandu, steamed or fried, served with tomato achar.",
 	price: 1250.5,
 	tags: ["food", "nepal"],
-	imageUrl: sampleImage,
+	image: sampleImageAsset,
 	publishedAt: "2026-09-01T08:00:00.000Z",
 };
 

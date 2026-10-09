@@ -12,6 +12,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
   - [conventions.md](docs/guides/conventions.md): file map, building blocks, rules.
   - [search-filters-masking.md](docs/guides/search-filters-masking.md): URL params, filters, list loading, dialogs via route masking, path params.
   - [rbac.md](docs/guides/rbac.md): roles, permissions, guarding functions, routes and UI, the escalation rules.
+  - [attachments.md](docs/guides/attachments.md): Cloudinary uploads (signed, direct, verified), showing images, adding images to a feature.
   - [audit.md](docs/guides/audit.md): module review and what's scheduled.
 
 **Stack:**
@@ -68,7 +69,9 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 
 - **Zod and the CSP:** Zod 4 probes eval when a `z.object` is created. Always import `"zod"` (aliased), never `zod/v4` in app code (0086).
 - **Locale frozen at module scope:** JSX or strings built from `m.*` at module level render in the first request's language on the server.
-- **Images in dev:** served by a Nitro route (`src/server/routes/images.ts`), not a Start server route. Nitro dev sends `Sec-Fetch-Dest: image` requests to Vite otherwise (0067). Task 21 replaces this with Cloudinary.
+- **Images are Cloudinary attachments** (0098): upload straight from the browser with a server signature, verify on the server, link in the item's save. Render with `CloudImage` (server-built URLs). Never stream files through a server function.
+- **Form arrays updated from async callbacks:** use the field's atomic helpers (`field.pushValue`), not a value read earlier; concurrent uploads lost images that way (0099).
+- **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job; Nitro dev routes `Sec-Fetch-Dest: image` requests to Vite unless a Nitro route matches (0067).
 - **Windows:** keep the checkout path short (0029). In Git Bash, avoid apostrophes inside heredocs and `node -e`; write a script file instead. In edit scripts, pass replacements to `String.replace` as functions: `$`` in a replacement string is a special pattern.
 - **Masked routes need `unmaskOnReload: true`.** Without it a reload keeps the mask from history state, so the client renders something the server didn't (a hydration error).
 - **Admin guard:** `_admin` checks the server on entering the area and on SSR (any permission opens it); inner navigations reuse the session (0090). Never rely on it for data safety: every server function has its own `requirePermission`.

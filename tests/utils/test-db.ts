@@ -17,15 +17,11 @@ export async function createTestDb(adminId = "admin-1") {
 	return {
 		db,
 		adminId,
-		/** Removes Test CRUD rows and images between tests. */
+		/** Removes Test CRUD rows and attachments between tests. */
 		reset: async () => {
 			await db.delete(schema.testCrud);
-			await db.delete(schema.testCrudImage);
+			await db.delete(schema.attachment);
 		},
 		close: () => client.close(),
 	};
 }
-
-/** Smallest valid PNG signature + bytes, for upload tests (validateImage sniffs the signature). */
-export const pngFile = (name = "photo.png") =>
-	new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])], name, { type: "image/png" });

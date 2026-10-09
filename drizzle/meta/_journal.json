@@ -43,6 +43,13 @@
 			"when": 1791538802439,
 			"tag": "0005_rbac_seed",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1791542711424,
+			"tag": "0006_attachments",
+			"breakpoints": true
 		}
 	]
 }

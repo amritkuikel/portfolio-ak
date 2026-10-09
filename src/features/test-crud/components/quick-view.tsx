@@ -6,6 +6,7 @@ import { useCloseOverlay } from "@/components/navigation/use-close-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { formatCurrency, formatDate } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 import { publicTestCrudDetailQueryOptions } from "../queries";
@@ -20,12 +21,11 @@ export function TestCrudQuickView({ slug }: { slug: string }) {
 		<Dialog open onOpenChange={(open) => !open && close()}>
 			<DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl" data-testid="quick-view">
 				<div className="relative aspect-[16/9] overflow-hidden rounded-lg bg-muted">
-					{item?.imageUrl ? (
-						<img
-							src={item.imageUrl}
-							alt=""
-							width={640}
-							height={360}
+					{item?.image ? (
+						<CloudImage
+							image={item.image}
+							variant="cover"
+							sizes="(min-width: 640px) 576px, 100vw"
 							className="absolute inset-0 size-full object-cover"
 						/>
 					) : (

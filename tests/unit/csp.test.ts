@@ -29,6 +29,12 @@ describe("buildCsp", () => {
 		expect(csp["connect-src"]).toEqual(["'self'", "https://o1.ingest.sentry.io", "https://eu.i.posthog.com"]);
 	});
 
+	it("allows images from the same origin (plus data/blob previews) and configured hosts only", () => {
+		expect(directives(buildCsp({ nonce: "n" }))["img-src"]).toEqual(["'self'", "data:", "blob:"]);
+		const csp = directives(buildCsp({ nonce: "n", imgOrigins: ["https://res.cloudinary.com"] }));
+		expect(csp["img-src"]).toEqual(["'self'", "data:", "blob:", "https://res.cloudinary.com"]);
+	});
+
 	it("upgrades insecure requests only when asked (production)", () => {
 		expect(buildCsp({ nonce: "n" })).not.toContain("upgrade-insecure-requests");
 		expect(buildCsp({ nonce: "n", upgradeInsecureRequests: true })).toMatch(/; upgrade-insecure-requests$/);

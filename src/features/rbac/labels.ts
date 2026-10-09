@@ -6,6 +6,7 @@ export const RESOURCE_LABELS: Record<Resource, () => string> = {
 	"test-crud": m.perm_resource_test_crud,
 	users: m.perm_resource_users,
 	roles: m.perm_resource_roles,
+	attachments: m.perm_resource_attachments,
 };
 
 export const PERMISSION_LABELS: Record<Permission, () => string> = {
@@ -19,6 +20,7 @@ export const PERMISSION_LABELS: Record<Permission, () => string> = {
 	"users:ban": m.perm_users_ban,
 	"roles:read": m.perm_roles_read,
 	"roles:manage": m.perm_roles_manage,
+	"attachments:upload": m.perm_attachments_upload,
 };
 
 /** A role's display name: system roles are localized, custom roles use their own name. */

@@ -24,7 +24,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 | Auth and authorization | Fixed (Task 20) | Permissions resolved per request; `requirePermission` on every protected function (a test maps each one); route guards; Users, Roles and the permission matrix (0094–0097). |
 | Server functions | Keep | Thin: middleware + `zodInput` validator + one call into a service or repository. |
 | Data access | Keep + fixed | Repositories over an injected `Db`, tested on PGlite. `Db`/`Tx` moved to `src/server/db/types.ts`; list SQL is shared (0084). |
-| Images and files | Later (Task 21) | Bytes are stored in Postgres and served by a Nitro route. Task 21 moves them to Cloudinary attachments. |
+| Images and files | Fixed (Task 21) | Cloudinary attachments: signed direct uploads, server verification, galleries with alt text, responsive delivery, cleanup job (0098–0099). |
 | SEO | Later (Task 22) | `seo()` is used only on the Test CRUD pages. Home and `/stack` lack canonical and hreflang tags; admin, auth and account pages lack `noindex`; there is no sitemap or robots. Breadcrumb JSON-LD has landed (0083). |
 | Security | Keep + fixed | Headers and a nonce-based CSP. Zod's eval probe came back after a chunk-order change; it's now fixed structurally (0086). |
 | Observability | Keep | Sentry (pinned), PostHog behind consent, server-side flags. |
@@ -54,7 +54,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 
 - **Task 19 (done):** filters, search helpers, list loading without pending screens (0089), the admin guard round trip (0090), route masking (0091), param validation (0092).
 - **Task 20 (done):** permission catalog, roles and the matrix UI; `requirePermission` everywhere; sidebar, dashboard and actions filtered by permission.
-- **Task 21:** Cloudinary attachments, replacing the Postgres image table, with responsive delivery.
+- **Task 21 (done):** Cloudinary attachments with responsive delivery; legacy Postgres images move via `pnpm attachments:import-legacy`.
 - **Task 22:**
   - `seo()` on every public route, and `noindex` on private ones.
   - A sitemap, robots, Organization/WebSite and item JSON-LD, Open Graph images and a manifest.

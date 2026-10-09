@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { useCan } from "@/features/rbac/can";
 import { formatCurrency, formatDateTime } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
@@ -41,13 +42,12 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		hideable: true,
 		headClassName: "w-16",
 		cell: (row) =>
-			row.imageUrl ? (
-				<img
-					src={row.imageUrl}
+			row.image ? (
+				<CloudImage
+					image={row.image}
+					variant="thumb"
 					alt=""
 					loading="lazy"
-					width={40}
-					height={40}
 					className="size-10 rounded border object-cover"
 				/>
 			) : (

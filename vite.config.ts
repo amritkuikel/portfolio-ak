@@ -82,8 +82,8 @@ export default defineConfig(async ({ command, mode }) => {
 			nitro({
 				// Validates server env at boot. See the file for why this is a Nitro plugin.
 				plugins: ["./src/server/plugins/validate-env.ts"],
-				// A Nitro route, not a Start server route, so <img> requests reach it in dev too.
-				routes: { "/api/images/:id": { handler: "./src/server/routes/images.ts", method: "GET" } },
+				// Scheduled jobs (Vercel Cron, see vercel.json): bearer CRON_SECRET, 404 when unset.
+				routes: { "/api/cron/attachments": { handler: "./src/server/routes/cron-attachments.ts", method: "GET" } },
 				// Security headers on every response (pages, assets, API). The CSP is per
 				// request (nonce) and is added by src/middleware/security-headers.ts.
 				routeRules: { "/**": { headers: STATIC_SECURITY_HEADERS } },

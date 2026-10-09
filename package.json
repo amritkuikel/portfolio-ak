@@ -22,7 +22,8 @@
 		"db:seed-admin": "node scripts/seed-admin.mjs",
 		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts",
 		"test:storybook": "vitest run --project storybook && vitest run --project storybook-dark-ne",
-		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.mjs"
+		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.mjs",
+		"attachments:import-legacy": "node scripts/attachments-import-legacy.mjs"
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.6",

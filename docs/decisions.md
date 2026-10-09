@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (97 entries)</summary>
+<summary>Index (99 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -103,6 +103,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0095](#0095-every-server-function-names-its-permission-pages-guard-by-permission-the-ui-only-hides): Every server function names its permission; pages guard by permission; the UI only hides
 - [0096](#0096-rules-against-self-escalation-and-lockout): Rules against self-escalation and lockout
 - [0097](#0097-the-permission-matrix-saves-each-change-optimistically-and-rolls-back-on-refusal): The permission matrix saves each change optimistically and rolls back on refusal
+- [0098](#0098-attachments-signed-direct-uploads-to-cloudinary-verified-on-the-server): Attachments: signed direct uploads to Cloudinary, verified on the server
+- [0099](#0099-the-image-editor-is-a-feature-field-concurrent-uploads-append-atomically): The image editor is a feature field; concurrent uploads append atomically
 </details>
 
 ---
@@ -811,6 +813,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0067: Uploaded images are stored in Postgres and served by a Nitro route
 
+*Superseded by 0098 (Cloudinary attachments); the legacy table remains only for `pnpm attachments:import-legacy`.*
+
 - **What:**
   - `test_crud_image` (`bytea`, sniffed MIME type, size) is referenced by `test_crud.image` with `ON DELETE SET NULL`. Create and update are ONE FormData request: shared-schema JSON plus an optional file. The image is inserted, replaced or removed in the same transaction as the row, and replaced or orphaned images are deleted there too.
   - The type comes from the file's magic bytes (PNG, JPEG or WebP). The browser's `File.type` and the extension are ignored. The limit is 2 MB, checked before reading the file.
@@ -1187,3 +1191,42 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Saving:** each change is one `updateRolePermissions({ roleId, grant, revoke })` call, run as a TanStack Query mutation. `onMutate` updates the cached roles, `onError` restores them and shows a toast, and `onSettled` refetches roles and the session.
   - **Disabled cells:** the Admin column, everything for read-only viewers, and permissions a non-admin doesn't hold.
 - **Why:** Instant feedback and no "Save" step to forget. A rule violation or a network failure visibly undoes itself. Plain Query mutations are enough here; the roles list is small and has no paging that would call for a TanStack DB collection.
+
+## 0098: Attachments: signed direct uploads to Cloudinary, verified on the server
+
+- **What:**
+  - **Upload flow:** the browser asks `signImageUpload` (permission `attachments:upload`) for a ticket. The server picks the `public_id` (`<CLOUDINARY_FOLDER>/<scope>/<uuid>`) and signs it together with `allowed_formats` and `overwrite=false`. The browser then POSTs the file straight to Cloudinary (XHR, for progress and cancel). `confirmImageUpload` reads the asset back through Cloudinary's Admin API, checks the format and the size (10 MB), and records an `attachment` row as *pending*.
+  - **Linking:** the item's own save links pending uploads, in the user's order with their alt text, in the same transaction (`syncEntityAttachments`). Only the user's own pending uploads, or images already on that item, can be linked.
+  - **Removal:** images an item drops, and the images of deleted items, are marked removed. Their assets are deleted at once when Cloudinary answers. A daily Vercel Cron job (`/api/cron/attachments`, bearer `CRON_SECRET`) deletes what's left, plus day-old orphans.
+  - **Delivery:** URLs are built on the server (`ImageAsset`: `full`, a 16:9 `cover` and a `thumb`, each with a `srcSet` using `f_auto,q_auto`). `CloudImage` renders them with width/height, `sizes` and lazy loading; the detail page's cover is eager with high fetch priority. The CSP allows Cloudinary's upload origin (`connect-src`) and delivery origin (`img-src`) only when it's configured.
+  - **Unconfigured:** without the three `CLOUDINARY_*` variables, uploads are refused with a clear message and items have no images.
+  - **Client:** a thin client over Cloudinary's REST API (`src/server/attachments/cloudinary.ts`) instead of the SDK.
+- **Why:**
+  - **Direct uploads:** files never pass through our server (no body-size limits, no memory pressure).
+  - **The signature:** it fixes where a file goes and which formats Cloudinary accepts.
+  - **Size limit:** Cloudinary has no size parameter for signed uploads, so the size is enforced from the Admin API's authoritative `bytes`, and an oversized asset is deleted.
+  - **Pending, then linked:** a failed or abandoned form can't attach anything to an item, and orphans are cleaned up.
+  - **Server-built URLs:** the browser needs no Cloudinary config, and every image gets one consistent set of transformations.
+  - **REST over the SDK:** the SDK is CommonJS with dependencies, and the four calls used are small. Signing follows Cloudinary's documented algorithm, and the test reproduces the documentation's example signatures.
+- **Legacy images:** Test CRUD's Postgres images (decision 0067) are no longer read. `pnpm attachments:import-legacy` moves existing ones to Cloudinary; the old table and column stay until that has run, then a migration can drop them.
+- **Verified live** against a real Cloudinary account (production build, all test assets deleted afterwards):
+  - **Upload and save:** uploading two images straight to Cloudinary, verification, saving in a chosen order with alt text.
+  - **Public pages:** responsive delivery on cards and the detail page (no layout shift, no CSP violations), and the cover as `og:image`.
+  - **Cloudinary-side rules:** it refused an SVG outside the signed formats and a reused signature for another `public_id`.
+  - **Clean-up:** discard before saving, item deletion, and the cron cleanup each deleted the assets.
+  - **Permissions:** no picker without `attachments:upload`.
+- **Alternatives considered:**
+  - Unsigned upload presets: anyone could upload.
+  - Streaming uploads through our server: memory and time limits on Vercel.
+  - Cloudinary's Upload Widget: a third-party script under our CSP, and not our UI.
+  - Verifying only the upload response signature: it proves the asset exists, but its size and format fields aren't signed.
+
+## 0099: The image editor is a feature field; concurrent uploads append atomically
+
+- **What:**
+  - **The field:** `AttachmentsField` (`src/features/attachments/components`) is used inside `form.AppField`. Its value is `{ id, alt, preview }[]`, and `toTestCrudInput` sends ids and alt text only.
+  - **Editing:** a native file picker or drag-and-drop adds images. Up/down buttons reorder them, with drag-and-drop as a bonus. Each image has an alt-text input and a remove button, the first image is marked as the cover, and a live region announces changes.
+  - **Without permission:** a user without `attachments:upload` can still reorder, describe and remove images, but not add them.
+  - **Busy state:** the form refuses to submit while uploads are running.
+  - **Concurrency:** finished uploads are added with TanStack Form's `pushValue`.
+- **Why:** The first version appended to the value read when the upload started, so when two uploads finished together one image was lost. The live test caught it, and a regression test now fails without the fix. The field lives in the feature, not the generic field library, because it calls the app's server functions.

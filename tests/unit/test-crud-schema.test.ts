@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-	imageUrl,
 	slugify,
 	TEST_CRUD_SEARCH_DEFAULTS,
 	testCrudFormSchema,
 	testCrudInputSchema,
 	testCrudListInputSchema,
 	testCrudSearchSchema,
+	toTestCrudInput,
 } from "@/features/test-crud/schema";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 
@@ -23,6 +23,7 @@ const valid = {
 	price: 100,
 	phone: "",
 	tags: [],
+	images: [],
 } as const;
 
 const messages = (result: { success: boolean; error?: { issues: Array<{ path: PropertyKey[]; message: string }> } }) =>
@@ -69,15 +70,23 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 		);
 	});
 
-	it("the form schema adds the image (type, size, max one)", () => {
-		const big = new File([new Uint8Array(3 * 1024 * 1024)], "big.png", { type: "image/png" });
-		const svg = new File(["<svg/>"], "x.svg", { type: "image/svg+xml" });
-		const ok = new File(["x"], "x.webp", { type: "image/webp" });
-		expect(testCrudFormSchema.safeParse({ ...valid, image: [ok], removeImage: false }).success).toBe(true);
-		const result = testCrudFormSchema.safeParse({ ...valid, image: [big, svg], removeImage: false });
-		expect(result.error?.issues.map((issue) => issue.message)).toEqual(
-			expect.arrayContaining(["Choose at most 1 files.", "x.svg isn't an accepted file type."]),
-		);
+	it("images are attachment ids with alt text, at most 8, and the form's previews never reach the server", () => {
+		const id = "6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0001";
+		const preview = {
+			id,
+			alt: "",
+			width: 1,
+			height: 1,
+			full: { src: "x", srcSet: "x" },
+			cover: { src: "x", srcSet: "x" },
+			thumb: "x",
+		};
+		const form = testCrudFormSchema.parse({ ...valid, images: [{ id, alt: " Momo ", preview }] });
+		expect(toTestCrudInput(form).images).toEqual([{ id, alt: "Momo" }]);
+		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id: "nope", alt: "" }] }).success).toBe(false);
+		const nine = Array.from({ length: 9 }, () => ({ id, alt: "" }));
+		expect(testCrudInputSchema.safeParse({ ...valid, images: nine }).success).toBe(false);
+		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id, alt: "x".repeat(201) }] }).success).toBe(false);
 	});
 });
 
@@ -100,12 +109,5 @@ describe("admin list search params", () => {
 	it("the server function input requires an allowed page size", () => {
 		expect(testCrudListInputSchema.safeParse({ ...TEST_CRUD_SEARCH_DEFAULTS, pageSize: 20 }).success).toBe(true);
 		expect(testCrudListInputSchema.safeParse({ ...TEST_CRUD_SEARCH_DEFAULTS, pageSize: 1000 }).success).toBe(false);
-	});
-});
-
-describe("imageUrl", () => {
-	it("points at the image route", () => {
-		expect(imageUrl("abc")).toBe("/api/images/abc");
-		expect(imageUrl(null)).toBeNull();
 	});
 });

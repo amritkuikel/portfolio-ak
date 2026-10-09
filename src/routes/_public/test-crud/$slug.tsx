@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { Page } from "@/components/page/page";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Badge } from "@/components/ui/badge";
+import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { publicTestCrudDetailQueryOptions } from "@/features/test-crud/queries";
 import { testCrudSlugParamSchema } from "@/features/test-crud/schema";
 import { track } from "@/lib/analytics";
@@ -26,8 +27,8 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 			const item = await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
 			// Only what head() and the breadcrumb need: the full item (with its body) already
 			// travels to the browser in the Query cache, so returning it would send it twice.
-			const { title, summary, imageUrl, publishedAt } = item;
-			return { title, summary, imageUrl, publishedAt };
+			const { title, summary, publishedAt } = item;
+			return { title, summary, publishedAt, ogImage: item.image?.cover.src ?? null };
 		} catch (error) {
 			// Missing and draft slugs are indistinguishable to the public: both 404.
 			if (isAppError(error) && error.code === "NOT_FOUND") throw notFound();
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 			title: loaderData.title,
 			description: loaderData.summary || m.test_crud_public_description(),
 			path: `/test-crud/${params.slug}`,
-			image: loaderData.imageUrl,
+			image: loaderData.ogImage,
 			type: "article",
 		});
 		return {
@@ -77,14 +78,18 @@ function PublicDetailPage() {
 					</p>
 					{item.summary ? <p className="text-lg text-muted-foreground">{item.summary}</p> : null}
 				</header>
-				{item.imageUrl ? (
-					<img
-						src={item.imageUrl}
-						alt=""
-						width={1280}
-						height={720}
-						className="aspect-[16/9] w-full rounded-xl border bg-muted object-cover"
-					/>
+				{item.image ? (
+					<div className="relative aspect-[16/9] overflow-hidden rounded-xl border bg-muted">
+						{/* The largest element on the page: load it first. */}
+						<CloudImage
+							image={item.image}
+							variant="cover"
+							loading="eager"
+							fetchPriority="high"
+							sizes="(min-width: 768px) 736px, 100vw"
+							className="absolute inset-0 size-full object-cover"
+						/>
+					</div>
 				) : null}
 				<dl className="grid gap-4 rounded-xl border bg-card p-4 text-sm sm:grid-cols-3">
 					<div className="flex flex-col gap-1">
@@ -115,6 +120,26 @@ function PublicDetailPage() {
 					) : null}
 				</dl>
 				{item.body ? <RichTextContent html={item.body} className="max-w-none text-base" /> : null}
+				{item.images.length > 1 ? (
+					<section aria-labelledby="gallery-title" className="flex flex-col gap-3">
+						<h2 id="gallery-title" className="font-semibold text-xl">
+							{m.test_crud_public_gallery()}
+						</h2>
+						<ul className="grid gap-4 sm:grid-cols-2">
+							{item.images.slice(1).map((image) => (
+								<li key={image.id} className="relative aspect-[16/9] overflow-hidden rounded-lg border bg-muted">
+									<CloudImage
+										image={image}
+										variant="cover"
+										loading="lazy"
+										sizes="(min-width: 768px) 360px, 100vw"
+										className="absolute inset-0 size-full object-cover"
+									/>
+								</li>
+							))}
+						</ul>
+					</section>
+				) : null}
 			</article>
 		</Page>
 	);

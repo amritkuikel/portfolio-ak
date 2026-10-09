@@ -54,6 +54,27 @@ describe("server env", () => {
 		expect((error as Error).message).toMatch(/EMAIL_FROM:/);
 	});
 
+	it("Cloudinary: all three or none; a numeric key; defaults for folder and hosts", () => {
+		const cloudinary = {
+			CLOUDINARY_CLOUD_NAME: "my-cloud",
+			CLOUDINARY_API_KEY: "123456789012345",
+			CLOUDINARY_API_SECRET: "a-long-enough-secret",
+		};
+		const env = createServerEnv({ ...validServer, ...cloudinary });
+		expect(env).toMatchObject({
+			CLOUDINARY_FOLDER: "portfolio",
+			CLOUDINARY_API_BASE: "https://api.cloudinary.com",
+			CLOUDINARY_DELIVERY_BASE: "https://res.cloudinary.com",
+		});
+		expect(createServerEnv({ ...validServer }).CLOUDINARY_CLOUD_NAME).toBeUndefined();
+		expect((serverError({ ...validServer, CLOUDINARY_CLOUD_NAME: "my-cloud" }) as Error).message).toMatch(
+			/Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET together/,
+		);
+		expect((serverError({ ...validServer, ...cloudinary, CLOUDINARY_API_KEY: "abc123" }) as Error).message).toMatch(
+			/CLOUDINARY_API_KEY: Cloudinary API keys are numeric/,
+		);
+	});
+
 	it("rejects an unknown EMAIL_PROVIDER", () => {
 		const error = serverError({ ...validServer, EMAIL_PROVIDER: "smtp" });
 		expect((error as Error).message).toMatch(/EMAIL_PROVIDER:/);
