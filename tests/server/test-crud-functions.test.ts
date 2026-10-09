@@ -34,6 +34,10 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["confirmImageUpload", "attachments:upload"],
 		["discardImageUpload", "attachments:upload"],
 	],
+	"src/functions/examples-permissions.ts": [
+		["exampleReadItems", "test-crud:read"],
+		["exampleManageRoles", "roles:manage"],
+	],
 };
 
 describe("guarded server functions", () => {

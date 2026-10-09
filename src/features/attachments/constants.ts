@@ -7,7 +7,7 @@ export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image
 export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 /** Where an upload is going: becomes part of its Cloudinary public_id ("portfolio/test-crud/<uuid>"). */
-export const UPLOAD_SCOPES = ["test-crud"] as const;
+export const UPLOAD_SCOPES = ["test-crud", "examples"] as const;
 export type UploadScope = (typeof UPLOAD_SCOPES)[number];
 
 /** Images per Test CRUD item. */

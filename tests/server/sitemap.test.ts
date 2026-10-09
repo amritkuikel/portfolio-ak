@@ -122,10 +122,9 @@ describe("robots.txt", () => {
 
 describe("web manifest", () => {
 	it("is localized and lists the app icons", () => {
-		const english = webManifest();
+		const english = webManifest("en");
 		expect(english).toMatchObject({ name: "Portfolio", lang: "en", start_url: "/" });
-		overwriteGetLocale(() => "ne");
-		const manifest = webManifest();
+		const manifest = webManifest("ne");
 		expect(manifest).toMatchObject({ lang: "ne", start_url: "/ne/" });
 		expect(manifest.description).not.toBe(english.description);
 		expect(manifest.icons.map((icon) => icon.src)).toEqual([

@@ -81,9 +81,9 @@ Add a builder there for a new type, and assert its output in the route test.
 | --- | --- | --- |
 | `/sitemap.xml` | `src/routes/sitemap[.]xml.ts` → `src/server/seo/sitemap.ts` | Static pages, list pages 2+, published items with `lastmod`; one `<url>` per language, each listing every `hreflang` alternate. |
 | `/robots.txt` | `src/server/seo/robots.ts` | Disallows `/admin`, `/ne/admin`, `/api/`, `/_serverFn/`; points to the sitemap. Other private pages stay crawlable so crawlers can read their `noindex`. |
-| `/manifest.webmanifest` | `src/server/seo/manifest.ts` | Localized (`/ne/manifest.webmanifest`); the root head links the current language's. |
+| `/manifest.webmanifest` | `src/server/routes/manifest.ts` (Nitro) → `src/server/seo/manifest.ts` | Localized (`/ne/manifest.webmanifest`); the root head links the current language's. |
 
-These are Start server routes (`.ts` files with only `server.handlers`). `/ne/sitemap.xml` and `/ne/robots.txt` are 404s. Responses are cached at the edge for an hour.
+The sitemap and robots are Start server routes (`.ts` files with only `server.handlers`); `/ne/sitemap.xml` and `/ne/robots.txt` are 404s. The manifest is a Nitro route (one entry per locale in `vite.config.ts`): browsers fetch it with `Sec-Fetch-Dest: manifest`, which Nitro's dev server otherwise hands to Vite (0067). Responses are cached at the edge for an hour.
 
 **Adding pages to the sitemap:** add them to `sitemapEntries()` (published rows only) and to `INDEXABLE` in the route test.
 
@@ -103,3 +103,7 @@ To rebrand, replace these files at the same sizes. `theme-color` follows the the
 - `pnpm test`: the route test (every route, both languages), `seo()`, sitemap, robots and manifest tests.
 - Production build: `curl` the page and read its `<head>`; check `/sitemap.xml`. Absolute URLs use `VITE_SITE_URL`, which is set at build time.
 - After deploying: Google's Rich Results Test and the Search Console sitemap report.
+
+## Live example
+
+- **seo() output and JSON-LD:** `/dev/examples/seo` (`src/routes/_public/dev/examples/seo.tsx`), with `pnpm dev`.

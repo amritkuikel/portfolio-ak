@@ -36,7 +36,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => Promise<void> | vo
 	};
 
 	return (
-		<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="login-form">
+		<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="login-form">
 			{formError ? <FormMessage tone="error">{formError}</FormMessage> : null}
 			<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={errors.email} />
 			<AuthField

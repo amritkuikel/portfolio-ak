@@ -69,7 +69,7 @@ function RegisterPage() {
 	return (
 		<>
 			<h1 className="font-semibold text-2xl tracking-tight">{m.auth_register_title()}</h1>
-			<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="register-form">
+			<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="register-form">
 				{formError ? <FormMessage tone="error">{formError}</FormMessage> : null}
 				<AuthField name="name" autoComplete="name" label={m.auth_name_label()} error={errors.name} />
 				<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={errors.email} />

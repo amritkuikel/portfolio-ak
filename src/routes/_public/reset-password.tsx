@@ -70,7 +70,7 @@ function ResetPasswordPage() {
 					</Link>
 				</>
 			) : (
-				<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
+				<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
 					{formError ? <FormMessage tone="error">{formError}</FormMessage> : null}
 					<AuthField
 						name="password"

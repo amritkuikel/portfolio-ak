@@ -123,3 +123,8 @@ params: { parse: (raw) => parseParams(z.object({ id: z.uuid() }), raw) },
 - **`tests/components/filters/filter-bar.test.tsx`:** URL updates, debounce, chips, Clear all, the no-JS form.
 - **`tests/components/navigation/route-masking.test.tsx`:** href, masked address, Back/Forward, reload, 404 for invalid params.
 - **`tests/server/test-crud-repository.test.ts`:** each filter against Postgres.
+
+## Live example
+
+- **Search params + filters:** `/dev/examples/filters` (`src/routes/_public/dev/examples/filters.tsx`), with `pnpm dev`.
+- **Route masking:** `/dev/examples/masking` (`src/routes/_public/dev/examples/masking/index.tsx`), with `pnpm dev`.

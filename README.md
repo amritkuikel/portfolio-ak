@@ -179,7 +179,7 @@ const form = useAppForm({
 ```
 
 - **Fields:** `TextField`, `TextareaField`, `EmailField`, `PasswordField`, `NumberField`, `CurrencyField`, `SelectField`, `ComboboxField`, `MultiSelectField`, `RadioGroupField`, `CheckboxField`, `CheckboxGroupField`, `SwitchField`, `UrlField`, `PhoneField`, `OtpField`, `DateField`, `DateRangeField`, `TimeField`, `SliderField`, `TagsInputField`, `ColorField`, `FileField`, `ImageField`, `RichTextField`.
-- **Showcase:** run `pnpm dev` and open `/dev/forms` (or `/ne/dev/forms`) to see and try every field. It returns 404 in production builds.
+- **Showcase:** run `pnpm dev` and open `/dev/forms` (or `/ne/dev/forms`) to see and try every field, and `/dev/examples` for one working page per module (loader + Query, streaming, filters, masking, forms, DataTable, optimistic updates, preferences, permissions, attachments, SEO, i18n, errors, analytics). Both return 404 in production builds.
 - **Accessibility:** Every field wires label, description, `aria-invalid` and `aria-describedby`.
 - **When errors show:** Only after a field is left (blurred) or a submit is attempted.
 - **Validation:** `formValidators(schema)` runs the schema on change, blur and submit.
@@ -245,6 +245,7 @@ Both are optional. If their variables are unset they are off completely: nothing
 - **Feature flags** are evaluated on the server (`src/functions/feature-flags.ts`) and SSR'd through the Query cache, so server and client render the same thing.
   - Example: create a boolean flag `home-items-cta` in PostHog to show a call to action on the home page.
   - Before consent, flags are evaluated with a shared anonymous id and never record `$feature_flag_called`.
+- **Example:** `/dev/examples/analytics` (with `pnpm dev`) shows the consent state, `track()` before and after consent, and a server-evaluated flag.
 
 ## Authentication
 

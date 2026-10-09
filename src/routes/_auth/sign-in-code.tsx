@@ -69,7 +69,7 @@ function SignInCodePage() {
 			<h1 className="font-semibold text-2xl tracking-tight">{m.auth_otp_title()}</h1>
 			{formError ? <FormMessage tone="error">{formError}</FormMessage> : null}
 			{email ? (
-				<form noValidate onSubmit={verify} className="flex flex-col gap-4" data-testid="otp-verify-form">
+				<form method="post" noValidate onSubmit={verify} className="flex flex-col gap-4" data-testid="otp-verify-form">
 					<FormMessage tone="success">{m.auth_otp_sent({ email, minutes: formatNumber(OTP_MINUTES) })}</FormMessage>
 					<AuthField
 						name="otp"
@@ -88,7 +88,13 @@ function SignInCodePage() {
 					</Button>
 				</form>
 			) : (
-				<form noValidate onSubmit={sendCode} className="flex flex-col gap-4" data-testid="otp-request-form">
+				<form
+					method="post"
+					noValidate
+					onSubmit={sendCode}
+					className="flex flex-col gap-4"
+					data-testid="otp-request-form"
+				>
 					<p className="text-muted-foreground">{m.auth_otp_intro()}</p>
 					<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={error} />
 					<Button type="submit" disabled={pending}>

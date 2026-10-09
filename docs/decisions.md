@@ -108,6 +108,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0100](#0100-every-page-is-indexable-through-seo-or-private-through-noindex-a-test-checks-every-route): Every page is indexable through seo() or private through noindex; a test checks every route
 - [0101](#0101-the-sitemap-robotstxt-and-manifest-are-start-server-routes-built-from-the-same-data-as-the-pages): The sitemap, robots.txt and manifest are Start server routes built from the same data as the pages
 - [0102](#0102-json-ld-is-typed-with-schema-dts-and-emitted-through-route-heads-items-are-products): JSON-LD is typed with schema-dts and emitted through route heads; items are Products
+- [0103](#0103-module-examples-are-dev-only-routes-over-in-memory-data-guarded-by-one-layout): Module examples are dev-only routes over in-memory data, guarded by one layout
+- [0104](#0104-forms-handled-in-javascript-use-methodpost): Forms handled in JavaScript use `method="post"`
 </details>
 
 ---
@@ -1291,3 +1293,43 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives considered:**
   - Rendering JSON-LD `<script>` tags in page components: they stay in the body, and data needed by the head would be duplicated in components.
   - A `@graph` per page: one more nesting level for no gain at this size.
+
+## 0103: Module examples are dev-only routes over in-memory data, guarded by one layout
+
+- **What:**
+  - **Pages:** `/dev/examples` lists 14 example pages, one per module: loader + Query, streaming, filters, masking, forms, DataTable, optimistic update, preferences, permissions, attachments, SEO, i18n, errors, analytics and flags.
+    - Each page is a real route under `src/routes/_public/dev/examples/` that uses the same building blocks as the app.
+    - Each shows its source file and guide (`ExamplePage`), and the guides link back.
+  - **Registry:** `features/dev/examples/registry.ts` drives the index; a test checks it against the route tree, and that every source and guide file exists.
+  - **One guard:** `src/routes/_public/dev/route.tsx`'s `beforeLoad` throws `notFound()` when `import.meta.env.DEV` is false, so every `/dev` page (examples and `/dev/forms`) is the localized 404 in builds, before any loader runs. Its head is `noindex`.
+  - **Server functions:** in `src/functions/examples.ts` behind `devOnlyMiddleware` (NOT_FOUND in builds). The permission example's two functions are in `examples-permissions.ts`; they run `requirePermission` first like every guarded function (the guarded-functions test covers that file), then the dev check.
+  - **Data:** an in-memory task list in the dev server process (`src/server/examples/tasks.ts`), with fixed ids and dates. It is shared by the filters, DataTable, masking and optimistic examples, and the DataTable page can reset it.
+  - **Uploads:** they use a new `examples` scope (`UPLOAD_SCOPES`), so example uploads land in their own Cloudinary folder. They're never linked, so the daily cleanup deletes them.
+- **Why:**
+  - **Real routes, not stories:** the patterns are about loaders, SSR, URLs, server functions and the router (masking, streaming, status codes), which only a running app shows.
+  - **In-memory data:** examples can be clicked freely (bulk delete, refusals) without touching the database or needing a migration, and the store module is never part of a client bundle.
+  - **The layout guard:** one place decides that /dev doesn't exist in production; the per-function middleware covers direct calls to the endpoints.
+- **The manifest moved to a Nitro route:** the live check found `/manifest.webmanifest` 404 in dev. Browsers fetch it with `Sec-Fetch-Dest: manifest`, and Nitro's dev server sends non-document destinations to Vite unless a Nitro route matches (as with images, 0067). It is now `src/server/routes/manifest.ts`, registered per locale in `vite.config.ts`, with the locale taken from the path. Production behaved the same either way; dev logged an error on every page.
+- **Verified:**
+  - **Statuses:** every page answers 200 in dev; missing and invalid ids, `notFound()`, a refusal and a crash give 404, 404, 403 and 500.
+  - **Browser review** (axe, overflow, console, CSP, CLS; en/ne × light/dark × 390/768/1280; 228 loads):
+    - **Where:** on a production build with the /dev guards temporarily turned off (then restored and rebuilt).
+    - **Why not dev:** dev skips font preloads (src/lib/fonts.ts), so the first paint uses fallback metrics. That wrapped a long breadcrumb 1 px earlier and registered as CLS that production doesn't have.
+    - **Result:** one real issue, now fixed: permission badges overflowed at 390 px in Nepali (`Facts` now stacks on phones).
+  - **Scripted flows:** no request while hydrating; streaming fallback then value; the filter URL; the masked dialog, Back and reload; a server field error; the bulk action; optimistic success and rollback; the theme surviving a reload; the server's permission answers for an admin and an editor; the action-error toast; consent changes.
+  - **Production build:** all of `/dev/*` is 404.
+- **Alternatives considered:**
+  - Storybook stories: no router, loaders or server functions.
+  - Examples on the database (a seeded table): a migration and cleanup for development-only data.
+  - An env flag to enable the pages in production: the brief says unreachable in production, and `import.meta.env.DEV` is a build-time constant.
+
+## 0104: Forms handled in JavaScript use method="post"
+
+- **What:** the shared `Form` (useAppForm) and every hand-written form (sign-in, register, sign-in code, forgot and reset password, verify email, account) set `method="post"`. FilterBar keeps `method="get"`, because its values belong in the URL. `tests/unit/form-method.test.ts` checks every `<form>` in `src`.
+- **Why:**
+  - **The problem:** a form without a method submits as GET. A submit before hydration (a slow phone, a click during load) then put the fields in the URL: passwords in the address bar, history, referrers and server logs. The dev examples' scripted flows hit exactly that (`?username=…&email=…`) while the dev server was busy.
+  - **The fix:** with POST, a pre-hydration submit sends the values in the body. The server renders the page again (a page URL accepts POST and ignores the body), and the user simply submits again once it has loaded.
+- **Verified:** with JavaScript off, submitting the sign-in form and the examples form leaves the URL unchanged. With JavaScript, the forms behave as before (unit tests, the auth flows and the example flows).
+- **Alternatives considered:**
+  - Disabling submit buttons until hydration: the buttons change state after load, and nothing at all works without JavaScript.
+  - `action="javascript:void(0)"`: blocked by the CSP and flagged by React.

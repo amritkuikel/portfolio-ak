@@ -48,7 +48,7 @@ function ForgotPasswordPage() {
 			{sentTo ? (
 				<FormMessage tone="success">{m.auth_forgot_sent({ email: sentTo })}</FormMessage>
 			) : (
-				<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="forgot-form">
+				<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="forgot-form">
 					<p className="text-muted-foreground">{m.auth_forgot_intro()}</p>
 					{formError ? <FormMessage tone="error">{formError}</FormMessage> : null}
 					<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={error} />

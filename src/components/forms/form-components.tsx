@@ -11,13 +11,15 @@ import { FormMetaProvider, useFormMeta } from "./form-meta";
 /**
  * <form> wired to TanStack Form: prevents the native submit, runs handleSubmit,
  * disables browser validation bubbles (our messages are localized) and gives
- * fields a unique id prefix.
+ * fields a unique id prefix. method="post": a submit before hydration reloads the
+ * page with the values in the request body, never in the URL (history, logs).
  */
 export function Form({ children, className, ...props }: Omit<ComponentProps<"form">, "onSubmit">) {
 	const form = useFormContext();
 	return (
 		<FormMetaProvider>
 			<form
+				method="post"
 				noValidate
 				className={cn("flex flex-col gap-6", className)}
 				onSubmit={(event) => {

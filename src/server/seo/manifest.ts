@@ -1,22 +1,21 @@
 import "@tanstack/react-start/server-only";
 import { clientEnv } from "@/lib/client-env";
 import { m } from "@/paraglide/messages";
-import { getLocale, getTextDirection, localizeHref } from "@/paraglide/runtime";
+import { getTextDirection, type Locale, localizeHref } from "@/paraglide/runtime";
 
 /**
- * The web app manifest in the request's language (/manifest.webmanifest and
+ * The web app manifest in one language (/manifest.webmanifest and
  * /ne/manifest.webmanifest; the root head links the current one). Colours match
  * the light theme's --background and the icon tile.
  */
-export function webManifest() {
-	const locale = getLocale();
+export function webManifest(locale: Locale) {
 	return {
 		name: clientEnv.VITE_APP_TITLE,
 		short_name: clientEnv.VITE_APP_TITLE,
-		description: m.site_description(),
+		description: m.site_description({}, { locale }),
 		lang: locale,
 		dir: getTextDirection(locale),
-		start_url: localizeHref("/"),
+		start_url: localizeHref("/", { locale }),
 		scope: "/",
 		display: "standalone",
 		background_color: "#ffffff",

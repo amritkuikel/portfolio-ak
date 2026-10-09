@@ -15,6 +15,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
   - [attachments.md](docs/guides/attachments.md): Cloudinary uploads (signed, direct, verified), showing images, adding images to a feature.
   - [seo.md](docs/guides/seo.md): `seo()`/`listSeo()` vs `privateHead()`, JSON-LD, sitemap, robots, manifest, icons.
   - [audit.md](docs/guides/audit.md): module review and what's scheduled.
+- **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
 **Stack:**
 - TanStack Start + Router, Query, DB, Form and Store
@@ -73,7 +74,10 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **Locale frozen at module scope:** JSX or strings built from `m.*` at module level render in the first request's language on the server.
 - **Images are Cloudinary attachments** (0098): upload straight from the browser with a server signature, verify on the server, link in the item's save. Render with `CloudImage` (server-built URLs). Never stream files through a server function.
 - **Form arrays updated from async callbacks:** use the field's atomic helpers (`field.pushValue`), not a value read earlier; concurrent uploads lost images that way (0099).
-- **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job; Nitro dev routes `Sec-Fetch-Dest: image` requests to Vite unless a Nitro route matches (0067).
+- **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job and the web manifest. Nitro's dev server hands requests whose `Sec-Fetch-Dest` isn't a document (`image`, `manifest`…) to Vite unless a Nitro route matches, so a Start server route fetched that way is a 404 in dev only (0067, 0103).
+- **Forms handled in JavaScript set `method="post"`** (the shared `Form` does): without it a submit before hydration puts the fields, passwords included, in the URL. A test checks every `<form>` (0104).
+- **Dev-only pages** live under `src/routes/_public/dev/` (the layout 404s in builds); their server functions use `devOnlyMiddleware`.
+- **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
 - **Windows:** keep the checkout path short (0029). In Git Bash, avoid apostrophes inside heredocs and `node -e`; write a script file instead. In edit scripts, pass replacements to `String.replace` as functions: `$`` in a replacement string is a special pattern.
 - **Masked routes need `unmaskOnReload: true`.** Without it a reload keeps the mask from history state, so the client renders something the server didn't (a hydration error).
 - **Admin guard:** `_admin` checks the server on entering the area and on SSR (any permission opens it); inner navigations reuse the session (0090). Never rely on it for data safety: every server function has its own `requirePermission`.

@@ -48,7 +48,7 @@ function VerifyEmailPage() {
 			{error || !session ? (
 				<>
 					<FormMessage tone="error">{m.auth_verify_failed()}</FormMessage>
-					<form noValidate onSubmit={onResend} className="flex flex-col gap-4">
+					<form method="post" noValidate onSubmit={onResend} className="flex flex-col gap-4">
 						<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={emailError} />
 						<Button type="submit" variant="outline">
 							{m.auth_resend_verification()}

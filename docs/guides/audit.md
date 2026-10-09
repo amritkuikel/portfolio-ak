@@ -56,6 +56,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 - **Task 20 (done):** permission catalog, roles and the matrix UI; `requirePermission` everywhere; sidebar, dashboard and actions filtered by permission.
 - **Task 21 (done):** Cloudinary attachments with responsive delivery; legacy Postgres images move via `pnpm attachments:import-legacy`.
 - **Task 22 (done):** `seo()` on every public route and `noindex` on private ones; sitemap, robots, JSON-LD, Open Graph images, icons and a manifest ([seo.md](seo.md)).
+- **Task 23 (done):** `/dev/examples`, one working page per module, linked from the guides (0103).
 - **Task 24:** Complete `CLAUDE.md` and guides (this task adds the first version).
 
 ## How this was verified

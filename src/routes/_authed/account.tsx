@@ -98,7 +98,7 @@ function ProfileSection({ name }: { name: string }) {
 
 	return (
 		<Section title={m.account_profile_title()}>
-			<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="profile-form">
+			<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="profile-form">
 				{status ? <FormMessage tone={status.tone}>{status.text}</FormMessage> : null}
 				<AuthField name="name" autoComplete="name" defaultValue={name} label={m.auth_name_label()} error={error} />
 				<Button type="submit" disabled={pending} className="self-start">
@@ -137,7 +137,7 @@ function EmailSection({ email }: { email: string }) {
 
 	return (
 		<Section title={m.account_email_title()} description={m.account_email_current({ email })}>
-			<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="email-form">
+			<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="email-form">
 				{status ? <FormMessage tone={status.tone}>{status.text}</FormMessage> : null}
 				<AuthField
 					name="newEmail"
@@ -189,7 +189,7 @@ function PasswordSection() {
 
 	return (
 		<Section title={m.account_password_title()}>
-			<form noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="password-form">
+			<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="password-form">
 				{status ? <FormMessage tone={status.tone}>{status.text}</FormMessage> : null}
 				<AuthField
 					name="current"

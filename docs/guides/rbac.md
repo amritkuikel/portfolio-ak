@@ -80,3 +80,7 @@ Each violation is a `ruleError` with a localized message (`fieldErrors._form`), 
   - the role dialog;
   - the user-roles dialog.
 - **Live checks:** replay a captured server call from a session without the permission. Server-function errors come back as a serialized payload with HTTP 200 (`x-tss-serialized`), so assert the `FORBIDDEN` code in the body, and that the data didn't change.
+
+## Live example
+
+- **useCan, <Can> and guarded server functions:** `/dev/examples/permissions` (`src/routes/_public/dev/examples/permissions.tsx`), with `pnpm dev`.

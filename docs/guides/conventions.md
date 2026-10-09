@@ -20,6 +20,7 @@ src/
     errors/               Error, not-found and pending pages
   features/rbac/          Permission catalog + labels, useCan/<Can>/assertRoutePermission, users and roles UI
   features/admin/         Admin sections (sidebar + dashboard, each with its permission)
+  features/dev/examples/  The /dev/examples pages' registry, page frame, schema and in-memory data (development only)
   features/<name>/        Everything specific to one feature, shared by client and server:
     schema.ts             Zod input + URL search schemas, DTO types (built from src/lib/list.ts and src/lib/validation.ts)
     constants.ts labels.ts  Enum values and their localized labels
@@ -129,3 +130,22 @@ loader: async (…) => { const item = await queryClient.ensureQueryData(…); re
 - **Import Zod as `zod`.** It resolves to `src/lib/zod.ts` (jitless, CSP-safe). Never import `zod/v4` directly in app code.
 - **Every string goes through Paraglide** in en and ne. Delete keys when their UI goes away; `tests/i18n/message-usage.test.ts` enforces it.
 - **No layout shift:** fixed image aspect boxes, skeletons with the page's footprint, and preferences read from cookies on the server.
+
+## Live examples
+
+Run `pnpm dev` and open `/dev/examples` (or `/ne/dev/examples`): one small, real page per module, each naming its source and guide. They answer 404 in production builds. The patterns from this guide:
+
+| Pattern | Page | Source |
+| --- | --- | --- |
+| Loader + Query (SSR, no refetch while hydrating) | `/dev/examples/loader-query` | `src/routes/_public/dev/examples/loader-query.tsx` |
+| Streaming a slow part with `Await` | `/dev/examples/streaming` | `src/routes/_public/dev/examples/streaming.tsx` |
+| Forms: client validation; server field errors | `/dev/examples/forms` | `src/routes/_public/dev/examples/forms.tsx` |
+| DataTable with columns, sorting, bulk and row actions | `/dev/examples/data-table` | `src/routes/_public/dev/examples/data-table.tsx` |
+| TanStack DB optimistic update and rollback | `/dev/examples/optimistic` | `src/routes/_public/dev/examples/optimistic.tsx` |
+| Store preferences (cookies, SSR) | `/dev/examples/preferences` | `src/routes/_public/dev/examples/preferences.tsx` |
+| i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/_public/dev/examples/i18n.tsx` |
+| Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/_public/dev/examples/errors.tsx` |
+
+The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags (README, "Observability").
+
+**Adding an example:** a route under `src/routes/_public/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.

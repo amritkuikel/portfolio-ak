@@ -13,7 +13,6 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
-import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminAdminRouteRouteImport } from './routes/_admin/admin/route'
@@ -23,6 +22,7 @@ import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthSignInCodeRouteImport } from './routes/_auth/sign-in-code'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
+import { Route as PublicDevRouteRouteImport } from './routes/_public/dev/route'
 import { Route as PublicHealthRouteImport } from './routes/_public/health'
 import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-password'
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
@@ -32,6 +32,7 @@ import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
+import { Route as PublicDevExamplesRouteRouteImport } from './routes/_public/dev/examples/route'
 import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as PublicTestCrudIndexRouteImport } from './routes/_public/test-crud/index'
 import { Route as PublicTestCrudSlugRouteImport } from './routes/_public/test-crud/$slug'
@@ -42,6 +43,23 @@ import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/adm
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
 import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
+import { Route as PublicDevExamplesIndexRouteImport } from './routes/_public/dev/examples/index'
+import { Route as PublicDevExamplesAnalyticsRouteImport } from './routes/_public/dev/examples/analytics'
+import { Route as PublicDevExamplesAttachmentsRouteImport } from './routes/_public/dev/examples/attachments'
+import { Route as PublicDevExamplesDataTableRouteImport } from './routes/_public/dev/examples/data-table'
+import { Route as PublicDevExamplesErrorsRouteImport } from './routes/_public/dev/examples/errors'
+import { Route as PublicDevExamplesFiltersRouteImport } from './routes/_public/dev/examples/filters'
+import { Route as PublicDevExamplesFormsRouteImport } from './routes/_public/dev/examples/forms'
+import { Route as PublicDevExamplesI18nRouteImport } from './routes/_public/dev/examples/i18n'
+import { Route as PublicDevExamplesLoaderQueryRouteImport } from './routes/_public/dev/examples/loader-query'
+import { Route as PublicDevExamplesMaskingRouteRouteImport } from './routes/_public/dev/examples/masking/route'
+import { Route as PublicDevExamplesOptimisticRouteImport } from './routes/_public/dev/examples/optimistic'
+import { Route as PublicDevExamplesPermissionsRouteImport } from './routes/_public/dev/examples/permissions'
+import { Route as PublicDevExamplesPreferencesRouteImport } from './routes/_public/dev/examples/preferences'
+import { Route as PublicDevExamplesSeoRouteImport } from './routes/_public/dev/examples/seo'
+import { Route as PublicDevExamplesStreamingRouteImport } from './routes/_public/dev/examples/streaming'
+import { Route as PublicDevExamplesMaskingIndexRouteImport } from './routes/_public/dev/examples/masking/index'
+import { Route as PublicDevExamplesMaskingIdRouteImport } from './routes/_public/dev/examples/masking/$id'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -57,11 +75,6 @@ const AuthedRoute = AuthedRouteImport.update({
 } as any)
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
-  id: '/manifest.webmanifest',
-  path: '/manifest.webmanifest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -109,6 +122,11 @@ const PublicIndexRoute = PublicIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicDevRouteRoute = PublicDevRouteRouteImport.update({
+  id: '/dev',
+  path: '/dev',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicHealthRoute = PublicHealthRouteImport.update({
   id: '/health',
   path: '/health',
@@ -154,10 +172,15 @@ const AdminAdminUsersRouteRoute = AdminAdminUsersRouteRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
+const PublicDevExamplesRouteRoute = PublicDevExamplesRouteRouteImport.update({
+  id: '/examples',
+  path: '/examples',
+  getParentRoute: () => PublicDevRouteRoute,
+} as any)
 const PublicDevFormsRoute = PublicDevFormsRouteImport.update({
-  id: '/dev/forms',
-  path: '/dev/forms',
-  getParentRoute: () => PublicRoute,
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => PublicDevRouteRoute,
 } as any)
 const PublicTestCrudIndexRoute = PublicTestCrudIndexRouteImport.update({
   id: '/',
@@ -205,13 +228,110 @@ const AdminAdminUsersIndexRoute = AdminAdminUsersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminUsersRouteRoute,
 } as any)
+const PublicDevExamplesIndexRoute = PublicDevExamplesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PublicDevExamplesRouteRoute,
+} as any)
+const PublicDevExamplesAnalyticsRoute =
+  PublicDevExamplesAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesAttachmentsRoute =
+  PublicDevExamplesAttachmentsRouteImport.update({
+    id: '/attachments',
+    path: '/attachments',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesDataTableRoute =
+  PublicDevExamplesDataTableRouteImport.update({
+    id: '/data-table',
+    path: '/data-table',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesErrorsRoute = PublicDevExamplesErrorsRouteImport.update({
+  id: '/errors',
+  path: '/errors',
+  getParentRoute: () => PublicDevExamplesRouteRoute,
+} as any)
+const PublicDevExamplesFiltersRoute =
+  PublicDevExamplesFiltersRouteImport.update({
+    id: '/filters',
+    path: '/filters',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesFormsRoute = PublicDevExamplesFormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => PublicDevExamplesRouteRoute,
+} as any)
+const PublicDevExamplesI18nRoute = PublicDevExamplesI18nRouteImport.update({
+  id: '/i18n',
+  path: '/i18n',
+  getParentRoute: () => PublicDevExamplesRouteRoute,
+} as any)
+const PublicDevExamplesLoaderQueryRoute =
+  PublicDevExamplesLoaderQueryRouteImport.update({
+    id: '/loader-query',
+    path: '/loader-query',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesMaskingRouteRoute =
+  PublicDevExamplesMaskingRouteRouteImport.update({
+    id: '/masking',
+    path: '/masking',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesOptimisticRoute =
+  PublicDevExamplesOptimisticRouteImport.update({
+    id: '/optimistic',
+    path: '/optimistic',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesPermissionsRoute =
+  PublicDevExamplesPermissionsRouteImport.update({
+    id: '/permissions',
+    path: '/permissions',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesPreferencesRoute =
+  PublicDevExamplesPreferencesRouteImport.update({
+    id: '/preferences',
+    path: '/preferences',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesSeoRoute = PublicDevExamplesSeoRouteImport.update({
+  id: '/seo',
+  path: '/seo',
+  getParentRoute: () => PublicDevExamplesRouteRoute,
+} as any)
+const PublicDevExamplesStreamingRoute =
+  PublicDevExamplesStreamingRouteImport.update({
+    id: '/streaming',
+    path: '/streaming',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesMaskingIndexRoute =
+  PublicDevExamplesMaskingIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PublicDevExamplesMaskingRouteRoute,
+  } as any)
+const PublicDevExamplesMaskingIdRoute =
+  PublicDevExamplesMaskingIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => PublicDevExamplesMaskingRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
-  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AdminAdminRouteRouteWithChildren
+  '/dev': typeof PublicDevRouteRouteWithChildren
   '/test-crud': typeof PublicTestCrudRouteRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -225,23 +345,41 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
+  '/dev/examples': typeof PublicDevExamplesRouteRouteWithChildren
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/test-crud/': typeof PublicTestCrudIndexRoute
+  '/dev/examples/masking': typeof PublicDevExamplesMaskingRouteRouteWithChildren
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
+  '/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
+  '/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
+  '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
+  '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
+  '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
+  '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
+  '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
+  '/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
+  '/dev/examples/seo': typeof PublicDevExamplesSeoRoute
+  '/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/dev/examples/': typeof PublicDevExamplesIndexRoute
+  '/dev/examples/masking/$id': typeof PublicDevExamplesMaskingIdRoute
+  '/dev/examples/masking/': typeof PublicDevExamplesMaskingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
-  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dev': typeof PublicDevRouteRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
@@ -259,9 +397,25 @@ export interface FileRoutesByTo {
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
+  '/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
+  '/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
+  '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
+  '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
+  '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
+  '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
+  '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
+  '/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
+  '/dev/examples/seo': typeof PublicDevExamplesSeoRoute
+  '/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
+  '/dev/examples': typeof PublicDevExamplesIndexRoute
+  '/dev/examples/masking/$id': typeof PublicDevExamplesMaskingIdRoute
+  '/dev/examples/masking': typeof PublicDevExamplesMaskingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -269,10 +423,10 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
-  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_admin/admin': typeof AdminAdminRouteRouteWithChildren
+  '/_public/dev': typeof PublicDevRouteRouteWithChildren
   '/_public/test-crud': typeof PublicTestCrudRouteRouteWithChildren
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -287,26 +441,44 @@ export interface FileRoutesById {
   '/_admin/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
+  '/_public/dev/examples': typeof PublicDevExamplesRouteRouteWithChildren
   '/_public/dev/forms': typeof PublicDevFormsRoute
   '/_public/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_public/test-crud/': typeof PublicTestCrudIndexRoute
+  '/_public/dev/examples/masking': typeof PublicDevExamplesMaskingRouteRouteWithChildren
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/_public/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
+  '/_public/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/_public/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
+  '/_public/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
+  '/_public/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
+  '/_public/dev/examples/forms': typeof PublicDevExamplesFormsRoute
+  '/_public/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/_public/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
+  '/_public/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
+  '/_public/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
+  '/_public/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
+  '/_public/dev/examples/seo': typeof PublicDevExamplesSeoRoute
+  '/_public/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/_public/dev/examples/': typeof PublicDevExamplesIndexRoute
+  '/_public/dev/examples/masking/$id': typeof PublicDevExamplesMaskingIdRoute
+  '/_public/dev/examples/masking/': typeof PublicDevExamplesMaskingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/manifest.webmanifest'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/admin'
+    | '/dev'
     | '/test-crud'
     | '/forgot-password'
     | '/login'
@@ -320,23 +492,41 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
+    | '/dev/examples'
     | '/dev/forms'
     | '/test-crud/$slug'
     | '/api/auth/$'
     | '/admin/'
     | '/test-crud/'
+    | '/dev/examples/masking'
     | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/dev/examples/analytics'
+    | '/dev/examples/attachments'
+    | '/dev/examples/data-table'
+    | '/dev/examples/errors'
+    | '/dev/examples/filters'
+    | '/dev/examples/forms'
+    | '/dev/examples/i18n'
+    | '/dev/examples/loader-query'
+    | '/dev/examples/optimistic'
+    | '/dev/examples/permissions'
+    | '/dev/examples/preferences'
+    | '/dev/examples/seo'
+    | '/dev/examples/streaming'
     | '/admin/roles/'
     | '/admin/test-crud/'
     | '/admin/users/'
+    | '/dev/examples/'
+    | '/dev/examples/masking/$id'
+    | '/dev/examples/masking/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/manifest.webmanifest'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/dev'
     | '/forgot-password'
     | '/login'
     | '/register'
@@ -354,19 +544,35 @@ export interface FileRouteTypes {
     | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/dev/examples/analytics'
+    | '/dev/examples/attachments'
+    | '/dev/examples/data-table'
+    | '/dev/examples/errors'
+    | '/dev/examples/filters'
+    | '/dev/examples/forms'
+    | '/dev/examples/i18n'
+    | '/dev/examples/loader-query'
+    | '/dev/examples/optimistic'
+    | '/dev/examples/permissions'
+    | '/dev/examples/preferences'
+    | '/dev/examples/seo'
+    | '/dev/examples/streaming'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
+    | '/dev/examples'
+    | '/dev/examples/masking/$id'
+    | '/dev/examples/masking'
   id:
     | '__root__'
     | '/_admin'
     | '/_auth'
     | '/_authed'
     | '/_public'
-    | '/manifest.webmanifest'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/_admin/admin'
+    | '/_public/dev'
     | '/_public/test-crud'
     | '/_auth/forgot-password'
     | '/_auth/login'
@@ -381,17 +587,35 @@ export interface FileRouteTypes {
     | '/_admin/admin/roles'
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
+    | '/_public/dev/examples'
     | '/_public/dev/forms'
     | '/_public/test-crud/$slug'
     | '/api/auth/$'
     | '/_admin/admin/'
     | '/_public/test-crud/'
+    | '/_public/dev/examples/masking'
     | '/_admin/admin/roles/permissions'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
+    | '/_public/dev/examples/analytics'
+    | '/_public/dev/examples/attachments'
+    | '/_public/dev/examples/data-table'
+    | '/_public/dev/examples/errors'
+    | '/_public/dev/examples/filters'
+    | '/_public/dev/examples/forms'
+    | '/_public/dev/examples/i18n'
+    | '/_public/dev/examples/loader-query'
+    | '/_public/dev/examples/optimistic'
+    | '/_public/dev/examples/permissions'
+    | '/_public/dev/examples/preferences'
+    | '/_public/dev/examples/seo'
+    | '/_public/dev/examples/streaming'
     | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
+    | '/_public/dev/examples/'
+    | '/_public/dev/examples/masking/$id'
+    | '/_public/dev/examples/masking/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -399,7 +623,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
-  ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -433,13 +656,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof PublicRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manifest.webmanifest': {
-      id: '/manifest.webmanifest'
-      path: '/manifest.webmanifest'
-      fullPath: '/manifest.webmanifest'
-      preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -505,6 +721,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicIndexRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/dev': {
+      id: '/_public/dev'
+      path: '/dev'
+      fullPath: '/dev'
+      preLoaderRoute: typeof PublicDevRouteRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/health': {
       id: '/_public/health'
       path: '/health'
@@ -568,12 +791,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminUsersRouteRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_public/dev/examples': {
+      id: '/_public/dev/examples'
+      path: '/examples'
+      fullPath: '/dev/examples'
+      preLoaderRoute: typeof PublicDevExamplesRouteRouteImport
+      parentRoute: typeof PublicDevRouteRoute
+    }
     '/_public/dev/forms': {
       id: '/_public/dev/forms'
-      path: '/dev/forms'
+      path: '/forms'
       fullPath: '/dev/forms'
       preLoaderRoute: typeof PublicDevFormsRouteImport
-      parentRoute: typeof PublicRoute
+      parentRoute: typeof PublicDevRouteRoute
     }
     '/_public/test-crud/': {
       id: '/_public/test-crud/'
@@ -637,6 +867,125 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users/'
       preLoaderRoute: typeof AdminAdminUsersIndexRouteImport
       parentRoute: typeof AdminAdminUsersRouteRoute
+    }
+    '/_public/dev/examples/': {
+      id: '/_public/dev/examples/'
+      path: '/'
+      fullPath: '/dev/examples/'
+      preLoaderRoute: typeof PublicDevExamplesIndexRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/analytics': {
+      id: '/_public/dev/examples/analytics'
+      path: '/analytics'
+      fullPath: '/dev/examples/analytics'
+      preLoaderRoute: typeof PublicDevExamplesAnalyticsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/attachments': {
+      id: '/_public/dev/examples/attachments'
+      path: '/attachments'
+      fullPath: '/dev/examples/attachments'
+      preLoaderRoute: typeof PublicDevExamplesAttachmentsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/data-table': {
+      id: '/_public/dev/examples/data-table'
+      path: '/data-table'
+      fullPath: '/dev/examples/data-table'
+      preLoaderRoute: typeof PublicDevExamplesDataTableRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/errors': {
+      id: '/_public/dev/examples/errors'
+      path: '/errors'
+      fullPath: '/dev/examples/errors'
+      preLoaderRoute: typeof PublicDevExamplesErrorsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/filters': {
+      id: '/_public/dev/examples/filters'
+      path: '/filters'
+      fullPath: '/dev/examples/filters'
+      preLoaderRoute: typeof PublicDevExamplesFiltersRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/forms': {
+      id: '/_public/dev/examples/forms'
+      path: '/forms'
+      fullPath: '/dev/examples/forms'
+      preLoaderRoute: typeof PublicDevExamplesFormsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/i18n': {
+      id: '/_public/dev/examples/i18n'
+      path: '/i18n'
+      fullPath: '/dev/examples/i18n'
+      preLoaderRoute: typeof PublicDevExamplesI18nRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/loader-query': {
+      id: '/_public/dev/examples/loader-query'
+      path: '/loader-query'
+      fullPath: '/dev/examples/loader-query'
+      preLoaderRoute: typeof PublicDevExamplesLoaderQueryRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/masking': {
+      id: '/_public/dev/examples/masking'
+      path: '/masking'
+      fullPath: '/dev/examples/masking'
+      preLoaderRoute: typeof PublicDevExamplesMaskingRouteRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/optimistic': {
+      id: '/_public/dev/examples/optimistic'
+      path: '/optimistic'
+      fullPath: '/dev/examples/optimistic'
+      preLoaderRoute: typeof PublicDevExamplesOptimisticRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/permissions': {
+      id: '/_public/dev/examples/permissions'
+      path: '/permissions'
+      fullPath: '/dev/examples/permissions'
+      preLoaderRoute: typeof PublicDevExamplesPermissionsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/preferences': {
+      id: '/_public/dev/examples/preferences'
+      path: '/preferences'
+      fullPath: '/dev/examples/preferences'
+      preLoaderRoute: typeof PublicDevExamplesPreferencesRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/seo': {
+      id: '/_public/dev/examples/seo'
+      path: '/seo'
+      fullPath: '/dev/examples/seo'
+      preLoaderRoute: typeof PublicDevExamplesSeoRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/streaming': {
+      id: '/_public/dev/examples/streaming'
+      path: '/streaming'
+      fullPath: '/dev/examples/streaming'
+      preLoaderRoute: typeof PublicDevExamplesStreamingRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/masking/': {
+      id: '/_public/dev/examples/masking/'
+      path: '/'
+      fullPath: '/dev/examples/masking/'
+      preLoaderRoute: typeof PublicDevExamplesMaskingIndexRouteImport
+      parentRoute: typeof PublicDevExamplesMaskingRouteRoute
+    }
+    '/_public/dev/examples/masking/$id': {
+      id: '/_public/dev/examples/masking/$id'
+      path: '/$id'
+      fullPath: '/dev/examples/masking/$id'
+      preLoaderRoute: typeof PublicDevExamplesMaskingIdRouteImport
+      parentRoute: typeof PublicDevExamplesMaskingRouteRoute
     }
   }
 }
@@ -738,6 +1087,79 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
+interface PublicDevExamplesMaskingRouteRouteChildren {
+  PublicDevExamplesMaskingIdRoute: typeof PublicDevExamplesMaskingIdRoute
+  PublicDevExamplesMaskingIndexRoute: typeof PublicDevExamplesMaskingIndexRoute
+}
+
+const PublicDevExamplesMaskingRouteRouteChildren: PublicDevExamplesMaskingRouteRouteChildren =
+  {
+    PublicDevExamplesMaskingIdRoute: PublicDevExamplesMaskingIdRoute,
+    PublicDevExamplesMaskingIndexRoute: PublicDevExamplesMaskingIndexRoute,
+  }
+
+const PublicDevExamplesMaskingRouteRouteWithChildren =
+  PublicDevExamplesMaskingRouteRoute._addFileChildren(
+    PublicDevExamplesMaskingRouteRouteChildren,
+  )
+
+interface PublicDevExamplesRouteRouteChildren {
+  PublicDevExamplesMaskingRouteRoute: typeof PublicDevExamplesMaskingRouteRouteWithChildren
+  PublicDevExamplesAnalyticsRoute: typeof PublicDevExamplesAnalyticsRoute
+  PublicDevExamplesAttachmentsRoute: typeof PublicDevExamplesAttachmentsRoute
+  PublicDevExamplesDataTableRoute: typeof PublicDevExamplesDataTableRoute
+  PublicDevExamplesErrorsRoute: typeof PublicDevExamplesErrorsRoute
+  PublicDevExamplesFiltersRoute: typeof PublicDevExamplesFiltersRoute
+  PublicDevExamplesFormsRoute: typeof PublicDevExamplesFormsRoute
+  PublicDevExamplesI18nRoute: typeof PublicDevExamplesI18nRoute
+  PublicDevExamplesLoaderQueryRoute: typeof PublicDevExamplesLoaderQueryRoute
+  PublicDevExamplesOptimisticRoute: typeof PublicDevExamplesOptimisticRoute
+  PublicDevExamplesPermissionsRoute: typeof PublicDevExamplesPermissionsRoute
+  PublicDevExamplesPreferencesRoute: typeof PublicDevExamplesPreferencesRoute
+  PublicDevExamplesSeoRoute: typeof PublicDevExamplesSeoRoute
+  PublicDevExamplesStreamingRoute: typeof PublicDevExamplesStreamingRoute
+  PublicDevExamplesIndexRoute: typeof PublicDevExamplesIndexRoute
+}
+
+const PublicDevExamplesRouteRouteChildren: PublicDevExamplesRouteRouteChildren =
+  {
+    PublicDevExamplesMaskingRouteRoute:
+      PublicDevExamplesMaskingRouteRouteWithChildren,
+    PublicDevExamplesAnalyticsRoute: PublicDevExamplesAnalyticsRoute,
+    PublicDevExamplesAttachmentsRoute: PublicDevExamplesAttachmentsRoute,
+    PublicDevExamplesDataTableRoute: PublicDevExamplesDataTableRoute,
+    PublicDevExamplesErrorsRoute: PublicDevExamplesErrorsRoute,
+    PublicDevExamplesFiltersRoute: PublicDevExamplesFiltersRoute,
+    PublicDevExamplesFormsRoute: PublicDevExamplesFormsRoute,
+    PublicDevExamplesI18nRoute: PublicDevExamplesI18nRoute,
+    PublicDevExamplesLoaderQueryRoute: PublicDevExamplesLoaderQueryRoute,
+    PublicDevExamplesOptimisticRoute: PublicDevExamplesOptimisticRoute,
+    PublicDevExamplesPermissionsRoute: PublicDevExamplesPermissionsRoute,
+    PublicDevExamplesPreferencesRoute: PublicDevExamplesPreferencesRoute,
+    PublicDevExamplesSeoRoute: PublicDevExamplesSeoRoute,
+    PublicDevExamplesStreamingRoute: PublicDevExamplesStreamingRoute,
+    PublicDevExamplesIndexRoute: PublicDevExamplesIndexRoute,
+  }
+
+const PublicDevExamplesRouteRouteWithChildren =
+  PublicDevExamplesRouteRoute._addFileChildren(
+    PublicDevExamplesRouteRouteChildren,
+  )
+
+interface PublicDevRouteRouteChildren {
+  PublicDevExamplesRouteRoute: typeof PublicDevExamplesRouteRouteWithChildren
+  PublicDevFormsRoute: typeof PublicDevFormsRoute
+}
+
+const PublicDevRouteRouteChildren: PublicDevRouteRouteChildren = {
+  PublicDevExamplesRouteRoute: PublicDevExamplesRouteRouteWithChildren,
+  PublicDevFormsRoute: PublicDevFormsRoute,
+}
+
+const PublicDevRouteRouteWithChildren = PublicDevRouteRoute._addFileChildren(
+  PublicDevRouteRouteChildren,
+)
+
 interface PublicTestCrudRouteRouteChildren {
   PublicTestCrudSlugRoute: typeof PublicTestCrudSlugRoute
   PublicTestCrudIndexRoute: typeof PublicTestCrudIndexRoute
@@ -752,23 +1174,23 @@ const PublicTestCrudRouteRouteWithChildren =
   PublicTestCrudRouteRoute._addFileChildren(PublicTestCrudRouteRouteChildren)
 
 interface PublicRouteChildren {
+  PublicDevRouteRoute: typeof PublicDevRouteRouteWithChildren
   PublicTestCrudRouteRoute: typeof PublicTestCrudRouteRouteWithChildren
   PublicHealthRoute: typeof PublicHealthRoute
   PublicResetPasswordRoute: typeof PublicResetPasswordRoute
   PublicStackRoute: typeof PublicStackRoute
   PublicVerifyEmailRoute: typeof PublicVerifyEmailRoute
   PublicIndexRoute: typeof PublicIndexRoute
-  PublicDevFormsRoute: typeof PublicDevFormsRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
+  PublicDevRouteRoute: PublicDevRouteRouteWithChildren,
   PublicTestCrudRouteRoute: PublicTestCrudRouteRouteWithChildren,
   PublicHealthRoute: PublicHealthRoute,
   PublicResetPasswordRoute: PublicResetPasswordRoute,
   PublicStackRoute: PublicStackRoute,
   PublicVerifyEmailRoute: PublicVerifyEmailRoute,
   PublicIndexRoute: PublicIndexRoute,
-  PublicDevFormsRoute: PublicDevFormsRoute,
 }
 
 const PublicRouteWithChildren =
@@ -779,7 +1201,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
-  ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
