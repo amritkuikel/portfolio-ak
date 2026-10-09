@@ -8,6 +8,8 @@ const WIDTHS = [320, 480, 640, 960, 1280, 1920] as const;
 const MAX_WIDTH = 1920;
 /** Format and quality chosen per browser by Cloudinary. */
 const AUTO = "f_auto,q_auto";
+/** Social previews: a fixed size and a format every crawler reads. */
+export const OG_TRANSFORMATION = "c_fill,g_auto,w_1200,h_630,f_jpg,q_auto";
 
 const widthsFor = (original: number) => {
 	const widths = WIDTHS.filter((width) => width < original);
@@ -40,5 +42,6 @@ export function toImageAsset(store: ImageStore, row: AttachmentRow): ImageAsset 
 		full: source(store, row, width, (w) => `c_limit,w_${w},${AUTO}`),
 		cover: source(store, row, width, (w) => `c_fill,g_auto,ar_16:9,w_${w},${AUTO}`),
 		thumb: store.url({ publicId: row.publicId, version: row.version }, `c_fill,g_auto,w_160,h_160,${AUTO}`),
+		og: store.url({ publicId: row.publicId, version: row.version }, OG_TRANSFORMATION),
 	};
 }

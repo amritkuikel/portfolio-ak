@@ -366,3 +366,12 @@ export async function getPublishedTestCrud(
 	}));
 	return detail ?? null;
 }
+
+/** Every published item's slug and last change, newest first (the sitemap). */
+export async function listPublishedTestCrudForSitemap(db: Db): Promise<Array<{ slug: string; updatedAt: Date }>> {
+	return db
+		.select({ slug: testCrud.slug, updatedAt: testCrud.updatedAt })
+		.from(testCrud)
+		.where(isPublished)
+		.orderBy(desc(testCrud.updatedAt), asc(testCrud.id));
+}

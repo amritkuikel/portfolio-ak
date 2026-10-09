@@ -31,6 +31,7 @@ export const sampleImageAsset: ImageAsset = {
 	full: { src: sampleImage, srcSet: `${sampleImage} 1600w` },
 	cover: { src: sampleImage, srcSet: `${sampleImage} 1600w` },
 	thumb: sampleImage,
+	og: sampleImage,
 };
 
 export const sampleItems: TestCrudListItem[] = [

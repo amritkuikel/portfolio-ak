@@ -13,6 +13,9 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
+import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminAdminRouteRouteImport } from './routes/_admin/admin/route'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -54,6 +57,21 @@ const AuthedRoute = AuthedRouteImport.update({
 } as any)
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
+  id: '/manifest.webmanifest',
+  path: '/manifest.webmanifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAdminRouteRoute = AdminAdminRouteRouteImport.update({
@@ -190,6 +208,9 @@ const AdminAdminUsersIndexRoute = AdminAdminUsersIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AdminAdminRouteRouteWithChildren
   '/test-crud': typeof PublicTestCrudRouteRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -218,6 +239,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
@@ -245,6 +269,9 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_admin/admin': typeof AdminAdminRouteRouteWithChildren
   '/_public/test-crud': typeof PublicTestCrudRouteRouteWithChildren
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -276,6 +303,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/manifest.webmanifest'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/admin'
     | '/test-crud'
     | '/forgot-password'
@@ -304,6 +334,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/manifest.webmanifest'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/forgot-password'
     | '/login'
     | '/register'
@@ -330,6 +363,9 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/_authed'
     | '/_public'
+    | '/manifest.webmanifest'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/_admin/admin'
     | '/_public/test-crud'
     | '/_auth/forgot-password'
@@ -363,6 +399,9 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
+  ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -394,6 +433,27 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof PublicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manifest.webmanifest': {
+      id: '/manifest.webmanifest'
+      path: '/manifest.webmanifest'
+      fullPath: '/manifest.webmanifest'
+      preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_admin/admin': {
@@ -719,6 +779,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
+  ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

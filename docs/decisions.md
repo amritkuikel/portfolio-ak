@@ -105,6 +105,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0097](#0097-the-permission-matrix-saves-each-change-optimistically-and-rolls-back-on-refusal): The permission matrix saves each change optimistically and rolls back on refusal
 - [0098](#0098-attachments-signed-direct-uploads-to-cloudinary-verified-on-the-server): Attachments: signed direct uploads to Cloudinary, verified on the server
 - [0099](#0099-the-image-editor-is-a-feature-field-concurrent-uploads-append-atomically): The image editor is a feature field; concurrent uploads append atomically
+- [0100](#0100-every-page-is-indexable-through-seo-or-private-through-noindex-a-test-checks-every-route): Every page is indexable through seo() or private through noindex; a test checks every route
+- [0101](#0101-the-sitemap-robotstxt-and-manifest-are-start-server-routes-built-from-the-same-data-as-the-pages): The sitemap, robots.txt and manifest are Start server routes built from the same data as the pages
+- [0102](#0102-json-ld-is-typed-with-schema-dts-and-emitted-through-route-heads-items-are-products): JSON-LD is typed with schema-dts and emitted through route heads; items are Products
 </details>
 
 ---
@@ -1230,3 +1233,61 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Busy state:** the form refuses to submit while uploads are running.
   - **Concurrency:** finished uploads are added with TanStack Form's `pushValue`.
 - **Why:** The first version appended to the value read when the upload started, so when two uploads finished together one image was lost. The live test caught it, and a regression test now fails without the fix. The field lives in the feature, not the generic field library, because it calls the app's server functions.
+
+## 0100: Every page is indexable through seo() or private through noindex; a test checks every route
+
+- **What:**
+  - **Indexable pages** (home, `/stack`, `/test-crud`, items) build their head with `seo()` (`src/lib/seo.ts`):
+    - title, description and `robots: index, follow, max-image-preview:large`;
+    - a canonical, and `hreflang` alternates for en, ne and `x-default`;
+    - Open Graph and Twitter tags with an image that always exists: the item's own, or `public/og-default.png`;
+    - JSON-LD.
+  - **Lists** use `listSeo()`: page 1 is canonical at the bare path; later pages are their own canonical URLs with "page N" in the title and description; searches are `noindex, follow`; sort doesn't change the canonical.
+  - **Private pages** get `noindex, nofollow`. The `_admin`, `_auth` and `_authed` layouts set it for all their children (TanStack keeps the deepest route's meta per name, so a child that sets only a title inherits it). Single pages under `_public` (health, reset-password, verify-email, dev) use `privateHead()`.
+  - **The test:** `tests/unit/route-seo.test.ts` builds the real router, computes each page's merged head the way the router does, in both languages. It checks:
+    - the indexable pages' tags, and that their titles and descriptions are unique;
+    - that every other page is noindex.
+    A new page that is neither fails it.
+- **Why:**
+  - **Layout-level noindex:** a private page can't be forgotten; the test catches anything outside the layouts.
+  - **Paginated pages self-canonical:** Google no longer uses rel=prev/next and recommends that each page of a series be its own canonical. Pointing them all at page 1 hides the items on later pages.
+  - **Searches noindex but followed:** search result URLs are infinite and thin, but their links lead to real pages.
+  - **A default image:** shared links always get a large preview card instead of a text-only card.
+- **theme-color:** rendered in the document head from the theme preference: one colour, or both with media queries for "system". `head()` can't do this because the router dedupes meta by name.
+- **Alternatives considered:**
+  - `noindex` via an `X-Robots-Tag` header in middleware: invisible in the page, and it duplicates route knowledge in a path list.
+  - Disallowing every private path in robots.txt: crawlers then never see the `noindex`, and a linked URL can still be indexed without content.
+
+## 0101: The sitemap, robots.txt and manifest are Start server routes built from the same data as the pages
+
+- **What:**
+  - **`/sitemap.xml`:**
+    - Contents: the home page, `/stack` with its later pages, `/test-crud` with its later pages, and every published item (`lastmod` from `updated_at`; the list uses the newest item's).
+    - Format: each page appears once per language, and each `<url>` lists all `hreflang` alternates, as Google documents for localized sitemaps.
+  - **`/robots.txt`:** allows everything except `/admin`, `/ne/admin`, `/api/` and `/_serverFn/`, and names the sitemap.
+  - **`/manifest.webmanifest`:** localized; the root head links `/ne/manifest.webmanifest` on Nepali pages. Icons: 192, 512 and a maskable 512.
+  - **Routes:** the handlers live in `src/server/seo/` behind `.ts` route files with only `server.handlers`. `/ne/sitemap.xml` and `/ne/robots.txt` are 404s (the router maps `/ne/*` onto every route, so the handler checks the path). Responses are cached at the edge for an hour.
+  - **Import boundary:** the rule now recognises such server routes structurally (a `.ts` route file with `server.handlers` and no component) instead of only `src/routes/api/`.
+- **Why:**
+  - **From the database at request time:** a newly published item is listed without a rebuild.
+  - **The same page list:** the sitemap's pages match what `seo()` marks indexable (page N URLs are built the same way as `listSeo()`), so no page is listed that says noindex.
+  - **Server routes over Nitro routes:** they get the locale middleware and the app's server-only import protection. Nitro routes stay for endpoints outside Start, such as the cron job.
+- **Static files:** the icons and `og-default.png` are generated from the logo mark and live in `public/`. They are replaced at the same sizes to rebrand (see docs/guides/seo.md).
+
+## 0102: JSON-LD is typed with schema-dts and emitted through route heads; items are Products
+
+- **What:**
+  - **Builders:** `src/lib/structured-data.ts` returns schema-dts types: `organizationJsonLd`, `websiteJsonLd` and `productJsonLd`.
+  - **Emitting:** `seo({ jsonLd })` adds each one as a head entry `{ "script:ld+json": data }`. TanStack renders that as `<script type="application/ld+json">` with `<`, `>` and `&` escaped as JSON unicode escapes, so content can't close the tag. The entries swap on client navigation like the rest of the head.
+  - **Home:** `WebSite` (in the page's language) and `Organization` (`@id` `<site>/#organization`, logo `/icon-512.png`). Other entities refer to it by `@id`.
+  - **Test CRUD item:** `Product` with an `Offer`: price with two decimals, NPR, `InStock`, URL, and seller and brand pointing at the Organization. It also has images (the 1200×630 `og` renditions), keywords from the tags, and `releaseDate`. The page keeps `og:type=article` with `article:published_time`.
+  - **BreadcrumbList:** unchanged (0083): rendered by `<Breadcrumbs jsonLd>` in the body.
+  - **Per-item Open Graph image:** a new `ImageAsset.og` URL (`c_fill,g_auto,w_1200,h_630,f_jpg,q_auto`), with the image's alt text, or the item title when it has none.
+- **Why:**
+  - **schema-dts:** it is the schema.org vocabulary as TypeScript types, so "validated against the schema.org types" holds at compile time at zero runtime cost (types only). The route test pins the exact output.
+  - **Product, not Article:** items have a price, and Google's product snippets need `offers`. The body text doesn't make them articles.
+  - **A JPEG `og` rendition:** some crawlers don't read AVIF or WebP from `f_auto`, and 1200×630 is the size every platform's large card expects.
+- **The cast:** React's `<meta>` props type doesn't list the `script:ld+json` key the router accepts. `jsonLdMeta()` casts it in one documented place.
+- **Alternatives considered:**
+  - Rendering JSON-LD `<script>` tags in page components: they stay in the body, and data needed by the head would be duplicated in components.
+  - A `@graph` per page: one more nesting level for no gain at this size.

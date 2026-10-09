@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { NOINDEX } from "@/lib/seo";
 
 /**
  * Pages that need a signed-in user. Anonymous visitors go to /login with a
@@ -13,5 +14,6 @@ export const Route = createFileRoute("/_authed")({
 		// Narrow the type for child routes: session is non-null below this layout.
 		return { session: context.session };
 	},
+	head: () => ({ meta: [NOINDEX] }),
 	component: Outlet,
 });

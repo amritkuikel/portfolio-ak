@@ -399,8 +399,6 @@
 	"test_crud_public_price": "मूल्य",
 	"test_crud_public_contact": "सम्पर्क",
 	"test_crud_public_tags": "ट्याग",
-	"test_crud_public_page_title": "वस्तुहरू, पृष्ठ {page}",
-	"test_crud_public_search_title": "खोज: {q}",
 	"test_crud_public_loading": "वस्तुहरू लोड हुँदैछन्…",
 	"consent_title": "यो साइट सुधार्न सहयोग गर्नुहोस्",
 	"consent_body": "तपाईंको अनुमति भए हामी कुन पृष्ठ हेरिन्छन् भनेर बुझ्न PostHog विश्लेषण प्रयोग गर्छौँ। तपाईंले अनुमति नदिएसम्म केही ट्र्याक गरिँदैन, र जुनसुकै बेला मन बदल्न सक्नुहुन्छ।",
@@ -570,5 +568,8 @@
 	"attachments_field_empty": "अहिलेसम्म तस्बिर छैन।",
 	"attachments_field_wait": "अपलोड सकिन पर्खनुहोस्।",
 	"attachments_field_image_n": "तस्बिर {n}",
-	"test_crud_public_gallery": "थप तस्बिरहरू"
+	"test_crud_public_gallery": "थप तस्बिरहरू",
+	"seo_list_page_title": "{title}, पृष्ठ {page}",
+	"seo_list_page_description": "{description} पृष्ठ {page}।",
+	"seo_list_search_title": "{title}: “{q}” को खोज"
 }

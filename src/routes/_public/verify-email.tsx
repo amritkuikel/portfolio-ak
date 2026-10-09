@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { CheckEmail } from "@/features/auth/components/check-email";
 import { field, validateEmail } from "@/features/auth/validation";
-import { pageTitle } from "@/lib/seo";
+import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -16,7 +16,7 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/_public/verify-email")({
 	validateSearch: z.object({ error: z.string().max(64).optional().catch(undefined) }),
-	head: () => ({ meta: [{ title: pageTitle(m.auth_verify_title()) }] }),
+	head: () => privateHead(m.auth_verify_title()),
 	component: VerifyEmailPage,
 });
 

@@ -34,6 +34,7 @@ const asset = (id: string, alt = ""): ImageAsset => ({
 	full: { src: `/${id}.png`, srcSet: `/${id}.png 1600w` },
 	cover: { src: `/${id}.png`, srcSet: `/${id}.png 1600w` },
 	thumb: `/${id}.png`,
+	og: `/${id}.png`,
 });
 
 /** A fake XMLHttpRequest: records the request; the test decides when it finishes. */

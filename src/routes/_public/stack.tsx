@@ -19,7 +19,7 @@ import { getStackStats } from "@/functions/stack";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatNumber } from "@/lib/intl";
 import { loadList } from "@/lib/query";
-import { pageTitle } from "@/lib/seo";
+import { listSeo } from "@/lib/seo";
 import { useListQuery } from "@/lib/use-list-query";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -37,9 +37,14 @@ export const Route = createFileRoute("/_public/stack")({
 		return { stats: getStackStats() };
 	},
 	staticData: { breadcrumb: staticCrumb(m.stack_title) },
-	head: () => ({
-		meta: [{ title: pageTitle(m.stack_title()) }, { name: "description", content: m.stack_description() }],
-	}),
+	head: ({ match: { search } }) =>
+		listSeo({
+			title: m.stack_title(),
+			description: m.stack_description(),
+			path: "/stack",
+			q: search.q,
+			page: search.page,
+		}),
 	pendingComponent: StackPending,
 	component: StackPage,
 });

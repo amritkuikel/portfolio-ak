@@ -23,7 +23,7 @@ Moving Part 1 images (stored in Postgres): `pnpm attachments:import-legacy --dry
 
 ## Showing images
 
-The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thumb`, each with `src`/`srcSet` using `f_auto,q_auto`. Render it with `CloudImage`:
+The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thumb` (`full` and `cover` with `src`/`srcSet`), all using `f_auto,q_auto`, plus `og`, a 1200×630 JPEG for social previews. Render it with `CloudImage`:
 
 ```tsx
 <div className="relative aspect-[16/9] overflow-hidden">
@@ -48,7 +48,7 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
    - Pass the store (`imageStore`) through from the server function.
 4. **Service:** after update or delete, `purge(db, store, removed)`.
 5. **Form:** `<form.AppField name="images">{() => <AttachmentsField label=… scope="projects" max={N} onBusyChange=… />}</form.AppField>`, with an `onSubmit` validator that refuses while uploads are running (see `TestCrudForm`).
-6. **Pages:** `CloudImage` as above. The `og:image` is `item.image?.cover.src`.
+6. **Pages:** `CloudImage` as above. For `seo({ image })` use the `og` URL (1200×630 JPEG): `{ url: image.og, width: 1200, height: 630, alt }` (see [seo.md](seo.md)).
 
 ## Rules (server-side)
 

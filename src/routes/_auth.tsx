@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { redirectSearchSchema } from "@/lib/redirect";
+import { NOINDEX } from "@/lib/seo";
 import { localizeHref } from "@/paraglide/runtime";
 
 /**
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/_auth")({
 	beforeLoad: ({ context, search }) => {
 		if (context.session) throw redirect({ href: localizeHref(search.redirect ?? "/account") });
 	},
+	// Sign-in pages have no search value: every child inherits noindex.
+	head: () => ({ meta: [NOINDEX] }),
 	component: AuthLayout,
 });
 

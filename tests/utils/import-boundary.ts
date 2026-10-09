@@ -18,14 +18,22 @@ const IMPORT_RE =
 
 const toPosix = (p: string) => p.split(path.sep).join("/");
 
+/** A server route: a .ts route file with only `server.handlers` (no component), stripped from the client. */
+const isServerRoute = (file: string, source: string) =>
+	file.startsWith("src/routes/") &&
+	file.endsWith(".ts") &&
+	/\bserver:\s*\{\s*handlers:/.test(source) &&
+	!/\bcomponent:/.test(source);
+
 // src/middleware may reach src/server only via dynamic import() inside .server(), which the
 // Start compiler strips from client builds (TanStack import protection still checks the build).
-const isAllowedImporter = (file: string) =>
+
+const isAllowedImporter = (file: string, source: string) =>
 	file.startsWith("src/server/") ||
 	file.startsWith("src/functions/") ||
 	file.startsWith("src/middleware/") ||
-	// Server routes (only `server.handlers`, stripped from the client), e.g. the Better Auth API.
-	file.startsWith("src/routes/api/") ||
+	// Server routes, e.g. the Better Auth API, /sitemap.xml, /robots.txt.
+	isServerRoute(file, source) ||
 	// Isomorphic helper whose server branch (createIsomorphicFn().server) is compiled out of the client.
 	file === "src/lib/http-status.ts" ||
 	file === "src/server.ts";
@@ -43,7 +51,7 @@ const isServerPath = (resolved: string) => resolved === "src/server" || resolved
 export const findServerImportViolations = (files: SourceFiles): Violation[] => {
 	const violations: Violation[] = [];
 	for (const [file, source] of files) {
-		if (isAllowedImporter(file)) continue;
+		if (isAllowedImporter(file, source)) continue;
 		for (const match of source.matchAll(IMPORT_RE)) {
 			const specifier = match[1] ?? match[2] ?? match[3];
 			if (!specifier) continue;

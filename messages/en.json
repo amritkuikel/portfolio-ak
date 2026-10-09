@@ -399,8 +399,6 @@
 	"test_crud_public_price": "Price",
 	"test_crud_public_contact": "Contact",
 	"test_crud_public_tags": "Tags",
-	"test_crud_public_page_title": "Items, page {page}",
-	"test_crud_public_search_title": "Search: {q}",
 	"test_crud_public_loading": "Loading items…",
 	"consent_title": "Help us improve this site",
 	"consent_body": "With your permission we use PostHog analytics to see which pages are visited. Nothing is tracked unless you allow it, and you can change your mind at any time.",
@@ -570,5 +568,8 @@
 	"attachments_field_empty": "No images yet.",
 	"attachments_field_wait": "Wait for the uploads to finish.",
 	"attachments_field_image_n": "Image {n}",
-	"test_crud_public_gallery": "More images"
+	"test_crud_public_gallery": "More images",
+	"seo_list_page_title": "{title}, page {page}",
+	"seo_list_page_description": "{description} Page {page}.",
+	"seo_list_search_title": "{title}: search for “{q}”"
 }

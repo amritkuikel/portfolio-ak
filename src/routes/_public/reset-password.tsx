@@ -6,7 +6,7 @@ import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { authErrorMessage } from "@/features/auth/errors";
 import { collectErrors, type FieldErrors, field, validateConfirm, validatePassword } from "@/features/auth/validation";
 import { authClient } from "@/lib/auth-client";
-import { pageTitle } from "@/lib/seo";
+import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_public/reset-password")({
 		token: z.string().max(512).optional().catch(undefined),
 		error: z.string().max(64).optional().catch(undefined),
 	}),
-	head: () => ({ meta: [{ title: pageTitle(m.auth_reset_title()) }] }),
+	head: () => privateHead(m.auth_reset_title()),
 	component: ResetPasswordPage,
 });
 

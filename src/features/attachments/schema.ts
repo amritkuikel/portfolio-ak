@@ -22,6 +22,8 @@ export type ImageAsset = {
 	cover: ImageSource;
 	/** A small square (admin lists, the editor). */
 	thumb: string;
+	/** 1200x630 JPEG cropped around the subject, for og:image and twitter:image. */
+	og: string;
 };
 
 export const ALT_MAX = 200;

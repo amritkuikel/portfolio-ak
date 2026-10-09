@@ -12,8 +12,9 @@ import { sessionQueryOptions } from "@/features/auth/queries";
 import { fontPreloads } from "@/lib/fonts";
 import { pageTitle } from "@/lib/seo";
 import { usePreferences } from "@/lib/stores/hooks";
+import type { ThemePreference } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
-import { getLocale, getTextDirection } from "@/paraglide/runtime";
+import { getLocale, getTextDirection, localizeHref } from "@/paraglide/runtime";
 import type { RouterContext } from "@/router";
 import appCss from "@/styles/app.css?url";
 
@@ -34,13 +35,30 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 		links: [
 			...fontPreloads(getLocale()),
 			{ rel: "stylesheet", href: appCss },
+			// Icon set: SVG for modern browsers, ICO for the rest, PNG for iOS; the manifest has the app icons.
+			{ rel: "icon", href: "/favicon.ico", sizes: "32x32" },
 			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+			{ rel: "manifest", href: localizeHref("/manifest.webmanifest") },
 		],
 	}),
 	errorComponent: ErrorPage,
 	notFoundComponent: NotFoundPage,
 	shellComponent: RootDocument,
 });
+
+/** Browser UI colour: --background of the chosen theme, or both for "system" (head() dedupes meta by name). */
+const THEME_COLORS = { light: "#ffffff", dark: "#09090b" } as const;
+
+function ThemeColor({ theme }: { theme: ThemePreference }) {
+	if (theme !== "system") return <meta name="theme-color" content={THEME_COLORS[theme]} />;
+	return (
+		<>
+			<meta name="theme-color" media="(prefers-color-scheme: light)" content={THEME_COLORS.light} />
+			<meta name="theme-color" media="(prefers-color-scheme: dark)" content={THEME_COLORS.dark} />
+		</>
+	);
+}
 
 function RootDocument({ children }: { children: ReactNode }) {
 	const locale = getLocale();
@@ -50,6 +68,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 		<html lang={locale} dir={getTextDirection(locale)} {...themeHtmlProps(theme)} suppressHydrationWarning>
 			<head>
 				<SystemThemeScript />
+				<ThemeColor theme={theme} />
 				<HeadContent />
 			</head>
 			<body className="flex min-h-dvh flex-col">

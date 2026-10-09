@@ -17,6 +17,12 @@ describe("server-only import boundary", () => {
 			["src/lib/dynamic.ts", `export const load = () => import("../server/env");`],
 			["src/lib/reexport.ts", `export { serverEnv } from "@/server/env";`],
 			["src/routes/db-leak.tsx", `import { db } from "@/server/db/client";`],
+			// A .ts route with a component is a page, not a server route.
+			[
+				"src/routes/page.ts",
+				`import { db } from "@/server/db/client";
+export const Route = createFileRoute("/p")({ server: { handlers: {} }, component: P });`,
+			],
 		]);
 		expect(findServerImportViolations(fixture)).toEqual([
 			{ file: "src/routes/leaky.tsx", specifier: "@/server/env" },
@@ -24,6 +30,7 @@ describe("server-only import boundary", () => {
 			{ file: "src/lib/dynamic.ts", specifier: "../server/env" },
 			{ file: "src/lib/reexport.ts", specifier: "@/server/env" },
 			{ file: "src/routes/db-leak.tsx", specifier: "@/server/db/client" },
+			{ file: "src/routes/page.ts", specifier: "@/server/db/client" },
 		]);
 	});
 
@@ -32,6 +39,11 @@ describe("server-only import boundary", () => {
 			["src/server/db/client.ts", `import { serverEnv } from "../env";`],
 			["src/functions/health.ts", `import { serverEnv } from "@/server/env";`],
 			["src/server.ts", `import "@/server/env";`],
+			[
+				"src/routes/sitemap[.]xml.ts",
+				`import { db } from "@/server/db/client";
+export const Route = createFileRoute("/sitemap.xml")({ server: { handlers: { GET } } });`,
+			],
 			["src/lib/client-only.ts", `import { clientEnv } from "@/lib/client-env";`],
 		]);
 		expect(findServerImportViolations(fixture)).toEqual([]);

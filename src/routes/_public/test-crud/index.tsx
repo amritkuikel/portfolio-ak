@@ -12,12 +12,11 @@ import { publicTestCrudListQueryOptions } from "@/features/test-crud/queries";
 import {
 	TEST_CRUD_PUBLIC_PAGE_SIZE,
 	TEST_CRUD_PUBLIC_SEARCH_DEFAULTS,
-	type TestCrudPublicSearch,
 	testCrudPublicRouteSearchSchema,
 } from "@/features/test-crud/schema";
 import { formatNumber } from "@/lib/intl";
 import { loadList } from "@/lib/query";
-import { seo } from "@/lib/seo";
+import { listSeo } from "@/lib/seo";
 import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
 
@@ -29,23 +28,17 @@ export const Route = createFileRoute("/_public/test-crud/")({
 	// SSR and entering: awaited, so the cards are in the HTML and the page works without
 	// JavaScript. A new search keeps the current cards until the new ones arrive (loadList).
 	loader: ({ context, deps, cause }) => loadList(context.queryClient, publicTestCrudListQueryOptions(deps), cause),
-	head: ({ match }) => listSeo(match.search),
+	head: ({ match: { search } }) =>
+		listSeo({
+			title: m.test_crud_public_title(),
+			description: m.test_crud_public_description(),
+			path: "/test-crud",
+			q: search.q,
+			page: search.page,
+		}),
 	pendingComponent: PublicListPending,
 	component: PublicListPage,
 });
-
-/** Page 1 is canonical "/test-crud"; later pages are their own URLs; searches are noindex. */
-const listSeo = ({ q, page }: TestCrudPublicSearch) =>
-	seo({
-		title: q
-			? m.test_crud_public_search_title({ q })
-			: page > 1
-				? m.test_crud_public_page_title({ page: formatNumber(page) })
-				: m.test_crud_public_title(),
-		description: m.test_crud_public_description(),
-		path: page > 1 && !q ? `/test-crud?page=${page}` : "/test-crud",
-		noindex: q !== "",
-	});
 
 function PublicListPage() {
 	const { view, ...search } = Route.useSearch();

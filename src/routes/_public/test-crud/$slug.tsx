@@ -16,6 +16,7 @@ import { setErrorStatus } from "@/lib/http-status";
 import { formatCurrency, formatDate } from "@/lib/intl";
 import { parseParams } from "@/lib/search";
 import { seo } from "@/lib/seo";
+import { productJsonLd } from "@/lib/structured-data";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/test-crud/$slug")({
@@ -27,8 +28,16 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 			const item = await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
 			// Only what head() and the breadcrumb need: the full item (with its body) already
 			// travels to the browser in the Query cache, so returning it would send it twice.
-			const { title, summary, publishedAt } = item;
-			return { title, summary, publishedAt, ogImage: item.image?.cover.src ?? null };
+			const { title, summary, publishedAt, price, tags, image } = item;
+			return {
+				title,
+				summary,
+				publishedAt,
+				price,
+				tags,
+				ogImage: image ? { url: image.og, width: 1200, height: 630, alt: image.alt || title } : null,
+				images: item.images.map((each) => each.og),
+			};
 		} catch (error) {
 			// Missing and draft slugs are indistinguishable to the public: both 404.
 			if (isAppError(error) && error.code === "NOT_FOUND") throw notFound();
@@ -39,12 +48,15 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 	staticData: { breadcrumb: loaderTitleCrumb },
 	head: ({ loaderData, params }) => {
 		if (!loaderData) return {};
+		const path = `/test-crud/${params.slug}`;
+		const description = loaderData.summary || m.test_crud_public_description();
 		const tags = seo({
 			title: loaderData.title,
-			description: loaderData.summary || m.test_crud_public_description(),
-			path: `/test-crud/${params.slug}`,
+			description,
+			path,
 			image: loaderData.ogImage,
 			type: "article",
+			jsonLd: productJsonLd({ ...loaderData, name: loaderData.title, description, path }),
 		});
 		return {
 			...tags,

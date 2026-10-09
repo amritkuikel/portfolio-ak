@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getDbHealth } from "@/functions/health";
 import { formatDateTime, formatNumber } from "@/lib/intl";
+import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/health")({
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/_public/health")({
 	// Always re-check; a cached health result is meaningless.
 	staleTime: 0,
 	gcTime: 0,
+	head: () => privateHead(m.health_title()),
 	component: HealthPage,
 });
 

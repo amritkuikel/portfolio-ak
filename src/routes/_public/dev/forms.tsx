@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { FormsShowcase } from "@/features/dev/forms-showcase";
-import { pageTitle } from "@/lib/seo";
+import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -14,6 +14,6 @@ export const Route = createFileRoute("/_public/dev/forms")({
 	beforeLoad: () => {
 		if (!import.meta.env.DEV) throw notFound();
 	},
-	head: () => ({ meta: [{ title: pageTitle(m.showcase_title()) }, { name: "robots", content: "noindex" }] }),
+	head: () => privateHead(m.showcase_title()),
 	component: import.meta.env.DEV ? FormsShowcase : () => null,
 });

@@ -80,6 +80,7 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 			full: { src: "x", srcSet: "x" },
 			cover: { src: "x", srcSet: "x" },
 			thumb: "x",
+			og: "x",
 		};
 		const form = testCrudFormSchema.parse({ ...valid, images: [{ id, alt: " Momo ", preview }] });
 		expect(toTestCrudInput(form).images).toEqual([{ id, alt: "Momo" }]);

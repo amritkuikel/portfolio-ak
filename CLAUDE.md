@@ -13,6 +13,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
   - [search-filters-masking.md](docs/guides/search-filters-masking.md): URL params, filters, list loading, dialogs via route masking, path params.
   - [rbac.md](docs/guides/rbac.md): roles, permissions, guarding functions, routes and UI, the escalation rules.
   - [attachments.md](docs/guides/attachments.md): Cloudinary uploads (signed, direct, verified), showing images, adding images to a feature.
+  - [seo.md](docs/guides/seo.md): `seo()`/`listSeo()` vs `privateHead()`, JSON-LD, sitemap, robots, manifest, icons.
   - [audit.md](docs/guides/audit.md): module review and what's scheduled.
 
 **Stack:**
@@ -52,6 +53,7 @@ A task is done when `typecheck`, `check`, `test`, `test:storybook`, `build` and 
 6. **i18n:** every user-visible string is a Paraglide message in `messages/en.json` and `messages/ne.json`. Call `m.key()` at render time, never in module-level constants. Delete keys whose UI is gone (a test checks).
 7. **Import Zod as `"zod"`.** It resolves to `src/lib/zod.ts` (jitless). The CSP forbids eval (decision 0086).
 8. **No `any`, no `@ts-ignore`,** and no lint suppression without a reason in the comment.
+9. **Every page is indexable or private:** public content uses `seo()` (lists `listSeo()`) and goes in the sitemap; everything else is `noindex` via its layout or `privateHead()`. `tests/unit/route-seo.test.ts` checks every route (0100).
 
 ## Adding a feature
 
@@ -79,4 +81,5 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
 - **Start-only helpers stay out of components:** modules using `createIsomorphicFn` or other `@tanstack/react-start` runtime APIs (e.g. `src/lib/http-status.ts`) may be imported by routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story that renders it. Example: `assertRoutePermission` lives in `rbac/route-guard.ts`, not `rbac/can.tsx`.
 - **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.
+- **Duplicate meta names:** `head()` keeps one `<meta>` per `name`/`property` (the deepest route's). Tags that need several of the same name (`theme-color` per colour scheme) are rendered in `__root.tsx`'s `<head>`.
 - **Running production locally** needs `EMAIL_PROVIDER=resend` and a `RESEND_API_KEY` (any `re_…` placeholder works when emails aren't sent). Production refuses the console email provider.

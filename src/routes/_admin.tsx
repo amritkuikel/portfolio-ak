@@ -4,6 +4,7 @@ import { canEnterAdmin } from "@/features/rbac/permissions";
 import { ensureAdminAccess } from "@/functions/auth";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
+import { NOINDEX } from "@/lib/seo";
 
 /**
  * Admin area. Entering it (and every SSR request) checks the role ON THE SERVER
@@ -31,6 +32,8 @@ export const Route = createFileRoute("/_admin")({
 			throw error;
 		}
 	},
+	// Private: every admin page inherits this (child heads set only the title).
+	head: () => ({ meta: [NOINDEX] }),
 	component: AdminShell,
 });
 

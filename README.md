@@ -228,7 +228,7 @@ The Test CRUD files for each layer:
 
 Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098). Part 1 images stored in Postgres move with `pnpm attachments:import-legacy`.
 
-For a public page's head, use `seo({ title, description, path, image })` from `src/lib/seo.ts`. It returns the title, description, canonical URL, `hreflang` alternates for every locale plus `x-default`, and Open Graph and Twitter tags.
+For a public page's head, use `seo({ title, description, path, image, jsonLd })` from `src/lib/seo.ts` (lists: `listSeo()`). It returns the title, description, robots, canonical URL, `hreflang` alternates for every locale plus `x-default`, Open Graph and Twitter tags, and JSON-LD. Private pages use `privateHead()`. The sitemap, robots.txt and the web manifest are server routes. See [docs/guides/seo.md](docs/guides/seo.md).
 
 ## Observability: Sentry and PostHog
 
