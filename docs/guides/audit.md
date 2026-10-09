@@ -21,7 +21,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 | Forms | Keep | `useAppForm` and the field library: one Zod schema for the client and server, server field errors, an error summary and an unsaved-changes guard. |
 | State: Query / DB / Store | Keep | Query for server state (SSR-dehydrated), TanStack DB for optimistic list edits, Store and cookies for preferences, so the server renders the user's choices. |
 | i18n | Keep + fixed | Paraglide URL strategy, so every page exists in both locales. Unused keys are now a test failure (0087). |
-| Auth and authorization | Keep → later (Task 20) | Better Auth sessions and `requireAdminMiddleware` on every admin function (a test enforces it). Task 20 replaces the single admin role with permissions. |
+| Auth and authorization | Fixed (Task 20) | Permissions resolved per request; `requirePermission` on every protected function (a test maps each one); route guards; Users, Roles and the permission matrix (0094–0097). |
 | Server functions | Keep | Thin: middleware + `zodInput` validator + one call into a service or repository. |
 | Data access | Keep + fixed | Repositories over an injected `Db`, tested on PGlite. `Db`/`Tx` moved to `src/server/db/types.ts`; list SQL is shared (0084). |
 | Images and files | Later (Task 21) | Bytes are stored in Postgres and served by a Nitro route. Task 21 moves them to Cloudinary attachments. |
@@ -53,10 +53,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 ### Scheduled
 
 - **Task 19 (done):** filters, search helpers, list loading without pending screens (0089), the admin guard round trip (0090), route masking (0091), param validation (0092).
-- **Task 20:**
-  - A permission catalog, roles and the matrix UI.
-  - `requirePermission` replacing `requireAdminMiddleware` where a finer permission applies.
-  - Sidebar items filtered by permission.
+- **Task 20 (done):** permission catalog, roles and the matrix UI; `requirePermission` everywhere; sidebar, dashboard and actions filtered by permission.
 - **Task 21:** Cloudinary attachments, replacing the Postgres image table, with responsive delivery.
 - **Task 22:**
   - `seo()` on every public route, and `noindex` on private ones.

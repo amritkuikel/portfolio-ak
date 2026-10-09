@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+import { ALL_PERMISSIONS, type Permission } from "@/features/rbac/permissions";
 import { AppError } from "@/lib/errors";
 import type { Session } from "@/lib/session";
-import { requireAdminMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
+import {
+	requireAdminAccessMiddleware,
+	requirePermission,
+	requireUserMiddleware,
+	sessionMiddleware,
+} from "@/middleware/auth";
 
 // The real lookup asks Better Auth (database + request cookies); tests control its result.
 const getServerSession = vi.hoisted(() => vi.fn<() => Promise<Session | null>>());
@@ -20,8 +26,12 @@ const runServer = async (middleware: { options: { server?: unknown } }, context:
 	return { next, result };
 };
 
-const session = (role: "user" | "admin"): Session => ({
+const session = (
+	role: "user" | "admin",
+	permissions: Permission[] = role === "admin" ? [...ALL_PERMISSIONS] : [],
+): Session => ({
 	user: { id: "u1", email: "a@example.com", name: "A", role },
+	permissions,
 });
 
 describe("auth middleware", () => {
@@ -44,26 +54,39 @@ describe("auth middleware", () => {
 		});
 	});
 
-	it("requireUserMiddleware passes the user on", async () => {
-		const { next } = await runServer(requireUserMiddleware, { session: session("user") });
-		expect(next).toHaveBeenCalledWith({ context: { user: session("user").user } });
+	it("requireUserMiddleware passes the user and their permissions on", async () => {
+		const editor = session("user", ["test-crud:read"]);
+		const { next } = await runServer(requireUserMiddleware, { session: editor });
+		expect(next).toHaveBeenCalledWith({ context: { user: editor.user, permissions: ["test-crud:read"] } });
 	});
 
-	it("requireAdminMiddleware rejects non-admins with FORBIDDEN", async () => {
-		const run = runServer(requireAdminMiddleware, { user: session("user").user });
+	it("requirePermission rejects users missing any required permission with FORBIDDEN", async () => {
+		const middleware = requirePermission("test-crud:read", "test-crud:delete");
+		const run = runServer(middleware, { permissions: ["test-crud:read"] });
 		await expect(run).rejects.toBeInstanceOf(AppError);
-		await expect(runServer(requireAdminMiddleware, { user: session("user").user })).rejects.toMatchObject({
+		await expect(runServer(middleware, { permissions: ["test-crud:read"] })).rejects.toMatchObject({
 			code: "FORBIDDEN",
+			status: 403,
 		});
 	});
 
-	it("requireAdminMiddleware lets admins through", async () => {
-		const { next } = await runServer(requireAdminMiddleware, { user: session("admin").user });
+	it("requirePermission lets users with every required permission through", async () => {
+		const middleware = requirePermission("test-crud:read", "test-crud:delete");
+		const { next } = await runServer(middleware, { permissions: ["test-crud:delete", "test-crud:read", "users:read"] });
 		expect(next).toHaveBeenCalledOnce();
 	});
 
-	it("builds the chain: admin requires user requires session", () => {
-		expect(requireAdminMiddleware.options).toMatchObject({ middleware: [requireUserMiddleware] });
+	it("the admin gate needs at least one permission", async () => {
+		await expect(runServer(requireAdminAccessMiddleware, { permissions: [] })).rejects.toMatchObject({
+			code: "FORBIDDEN",
+		});
+		const { next } = await runServer(requireAdminAccessMiddleware, { permissions: ["users:read"] });
+		expect(next).toHaveBeenCalledOnce();
+	});
+
+	it("builds the chain: permission requires user requires session", () => {
+		expect(requirePermission("roles:read").options).toMatchObject({ middleware: [requireUserMiddleware] });
+		expect(requireAdminAccessMiddleware.options).toMatchObject({ middleware: [requireUserMiddleware] });
 		expect(requireUserMiddleware.options).toMatchObject({ middleware: [sessionMiddleware] });
 	});
 });

@@ -15,7 +15,13 @@ import { m } from "@/paraglide/messages";
 import { useFieldContext } from "../contexts";
 import { type FieldBaseProps, FieldLabelText, FieldMessages, FieldShell, useFieldA11y } from "../field-shell";
 
-export type FieldOption = { value: string; label: string; description?: string };
+export type FieldOption = {
+	value: string;
+	label: string;
+	description?: string;
+	/** Shown but not changeable (e.g. a permission the user may not grant). */
+	disabled?: boolean;
+};
 
 const optionId = (fieldId: string, value: string) => `${fieldId}-${value.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
 
@@ -288,7 +294,11 @@ export function RadioGroupField({ label, description, optional, options }: Radio
 }
 
 /** A single checkbox with its label beside it. Stores boolean. */
-export function CheckboxField({ label, description }: Omit<FieldBaseProps, "optional">) {
+export function CheckboxField({
+	label,
+	description,
+	disabled = false,
+}: Omit<FieldBaseProps, "optional"> & { disabled?: boolean }) {
 	const field = useFieldContext<boolean>();
 	const a11y = useFieldA11y(label);
 	return (
@@ -297,6 +307,7 @@ export function CheckboxField({ label, description }: Omit<FieldBaseProps, "opti
 				id={a11y.id}
 				name={field.name}
 				checked={field.state.value === true}
+				disabled={disabled}
 				onCheckedChange={(checked) => {
 					field.handleChange(checked === true);
 					field.handleBlur();
@@ -345,6 +356,7 @@ export function CheckboxGroupField({ label, description, optional, options }: Ch
 								name={field.name}
 								value={option.value}
 								checked={values.includes(option.value)}
+								disabled={option.disabled}
 								onCheckedChange={(checked) => {
 									field.handleChange(
 										checked === true ? [...values, option.value] : values.filter((value) => value !== option.value),

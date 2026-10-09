@@ -44,6 +44,9 @@ export type AppErrorShape = {
 	requestId?: string;
 };
 
+/** Field-errors key for a message about the whole action (shown by errorMessage). */
+export const FORM_ERROR_KEY = "_form";
+
 export class AppError extends Error {
 	override name = "AppError";
 	readonly code: AppErrorCode;
@@ -90,3 +93,11 @@ export const appErrorSerializationAdapter = createSerializationAdapter({
 	toSerializable: (error) => error.toShape(),
 	fromSerializable: (shape: AppErrorShape) => AppError.fromShape(shape),
 });
+
+/**
+ * An AppError that carries a localized explanation for the user (e.g. "You can't
+ * remove the last admin."), in `fieldErrors._form`. errorMessage() shows it
+ * instead of the generic text for the code.
+ */
+export const ruleError = (code: AppErrorCode, devMessage: string, userMessage: string) =>
+	new AppError(code, devMessage, { fieldErrors: { [FORM_ERROR_KEY]: [userMessage] } });

@@ -3,7 +3,7 @@ import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { type AppErrorCode, isAppError } from "@/lib/errors";
+import { type AppErrorCode, FORM_ERROR_KEY, isAppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 
 const messages: Record<AppErrorCode, () => string> = {
@@ -18,7 +18,7 @@ const messages: Record<AppErrorCode, () => string> = {
 
 /** Localized user-facing text for any error. Never shows raw error messages. */
 export const errorMessage = (error: unknown): string =>
-	isAppError(error) ? messages[error.code]() : m.error_internal();
+	isAppError(error) ? (error.fieldErrors?.[FORM_ERROR_KEY]?.[0] ?? messages[error.code]()) : m.error_internal();
 
 /**
  * Route error boundary. Shows a localized message chosen by AppError code,

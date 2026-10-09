@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (93 entries)</summary>
+<summary>Index (97 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -99,6 +99,10 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0091](#0091-route-masking-for-the-edit-dialog-and-quick-view-masked-links-always-unmask-on-reload): Route masking for the edit dialog and quick view; masked links always unmask on reload
 - [0092](#0092-path-params-are-validated-by-the-route-paramsparse-not-in-loaders): Path params are validated by the route (`params.parse`), not in loaders
 - [0093](#0093-date-filters-are-calendar-days-in-the-app-time-zone-compared-as-instants): Date filters are calendar days in the app time zone, compared as instants
+- [0094](#0094-roles-and-permissions-live-in-app-tables-better-auth-keeps-identity-sessions-and-the-admin-flag): Roles and permissions live in app tables; Better Auth keeps identity, sessions and the admin flag
+- [0095](#0095-every-server-function-names-its-permission-pages-guard-by-permission-the-ui-only-hides): Every server function names its permission; pages guard by permission; the UI only hides
+- [0096](#0096-rules-against-self-escalation-and-lockout): Rules against self-escalation and lockout
+- [0097](#0097-the-permission-matrix-saves-each-change-optimistically-and-rolls-back-on-refusal): The permission matrix saves each change optimistically and rolls back on refusal
 </details>
 
 ---
@@ -540,7 +544,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:**
   - The root `beforeLoad` fills `context.session` from `sessionQueryOptions()` (the `getSession` server function, cached for 60 s on the client), and sign-in, sign-out and account changes invalidate it.
   - `_authed` redirects to `/login?redirect=<path>`.
-  - `_admin` calls the `ensureAdmin` server function (`requireAdminMiddleware`) on every navigation instead of trusting the cached context. Anonymous visitors are redirected to login; signed-in non-admins get the FORBIDDEN page. *(Revised by 0090: on entering the admin area and on every SSR request; inner navigations reuse the loaded admin session.)*
+  - `_admin` calls the `ensureAdmin` server function (`requireAdminMiddleware`) on every navigation instead of trusting the cached context. Anonymous visitors are redirected to login; signed-in non-admins get the FORBIDDEN page. *(Revised by 0090: on entering the admin area and on every SSR request; inner navigations reuse the loaded admin session. Since 0095 the gate is any permission, not the admin role.)*
 - **Why:** One session lookup per SSR request, and no extra RPC on client navigations for ordinary pages. The admin area gets a server decision each time. Data safety never depends on these guards, because server functions carry their own middleware.
 - **Alternatives considered:** Calling `getSession` in every `beforeLoad` (an RPC per navigation). Trusting the cached role for `_admin` (fails the plan's "checks the role on the server").
 
@@ -1132,3 +1136,54 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 - **What:** `?from=`/`?to=` are `YYYY-MM-DD`. `dayRangeInZone` (`src/lib/date-only.ts`) turns them into `[start of from, start of the day after to)` in `APP_TIME_ZONE` (Asia/Kathmandu), using Intl offsets (correct across DST, tested with New York). `dateRange(column, from, to)` (`src/server/db/list.ts`) compares the timestamp column with those instants. Also added: `numberRange`, `overlapsAny` (array `&&`) and a GIN index on `test_crud.tags` plus a B-tree index on `price` (migration 0003).
 - **Why:** Dates are displayed in Nepal time (0025), so "published on 2 Sep" must mean the Nepal day, not the UTC day: 18:20 UTC on 1 Sep is already 2 Sep in Nepal, and the tests cover that edge. Comparing instants keeps indexes usable, which `AT TIME ZONE` on the column would not.
+
+## 0094: Roles and permissions live in app tables; Better Auth keeps identity, sessions and the admin flag
+
+- **What:**
+  - **Catalog:** the permission catalog is code: `src/features/rbac/permissions.ts`, with `"<resource>:<action>"` strings and a localized label for each (`labels.ts`, typed as `Record<Permission, …>` so none can be missing).
+  - **Tables:**
+    - `role`: the seeded system roles `admin` and `user` (migration 0005) plus custom roles;
+    - `role_permission`;
+    - `user_role`: custom roles only.
+  - **Admin:** Better Auth's `user.role = "admin"` remains the one admin flag. It's what `pnpm db:seed-admin` and Better Auth's own admin endpoints use, and it grants every permission implicitly. `user` is everyone's baseline (it starts empty).
+  - **Ban:** a ban sets `user.banned` and deletes the user's sessions in one transaction. Better Auth's admin plugin then refuses new sign-ins.
+- **Why:** Better Auth's admin-plugin roles are defined statically in code. Its database-stored roles ("dynamic access control") belong to the organization plugin and are scoped to organizations and their members, which this app doesn't have. Admins have to be able to create roles and tick permissions at runtime, so roles are app data. Keeping the admin flag where Better Auth has it avoids a second, drifting source of truth.
+- **Alternatives considered:**
+  - The organization plugin with one implicit organization: more tables and APIs for no benefit.
+  - Roles as a comma-separated `user.role`: no foreign keys, and no clean place for permissions.
+  - Better Auth's `banUser` endpoint: it checks Better Auth's static roles, so a custom role holding `users:ban` couldn't use it.
+
+## 0095: Every server function names its permission; pages guard by permission; the UI only hides
+
+- **What:**
+  - **Per request:** `getServerSession` resolves the user's permissions from the database on every request: one query, or none for admins; banned users get none. They travel in the `Session`.
+  - **Server functions:** each one runs `requirePermission("<resource>:<action>", …)`, for example `test-crud:publish` for publishing. A test checks every function in `src/functions/test-crud.ts` and `rbac.ts` against an explicit name-to-permission table.
+  - **Admin area:** the `_admin` gate needs any permission (`ensureAdminAccess`).
+  - **Routes:** each section route calls `assertRoutePermission(context.session, …)` in `beforeLoad`, which gives the localized FORBIDDEN page with a real 403 during SSR.
+  - **UI:** `useCan`, `<Can>` and `usePermissions` decide what to show: sidebar sections, dashboard cards, buttons, row actions, bulk selection.
+  - **Client:** `hydrateRoot`'s `onCaughtError` no longer logs expected app errors (status < 500); everything else is logged as before.
+- **Why:** The server is the authority, and naming the permission at each function makes the mapping reviewable and testable. Resolving per request means removing a permission takes effect on the user's next request.
+- **Verified live (production build):**
+  - An Editor's replayed "publish" call came back `FORBIDDEN` / "Missing permission: test-crud:publish", and the item stayed unchanged. Start transports function errors in the payload with HTTP 200, as already noted in 0070.
+  - The Editor's direct visits to Users, Roles and Permissions returned a 403 page.
+  - After the admin revoked "create", the Editor's next request to the new-item page returned 403.
+
+## 0096: Rules against self-escalation and lockout
+
+- **What** (`src/server/rbac/service.ts`, enforced on the server whatever the UI shows):
+  - The admin role is fixed: it has every permission, and its permissions can't be edited.
+  - Only admins change who is an admin. Non-admins can't change an admin's roles or ban an admin.
+  - There is always at least one active admin: you can't demote or ban the last one.
+  - Nobody changes their own roles or bans themselves.
+  - A non-admin can only grant, revoke, hand out or take away permissions they hold themselves. This covers matrix edits, role assignments and role deletion.
+  - System roles can't be renamed or deleted. Custom role names are unique, case-insensitively.
+- **Messages:** rule violations carry a localized explanation in `fieldErrors._form` (`ruleError`), which `errorMessage()` shows instead of the generic text for the code.
+- **Tests:** PGlite tests cover each rule, including a `roles:manage` holder trying to grant themselves `users:ban` and a `users:update` holder handing out a stronger role. The UI mirrors the rules by disabling what the actor can't change.
+
+## 0097: The permission matrix saves each change optimistically and rolls back on refusal
+
+- **What:**
+  - **Layout:** roles are columns; permissions are rows grouped by resource, each group with an "all" box that is indeterminate when partly granted. The first column is sticky so the matrix scrolls sideways on phones.
+  - **Saving:** each change is one `updateRolePermissions({ roleId, grant, revoke })` call, run as a TanStack Query mutation. `onMutate` updates the cached roles, `onError` restores them and shows a toast, and `onSettled` refetches roles and the session.
+  - **Disabled cells:** the Admin column, everything for read-only viewers, and permissions a non-admin doesn't hold.
+- **Why:** Instant feedback and no "Save" step to forget. A rule violation or a network failure visibly undoes itself. Plain Query mutations are enough here; the roles list is small and has no paging that would call for a TanStack DB collection.

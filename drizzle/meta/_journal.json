@@ -29,6 +29,20 @@
 			"when": 1791526875704,
 			"tag": "0003_test_crud_filter_indexes",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1791538801173,
+			"tag": "0004_rbac",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1791538802439,
+			"tag": "0005_rbac_seed",
+			"breakpoints": true
 		}
 	]
 }

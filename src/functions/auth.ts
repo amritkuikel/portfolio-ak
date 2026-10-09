@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Session } from "@/lib/session";
-import { requireAdminMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
+import { requireAdminAccessMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
 
 /** Current session or null. Used by the root route to fill the router context. */
 export const getSession = createServerFn({ method: "GET" })
@@ -14,13 +14,13 @@ export const getAuthFeatures = createServerFn({ method: "GET" }).handler(async (
 });
 
 /**
- * Server-side admin check for the _admin layout. Throws UNAUTHORIZED/FORBIDDEN
- * via requireAdminMiddleware; the role is read from the database-backed session,
- * never from client state.
+ * Server-side gate for the _admin layout: the user must hold at least one
+ * permission. Throws UNAUTHORIZED/FORBIDDEN; permissions come from the database
+ * for this request, never from client state.
  */
-export const ensureAdmin = createServerFn({ method: "GET" })
-	.middleware([requireAdminMiddleware])
-	.handler(({ context }): Session => ({ user: context.user }));
+export const ensureAdminAccess = createServerFn({ method: "GET" })
+	.middleware([requireAdminAccessMiddleware])
+	.handler(({ context }): Session => ({ user: context.user, permissions: context.permissions }));
 
 export type AccountSession = {
 	id: string;

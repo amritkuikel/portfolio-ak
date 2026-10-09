@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useCan, usePermissions } from "@/features/rbac/can";
+import type { Permission } from "@/features/rbac/permissions";
 import { testCrudPageCollection } from "@/features/test-crud/collection";
 import { testCrudColumns } from "@/features/test-crud/components/admin-columns";
 import { TestCrudEditDialog } from "@/features/test-crud/components/edit-dialog";
@@ -74,8 +76,9 @@ export const Route = createFileRoute("/_admin/admin/test-crud/")({
 /** What the user asked to delete: one row (named in the dialog) or a selection. */
 type DeleteRequest = { ids: string[]; title?: string; done?: () => void };
 
-/** A component, not a constant: messages must be read at render time (per request locale). */
+/** A component, not a constant: messages must be read at render time (per request locale). Needs test-crud:create. */
 function NewItemButton() {
+	if (!useCan("test-crud:create")) return null;
 	return (
 		<Button asChild>
 			<Link to="/admin/test-crud/new">
@@ -146,6 +149,11 @@ function TestCrudAdminPage() {
 		);
 	};
 
+	// What this user may do (the server checks each action again).
+	const permissions = usePermissions();
+	const can = (permission: Permission) => permissions.includes(permission);
+	const canChangeRows = can("test-crud:update") || can("test-crud:publish") || can("test-crud:delete");
+
 	const filtered = testCrudFilterChips(search).length > 0;
 	const single = pendingDelete?.ids.length === 1 && pendingDelete.title !== undefined;
 
@@ -178,33 +186,53 @@ function TestCrudAdminPage() {
 						sort={search.sort}
 						busy={busy}
 						data-testid="test-crud-table"
-						bulkActions={({ ids, clear }) => (
-							<Button variant="destructive" size="sm" onClick={() => setPendingDelete({ ids, done: clear })}>
-								{m.test_crud_delete_selected()}
-							</Button>
-						)}
-						rowActions={(row) => (
-							<>
-								<DropdownMenuItem asChild>
-									<EditItemLink id={row.id}>{m.test_crud_edit_in_dialog()}</EditItemLink>
-								</DropdownMenuItem>
-								<DropdownMenuItem asChild>
-									<Link to="/admin/test-crud/$id" params={{ id: row.id }}>
-										{m.test_crud_edit()}
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuItem onSelect={() => setStatus(row, row.status === "published" ? "draft" : "published")}>
-									{row.status === "published" ? m.test_crud_unpublish() : m.test_crud_publish()}
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem
-									variant="destructive"
-									onSelect={() => setPendingDelete({ ids: [row.id], title: row.title })}
-								>
-									{m.test_crud_delete()}
-								</DropdownMenuItem>
-							</>
-						)}
+						bulkActions={
+							can("test-crud:delete")
+								? ({ ids, clear }) => (
+										<Button variant="destructive" size="sm" onClick={() => setPendingDelete({ ids, done: clear })}>
+											{m.test_crud_delete_selected()}
+										</Button>
+									)
+								: undefined
+						}
+						rowActions={
+							canChangeRows
+								? (row) => (
+										<>
+											{can("test-crud:update") ? (
+												<>
+													<DropdownMenuItem asChild>
+														<EditItemLink id={row.id}>{m.test_crud_edit_in_dialog()}</EditItemLink>
+													</DropdownMenuItem>
+													<DropdownMenuItem asChild>
+														<Link to="/admin/test-crud/$id" params={{ id: row.id }}>
+															{m.test_crud_edit()}
+														</Link>
+													</DropdownMenuItem>
+												</>
+											) : null}
+											{can("test-crud:publish") ? (
+												<DropdownMenuItem
+													onSelect={() => setStatus(row, row.status === "published" ? "draft" : "published")}
+												>
+													{row.status === "published" ? m.test_crud_unpublish() : m.test_crud_publish()}
+												</DropdownMenuItem>
+											) : null}
+											{can("test-crud:delete") ? (
+												<>
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														variant="destructive"
+														onSelect={() => setPendingDelete({ ids: [row.id], title: row.title })}
+													>
+														{m.test_crud_delete()}
+													</DropdownMenuItem>
+												</>
+											) : null}
+										</>
+									)
+								: undefined
+						}
 						empty={
 							<EmptyState
 								data-testid="empty"
@@ -260,7 +288,7 @@ function TestCrudAdminPage() {
 				onCancel={() => setPendingDelete(null)}
 			/>
 
-			{search.edit ? <TestCrudEditDialog id={search.edit} /> : null}
+			{search.edit && can("test-crud:update") ? <TestCrudEditDialog id={search.edit} /> : null}
 		</Page>
 	);
 }

@@ -1,23 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import {
-	DatabaseIcon,
-	LayoutDashboardIcon,
-	type LucideIcon,
-	PanelLeftCloseIcon,
-	PanelLeftOpenIcon,
-} from "lucide-react";
+import { LayoutDashboardIcon, type LucideIcon, PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { ADMIN_SECTIONS, type AdminSection } from "@/features/admin/sections";
+import { usePermissions } from "@/features/rbac/can";
 import { useSidebar } from "@/lib/stores/hooks";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-type NavItem = { to: "/admin" | "/admin/test-crud"; label: () => string; icon: LucideIcon; exact?: boolean };
+type NavItem = { to: "/admin" | AdminSection["to"]; label: () => string; icon: LucideIcon; exact?: boolean };
 
-const NAV: ReadonlyArray<NavItem> = [
-	{ to: "/admin", label: m.admin_nav_dashboard, icon: LayoutDashboardIcon, exact: true },
-	{ to: "/admin/test-crud", label: m.admin_nav_test_crud, icon: DatabaseIcon },
-];
+const DASHBOARD: NavItem = { to: "/admin", label: m.admin_nav_dashboard, icon: LayoutDashboardIcon, exact: true };
 
 const SIDEBAR_ID = "admin-sidebar";
 
@@ -29,6 +22,9 @@ const SIDEBAR_ID = "admin-sidebar";
  */
 export function AdminSidebar() {
 	const { collapsed, toggle } = useSidebar();
+	// Only sections the user may open (each route and server function checks again).
+	const permissions = usePermissions();
+	const nav = [DASHBOARD, ...ADMIN_SECTIONS.filter((section) => permissions.includes(section.permission))];
 	const ToggleIcon = collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon;
 	return (
 		<aside
@@ -54,7 +50,7 @@ export function AdminSidebar() {
 			</Button>
 			<nav id={SIDEBAR_ID} aria-label={m.admin_sidebar_label()}>
 				<ul className="flex flex-col gap-1">
-					{NAV.map((item) => (
+					{nav.map((item) => (
 						<li key={item.to}>
 							<Link
 								to={item.to}

@@ -67,7 +67,7 @@ src/
 1. Request middleware adds the security headers and the CSP nonce, and checks CSRF for server functions.
 2. The router matches the route; `beforeLoad` guards check the session (`_authed`) or ask the server for the admin role (`_admin`).
 3. The **loader** calls `queryClient.ensureQueryData(...)`, which calls a **server function**.
-4. The server function runs its **middleware** (locale, logging, error normalisation, `requireAdminMiddleware`) and its **validator** (the shared Zod schema), then its handler. The handler calls a service or repository in `src/server/**` that talks to Postgres through **Drizzle**.
+4. The server function runs its **middleware** (locale, logging, error normalisation, `requirePermission(…)`) and its **validator** (the shared Zod schema), then its handler. The handler calls a service or repository in `src/server/**` that talks to Postgres through **Drizzle**.
 5. The result is rendered on the server, streamed as HTML with the Query cache dehydrated, and hydrated in the browser without refetching. Admin lists then use a **TanStack DB** collection over the same query for optimistic edits with rollback.
 
 ## Security
@@ -79,7 +79,7 @@ src/
   - `connect-src` allows only the same origin plus the configured Sentry and PostHog hosts.
   - Also `frame-ancestors 'none'` and `object-src 'none'`.
 - **Server-only code** (`src/server/**`, `*.server.*`) can't be imported by client code: TanStack Start import protection and `tests/server/env-boundary.test.ts` enforce it.
-- **Auth:** every admin server function runs `requireAdminMiddleware`. Auth endpoints are rate limited, and server functions reject cross-site calls (CSRF).
+- **Auth:** every protected server function runs `requirePermission("<resource>:<action>")`, resolved from the database on each request (roles and the permission matrix: [docs/guides/rbac.md](docs/guides/rbac.md)). Auth endpoints are rate limited, and server functions reject cross-site calls (CSRF).
 - **Content:** rich text is sanitized on the server before it's stored and again when read. Uploaded images are type-checked from their bytes.
 
 ## Deployment (Vercel)
@@ -150,7 +150,7 @@ Stories live next to their components (`*.stories.tsx`). They cover every form f
 - **Layout routes:** `_public` (public pages), `_auth` (login and register), `_authed` (signed-in users) and `_admin` (admins). The guards run in each layout's `beforeLoad`.
 - **Data loading:** Loaders call `queryClient.ensureQueryData(...)`, and components read with `useSuspenseQuery`. SSR dehydration is handled by `@tanstack/react-router-ssr-query`. See `src/routes/_public/stack.tsx` for the full pattern: search params, loader, pending state and streaming.
 - **Server functions:** Use `createServerFn().inputValidator(zodInput(schema))`. Throw `AppError(code)` for expected failures. Anything else reaches the client as `INTERNAL`, with details only in the server log.
-- **Guarding server functions:** Add `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` (`src/middleware/auth.ts`). Route guards alone never protect data.
+- **Guarding server functions:** Add `.middleware([requireUserMiddleware])` (signed in) or `.middleware([requirePermission("…")])` (`src/middleware/auth.ts`). Route guards alone never protect data.
 
 ## Forms
 
@@ -203,7 +203,7 @@ Pick the tool by what the state is (full reasoning in `docs/decisions.md` 0064):
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
 2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
 3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
-4. **Server functions:** `src/functions/projects.ts`, with `.middleware([requireAdminMiddleware])` on every admin function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add the file to `ADMIN_FUNCTION_FILES` in `tests/server/test-crud-functions.test.ts`.
+4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/test-crud-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
 6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `Pagination`, `EmptyState` and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
 7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
@@ -216,7 +216,7 @@ The Test CRUD files for each layer:
 | Table | `src/server/db/schema/test-crud.ts` | Drizzle table. Then run `pnpm db:generate` and `pnpm db:migrate`. |
 | Shared schema | `src/features/test-crud/schema.ts` | One Zod schema for the form and the server, plus list search params and DTOs |
 | Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
-| Server functions | `src/functions/test-crud.ts` | `requireAdminMiddleware` on every function, `.validator()` input, and FormData for file uploads |
+| Server functions | `src/functions/test-crud.ts` | `requirePermission("test-crud:<action>")` on every function, `.validator()` input, and FormData for file uploads |
 | Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
 | Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
@@ -258,7 +258,7 @@ pnpm db:seed-admin --email you@example.com --password "at-least-12-chars" --name
 ```
 
 - **Seeding an admin:** `db:seed-admin` also reads `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_NAME` from `.env`. Add `--force` if other users already exist.
-- **Protecting data:** Use `.middleware([requireUserMiddleware])` or `.middleware([requireAdminMiddleware])` on server functions. The `_authed` and `_admin` layouts guard navigation, and `_admin` re-checks the role on the server on every visit.
+- **Protecting data:** Use `.middleware([requireUserMiddleware])` or `.middleware([requirePermission("…")])` on server functions. The `_authed` and `_admin` layouts guard navigation (`_admin` asks the server when entering the area; any permission opens it), and each admin section route checks its own permission with `assertRoutePermission`.
 - **Rate limits:** They are stored in the database and keyed by a trusted client IP (`src/server/auth/client-ip.ts`). Behind a reverse proxy other than Vercel, set that proxy's trusted header there.
 - **Schema changes:** After changing auth plugins, regenerate the schema with `pnpm auth:schema`, then run `pnpm db:generate` and `pnpm db:migrate`.
 

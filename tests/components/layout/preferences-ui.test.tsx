@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
 	createMemoryHistory,
 	createRootRouteWithContext,
@@ -13,6 +15,9 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { ThemeSync, ThemeToggle } from "@/components/layout/theme";
+import { sessionQueryOptions } from "@/features/auth/queries";
+import { ALL_PERMISSIONS } from "@/features/rbac/permissions";
+import type { Session } from "@/lib/session";
 import { useTablePreferences } from "@/lib/stores/hooks";
 import { createPreferencesStore, DEFAULT_PREFERENCES, type Preferences } from "@/lib/stores/preferences";
 import type { RouterContext } from "@/router";
@@ -32,7 +37,18 @@ async function renderWithPreferences(ui: ReactNode, initial: Partial<Preferences
 		context: { preferences },
 	});
 	await act(() => router.load());
-	render(<RouterProvider router={router} />);
+	// The sidebar shows sections by permission, read from the session query.
+	const queryClient = new QueryClient();
+	const session: Session = {
+		user: { id: "a", email: "a@example.com", name: "A", role: "admin" },
+		permissions: [...ALL_PERMISSIONS],
+	};
+	queryClient.setQueryData(sessionQueryOptions().queryKey, session);
+	render(
+		<QueryClientProvider client={queryClient}>
+			<RouterProvider router={router} />
+		</QueryClientProvider>,
+	);
 	return { preferences, user: userEvent.setup() };
 }
 

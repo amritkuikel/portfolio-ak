@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Page, PageHeader } from "@/components/page/page";
+import { assertRoutePermission } from "@/features/rbac/route-guard";
 import { TestCrudForm } from "@/features/test-crud/components/test-crud-form";
 import { testCrudDetailQueryOptions } from "@/features/test-crud/queries";
 import { testCrudIdParamSchema } from "@/features/test-crud/schema";
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_admin/admin/test-crud/$id")({
 	// Only UUIDs match this route; anything else falls through to the localized 404
 	// without a server round trip ("new" is its own route and matches first).
 	params: { parse: (raw) => parseParams(testCrudIdParamSchema, raw) },
+	beforeLoad: ({ context }) => assertRoutePermission(context.session, "test-crud:update"),
 	loader: async ({ context, params }) => {
 		try {
 			const item = await context.queryClient.ensureQueryData(testCrudDetailQueryOptions(params.id));

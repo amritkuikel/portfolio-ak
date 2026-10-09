@@ -26,14 +26,19 @@ import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicTestCrudRouteRouteImport } from './routes/_public/test-crud/route'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
+import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
 import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as PublicTestCrudIndexRouteImport } from './routes/_public/test-crud/index'
 import { Route as PublicTestCrudSlugRouteImport } from './routes/_public/test-crud/$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
+import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
+import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -116,9 +121,19 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
+const AdminAdminRolesRouteRoute = AdminAdminRolesRouteRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
 const AdminAdminTestCrudRouteRoute = AdminAdminTestCrudRouteRouteImport.update({
   id: '/test-crud',
   path: '/test-crud',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
+const AdminAdminUsersRouteRoute = AdminAdminUsersRouteRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
 const PublicDevFormsRoute = PublicDevFormsRouteImport.update({
@@ -141,6 +156,17 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAdminRolesIndexRoute = AdminAdminRolesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminRolesRouteRoute,
+} as any)
+const AdminAdminRolesPermissionsRoute =
+  AdminAdminRolesPermissionsRouteImport.update({
+    id: '/permissions',
+    path: '/permissions',
+    getParentRoute: () => AdminAdminRolesRouteRoute,
+  } as any)
 const AdminAdminTestCrudIndexRoute = AdminAdminTestCrudIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -156,6 +182,11 @@ const AdminAdminTestCrudNewRoute = AdminAdminTestCrudNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AdminAdminTestCrudRouteRoute,
 } as any)
+const AdminAdminUsersIndexRoute = AdminAdminUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminUsersRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
@@ -170,15 +201,20 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
+  '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/test-crud/': typeof PublicTestCrudIndexRoute
+  '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
+  '/admin/users/': typeof AdminAdminUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -196,9 +232,12 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof AdminAdminIndexRoute
   '/test-crud': typeof PublicTestCrudIndexRoute
+  '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
+  '/admin/users': typeof AdminAdminUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -218,15 +257,20 @@ export interface FileRoutesById {
   '/_public/stack': typeof PublicStackRoute
   '/_public/verify-email': typeof PublicVerifyEmailRoute
   '/_public/': typeof PublicIndexRoute
+  '/_admin/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
+  '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/_public/dev/forms': typeof PublicDevFormsRoute
   '/_public/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_public/test-crud/': typeof PublicTestCrudIndexRoute
+  '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
+  '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -243,15 +287,20 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/admin/roles'
     | '/admin/test-crud'
+    | '/admin/users'
     | '/dev/forms'
     | '/test-crud/$slug'
     | '/api/auth/$'
     | '/admin/'
     | '/test-crud/'
+    | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/admin/roles/'
     | '/admin/test-crud/'
+    | '/admin/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -269,9 +318,12 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/admin'
     | '/test-crud'
+    | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/admin/roles'
     | '/admin/test-crud'
+    | '/admin/users'
   id:
     | '__root__'
     | '/_admin'
@@ -290,15 +342,20 @@ export interface FileRouteTypes {
     | '/_public/stack'
     | '/_public/verify-email'
     | '/_public/'
+    | '/_admin/admin/roles'
     | '/_admin/admin/test-crud'
+    | '/_admin/admin/users'
     | '/_public/dev/forms'
     | '/_public/test-crud/$slug'
     | '/api/auth/$'
     | '/_admin/admin/'
     | '/_public/test-crud/'
+    | '/_admin/admin/roles/permissions'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
+    | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
+    | '/_admin/admin/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -430,11 +487,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_admin/admin/roles': {
+      id: '/_admin/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminAdminRolesRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
     '/_admin/admin/test-crud': {
       id: '/_admin/admin/test-crud'
       path: '/test-crud'
       fullPath: '/admin/test-crud'
       preLoaderRoute: typeof AdminAdminTestCrudRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/users': {
+      id: '/_admin/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminAdminUsersRouteRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
     '/_public/dev/forms': {
@@ -465,6 +536,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin/admin/roles/': {
+      id: '/_admin/admin/roles/'
+      path: '/'
+      fullPath: '/admin/roles/'
+      preLoaderRoute: typeof AdminAdminRolesIndexRouteImport
+      parentRoute: typeof AdminAdminRolesRouteRoute
+    }
+    '/_admin/admin/roles/permissions': {
+      id: '/_admin/admin/roles/permissions'
+      path: '/permissions'
+      fullPath: '/admin/roles/permissions'
+      preLoaderRoute: typeof AdminAdminRolesPermissionsRouteImport
+      parentRoute: typeof AdminAdminRolesRouteRoute
+    }
     '/_admin/admin/test-crud/': {
       id: '/_admin/admin/test-crud/'
       path: '/'
@@ -486,8 +571,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTestCrudNewRouteImport
       parentRoute: typeof AdminAdminTestCrudRouteRoute
     }
+    '/_admin/admin/users/': {
+      id: '/_admin/admin/users/'
+      path: '/'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminAdminUsersIndexRouteImport
+      parentRoute: typeof AdminAdminUsersRouteRoute
+    }
   }
 }
+
+interface AdminAdminRolesRouteRouteChildren {
+  AdminAdminRolesPermissionsRoute: typeof AdminAdminRolesPermissionsRoute
+  AdminAdminRolesIndexRoute: typeof AdminAdminRolesIndexRoute
+}
+
+const AdminAdminRolesRouteRouteChildren: AdminAdminRolesRouteRouteChildren = {
+  AdminAdminRolesPermissionsRoute: AdminAdminRolesPermissionsRoute,
+  AdminAdminRolesIndexRoute: AdminAdminRolesIndexRoute,
+}
+
+const AdminAdminRolesRouteRouteWithChildren =
+  AdminAdminRolesRouteRoute._addFileChildren(AdminAdminRolesRouteRouteChildren)
 
 interface AdminAdminTestCrudRouteRouteChildren {
   AdminAdminTestCrudIdRoute: typeof AdminAdminTestCrudIdRoute
@@ -507,13 +612,28 @@ const AdminAdminTestCrudRouteRouteWithChildren =
     AdminAdminTestCrudRouteRouteChildren,
   )
 
+interface AdminAdminUsersRouteRouteChildren {
+  AdminAdminUsersIndexRoute: typeof AdminAdminUsersIndexRoute
+}
+
+const AdminAdminUsersRouteRouteChildren: AdminAdminUsersRouteRouteChildren = {
+  AdminAdminUsersIndexRoute: AdminAdminUsersIndexRoute,
+}
+
+const AdminAdminUsersRouteRouteWithChildren =
+  AdminAdminUsersRouteRoute._addFileChildren(AdminAdminUsersRouteRouteChildren)
+
 interface AdminAdminRouteRouteChildren {
+  AdminAdminRolesRouteRoute: typeof AdminAdminRolesRouteRouteWithChildren
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
+  AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
 }
 
 const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
+  AdminAdminRolesRouteRoute: AdminAdminRolesRouteRouteWithChildren,
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
+  AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
 }
 

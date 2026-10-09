@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
+import { canEnterAdmin } from "@/features/rbac/permissions";
 import { clientEnv } from "@/lib/client-env";
 import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
@@ -33,7 +34,7 @@ export function SiteHeader() {
 					<Link to="/test-crud" className={navLink}>
 						{m.nav_test_crud()}
 					</Link>
-					{session?.user.role === "admin" ? (
+					{session && canEnterAdmin(session.permissions) ? (
 						<Link to="/admin" className={navLink}>
 							{m.nav_admin()}
 						</Link>

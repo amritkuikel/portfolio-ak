@@ -2,10 +2,32 @@ import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
+import { useCan } from "@/features/rbac/can";
 import { formatCurrency, formatDateTime } from "@/lib/intl";
 import { m } from "@/paraglide/messages";
 import { STATUS_LABELS } from "../labels";
 import type { TestCrudListItem } from "../schema";
+
+/** The title, linking to the edit page for users who may edit. */
+function TitleCell({ row }: { row: TestCrudListItem }) {
+	const canEdit = useCan("test-crud:update");
+	return (
+		<>
+			{canEdit ? (
+				<Link
+					to="/admin/test-crud/$id"
+					params={{ id: row.id }}
+					className="font-medium underline-offset-4 hover:underline"
+				>
+					{row.title}
+				</Link>
+			) : (
+				<span className="font-medium">{row.title}</span>
+			)}
+			<div className="truncate font-mono text-muted-foreground text-xs">{row.slug}</div>
+		</>
+	);
+}
 
 /**
  * The admin list's columns. `sort` values match TEST_CRUD_SORTS; `hideable`
@@ -39,18 +61,7 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		header: m.test_crud_col_title,
 		sort: "title",
 		cellClassName: "max-w-72",
-		cell: (row) => (
-			<>
-				<Link
-					to="/admin/test-crud/$id"
-					params={{ id: row.id }}
-					className="font-medium underline-offset-4 hover:underline"
-				>
-					{row.title}
-				</Link>
-				<div className="truncate font-mono text-muted-foreground text-xs">{row.slug}</div>
-			</>
-		),
+		cell: (row) => <TitleCell row={row} />,
 	},
 	{
 		id: "status",

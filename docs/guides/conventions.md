@@ -18,6 +18,8 @@ src/
     forms/                useAppForm + the field library (see the forms showcase at /dev/forms)
     layout/               Site header/footer, admin sidebar, theme, consent banner
     errors/               Error, not-found and pending pages
+  features/rbac/          Permission catalog + labels, useCan/<Can>/assertRoutePermission, users and roles UI
+  features/admin/         Admin sections (sidebar + dashboard, each with its permission)
   features/<name>/        Everything specific to one feature, shared by client and server:
     schema.ts             Zod input + URL search schemas, DTO types (built from src/lib/list.ts and src/lib/validation.ts)
     constants.ts labels.ts  Enum values and their localized labels

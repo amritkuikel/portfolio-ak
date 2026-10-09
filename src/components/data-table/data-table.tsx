@@ -40,7 +40,7 @@ export type DataTableProps<Row> = {
 	sort?: string;
 	/** Adds a checkbox column; actions for the selection appear in a bar above the table. */
 	bulkActions?: (selection: BulkSelection) => ReactNode;
-	/** Menu items (DropdownMenuItem) for a row's "…" menu. */
+	/** Menu items (DropdownMenuItem) for a row's "…" menu; null/undefined for a row without actions. */
 	rowActions?: (row: Row) => ReactNode;
 	/** Shown instead of the table when there are no rows. */
 	empty?: ReactNode;
@@ -137,6 +137,7 @@ export function DataTable<Row>({
 						{rows.map((row) => {
 							const id = getRowId(row);
 							const isSelected = selectedIds.has(id);
+							const actions = rowActions?.(row);
 							return (
 								<TableRow key={id} data-state={isSelected ? "selected" : undefined} data-row-id={id}>
 									{bulkActions ? (
@@ -156,18 +157,20 @@ export function DataTable<Row>({
 									{rowActions ? (
 										<TableCell>
 											{/* Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click). */}
-											<DropdownMenu modal={false}>
-												<DropdownMenuTrigger asChild>
-													<Button
-														variant="ghost"
-														size="icon"
-														aria-label={m.table_row_actions({ label: getRowLabel(row) })}
-													>
-														<MoreHorizontalIcon aria-hidden />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">{rowActions(row)}</DropdownMenuContent>
-											</DropdownMenu>
+											{actions == null ? null : (
+												<DropdownMenu modal={false}>
+													<DropdownMenuTrigger asChild>
+														<Button
+															variant="ghost"
+															size="icon"
+															aria-label={m.table_row_actions({ label: getRowLabel(row) })}
+														>
+															<MoreHorizontalIcon aria-hidden />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end">{actions}</DropdownMenuContent>
+												</DropdownMenu>
+											)}
 										</TableCell>
 									) : null}
 								</TableRow>
