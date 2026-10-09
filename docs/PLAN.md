@@ -690,13 +690,13 @@ Part 2 builds on the finished Part 1 app. It turns Test CRUD's one-off admin pie
 
 ### Part 2 Definition of Done
 
-- [ ] Admin and public pages are built from the shared building blocks. Breadcrumbs appear on every admin page and on public detail pages.
-- [ ] Every list has URL-driven, SSR'd filters, sorting and pagination; search and pagination work without JS.
-- [ ] Route masking examples work across reload, back/forward and new tab.
-- [ ] RBAC: the permission matrix edits role permissions, the server enforces every permission, and the UI reflects them. Escalation tests pass.
-- [ ] Attachments: Cloudinary signed uploads with server-side verification, permissions, cleanup and responsive delivery with no layout shift.
-- [ ] SEO: every page has correct head tags. Sitemap, robots and JSON-LD are valid; private pages are noindex.
-- [ ] A dev-only example page exists for every module, and it returns 404 in production.
-- [ ] `CLAUDE.md` and `docs/guides/*` are complete and accurate.
-- [ ] Every page in both locales and themes at 3 widths: no axe violations, no overflow, no console errors or warnings, no hydration warnings, and CLS ≤ 0.01.
-- [ ] All gates are green with no warnings: typecheck, check, test, test:storybook, build and build-storybook.
+- [x] Admin and public pages are built from the shared building blocks. Breadcrumbs appear on every admin page and on public detail pages.
+- [x] Every list has URL-driven, SSR'd filters, sorting and pagination; search and pagination work without JS.
+- [x] Route masking examples work across reload, back/forward and new tab.
+- [x] RBAC: the permission matrix edits role permissions, the server enforces every permission, and the UI reflects them. Escalation tests pass.
+- [x] Attachments: Cloudinary signed uploads with server-side verification, permissions, cleanup and responsive delivery with no layout shift.
+- [x] SEO: every page has correct head tags. Sitemap, robots and JSON-LD are valid; private pages are noindex.
+- [x] A dev-only example page exists for every module, and it returns 404 in production.
+- [x] `CLAUDE.md` and `docs/guides/*` are complete and accurate.
+- [x] Every page in both locales and themes at 3 widths: no axe violations, no overflow, no console errors or warnings, no hydration warnings, and CLS ≤ 0.01.
+- [x] All gates are green with no warnings: typecheck, check, test, test:storybook, build and build-storybook.

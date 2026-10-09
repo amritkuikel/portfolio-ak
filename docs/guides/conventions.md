@@ -146,6 +146,6 @@ Run `pnpm dev` and open `/dev/examples` (or `/ne/dev/examples`): one small, real
 | i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/_public/dev/examples/i18n.tsx` |
 | Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/_public/dev/examples/errors.tsx` |
 
-The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags (README, "Observability").
+The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags ([observability.md](observability.md)). Tables and filters in depth: [tables-filters.md](tables-filters.md); forms: [forms.md](forms.md); state: [state.md](state.md); i18n: [i18n.md](i18n.md).
 
 **Adding an example:** a route under `src/routes/_public/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.

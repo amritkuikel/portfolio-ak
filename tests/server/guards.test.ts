@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { LOCALE_HEADER } from "@/lib/i18n/locale-header";
 import { localeFunctionMiddleware } from "@/lib/i18n/locale-middleware";
 import { csrfMiddleware } from "@/middleware/csrf";
+import { errorNormalizationMiddleware } from "@/middleware/errors";
 import { logServerFn, requestLoggingMiddleware } from "@/middleware/logging";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 
@@ -118,7 +119,6 @@ describe("locale header for server functions", () => {
 
 describe("error normalisation middleware", () => {
 	it("passes results through and turns thrown errors into AppErrors carrying the request id", async () => {
-		const { errorNormalizationMiddleware } = await import("@/middleware/errors");
 		const step = stepOf(errorNormalizationMiddleware, "server");
 		const ok = await step({ next: async () => "ok", context: { requestId: "req-1" } });
 		expect(ok).toBe("ok");

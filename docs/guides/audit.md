@@ -30,7 +30,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 | Observability | Keep | Sentry (pinned), PostHog behind consent, server-side flags. |
 | Testing | Keep + fixed | Unit, PGlite and jsdom tests, plus stories as tests in 2 passes. Storybook's setup notice and jsdom noise are fixed (0087). New tests cover the list contract, breadcrumbs (pure and with a real router) and the SQL helpers. |
 | Env | Keep | T3 Env, validated at startup; only `VITE_` variables reach the client. |
-| File structure | Fixed | Documented in [conventions.md](conventions.md). |
+| File structure | Fixed | Documented in [conventions.md](conventions.md) and [architecture.md](architecture.md). |
 
 ## Findings in detail
 
@@ -57,7 +57,7 @@ Decision numbers refer to [decisions.md](../decisions.md).
 - **Task 21 (done):** Cloudinary attachments with responsive delivery; legacy Postgres images move via `pnpm attachments:import-legacy`.
 - **Task 22 (done):** `seo()` on every public route and `noindex` on private ones; sitemap, robots, JSON-LD, Open Graph images, icons and a manifest ([seo.md](seo.md)).
 - **Task 23 (done):** `/dev/examples`, one working page per module, linked from the guides (0103).
-- **Task 24:** Complete `CLAUDE.md` and guides (this task adds the first version).
+- **Task 24 (done):** `CLAUDE.md` completed; guides for architecture, routing and data, tables and filters, forms, state, i18n, testing, observability, security and deployment; README trimmed to an overview that links to them.
 
 ## How this was verified
 

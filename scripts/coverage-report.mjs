@@ -33,6 +33,18 @@ const AREAS = [
 	{ name: "Email", patterns: [/^src\/server\/email\//] },
 	{ name: "i18n", patterns: [/^src\/lib\/i18n\//, /^src\/lib\/intl(-ne)?\.ts$/, /^src\/lib\/seo\.ts$/] },
 	{ name: "Env", patterns: [/^src\/server\/env\.ts$/, /^src\/lib\/(client-env|client-env\.schema|env\.shared)\.ts$/] },
+	// Part 2 areas (docs/PLAN.md section 7).
+	{
+		name: "Lists & filters",
+		patterns: [
+			/^src\/lib\/(list|search|query|use-list-query|breadcrumbs)\.ts$/,
+			/^src\/server\/db\/list\.ts$/,
+			/^src\/components\/(filters|data-table|navigation|page)\//,
+		],
+	},
+	{ name: "RBAC", patterns: [/^src\/features\/rbac\//, /^src\/server\/rbac\//] },
+	{ name: "Attachments", patterns: [/^src\/features\/attachments\//, /^src\/server\/attachments\//] },
+	{ name: "SEO", patterns: [/^src\/lib\/(seo|structured-data)\.ts$/, /^src\/server\/seo\//] },
 ];
 
 const raw = JSON.parse(readFileSync(summaryPath, "utf8"));

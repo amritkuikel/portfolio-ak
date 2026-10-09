@@ -50,6 +50,9 @@ export default defineConfig({
 					setupFiles: ["tests/setup/env.ts", "tests/setup/dom.ts"],
 					restoreMocks: true,
 					unstubEnvs: true,
+					// jsdom interaction tests (calendar and country pickers via userEvent) can take
+					// several seconds on a busy machine; 5 s made them flaky, not wrong.
+					testTimeout: 15_000,
 				},
 			},
 			{
