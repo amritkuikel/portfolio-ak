@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6) and Part 2 (section 7, Tasks 17–24) are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -30,6 +30,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [security.md](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing, secrets |
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [audit.md](docs/guides/audit.md) | The Part 2 module review and what each task changed |
+| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Ink & Paper" design system, motion |
 
 ## Stack
 
@@ -61,7 +62,7 @@ A task is done when `typecheck`, `check`, `test`, `test:storybook`, `build` and 
 
 ```
 src/routes/            file routes: _public (site, /dev examples), _auth (sign-in), _authed (account), _admin (admin area),
-                       server routes (sitemap, robots, /api/auth)
+                       portfolio (editorial site, own chrome), server routes (sitemap, robots, /api/auth)
 src/features/<name>/   one feature, shared by client and server: schema.ts, queries.ts, collection.ts, labels, components/
 src/functions/         server functions: middleware + validator + one call into src/server
 src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL), auth, email, rbac, attachments, seo,
@@ -120,3 +121,8 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
 - **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.
 - **Running production locally** needs `EMAIL_PROVIDER=resend` and a `RESEND_API_KEY` (any `re_…` placeholder works when emails aren't sent). Production refuses the console email provider.
+- **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown below `/portfolio` renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/portfolio/route.tsx`).
+- **Fonts are never inlined:** a font file under Vite's 4 kB limit would become a `data:` URL, which the CSP's `font-src 'self'` blocks. `vite.config.ts` turns inlining off for `.woff`/`.woff2` (0108).
+- **Custom `text-*` sizes and tailwind-merge:** `cn("text-pf-h2", "text-pf-accent")` drops the size with the app's `cn` (both look like colours). Portfolio components import `cn` from `features/portfolio/lib/cn.ts`, which registers the scale.
+- **Variable fonts with optical sizing change width with size:** a metric-matched fallback only works at a pinned `opsz` (`pf-display` pins 144, and 36 for `text-pf-h3`). Measure fallback `size-adjust` in a browser at that setting (0108).
+- **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

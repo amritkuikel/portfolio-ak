@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useMatches } from "@tanstack/react-router";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { canEnterAdmin } from "@/features/rbac/permissions";
+import { isBareChrome } from "@/lib/chrome";
 import { clientEnv } from "@/lib/client-env";
 import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
@@ -15,6 +16,9 @@ export function SiteHeader() {
 	// Filled by the root route's beforeLoad, so it's available during SSR and hydration.
 	const { data: session } = useQuery(sessionQueryOptions());
 	const { signOut } = useAuthNavigation();
+	// Sections with their own navigation (staticData.chrome = "bare", src/lib/chrome.ts) render no app header.
+	const bare = useMatches({ select: isBareChrome });
+	if (bare) return null;
 
 	return (
 		<header className="border-b">

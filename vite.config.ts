@@ -48,6 +48,12 @@ export default defineConfig(async ({ command, mode }) => {
 
 	return {
 		resolve: { tsconfigPaths: true, alias: [zodAlias] },
+		build: {
+			// Fonts are never inlined as data: URLs, whatever their size: the CSP allows fonts
+			// from 'self' only. Small unicode-range subsets (under Vite's 4 kB limit) would
+			// otherwise be blocked. Other assets keep Vite's default (decision 0108).
+			assetsInlineLimit: (file: string) => (/\.woff2?$/.test(file) ? false : undefined),
+		},
 		environments: {
 			client: {
 				build: {

@@ -34,6 +34,29 @@ const sampleItem = {
 	images: ["https://res.cloudinary.com/demo/image/upload/og.jpg"],
 };
 
+/** Loader data the portfolio pages' heads read (src/routes/portfolio). */
+const samplePerson = {
+	name: "Aarav Shrestha",
+	role: "Full-stack developer",
+	intro: "Ten years of shipping web products end to end, from schema to pixel.",
+	socials: ["https://example.com/github"],
+};
+const sampleProject = {
+	title: "Ledgerline",
+	summary: "A treasury dashboard that closes the month in hours, not days.",
+	slug: "ledgerline",
+	year: 2026,
+	client: "Himal Capital",
+	stack: ["PostgreSQL", "TanStack Start"],
+};
+const samplePost = {
+	title: "Server-render everything",
+	excerpt: "A love letter to complete HTML, and why spinners are expensive.",
+	slug: "server-render-everything",
+	publishedAt: "2026-09-02",
+	tags: ["React", "SSR"],
+};
+
 /** Every indexable page: route id, the context its head() gets, and its expected canonical path. */
 const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<HeadContext>; path: string }> = [
 	{ id: "/_public/", label: "home", context: {}, path: "/" },
@@ -57,7 +80,27 @@ const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<Hea
 		context: { params: { slug: "momo-kitchen" }, loaderData: sampleItem },
 		path: "/test-crud/momo-kitchen",
 	},
+	{ id: "/portfolio/", label: "portfolio", context: { loaderData: samplePerson }, path: "/portfolio" },
+	{ id: "/portfolio/work/", label: "work", context: { match: { search: {} } }, path: "/portfolio/work" },
+	{
+		id: "/portfolio/work/$slug",
+		label: "case study",
+		context: { params: { slug: "ledgerline" }, loaderData: sampleProject },
+		path: "/portfolio/work/ledgerline",
+	},
+	{ id: "/portfolio/about", label: "about", context: { loaderData: samplePerson }, path: "/portfolio/about" },
+	{ id: "/portfolio/journal/", label: "journal", context: {}, path: "/portfolio/journal" },
+	{
+		id: "/portfolio/journal/$slug",
+		label: "article",
+		context: { params: { slug: samplePost.slug }, loaderData: samplePost },
+		path: "/portfolio/journal/server-render-everything",
+	},
+	{ id: "/portfolio/contact", label: "contact", context: {}, path: "/portfolio/contact" },
 ];
+
+/** Pages titled by their content (loader data), not by a message: the samples aren't translated. */
+const CONTENT_TITLED = new Set(["home", "item", "portfolio", "case study", "article"]);
 
 // Building a router resolves every route's full id ("/_public/test-crud/$slug").
 // Nothing loads, so the context is never read.
@@ -240,12 +283,61 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 			expect(head.meta.get("article:published_time")).toBe(sampleItem.publishedAt);
 		});
 	});
+
+	it("the portfolio describes its owner, case studies and articles (Person, CreativeWork, BlogPosting)", () => {
+		withLocale(() => {
+			const jsonLdOf = (id: string, context: Partial<HeadContext>) => {
+				const route = byId.get(id);
+				if (!route) throw new Error(id);
+				return headFor(route, context).jsonLd;
+			};
+			const person = { "@id": `${SITE}/portfolio#person` };
+			expect(jsonLdOf("/portfolio/", { loaderData: samplePerson })).toEqual([
+				expect.objectContaining({ "@type": "Person", ...person, name: "Aarav Shrestha", sameAs: samplePerson.socials }),
+			]);
+			expect(jsonLdOf("/portfolio/about", { loaderData: samplePerson })).toEqual([
+				expect.objectContaining({ "@type": "ProfilePage", mainEntity: expect.objectContaining(person) }),
+			]);
+			const caseUrl = localized("/portfolio/work/ledgerline", locale);
+			expect(jsonLdOf("/portfolio/work/$slug", { params: { slug: "ledgerline" }, loaderData: sampleProject })).toEqual([
+				expect.objectContaining({
+					"@type": "CreativeWork",
+					"@id": `${caseUrl}#work`,
+					name: "Ledgerline",
+					creator: person,
+					inLanguage: locale,
+				}),
+			]);
+			const articleUrl = localized("/portfolio/journal/server-render-everything", locale);
+			expect(
+				jsonLdOf("/portfolio/journal/$slug", { params: { slug: samplePost.slug }, loaderData: samplePost }),
+			).toEqual([
+				expect.objectContaining({
+					"@type": "BlogPosting",
+					"@id": `${articleUrl}#article`,
+					headline: samplePost.title,
+					datePublished: "2026-09-02",
+					author: person,
+				}),
+			]);
+		});
+	});
+
+	it("a filtered work index is noindex, still canonical to the full list", () => {
+		withLocale(() => {
+			const route = byId.get("/portfolio/work/");
+			if (!route) throw new Error("work");
+			const head = headFor(route, { match: { search: { discipline: "ai" } } });
+			expect(head.meta.get("robots")).toBe("noindex, follow");
+			expect(head.links.find((link) => link.rel === "canonical")?.href).toBe(localized("/portfolio/work", locale));
+		});
+	});
 });
 
-it("English and Nepali pages have different titles (except the home page: the site name)", () => {
+it("English and Nepali pages have different titles (except pages titled by their content)", () => {
 	const titles = (locale: Locale) => {
 		overwriteGetLocale(() => locale);
-		return INDEXABLE.filter((page) => page.label !== "home" && page.label !== "item").map((page) => {
+		return INDEXABLE.filter((page) => !CONTENT_TITLED.has(page.label)).map((page) => {
 			const route = byId.get(page.id);
 			return route ? headFor(route, page.context).title : undefined;
 		});

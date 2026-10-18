@@ -13,6 +13,7 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
+import { Route as PortfolioRouteRouteImport } from './routes/portfolio/route'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminAdminRouteRouteImport } from './routes/_admin/admin/route'
@@ -28,6 +29,9 @@ import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicTestCrudRouteRouteImport } from './routes/_public/test-crud/route'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
+import { Route as PortfolioIndexRouteImport } from './routes/portfolio/index'
+import { Route as PortfolioAboutRouteImport } from './routes/portfolio/about'
+import { Route as PortfolioContactRouteImport } from './routes/portfolio/contact'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
@@ -37,6 +41,10 @@ import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as PublicTestCrudIndexRouteImport } from './routes/_public/test-crud/index'
 import { Route as PublicTestCrudSlugRouteImport } from './routes/_public/test-crud/$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as PortfolioJournalIndexRouteImport } from './routes/portfolio/journal/index'
+import { Route as PortfolioJournalSlugRouteImport } from './routes/portfolio/journal/$slug'
+import { Route as PortfolioWorkIndexRouteImport } from './routes/portfolio/work/index'
+import { Route as PortfolioWorkSlugRouteImport } from './routes/portfolio/work/$slug'
 import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
 import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
@@ -75,6 +83,11 @@ const AuthedRoute = AuthedRouteImport.update({
 } as any)
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortfolioRouteRoute = PortfolioRouteRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -152,6 +165,21 @@ const PublicVerifyEmailRoute = PublicVerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => PublicRoute,
 } as any)
+const PortfolioIndexRoute = PortfolioIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const PortfolioAboutRoute = PortfolioAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const PortfolioContactRoute = PortfolioContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -196,6 +224,26 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PortfolioJournalIndexRoute = PortfolioJournalIndexRouteImport.update({
+  id: '/journal/',
+  path: '/journal/',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const PortfolioJournalSlugRoute = PortfolioJournalSlugRouteImport.update({
+  id: '/journal/$slug',
+  path: '/journal/$slug',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const PortfolioWorkIndexRoute = PortfolioWorkIndexRouteImport.update({
+  id: '/work/',
+  path: '/work/',
+  getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const PortfolioWorkSlugRoute = PortfolioWorkSlugRouteImport.update({
+  id: '/work/$slug',
+  path: '/work/$slug',
+  getParentRoute: () => PortfolioRouteRoute,
 } as any)
 const AdminAdminRolesIndexRoute = AdminAdminRolesIndexRouteImport.update({
   id: '/',
@@ -327,6 +375,7 @@ const PublicDevExamplesMaskingIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/portfolio': typeof PortfolioRouteRouteWithChildren
   '/': typeof PublicIndexRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -342,6 +391,9 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/portfolio/about': typeof PortfolioAboutRoute
+  '/portfolio/contact': typeof PortfolioContactRoute
+  '/portfolio/': typeof PortfolioIndexRoute
   '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
@@ -349,8 +401,12 @@ export interface FileRoutesByFullPath {
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
+  '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/test-crud/': typeof PublicTestCrudIndexRoute
+  '/portfolio/journal/': typeof PortfolioJournalIndexRoute
+  '/portfolio/work/': typeof PortfolioWorkIndexRoute
   '/dev/examples/masking': typeof PublicDevExamplesMaskingRouteRouteWithChildren
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
@@ -389,11 +445,18 @@ export interface FileRoutesByTo {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/portfolio/about': typeof PortfolioAboutRoute
+  '/portfolio/contact': typeof PortfolioContactRoute
+  '/portfolio': typeof PortfolioIndexRoute
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
+  '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
   '/admin': typeof AdminAdminIndexRoute
   '/test-crud': typeof PublicTestCrudIndexRoute
+  '/portfolio/journal': typeof PortfolioJournalIndexRoute
+  '/portfolio/work': typeof PortfolioWorkIndexRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
@@ -419,6 +482,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/portfolio': typeof PortfolioRouteRouteWithChildren
   '/_admin': typeof AdminRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
@@ -437,7 +501,10 @@ export interface FileRoutesById {
   '/_public/reset-password': typeof PublicResetPasswordRoute
   '/_public/stack': typeof PublicStackRoute
   '/_public/verify-email': typeof PublicVerifyEmailRoute
+  '/portfolio/about': typeof PortfolioAboutRoute
+  '/portfolio/contact': typeof PortfolioContactRoute
   '/_public/': typeof PublicIndexRoute
+  '/portfolio/': typeof PortfolioIndexRoute
   '/_admin/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
@@ -445,8 +512,12 @@ export interface FileRoutesById {
   '/_public/dev/forms': typeof PublicDevFormsRoute
   '/_public/test-crud/$slug': typeof PublicTestCrudSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
+  '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_public/test-crud/': typeof PublicTestCrudIndexRoute
+  '/portfolio/journal/': typeof PortfolioJournalIndexRoute
+  '/portfolio/work/': typeof PortfolioWorkIndexRoute
   '/_public/dev/examples/masking': typeof PublicDevExamplesMaskingRouteRouteWithChildren
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
@@ -474,6 +545,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/portfolio'
     | '/'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -489,6 +561,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/portfolio/about'
+    | '/portfolio/contact'
+    | '/portfolio/'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
@@ -496,8 +571,12 @@ export interface FileRouteTypes {
     | '/dev/forms'
     | '/test-crud/$slug'
     | '/api/auth/$'
+    | '/portfolio/journal/$slug'
+    | '/portfolio/work/$slug'
     | '/admin/'
     | '/test-crud/'
+    | '/portfolio/journal/'
+    | '/portfolio/work/'
     | '/dev/examples/masking'
     | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
@@ -536,11 +615,18 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/portfolio/about'
+    | '/portfolio/contact'
+    | '/portfolio'
     | '/dev/forms'
     | '/test-crud/$slug'
     | '/api/auth/$'
+    | '/portfolio/journal/$slug'
+    | '/portfolio/work/$slug'
     | '/admin'
     | '/test-crud'
+    | '/portfolio/journal'
+    | '/portfolio/work'
     | '/admin/roles/permissions'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
@@ -565,6 +651,7 @@ export interface FileRouteTypes {
     | '/dev/examples/masking'
   id:
     | '__root__'
+    | '/portfolio'
     | '/_admin'
     | '/_auth'
     | '/_authed'
@@ -583,7 +670,10 @@ export interface FileRouteTypes {
     | '/_public/reset-password'
     | '/_public/stack'
     | '/_public/verify-email'
+    | '/portfolio/about'
+    | '/portfolio/contact'
     | '/_public/'
+    | '/portfolio/'
     | '/_admin/admin/roles'
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
@@ -591,8 +681,12 @@ export interface FileRouteTypes {
     | '/_public/dev/forms'
     | '/_public/test-crud/$slug'
     | '/api/auth/$'
+    | '/portfolio/journal/$slug'
+    | '/portfolio/work/$slug'
     | '/_admin/admin/'
     | '/_public/test-crud/'
+    | '/portfolio/journal/'
+    | '/portfolio/work/'
     | '/_public/dev/examples/masking'
     | '/_admin/admin/roles/permissions'
     | '/_admin/admin/test-crud/$id'
@@ -619,6 +713,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  PortfolioRouteRoute: typeof PortfolioRouteRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
@@ -656,6 +751,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof PublicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portfolio': {
+      id: '/portfolio'
+      path: '/portfolio'
+      fullPath: '/portfolio'
+      preLoaderRoute: typeof PortfolioRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -763,6 +865,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicVerifyEmailRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/portfolio/': {
+      id: '/portfolio/'
+      path: '/'
+      fullPath: '/portfolio/'
+      preLoaderRoute: typeof PortfolioIndexRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
+    '/portfolio/about': {
+      id: '/portfolio/about'
+      path: '/about'
+      fullPath: '/portfolio/about'
+      preLoaderRoute: typeof PortfolioAboutRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
+    '/portfolio/contact': {
+      id: '/portfolio/contact'
+      path: '/contact'
+      fullPath: '/portfolio/contact'
+      preLoaderRoute: typeof PortfolioContactRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
     '/_admin/admin/': {
       id: '/_admin/admin/'
       path: '/'
@@ -825,6 +948,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/portfolio/journal/': {
+      id: '/portfolio/journal/'
+      path: '/journal'
+      fullPath: '/portfolio/journal/'
+      preLoaderRoute: typeof PortfolioJournalIndexRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
+    '/portfolio/journal/$slug': {
+      id: '/portfolio/journal/$slug'
+      path: '/journal/$slug'
+      fullPath: '/portfolio/journal/$slug'
+      preLoaderRoute: typeof PortfolioJournalSlugRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
+    '/portfolio/work/': {
+      id: '/portfolio/work/'
+      path: '/work'
+      fullPath: '/portfolio/work/'
+      preLoaderRoute: typeof PortfolioWorkIndexRouteImport
+      parentRoute: typeof PortfolioRouteRoute
+    }
+    '/portfolio/work/$slug': {
+      id: '/portfolio/work/$slug'
+      path: '/work/$slug'
+      fullPath: '/portfolio/work/$slug'
+      preLoaderRoute: typeof PortfolioWorkSlugRouteImport
+      parentRoute: typeof PortfolioRouteRoute
     }
     '/_admin/admin/roles/': {
       id: '/_admin/admin/roles/'
@@ -989,6 +1140,30 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface PortfolioRouteRouteChildren {
+  PortfolioAboutRoute: typeof PortfolioAboutRoute
+  PortfolioContactRoute: typeof PortfolioContactRoute
+  PortfolioIndexRoute: typeof PortfolioIndexRoute
+  PortfolioJournalSlugRoute: typeof PortfolioJournalSlugRoute
+  PortfolioWorkSlugRoute: typeof PortfolioWorkSlugRoute
+  PortfolioJournalIndexRoute: typeof PortfolioJournalIndexRoute
+  PortfolioWorkIndexRoute: typeof PortfolioWorkIndexRoute
+}
+
+const PortfolioRouteRouteChildren: PortfolioRouteRouteChildren = {
+  PortfolioAboutRoute: PortfolioAboutRoute,
+  PortfolioContactRoute: PortfolioContactRoute,
+  PortfolioIndexRoute: PortfolioIndexRoute,
+  PortfolioJournalSlugRoute: PortfolioJournalSlugRoute,
+  PortfolioWorkSlugRoute: PortfolioWorkSlugRoute,
+  PortfolioJournalIndexRoute: PortfolioJournalIndexRoute,
+  PortfolioWorkIndexRoute: PortfolioWorkIndexRoute,
+}
+
+const PortfolioRouteRouteWithChildren = PortfolioRouteRoute._addFileChildren(
+  PortfolioRouteRouteChildren,
+)
 
 interface AdminAdminRolesRouteRouteChildren {
   AdminAdminRolesPermissionsRoute: typeof AdminAdminRolesPermissionsRoute
@@ -1197,6 +1372,7 @@ const PublicRouteWithChildren =
   PublicRoute._addFileChildren(PublicRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  PortfolioRouteRoute: PortfolioRouteRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,

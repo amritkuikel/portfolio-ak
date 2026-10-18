@@ -79,7 +79,7 @@ Add a builder there for a new type, and assert its output in the route test.
 
 | URL | Source | Notes |
 | --- | --- | --- |
-| `/sitemap.xml` | `src/routes/sitemap[.]xml.ts` → `src/server/seo/sitemap.ts` | Static pages, list pages 2+, published items with `lastmod`; one `<url>` per language, each listing every `hreflang` alternate. |
+| `/sitemap.xml` | `src/routes/sitemap[.]xml.ts` → `src/server/seo/sitemap.ts` | Static pages, list pages 2+, published items with `lastmod`, and the `/portfolio` pages (slugs from its `PortfolioSource`, guides/portfolio.md); one `<url>` per language, each listing every `hreflang` alternate. |
 | `/robots.txt` | `src/server/seo/robots.ts` | Disallows `/admin`, `/ne/admin`, `/api/`, `/_serverFn/`; points to the sitemap. Other private pages stay crawlable so crawlers can read their `noindex`. |
 | `/manifest.webmanifest` | `src/server/routes/manifest.ts` (Nitro) → `src/server/seo/manifest.ts` | Localized (`/ne/manifest.webmanifest`); the root head links the current language's. |
 

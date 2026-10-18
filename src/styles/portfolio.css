@@ -1,0 +1,457 @@
+/*
+ * "Ink & Paper": the design system of the editorial /portfolio site (docs/guides/portfolio.md).
+ *
+ * Everything here is scoped: the tokens live under `.portfolio` (set by the
+ * /portfolio layout route) and every utility is prefixed `pf-`, so the rest of
+ * the app is untouched. The faces below are only downloaded when a portfolio
+ * page renders text in them (@font-face is lazy); the layout preloads the
+ * display face (src/features/portfolio/lib/fonts.ts). Decisions 0108 and 0109.
+ */
+@import "@fontsource-variable/fraunces/opsz.css";
+@import "@fontsource-variable/fraunces/opsz-italic.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "@fontsource-variable/noto-serif-devanagari/wght.css";
+
+/*
+ * Metric-matched fallbacks, so text keeps its line breaks when the web font
+ * swaps in and the giant display type can't shift the page.
+ *
+ * Fraunces changes width with its optical size (opsz), so a single fallback
+ * can't match every size: at 24px it is 1.02× Georgia, at 160px 0.82×. The
+ * display utility therefore pins the optical size (144 for headlines, 36 for
+ * h3-size type) and each gets its own face. size-adjust is the measured glyph
+ * width ratio against Georgia at that opsz (rendered in Chrome, no tracking);
+ * ascent and descent are Fraunces' hhea metrics (1956/510 of 2000) divided by
+ * it. The mono face matches Courier New 1:1. Decision 0108.
+ */
+@font-face {
+	font-family: "Fraunces Fallback";
+	src: local("Georgia");
+	size-adjust: 83.35%;
+	ascent-override: 117.34%;
+	descent-override: 30.59%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Fraunces Fallback";
+	font-style: italic;
+	src: local("Georgia Italic"), local("Georgia-Italic");
+	size-adjust: 78.29%;
+	ascent-override: 124.92%;
+	descent-override: 32.57%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Fraunces Text Fallback";
+	src: local("Georgia");
+	size-adjust: 102.19%;
+	ascent-override: 95.7%;
+	descent-override: 24.95%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Fraunces Text Fallback";
+	font-style: italic;
+	src: local("Georgia Italic"), local("Georgia-Italic");
+	size-adjust: 95.3%;
+	ascent-override: 102.62%;
+	descent-override: 26.76%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "JetBrains Mono Fallback";
+	src: local("Courier New"), local("CourierNewPSMT"), local("Courier");
+	size-adjust: 100%;
+	ascent-override: 102%;
+	descent-override: 30%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Noto Serif Devanagari Fallback";
+	src: local("Nirmala UI"), local("Kohinoor Devanagari"), local("Devanagari Sangam MN"), local("Mangal");
+	unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+25CC, U+A830-A839, U+A8E0-A8FF;
+	ascent-override: 93%;
+	descent-override: 62.5%;
+	line-gap-override: 0%;
+}
+
+/*
+ * Colour tokens. Light is the default; `.pf-inverse` flips a section to the
+ * other palette (an ink band on paper, or paper on ink in dark mode). Every
+ * text pair is at least 4.5:1 (ink 17:1, stone 5.0:1 on paper-2, accent 4.8:1).
+ */
+.pf-inverse {
+	background-color: var(--pf-paper);
+	color: var(--pf-ink);
+}
+
+.portfolio {
+	/* The two palettes, as raw values (inherited, so any band can switch). */
+	--pf-light-paper: oklch(0.972 0.012 85);
+	--pf-light-paper-2: oklch(0.938 0.018 80);
+	--pf-light-ink: oklch(0.19 0.012 60);
+	--pf-light-ink-2: oklch(0.34 0.012 60);
+	--pf-light-stone: oklch(0.5 0.016 65);
+	--pf-light-line: oklch(0.19 0.012 60 / 16%);
+	--pf-light-accent: oklch(0.53 0.19 33);
+	--pf-dark-paper: oklch(0.17 0.01 60);
+	--pf-dark-paper-2: oklch(0.215 0.012 60);
+	--pf-dark-ink: oklch(0.95 0.014 85);
+	--pf-dark-ink-2: oklch(0.83 0.012 80);
+	--pf-dark-stone: oklch(0.7 0.014 75);
+	--pf-dark-line: oklch(0.95 0.014 85 / 16%);
+	--pf-dark-accent: oklch(0.72 0.16 40);
+
+	/* The tokens components use: light by default. */
+	color-scheme: light;
+	--pf-paper: var(--pf-light-paper);
+	--pf-paper-2: var(--pf-light-paper-2);
+	--pf-ink: var(--pf-light-ink);
+	--pf-ink-2: var(--pf-light-ink-2);
+	--pf-stone: var(--pf-light-stone);
+	--pf-line: var(--pf-light-line);
+	--pf-accent: var(--pf-light-accent);
+
+	/* Layout and rhythm. */
+	--pf-margin: clamp(1rem, 4vw, 4rem);
+	--pf-gutter: clamp(1rem, 2vw, 2rem);
+	--pf-space-section: clamp(6rem, 14vw, 13rem);
+	--pf-max: 104rem;
+	--pf-header-h: 4.5rem;
+
+	/* Motion. */
+	--pf-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--pf-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--pf-dur-1: 160ms;
+	--pf-dur-2: 420ms;
+	--pf-dur-3: 900ms;
+}
+
+/* Dark theme, and inverse bands in the light theme. */
+.dark .portfolio,
+.portfolio .pf-inverse {
+	color-scheme: dark;
+	--pf-paper: var(--pf-dark-paper);
+	--pf-paper-2: var(--pf-dark-paper-2);
+	--pf-ink: var(--pf-dark-ink);
+	--pf-ink-2: var(--pf-dark-ink-2);
+	--pf-stone: var(--pf-dark-stone);
+	--pf-line: var(--pf-dark-line);
+	--pf-accent: var(--pf-dark-accent);
+}
+
+/* Inverse bands in the dark theme: back to the light palette. */
+.dark .portfolio .pf-inverse {
+	color-scheme: light;
+	--pf-paper: var(--pf-light-paper);
+	--pf-paper-2: var(--pf-light-paper-2);
+	--pf-ink: var(--pf-light-ink);
+	--pf-ink-2: var(--pf-light-ink-2);
+	--pf-stone: var(--pf-light-stone);
+	--pf-line: var(--pf-light-line);
+	--pf-accent: var(--pf-light-accent);
+}
+
+@theme inline {
+	--color-pf-paper: var(--pf-paper);
+	--color-pf-paper-2: var(--pf-paper-2);
+	--color-pf-ink: var(--pf-ink);
+	--color-pf-ink-2: var(--pf-ink-2);
+	--color-pf-stone: var(--pf-stone);
+	--color-pf-line: var(--pf-line);
+	--color-pf-accent: var(--pf-accent);
+
+	--font-pf-display:
+		"Fraunces Variable", "Noto Serif Devanagari Variable", "Fraunces Fallback", "Noto Serif Devanagari Fallback",
+		Georgia, serif;
+	--font-pf-mono: "JetBrains Mono Variable", "JetBrains Mono Fallback", ui-monospace, monospace;
+
+	/* Fluid type scale: sizes grow with the viewport between a phone and a wide desktop. */
+	--text-pf-label: 0.75rem;
+	--text-pf-label--line-height: 1.4;
+	--text-pf-small: 0.875rem;
+	--text-pf-small--line-height: 1.5;
+	--text-pf-body: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+	--text-pf-body--line-height: 1.65;
+	--text-pf-lead: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
+	--text-pf-lead--line-height: 1.4;
+	--text-pf-h3: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
+	--text-pf-h3--line-height: 1.12;
+	--text-pf-h2: clamp(2.25rem, 1.4rem + 4vw, 5rem);
+	--text-pf-h2--line-height: 1;
+	--text-pf-h1: clamp(2.75rem, 1.4rem + 7vw, 8.5rem);
+	--text-pf-h1--line-height: 0.95;
+	--text-pf-hero: clamp(3.25rem, 0.8rem + 11.5vw, 12.5rem);
+	--text-pf-hero--line-height: 0.9;
+	--text-pf-mega: clamp(3.5rem, 0.5rem + 15vw, 17rem);
+	--text-pf-mega--line-height: 0.86;
+}
+
+/* The page canvas: paper, ink and the body face. */
+@utility pf-canvas {
+	background-color: var(--pf-paper);
+	color: var(--pf-ink);
+	/* Long compound words and URLs never push the page sideways. */
+	overflow-wrap: break-word;
+	overflow-x: clip;
+}
+
+/* The centred content column with the fluid side margin. */
+@utility pf-container {
+	width: 100%;
+	max-width: var(--pf-max);
+	margin-inline: auto;
+	padding-inline: var(--pf-margin);
+}
+
+/* The editorial grid: 4 columns on phones, 12 from tablets up. */
+@utility pf-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	column-gap: var(--pf-gutter);
+	@media (width >= 48rem) {
+		grid-template-columns: repeat(12, minmax(0, 1fr));
+	}
+}
+
+/* Vertical rhythm between chapters. */
+@utility pf-section {
+	padding-block: var(--pf-space-section);
+}
+
+/* Display typography: tight leading, negative tracking, optical sizing for big type. */
+@utility pf-display {
+	font-family: var(--font-pf-display);
+	/* A pinned optical size keeps the width constant, so one fallback face matches it (see the @font-face notes). */
+	font-optical-sizing: none;
+	font-variation-settings: "opsz" 144;
+	font-weight: 380;
+	letter-spacing: -0.035em;
+	text-wrap: balance;
+	&.italic {
+		/* The display italic is narrower: tight tracking would swallow its word spaces. */
+		letter-spacing: -0.01em;
+	}
+	&.text-pf-h3 {
+		/* h3-size type uses the sturdier text cut and its own fallback. */
+		font-family:
+			"Fraunces Variable", "Noto Serif Devanagari Variable", "Fraunces Text Fallback", "Noto Serif Devanagari Fallback",
+			Georgia, serif;
+		font-variation-settings: "opsz" 36;
+	}
+	&:lang(ne) {
+		/* Devanagari needs room for its headline (shirorekha) and vowel signs. */
+		letter-spacing: 0;
+		line-height: 1.15;
+		font-weight: 500;
+	}
+}
+
+/* Small uppercase mono labels: eyebrows, indices, metadata. */
+@utility pf-label {
+	font-family: var(--font-pf-mono);
+	font-size: var(--text-pf-label);
+	line-height: var(--text-pf-label--line-height);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	&:lang(ne) {
+		letter-spacing: 0.02em;
+	}
+}
+
+/* Comfortable reading measure for long text. */
+@utility pf-measure {
+	max-width: 62ch;
+}
+
+/* An underline that draws in from the left on hover and focus. */
+@utility pf-link {
+	background-image: linear-gradient(currentColor, currentColor);
+	background-position: 0 100%;
+	background-repeat: no-repeat;
+	background-size: 0% 1px;
+	transition: background-size var(--pf-dur-2) var(--pf-ease-out);
+	&:hover,
+	&:focus-visible {
+		background-size: 100% 1px;
+	}
+}
+
+/* Keyboard focus that reads on both palettes (bands on the accent colour set --pf-focus). */
+@utility pf-focus {
+	outline: none;
+	&:focus-visible {
+		outline: 2px solid var(--pf-focus, var(--pf-accent));
+		outline-offset: 4px;
+	}
+}
+
+/* A band in the accent colour: paper text, and focus rings that stay visible. */
+@utility pf-accent-band {
+	background-color: var(--pf-accent);
+	color: var(--pf-paper);
+	--pf-focus: var(--pf-paper);
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion. Progressive enhancement only: every element is fully visible by
+ * default; animations run where the browser supports them and the reader
+ * hasn't asked for reduced motion. Only transform, clip-path and colour move,
+ * so nothing shifts layout (CLS stays 0) and axe never sees half-faded text.
+ * ------------------------------------------------------------------------- */
+
+@keyframes pf-line-up {
+	from {
+		transform: translateY(105%);
+	}
+}
+
+@keyframes pf-wipe-up {
+	from {
+		clip-path: inset(0 0 100% 0);
+		transform: translateY(2rem);
+	}
+}
+
+@keyframes pf-word-ink {
+	from {
+		color: var(--pf-stone);
+	}
+}
+
+@keyframes pf-marquee {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes pf-scale-in {
+	from {
+		transform: scale(1.08);
+	}
+}
+
+@keyframes pf-progress {
+	from {
+		transform: scaleX(0);
+	}
+}
+
+/* Hero lines: each line rises out of its own mask on load, staggered by --i. */
+.pf-line {
+	display: block;
+	overflow: clip;
+	/* Room for descenders and Devanagari vowel signs inside the mask. */
+	padding-block-end: 0.1em;
+	margin-block-end: -0.1em;
+}
+
+.pf-line > span {
+	display: inline-block;
+}
+
+/* The marquee: two copies of the list side by side; the track slides by one copy. */
+.pf-marquee {
+	overflow: clip;
+}
+
+.pf-marquee-track {
+	display: flex;
+	width: max-content;
+}
+
+.pf-marquee[data-paused] .pf-marquee-track {
+	animation-play-state: paused;
+}
+
+/* Covers that morph between pages share one transition class (CoverFrame sets the name). */
+[data-pf-cover] {
+	view-transition-class: pf-cover;
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+	.pf-line > span {
+		animation: pf-line-up var(--pf-dur-3) var(--pf-ease-out) both;
+		animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+	}
+
+	.pf-marquee-track {
+		animation: pf-marquee 48s linear infinite;
+	}
+
+	.pf-marquee:hover .pf-marquee-track,
+	.pf-marquee:focus-within .pf-marquee-track {
+		animation-play-state: paused;
+	}
+
+	.pf-zoom > * {
+		transition: transform var(--pf-dur-3) var(--pf-ease-out);
+	}
+
+	.pf-zoom:hover > *,
+	:focus-visible > .pf-zoom > *,
+	:hover > .pf-zoom > * {
+		transform: scale(1.04);
+	}
+
+	@supports (animation-timeline: view()) {
+		/* Blocks wipe up into view as they enter the viewport. */
+		.pf-reveal {
+			animation: pf-wipe-up linear both;
+			animation-timeline: view();
+			animation-range: entry 5% cover 28%;
+		}
+
+		/* Words ink in one after another as the paragraph crosses the viewport (SplitWords sets --i / --n). */
+		.pf-words > span {
+			animation: pf-word-ink linear both;
+			animation-timeline: view();
+			animation-range-start: cover calc(12% + 42% * var(--i) / var(--n));
+			animation-range-end: cover calc(18% + 42% * var(--i) / var(--n));
+		}
+
+		/* Covers settle from a slight zoom while scrolling past. */
+		.pf-parallax {
+			animation: pf-scale-in linear both;
+			animation-timeline: view();
+			animation-range: entry 0% cover 60%;
+		}
+	}
+
+	@supports (animation-timeline: scroll()) {
+		/* Reading progress bar on articles. */
+		.pf-progress {
+			animation: pf-progress linear both;
+			animation-timeline: scroll(root);
+		}
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* No sliding: the list wraps and the duplicate copy goes away. */
+	.pf-marquee-track {
+		width: auto;
+		flex-wrap: wrap;
+	}
+
+	.pf-marquee-track > [aria-hidden="true"] {
+		display: none;
+	}
+
+	::view-transition-group(*.pf-cover),
+	::view-transition-old(*.pf-cover),
+	::view-transition-new(*.pf-cover) {
+		animation: none;
+	}
+}
+
+/* Shared-element morph from a work card's cover into the case study hero (CoverFrame sets the name and class). */
+::view-transition-group(*.pf-cover) {
+	animation-duration: 600ms;
+	animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}

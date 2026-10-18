@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { portfolioSource } from "@/features/portfolio/sources";
 import { STACK_PAGE_SIZE } from "@/features/stack/schema";
 import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/schema";
 import { localizedUrl } from "@/lib/seo";
@@ -26,13 +27,21 @@ const listPages = (path: string, total: number, pageSize: number, lastmod?: Date
  * appear here; they're noindex in their head.
  */
 export async function sitemapEntries(db: Db): Promise<SitemapEntry[]> {
-	const items = await listPublishedTestCrudForSitemap(db);
+	const [items, portfolio] = await Promise.all([listPublishedTestCrudForSitemap(db), portfolioSource.listSlugs()]);
 	const latest = items[0]?.updatedAt;
 	return [
 		{ path: "/" },
 		...listPages("/stack", STACK.length, STACK_PAGE_SIZE),
 		...listPages("/test-crud", items.length, TEST_CRUD_PUBLIC_PAGE_SIZE, latest),
 		...items.map((item) => ({ path: `/test-crud/${item.slug}`, lastmod: item.updatedAt })),
+		// The editorial portfolio (demo content from its PortfolioSource, decision 0106).
+		{ path: "/portfolio" },
+		{ path: "/portfolio/work" },
+		...portfolio.projects.map((slug) => ({ path: `/portfolio/work/${slug}` })),
+		{ path: "/portfolio/about" },
+		{ path: "/portfolio/journal" },
+		...portfolio.posts.map((slug) => ({ path: `/portfolio/journal/${slug}` })),
+		{ path: "/portfolio/contact" },
 	];
 }
 

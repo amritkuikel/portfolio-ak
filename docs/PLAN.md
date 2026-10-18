@@ -700,3 +700,39 @@ Part 2 builds on the finished Part 1 app. It turns Test CRUD's one-off admin pie
 - [x] `CLAUDE.md` and `docs/guides/*` are complete and accurate.
 - [x] Every page in both locales and themes at 3 widths: no axe violations, no overflow, no console errors or warnings, no hydration warnings, and CLS ≤ 0.01.
 - [x] All gates are green with no warnings: typecheck, check, test, test:storybook, build and build-storybook.
+
+---
+
+## 8. Editorial portfolio at /portfolio (static demo data)
+
+A design-studio-style portfolio for a full-stack developer: big type, art direction and a story told in chapters, in both languages, on typed demo data that real data can replace later. The guide is [guides/portfolio.md](guides/portfolio.md); decisions 0105–0109.
+
+### Constraints
+
+- Nothing currently used changes behaviour. The only edits outside the section are additive:
+  - the header opt-out (`src/lib/chrome.ts`, `site-header.tsx`)
+  - one CSS import in `app.css`
+  - "never inline fonts" in `vite.config.ts`
+  - sitemap entries and test rows
+  - `portfolio_*` messages
+  - three font packages
+- It follows the app's conventions: SSR loaders with `ensureQueryData` + `useSuspenseQuery`, Paraglide for UI text, `seo()` on every page, strict CSP, and CLS ≤ 0.01.
+
+### Deliverables
+
+- **Routes:** `/portfolio` (hero → manifesto → selected work → capabilities → process → impact → voices → journal → finale), `/portfolio/work` (`?discipline=` filter), `/portfolio/work/$slug`, `/portfolio/about`, `/portfolio/journal`, `/portfolio/journal/$slug`, `/portfolio/contact`, and a 404 in the section's chrome.
+- **Content source:** a `PortfolioSource` port with a lazy-loaded fixture adapter, and query options per read.
+- **Demo content in en and ne:** a profile, 7 case studies, 6 articles, experience, capabilities, process and testimonials.
+- **"Ink & Paper" design system:**
+  - scoped tokens, light/dark palettes and inverse bands, plus a fluid type scale and the editorial grid
+  - CSS-only motion
+  - generated cover and screen art
+  - metric-matched fallbacks for every new face
+- **Tests and stories:** unit tests (data, source, lib), component tests (header opt-out, menu, marquee, copy email), stories for every primitive and section, route-SEO and sitemap coverage.
+
+### Definition of Done
+
+- [x] No existing page changed: `/`, `/stack`, `/test-crud` and the admin area keep the site header (component test).
+- [x] Every portfolio page is server-rendered complete, indexable with JSON-LD, and listed in the sitemap. A filtered work index is noindex.
+- [x] Both locales, both themes, at 390/768/1280: no axe violations, no overflow, no console errors (apart from the browser's own line for the intentional 404), no CSP violations, and CLS ≤ 0.01.
+- [x] Typecheck, check, test, test:storybook, build and build-storybook are green with no warnings.

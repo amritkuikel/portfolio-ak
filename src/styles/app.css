@@ -9,6 +9,8 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Scoped tokens and utilities of the /portfolio site (pf-*, under .portfolio). */
+@import "./portfolio.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

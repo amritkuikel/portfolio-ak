@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { portfolioSource } from "@/features/portfolio/sources";
 import { STACK_PAGE_SIZE } from "@/features/stack/schema";
 import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/schema";
 import { overwriteGetLocale } from "@/paraglide/runtime";
@@ -43,6 +44,7 @@ describe("sitemap", () => {
 				item("secret-draft", "draft", "2026-10-05T00:00:00Z"),
 			]);
 		const entries = await sitemapEntries(testDb.db);
+		const portfolio = await portfolioSource.listSlugs();
 		const stackPages = Math.ceil(STACK.length / STACK_PAGE_SIZE);
 		expect(entries.map((entry) => entry.path)).toEqual([
 			"/",
@@ -51,7 +53,16 @@ describe("sitemap", () => {
 			"/test-crud",
 			"/test-crud/newer",
 			"/test-crud/older",
+			"/portfolio",
+			"/portfolio/work",
+			...portfolio.projects.map((slug) => `/portfolio/work/${slug}`),
+			"/portfolio/about",
+			"/portfolio/journal",
+			...portfolio.posts.map((slug) => `/portfolio/journal/${slug}`),
+			"/portfolio/contact",
 		]);
+		expect(portfolio.projects).toHaveLength(7);
+		expect(portfolio.posts).toHaveLength(6);
 		expect(entries.find((entry) => entry.path === "/test-crud")?.lastmod?.toISOString()).toBe(
 			"2026-10-01T00:00:00.000Z",
 		);

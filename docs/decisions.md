@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (99 entries)</summary>
+<summary>Index (104 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -110,6 +110,11 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0102](#0102-json-ld-is-typed-with-schema-dts-and-emitted-through-route-heads-items-are-products): JSON-LD is typed with schema-dts and emitted through route heads; items are Products
 - [0103](#0103-module-examples-are-dev-only-routes-over-in-memory-data-guarded-by-one-layout): Module examples are dev-only routes over in-memory data, guarded by one layout
 - [0104](#0104-forms-handled-in-javascript-use-methodpost): Forms handled in JavaScript use `method="post"`
+- [0105](#0105-sections-can-opt-out-of-the-app-header-with-staticdatachrome): Sections can opt out of the app header with `staticData.chrome`
+- [0106](#0106-portfolio-content-sits-behind-a-portfoliosource-port-the-demo-adapter-lazy-loads-fixtures): Portfolio content sits behind a `PortfolioSource` port; the demo adapter lazy-loads fixtures
+- [0107](#0107-portfolio-content-is-localized-in-the-data--en-ne--ui-chrome-in-paraglide): Portfolio content is localized in the data (`{ en, ne }`), UI chrome in Paraglide
+- [0108](#0108-the-portfolios-design-system-is-scoped-under-portfolio-generated-art-fonts-pinned-to-an-optical-size): The portfolio's design system is scoped under `.portfolio`; generated art; fonts pinned to an optical size
+- [0109](#0109-portfolio-motion-is-css-only-scroll-driven-animations-clip-path-reveals-and-view-transitions): Portfolio motion is CSS only: scroll-driven animations, clip-path reveals and View Transitions
 </details>
 
 ---
@@ -1333,3 +1338,84 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives considered:**
   - Disabling submit buttons until hydration: the buttons change state after load, and nothing at all works without JavaScript.
   - `action="javascript:void(0)"`: blocked by the CSP and flagged by React.
+
+## 0105: Sections can opt out of the app header with staticData.chrome
+
+- **What:** `src/lib/chrome.ts` adds `chrome?: "bare"` to `StaticDataRouteOption` (the same augmentation as breadcrumbs). `SiteHeader` reads the matched routes with `useMatches({ select: isBareChrome })` and renders nothing when any of them is bare. The `/portfolio` layout sets it and brings its own header. `tests/components/layout/site-chrome.test.tsx` checks that `/` and `/stack` keep the header and a bare section's children don't.
+- **Why:**
+  - **Immersive design:** an editorial site with a full-bleed header can't sit under a second, unrelated header.
+  - **Opt-in:** the rule had to change no existing page. A route that doesn't set it behaves exactly as before.
+  - **Declared on routes:** it lives where breadcrumbs already do (`staticData`), so the root layout doesn't need a list of paths.
+- **Alternatives considered:**
+  - A pathless layout outside the root layout: impossible, since every route is under `__root`.
+  - Hiding the header with CSS from the section: it would still be in the HTML and the accessibility tree.
+  - A path check (`pathname.startsWith("/portfolio")`) in the header: it breaks with the `/ne` prefix and spreads knowledge of one section into shared code.
+
+## 0106: Portfolio content sits behind a PortfolioSource port; the demo adapter lazy-loads fixtures
+
+- **What:**
+  - **The port:** `src/features/portfolio/source.ts` defines the reads the UI needs (profile, projects, a project with its neighbour, posts, experience…). Every method takes the locale and returns records resolved to it; a missing slug is `null`.
+  - **The adapter:** `sources/fixture-source.ts` implements it over typed fixtures in `data/`, imported with `import("../data")`. `sources/index.ts` picks the adapter.
+  - **The UI:** `queries.ts` wraps every read in `queryOptions` (keys include the locale, `staleTime: Infinity`), and routes follow the usual loader + `useSuspenseQuery` pattern.
+- **Why:**
+  - **The brief:** a static frontend with demo data now, real data later. The port makes "later" a one-file change: no route or component knows where content comes from.
+  - **Same SSR path as real data:** loaders await queries, so the page arrives complete and hydrates without a request. A future server-function adapter keeps that.
+  - **No cost to other pages:** the dynamic import makes the fixtures (about 80 kB) their own chunk. Pages outside `/portfolio` never load it, and a portfolio page loaded from the server doesn't either (its queries are already filled). Only a client-side navigation into the section fetches it.
+  - **Testable:** the adapter is plain async functions, tested directly (`tests/unit/portfolio-source.test.ts`).
+- **Alternatives considered:**
+  - Importing fixtures straight into components: simplest today, but every component would need rewriting for real data, and the data would land in the route chunks.
+  - Server functions over the fixtures right away: a server round trip on client navigation for data that is static, and more moving parts for a demo.
+  - A database table and migration now: real infrastructure for placeholder content the owner will replace.
+
+## 0107: Portfolio content is localized in the data ({ en, ne }), UI chrome in Paraglide
+
+- **What:**
+  - **Content fields:** every human-language field of a content record is `Localized` (`{ en, ne }`, `schema.ts`). `resolveLocalized(record, locale)` (`lib/localize.ts`) resolves a whole record deeply, and its type `Resolved<T>` keeps tuples as tuples. The source returns resolved records, so components only ever see strings.
+  - **What stays unlocalized:** brand names, tech names and code are plain strings.
+  - **UI chrome:** labels, buttons and the site's own headings are `portfolio_*` Paraglide messages.
+- **Why:**
+  - **Content is data, like database rows:** Test CRUD items aren't messages either. Putting 300+ paragraphs of case studies in `messages/*.json` would bury the UI strings and tie content edits to a rebuild of the message bundle.
+  - **Pairs stay together:** keeping both languages side by side in one file makes translations easy to review and impossible to forget. `tests/unit/portfolio-data.test.ts` fails if a Nepali text has no Devanagari or an English text has some.
+  - **No mixed caching:** query keys include the locale, so English and Nepali results never share a cache entry.
+- **Alternatives considered:**
+  - Messages for everything: rule 6 is about UI text. Content keys would be unbounded and meaningless (`project_ledgerline_chapter_2_paragraph_1`).
+  - One file per language: translations drift apart silently.
+
+## 0108: The portfolio's design system is scoped under .portfolio; generated art; fonts pinned to an optical size
+
+- **What:**
+  - **Scoped tokens:** `src/styles/portfolio.css` (imported once from `app.css`) holds the "Ink & Paper" system:
+    - colour tokens under `.portfolio`, with a dark palette and `.pf-inverse` bands
+    - `@theme inline` mappings (`bg-pf-paper`, `text-pf-h2`, `font-pf-mono`)
+    - `pf-*` utilities and the motion rules
+  - **Fonts:** Fraunces, JetBrains Mono and Noto Serif Devanagari, self-hosted with Fontsource and preloaded by the portfolio layout only.
+  - **Covers and screens** are SVG generated from a seed (`CoverArt`, `ScreenArt`).
+  - **Portfolio `cn`:** components use `features/portfolio/lib/cn.ts`, which registers the `text-pf-*` size scale with tailwind-merge.
+  - **Vite never inlines fonts:** `build.assetsInlineLimit` returns `false` for `.woff`/`.woff2`.
+- **Why:**
+  - **Scoping:** the rest of the app keeps the shadcn tokens untouched. Unused `pf-*` utilities add a few kB of CSS and no behaviour, and `@font-face` files download only when a portfolio page uses them.
+  - **Generated art:** no binary placeholders to replace later, nothing for the CSP to allow, and covers follow the theme. A fixed aspect ratio means zero layout shift. Rounded coordinates from a seeded generator keep server and client markup identical.
+  - **Fallback metrics and optical size:**
+    - **The problem:** Fraunces changes width with its optical size. Measured in Chrome, it is 1.02× Georgia at 24px and 0.82× at 160px. A single `size-adjust` can't match it, and the hero's first line wrapped differently before and after the font swap (CLS 0.05).
+    - **The fix:** pinning `opsz` (144 for display, 36 for h3-size type) makes the ratio constant. Each gets a fallback face with the measured glyph ratio (83.35% / 78.29% italic, and 102.19% / 95.3%). Measured CLS is now 0.
+  - **Never inline fonts:** JetBrains Mono's cyrillic-ext subset is 2 kB, under Vite's 4 kB inline limit, so it was emitted as a `data:` URL, which the CSP's `font-src 'self'` blocks (a console error found by the browser review). No existing font was small enough to be inlined, so current output is unchanged.
+  - **tailwind-merge:** with the app's `cn`, `cn("text-pf-h2", "text-pf-accent")` kept only the colour, because both look like colour classes to tailwind-merge.
+- **Alternatives considered:**
+  - Extending the app's shadcn tokens: it would change the look of every existing page.
+  - Placeholder images in `public/`: binary files to replace, plus `srcset` and size work for content that's temporary.
+  - `font-display: optional`: not configurable with Fontsource's CSS, and it would show the fallback on most first visits.
+  - Allowing `data:` in `font-src`: it loosens the CSP for every page.
+
+## 0109: Portfolio motion is CSS only: scroll-driven animations, clip-path reveals and View Transitions
+
+- **What:**
+  - **Effects:** hero lines rise out of masks on load. Blocks wipe in with `animation-timeline: view()` (`.pf-reveal`). The manifesto inks in word by word (`SplitWords` sets `--i`/`--n`). The toolbox marquee slides in pure CSS. Articles show a reading-progress bar (`scroll(root)`).
+  - **Shared element:** a card's cover morphs into the case study hero through View Transitions (`CoverFrame` sets `view-transition-name`, links pass `viewTransition`, and the transition styles are scoped to a `pf-cover` class).
+  - **Guards:** everything sits inside `@media screen and (prefers-reduced-motion: no-preference)` and `@supports`. No animation library was added.
+- **Why:**
+  - **Progressive enhancement:** content is visible by default. Browsers without scroll timelines, readers who prefer reduced motion and print simply get the static page, and the JavaScript budget stays at zero.
+  - **Only `transform`, `clip-path` and `color` move:** layout never shifts (CLS 0), and axe never measures half-faded text. An opacity fade did exactly that in practice: elements caught mid-fade fail contrast.
+  - **Marquee pause button:** auto-moving content longer than 5 s needs a way to pause (WCAG 2.2.2), not just hover.
+- **Alternatives considered:**
+  - GSAP or Motion: richer choreography, but tens of kB on every portfolio page, and work that must wait for hydration.
+  - IntersectionObserver reveals in React: needs JavaScript, and risks content hidden until hydration (or forever if it fails).
