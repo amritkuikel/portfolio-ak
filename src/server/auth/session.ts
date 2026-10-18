@@ -22,12 +22,13 @@ export const getServerSession = async (): Promise<Session | null> => {
 	const result = await auth.api.getSession({ headers: getRequestHeaders() });
 	if (!result) return null;
 	const { user } = result;
+	const impersonation = result.session.impersonatedBy ? { impersonatedBy: result.session.impersonatedBy } : {};
 	const role = toRole(user.role);
 	const twoFactorEnabled = user.twoFactorEnabled === true;
 	const permissions = await permissionsForUser(db, { id: user.id, role, banned: user.banned ?? false });
 	const sessionUser = { id: user.id, email: user.email, name: user.name, role, twoFactorEnabled };
 	if (mustSetUpTwoFactor({ required: serverEnv.AUTH_REQUIRE_ADMIN_2FA, permissions, twoFactorEnabled })) {
-		return { user: sessionUser, permissions: [], twoFactorRequired: true };
+		return { user: sessionUser, permissions: [], twoFactorRequired: true, ...impersonation };
 	}
-	return { user: sessionUser, permissions };
+	return { user: sessionUser, permissions, ...impersonation };
 };

@@ -9,10 +9,13 @@
  */
 export const PERMISSION_CATALOG = {
 	"test-crud": ["read", "create", "update", "publish", "delete"],
-	users: ["read", "update", "ban"],
+	/** ban also covers signing a user out everywhere (revoking their sessions). */
+	users: ["read", "invite", "update", "ban"],
 	roles: ["read", "manage"],
 	/** Images go into an item through its own save (test-crud:create/update); uploading needs this too. */
 	attachments: ["upload"],
+	/** The audit log of admin actions (/admin/audit). */
+	audit: ["read"],
 } as const;
 
 type Catalog = typeof PERMISSION_CATALOG;

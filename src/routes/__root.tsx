@@ -4,6 +4,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ReactNode } from "react";
 import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
+import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { ConsentBanner, ObservabilitySync } from "@/components/layout/observability";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
@@ -74,6 +75,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body className="flex min-h-dvh flex-col">
+				<ImpersonationBanner />
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">{children}</div>
 				<ThemeSync />

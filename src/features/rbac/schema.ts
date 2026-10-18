@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { versionSchema } from "@/lib/concurrency";
 import { enumParam, type Paged, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list";
-import { optionalText, required } from "@/lib/validation";
+import { email, optionalText, required } from "@/lib/validation";
+import { locales } from "@/paraglide/runtime";
 import { isPermission, type Permission } from "./permissions";
 
 /** One permission from the catalog; anything else is rejected. */
@@ -109,3 +110,15 @@ export const userRolesSchema = z.object({
 export type UserRolesInput = z.output<typeof userRolesSchema>;
 
 export const userBanSchema = z.object({ userId: z.string().min(1).max(100), banned: z.boolean() });
+
+/** One user, by id (sign out everywhere, impersonate). */
+export const userIdSchema = z.object({ userId: z.string().min(1).max(100) });
+
+/** Invite someone: their name, address and the language of the invitation email. */
+export const userInviteSchema = z.object({
+	name: required({ max: 80 }),
+	email: email(),
+	locale: z.enum(locales),
+});
+export type UserInviteInput = z.output<typeof userInviteSchema>;
+export type UserInviteValues = z.input<typeof userInviteSchema>;

@@ -18,7 +18,7 @@ Vitest for logic, server code and components; Storybook for every component in a
 | `tests/components/` | jsdom tests of fields, filters, breadcrumbs, masking, preferences UI, permissions UI, the attachments editor |
 | `tests/i18n/` | Message parity, translation, unused keys, locale routing |
 | `tests/email/` | Every template in both languages |
-| `e2e/` | Playwright: `review.spec.ts` (every page), `flows/` (auth, account, Test CRUD, edit conflicts, permissions, no-JS lists, health), `harness/` (the server it runs against), `support/` (fixtures, page list, checks) |
+| `e2e/` | Playwright: `review.spec.ts` (every page), `flows/` (auth, account, Test CRUD, edit conflicts, permissions, user management and the audit log, no-JS lists, health), `harness/` (the server it runs against), `support/` (fixtures, page list, checks) |
 
 ## Patterns
 
@@ -93,6 +93,7 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 - **Test CRUD:** create, edit, publish (the public page appears) and delete (it 404s), as admin.
 - **Conflicts:** two tabs edit the same item; the second save is refused with the "changed by someone else" notice, its response carries an `x-request-id` that matches the error, and reloading then saving keeps both changes.
 - **Permissions:** a 403 page for a missing permission; actions a role lacks aren't offered; granting and revoking in the matrix takes effect on the next request.
+- **User management and the audit log:** an invitation from the email to the first sign-in; sign out everywhere (the user's session stops working); view as a user with the banner and back. Each is found in `/admin/audit` by its request id. An editor gets a 403 on the audit page, and the admin's captured call replayed with the editor's session answers FORBIDDEN.
 - **No JavaScript:** search and pagination on the public and admin lists.
 - **Health:** `GET`/`HEAD /api/health` answer 200 JSON, never cached; every response has its own `x-request-id`.
 

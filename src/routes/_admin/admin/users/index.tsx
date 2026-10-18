@@ -10,8 +10,10 @@ import { FilterBar } from "@/components/filters/filter-bar";
 import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
+import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useActor } from "@/features/rbac/can";
+import { InviteUserDialog } from "@/features/rbac/components/invite-user-dialog";
 import { userColumns } from "@/features/rbac/components/user-columns";
 import { UserRolesDialog } from "@/features/rbac/components/user-roles-dialog";
 import { hasAll } from "@/features/rbac/permissions";
@@ -23,12 +25,13 @@ import {
 	UserFilterControls,
 	userFilterChips,
 } from "@/features/rbac/user-filters";
-import { setUserBanned } from "@/functions/rbac";
+import { impersonateUser, revokeUserSessions, setUserBanned } from "@/functions/rbac";
 import { ensureQuery, loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { tableListInput, useListPage } from "@/lib/use-list-page";
 import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
+import { localizeHref } from "@/paraglide/runtime";
 
 export const Route = createFileRoute("/_admin/admin/users/")({
 	validateSearch: userSearchSchema,
@@ -48,8 +51,29 @@ export const Route = createFileRoute("/_admin/admin/users/")({
 	component: UsersPage,
 });
 
-/** What's being confirmed: a ban or an unban of one user. */
-type BanRequest = { user: UserListItem; banned: boolean };
+/** What's being confirmed for one user: a ban or unban, signing them out everywhere, or viewing as them. */
+type Confirming =
+	| { kind: "ban"; user: UserListItem; banned: boolean }
+	| { kind: "revoke"; user: UserListItem }
+	| { kind: "impersonate"; user: UserListItem };
+
+/** The confirm dialog's texts for each action. */
+const confirmCopy = (request: Confirming) => {
+	const name = request.user.name;
+	if (request.kind === "revoke") {
+		return { title: m.users_revoke_title({ name }), body: m.users_revoke_body(), label: m.users_revoke_sessions() };
+	}
+	if (request.kind === "impersonate") {
+		return {
+			title: m.users_impersonate_title({ name }),
+			body: m.users_impersonate_body(),
+			label: m.users_impersonate(),
+		};
+	}
+	return request.banned
+		? { title: m.users_ban_title({ name }), body: m.users_ban_body(), label: m.users_ban() }
+		: { title: m.users_unban_title({ name }), body: m.users_unban_body(), label: m.users_unban() };
+};
 
 function UsersPage() {
 	const search = Route.useSearch();
@@ -59,23 +83,42 @@ function UsersPage() {
 	const { data: roles = [] } = useListQuery(roleOptionsQueryOptions());
 
 	const [editing, setEditing] = useState<UserListItem | null>(null);
-	const [banRequest, setBanRequest] = useState<BanRequest | null>(null);
-	const ban = useMutation({
-		mutationFn: ({ user, banned }: BanRequest) => setUserBanned({ data: { userId: user.id, banned } }),
-		onSuccess: (_, { user, banned }) =>
-			toast.success(banned ? m.users_toast_banned({ name: user.name }) : m.users_toast_unbanned({ name: user.name })),
+	const [inviting, setInviting] = useState(false);
+	const [confirming, setConfirming] = useState<Confirming | null>(null);
+	const act = useMutation({
+		mutationFn: async (request: Confirming) => {
+			const userId = request.user.id;
+			if (request.kind === "ban") await setUserBanned({ data: { userId, banned: request.banned } });
+			else if (request.kind === "revoke") await revokeUserSessions({ data: { userId } });
+			else await impersonateUser({ data: { userId } });
+		},
+		onSuccess: (_, request) => {
+			const name = request.user.name;
+			// A new session (as the user): load the app again from the server, starting at home.
+			if (request.kind === "impersonate") window.location.assign(localizeHref("/"));
+			else if (request.kind === "revoke") toast.success(m.users_toast_revoked({ name }));
+			else toast.success(request.banned ? m.users_toast_banned({ name }) : m.users_toast_unbanned({ name }));
+		},
 		onError: (failure) => toast.error(m.users_toast_failed(), { description: errorMessage(failure) }),
-		onSettled: () => refreshRbac(queryClient),
+		onSettled: (_, __, request) => (request.kind === "impersonate" ? undefined : refreshRbac(queryClient)),
 	});
 
 	const canAssign = actor !== null && hasAll(actor.permissions, ["users:update"]);
 	const canBan = actor !== null && hasAll(actor.permissions, ["users:ban"]);
+	const canInvite = actor !== null && hasAll(actor.permissions, ["users:invite"]);
+	// Impersonation is for admins only, never of another admin (the server refuses the rest too).
+	const canImpersonate = (row: UserListItem) => actor?.isAdmin === true && !row.isAdmin && !row.banned;
+	const copy = confirming ? confirmCopy(confirming) : null;
 	const columns = userColumns(actor?.id);
 	const filtered = userFilterChips(search, roles).length > 0;
 
 	return (
 		<Page width="admin">
-			<PageHeader title={m.users_title()} description={m.users_description()} />
+			<PageHeader
+				title={m.users_title()}
+				description={m.users_description()}
+				actions={canInvite ? <Button onClick={() => setInviting(true)}>{m.users_invite()}</Button> : undefined}
+			/>
 			<div className="flex flex-col gap-3">
 				<div className="flex flex-wrap items-end justify-between gap-3">
 					<FilterBar values={search} preserve={["sort", "pageSize"]}>
@@ -105,13 +148,23 @@ function UsersPage() {
 												{canAssign ? (
 													<DropdownMenuItem onSelect={() => setEditing(row)}>{m.users_edit_roles()}</DropdownMenuItem>
 												) : null}
-												{canBan ? (
-													<DropdownMenuItem
-														variant={row.banned ? "default" : "destructive"}
-														onSelect={() => setBanRequest({ user: row, banned: !row.banned })}
-													>
-														{row.banned ? m.users_unban() : m.users_ban()}
+												{canImpersonate(row) ? (
+													<DropdownMenuItem onSelect={() => setConfirming({ kind: "impersonate", user: row })}>
+														{m.users_impersonate()}
 													</DropdownMenuItem>
+												) : null}
+												{canBan ? (
+													<>
+														<DropdownMenuItem onSelect={() => setConfirming({ kind: "revoke", user: row })}>
+															{m.users_revoke_sessions()}
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															variant={row.banned ? "default" : "destructive"}
+															onSelect={() => setConfirming({ kind: "ban", user: row, banned: !row.banned })}
+														>
+															{row.banned ? m.users_unban() : m.users_ban()}
+														</DropdownMenuItem>
+													</>
 												) : null}
 											</>
 										)
@@ -133,21 +186,18 @@ function UsersPage() {
 			{editing && actor ? (
 				<UserRolesDialog user={editing} roles={roles} actor={actor} onClose={() => setEditing(null)} />
 			) : null}
+			{inviting ? <InviteUserDialog onClose={() => setInviting(false)} /> : null}
 			<ConfirmDialog
-				open={banRequest !== null}
-				destructive={banRequest?.banned ?? false}
-				title={
-					banRequest?.banned
-						? m.users_ban_title({ name: banRequest.user.name })
-						: m.users_unban_title({ name: banRequest?.user.name ?? "" })
-				}
-				description={banRequest?.banned ? m.users_ban_body() : m.users_unban_body()}
-				confirmLabel={banRequest?.banned ? m.users_ban() : m.users_unban()}
+				open={confirming !== null}
+				destructive={confirming?.kind === "ban" && confirming.banned}
+				title={copy?.title ?? ""}
+				description={copy?.body ?? ""}
+				confirmLabel={copy?.label ?? ""}
 				onConfirm={() => {
-					if (banRequest) ban.mutate(banRequest);
-					setBanRequest(null);
+					if (confirming) act.mutate(confirming);
+					setConfirming(null);
 				}}
-				onCancel={() => setBanRequest(null)}
+				onCancel={() => setConfirming(null)}
 			/>
 		</Page>
 	);

@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQuery } from "@tanstack/react-query";
 import { expect, fn, waitFor, within } from "storybook/test";
-import { createRole, setUserRoles, updateRolePermissions } from "@/functions/rbac";
+import { createRole, inviteUser, setUserRoles, updateRolePermissions } from "@/functions/rbac";
 import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
 import { sampleBannedUser, sampleRoles } from "../../../../.storybook/mocks/data";
 import { ALL_PERMISSIONS, type Permission } from "../permissions";
 import { rolesQueryOptions } from "../queries";
+import { InviteUserDialog } from "./invite-user-dialog";
 import { PermissionMatrix } from "./permission-matrix";
 import { RoleDialog } from "./role-dialog";
 import { UserRolesDialog } from "./user-roles-dialog";
@@ -111,6 +113,25 @@ export const UserRolesAsAdmin: Story = {
 		await userEvent.click(dialog.getByRole("button", { name: m.users_roles_save() }));
 		await waitFor(() =>
 			expect(setUserRoles).toHaveBeenCalledWith({ data: { userId: "user-1", admin: false, roleIds: ["role-editor"] } }),
+		);
+	},
+};
+
+/** Name, address and the email's language (the current one by default); validated before sending. */
+export const InviteUser: Story = {
+	render: () => <InviteUserDialog onClose={fn()} />,
+	play: async ({ canvasElement, userEvent }) => {
+		const dialog = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await dialog.findByRole("button", { name: m.users_invite_send() }));
+		await expect(await dialog.findAllByText(m.validation_required())).not.toHaveLength(0);
+		await expect(inviteUser).not.toHaveBeenCalled();
+		await userEvent.type(dialog.getByRole("textbox", { name: m.users_invite_name() }), "Hari");
+		await userEvent.type(dialog.getByRole("textbox", { name: m.users_invite_email() }), "hari@example.com");
+		await userEvent.click(dialog.getByRole("button", { name: m.users_invite_send() }));
+		await waitFor(() =>
+			expect(inviteUser).toHaveBeenCalledWith({
+				data: { name: "Hari", email: "hari@example.com", locale: getLocale() },
+			}),
 		);
 	},
 };

@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (131 entries)</summary>
+<summary>Index (135 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -137,6 +137,10 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0129](#0129-account-deletion-always-takes-an-emailed-link-the-export-is-a-json-download): Account deletion always takes an emailed link; the export is a JSON download
 - [0130](#0130-linked-accounts-add-a-password-link-and-unlink-google-never-the-last-way-in): Linked accounts: add a password, link and unlink Google, never the last way in
 - [0131](#0131-last-login-method-and-passkeys-are-recipes): Last login method and passkeys are recipes
+- [0132](#0132-admin-actions-are-audited-in-the-same-transaction-as-the-change): Admin actions are audited in the same transaction as the change
+- [0133](#0133-inviting-a-user-creates-the-account-and-emails-a-long-lived-reset-token): Inviting a user creates the account and emails a long-lived reset token
+- [0134](#0134-impersonation-is-admin-only-audited-and-cant-change-the-account): Impersonation is admin-only, audited, and can't change the account
+- [0135](#0135-better-auths-role--admin-stays-the-superuser-flag): Better Auth's `role = "admin"` stays the superuser flag
 </details>
 
 ---
@@ -1642,3 +1646,43 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `docs/guides/security.md` ("Recipes: last login method, passkeys") shows how to add Better Auth's `lastLoginMethod` plugin (a "last used" hint on the login page) and `@better-auth/passkey` (WebAuthn sign-in, with its own table and two-factor interplay).
 - **Why a recipe:** last login method is a convenience with a cookie or an extra column; passkeys need a new dependency, a table, a migration and per-browser testing that not every project wants on day one. Both are a guide section only, with the exact code: a dev example would need the dependency and schema in every project, which is what the recipe avoids.
 - **Alternatives considered:** shipping passkeys in the base (most templates built on this won't use them, and they change the sign-in UI's shape).
+
+## 0132: Admin actions are audited in the same transaction as the change
+
+- **What:** an `audit_event` table (migration `0008_audit_log`): actor, the admin behind an impersonated session, action, target type, id and label, a `before`/`after` summary of the changed fields, request id, client IP and time. Services write it with `recordAudit(tx, actor, entry)` (`src/server/audit/record.ts`) inside the transaction that makes the change: role create, rename, delete and permission edits; a user's roles, ban, unban, sign-out-everywhere and invitation; impersonation start and stop; Test CRUD publish, unpublish and delete. `/admin/audit` lists it through the list contract (search by target or request id, actor, action, target type, day range), guarded by a new `audit:read` permission (page and function).
+- **Choices:**
+  - **Same transaction, not an event bus or an after-commit hook:** a change without its row (or a row without its change) can't happen, and the service is the one place that knows what changed. A refused or failed action leaves no row.
+  - **Who and where from:** server functions build the actor with `auditActorFrom(context)` (`src/server/audit/actor.ts`): the user, `impersonatedBy`, the request id from AsyncLocalStorage (0123) and the client IP from the same trusted source as the rate limits. Services take the plain `AuditActor`, so tests pass `{ id }`.
+  - **Summaries, not snapshots:** `before`/`after` hold the few fields the action touched (names, permission lists, status, role names, counts), never secrets or whole rows. Unchanged saves (granting a permission the role has, publishing a published item) write nothing.
+  - **History outlives accounts:** `actor_id` is set null when the account is deleted and `actor_label` keeps the email from the time. That is personal data kept after deletion on purpose (an audit trail that forgets who acted is no trail); projects with stricter rules can blank `actor_label` in `prepareAccountDeletion`.
+  - **Append-only in the app:** nothing updates or deletes rows. Retention (e.g. delete after a year) is a cron job a project adds if it needs one.
+  - **Not audited:** edits and creates of Test CRUD items (high volume, and the item itself has `updatedAt`); sign-ins and account changes (Better Auth's own events, a Task 33 recipe if wanted).
+- **Why:** "who removed this permission?" needs an answer that doesn't depend on someone's memory, and the request id ties it to the logs and Sentry.
+- **Alternatives considered:** database triggers (they don't know the actor or request id without session variables on every connection); writing after the transaction (a crash between the two loses the row); a generic diff of whole rows (noisy, and it would copy fields that shouldn't be kept).
+
+## 0133: Inviting a user creates the account and emails a long-lived reset token
+
+- **What:** `inviteUser` (`users:invite`, a new permission) takes a name, email and the invitation's language. The service creates the account (the `user` baseline, address unverified, no password) and its audit row in one transaction, then `sendInvitation` (`src/server/auth/invite.ts`) stores a Better Auth `reset-password:<token>` verification valid for 3 days and emails an `invite` template linking to `/reset-password?token=…&invite=1`. That page, worded as "Accept your invitation", calls Better Auth's normal reset, which creates the password account. `onPasswordReset` marks the address verified (only its owner could open the link), so the invitee signs in at once.
+- **Choices:**
+  - **Reuse the reset flow** instead of a new token type: the endpoint, its rate limit, the breached-password check and the page already exist and are tested. Only the lifetime (3 days, set when the token is stored) and the copy differ.
+  - **No roles in the invitation:** an invitee starts with the baseline, and roles are given from the list like for anyone else, through the same escalation rules. The invite form stays three fields.
+  - **An expired invitation needs no resend button:** "Forgot password" with the same address sends a fresh reset link and works for an account without a password.
+  - **The email is sent in the background** (like every auth email), so a mail outage doesn't fail the invitation; the address is the admin's to re-check.
+- **Why:** admins needed to add people without asking them to sign up and then finding their row.
+- **Alternatives considered:** Better Auth's admin `createUser` (its endpoint is disabled, 0112, and it wants a password the admin would then have to pass on); the `organization` plugin's invitations (multi-tenancy, a non-goal); an admin-chosen password (it travels outside the app).
+
+## 0134: Impersonation is admin-only, audited, and can't change the account
+
+- **What:** "View as this user" on `/admin/users` calls `impersonateUser`, which runs Better Auth's server-side `impersonateUser` (its HTTP endpoint stays disabled, 0112) inside the transaction that writes the `user.impersonate` audit row. The session is the user's, with `impersonatedBy` set, for at most an hour. Every page then shows a banner (`ImpersonationBanner`, rendered in `__root.tsx` from the session, so no layout shift) with "Back to my account", which calls `stopImpersonating` (`src/functions/auth.ts`): Better Auth restores the admin's session from its signed `admin_session` cookie, and a `user.impersonate-stop` row names the admin. Rows written while impersonating carry the admin as `impersonator_id`.
+- **Choices:**
+  - **Admins only (the superuser flag), not a permission:** the session acts with all of the target's permissions, so a custom role holding "impersonate" could reach anything any user can. The function is guarded with `users:update` (every protected function names a permission) and the service refuses non-admins; Better Auth's own check agrees. Never another admin, never a banned user, never from an impersonated session.
+  - **The account stays the owner's:** an impersonated session can't change the password, email, two-factor, linked accounts, other sessions or delete the account. Better Auth's endpoints are refused by a `before` hook (`refuseOwnerOnlyWhileImpersonating`, `OWNER_ONLY_PATHS` in `src/server/auth/policy.ts`); the app's own (`setMyPassword`, `revokeMySession`) use `requireAccountOwnerMiddleware`. Reading (including the data export) is allowed: it's what the admin came to see.
+  - **A recipe in the base:** it ships because the guards are the hard part, but nothing else depends on it; a project that doesn't want it deletes the row action, `impersonateUser` and the banner.
+- **Why:** support ("what does this user see?") without asking for their password, with a record of every use.
+- **Alternatives considered:** a "view as role" preview (doesn't reproduce a user's data); our own session cookie handling (Better Auth already signs and restores the admin's session); allowing it for any `users:update` holder (escalation by impersonating someone with more permissions).
+
+## 0135: Better Auth's `role = "admin"` stays the superuser flag
+
+- **What:** `user.role === "admin"` (Better Auth's admin plugin field) means "every permission, and the rules only an admin may break" (making admins, acting on admins, impersonating). Everything else lives in the RBAC tables: the `user` baseline role, custom roles and their permissions. The `admin` row in `role` exists for display and holds no permission rows. `docs/guides/rbac.md` states the model.
+- **Why:** the flag is read on every request by Better Auth itself (sign-in checks, impersonation, `adminRoles`), so moving it into `user_role` would mean keeping two sources in sync. A single boolean is also what the lockout rules (always one active admin) lock on.
+- **Alternatives considered:** an `admin` assignment in `user_role` with Better Auth's `role` derived from it (two writes per change, and a window where they disagree); dropping the admin plugin (it also provides bans and the impersonation sessions used by 0134).

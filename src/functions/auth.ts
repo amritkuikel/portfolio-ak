@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { type AccountSecurity, sessionIdSchema, setPasswordSchema } from "@/features/auth/schema";
 import { zodInput } from "@/lib/fn-input";
 import type { Session } from "@/lib/session";
-import { requireAdminAccessMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
+import {
+	requireAccountOwnerMiddleware,
+	requireAdminAccessMiddleware,
+	requireUserMiddleware,
+	sessionMiddleware,
+} from "@/middleware/auth";
 
 /** Current session or null. Used by the root route to fill the router context. */
 export const getSession = createServerFn({ method: "GET" })
@@ -61,7 +66,7 @@ export const listMySessions = createServerFn({ method: "GET" })
 
 /** Signs out one of the user's other sessions by id (the token is looked up on the server). */
 export const revokeMySession = createServerFn({ method: "POST" })
-	.middleware([requireUserMiddleware])
+	.middleware([requireAccountOwnerMiddleware])
 	.validator(zodInput(sessionIdSchema))
 	.handler(async ({ data }): Promise<void> => {
 		const [{ auth }, { revokeOwnSession }, { getRequestHeaders }] = await Promise.all([
@@ -92,7 +97,7 @@ export const getAccountSecurity = createServerFn({ method: "GET" })
 
 /** Adds a password to an account that has none (signed up with Google). */
 export const setMyPassword = createServerFn({ method: "POST" })
-	.middleware([requireUserMiddleware])
+	.middleware([requireAccountOwnerMiddleware])
 	.validator(zodInput(setPasswordSchema))
 	.handler(async ({ data }): Promise<void> => {
 		const [{ auth }, { setOwnPassword }, { serverEnv }, { isPasswordCompromised }, { getRequestHeaders }] =
@@ -109,4 +114,24 @@ export const setMyPassword = createServerFn({ method: "POST" })
 			data.newPassword,
 			serverEnv.AUTH_BREACHED_PASSWORD_CHECK ? isPasswordCompromised : null,
 		);
+	});
+
+/**
+ * Ends an impersonated session and restores the admin's own (decisions.md 0134).
+ * Any signed-in user may call it; it refuses sessions that aren't impersonated.
+ */
+export const stopImpersonating = createServerFn({ method: "POST" })
+	.middleware([requireUserMiddleware])
+	.handler(async ({ context }): Promise<void> => {
+		const [{ auth }, rbac, { auditActorFrom }, { db }, { getRequestHeaders }] = await Promise.all([
+			import("@/server/auth/auth"),
+			import("@/server/rbac/service"),
+			import("@/server/audit/actor"),
+			import("@/server/db/client"),
+			import("@tanstack/react-start/server"),
+		]);
+		const headers = getRequestHeaders();
+		await rbac.stopImpersonating(db, auditActorFrom(context), async () => {
+			await auth.api.stopImpersonating({ headers });
+		});
 	});

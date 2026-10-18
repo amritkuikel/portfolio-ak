@@ -33,6 +33,8 @@ const byCode: Readonly<Record<string, () => string>> = {
 	// Sign-in methods and deletion.
 	FAILED_TO_UNLINK_LAST_ACCOUNT: m.account_methods_unlink_last,
 	LAST_ADMIN: m.account_delete_last_admin,
+	// An impersonated session (decisions.md 0134).
+	IMPERSONATING: m.auth_error_impersonating,
 };
 
 /** Turnstile refused the request (no token, or a token that didn't verify). */

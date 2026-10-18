@@ -34,6 +34,7 @@ import { Route as PortfolioIndexRouteImport } from './routes/portfolio/index'
 import { Route as PortfolioAboutRouteImport } from './routes/portfolio/about'
 import { Route as PortfolioContactRouteImport } from './routes/portfolio/contact'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as AdminAdminAuditRouteRouteImport } from './routes/_admin/admin/audit/route'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
@@ -48,6 +49,7 @@ import { Route as PortfolioJournalIndexRouteImport } from './routes/portfolio/jo
 import { Route as PortfolioJournalSlugRouteImport } from './routes/portfolio/journal/$slug'
 import { Route as PortfolioWorkIndexRouteImport } from './routes/portfolio/work/index'
 import { Route as PortfolioWorkSlugRouteImport } from './routes/portfolio/work/$slug'
+import { Route as AdminAdminAuditIndexRouteImport } from './routes/_admin/admin/audit/index'
 import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
 import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
@@ -194,6 +196,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
+const AdminAdminAuditRouteRoute = AdminAdminAuditRouteRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
 const AdminAdminRolesRouteRoute = AdminAdminRolesRouteRouteImport.update({
   id: '/roles',
   path: '/roles',
@@ -263,6 +270,11 @@ const PortfolioWorkSlugRoute = PortfolioWorkSlugRouteImport.update({
   id: '/work/$slug',
   path: '/work/$slug',
   getParentRoute: () => PortfolioRouteRoute,
+} as any)
+const AdminAdminAuditIndexRoute = AdminAdminAuditIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminAuditRouteRoute,
 } as any)
 const AdminAdminRolesIndexRoute = AdminAdminRolesIndexRouteImport.update({
   id: '/',
@@ -420,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
   '/portfolio/': typeof PortfolioIndexRoute
+  '/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
   '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
@@ -453,6 +466,7 @@ export interface FileRoutesByFullPath {
   '/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
   '/dev/examples/seo': typeof PublicDevExamplesSeoRoute
   '/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
+  '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
@@ -506,6 +520,7 @@ export interface FileRoutesByTo {
   '/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
   '/dev/examples/seo': typeof PublicDevExamplesSeoRoute
   '/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
+  '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
@@ -539,6 +554,7 @@ export interface FileRoutesById {
   '/portfolio/contact': typeof PortfolioContactRoute
   '/_public/': typeof PublicIndexRoute
   '/portfolio/': typeof PortfolioIndexRoute
+  '/_admin/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
   '/_admin/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
@@ -572,6 +588,7 @@ export interface FileRoutesById {
   '/_public/dev/examples/preferences': typeof PublicDevExamplesPreferencesRoute
   '/_public/dev/examples/seo': typeof PublicDevExamplesSeoRoute
   '/_public/dev/examples/streaming': typeof PublicDevExamplesStreamingRoute
+  '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
@@ -602,6 +619,7 @@ export interface FileRouteTypes {
     | '/portfolio/about'
     | '/portfolio/contact'
     | '/portfolio/'
+    | '/admin/audit'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
@@ -635,6 +653,7 @@ export interface FileRouteTypes {
     | '/dev/examples/preferences'
     | '/dev/examples/seo'
     | '/dev/examples/streaming'
+    | '/admin/audit/'
     | '/admin/roles/'
     | '/admin/test-crud/'
     | '/admin/users/'
@@ -688,6 +707,7 @@ export interface FileRouteTypes {
     | '/dev/examples/preferences'
     | '/dev/examples/seo'
     | '/dev/examples/streaming'
+    | '/admin/audit'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
@@ -720,6 +740,7 @@ export interface FileRouteTypes {
     | '/portfolio/contact'
     | '/_public/'
     | '/portfolio/'
+    | '/_admin/admin/audit'
     | '/_admin/admin/roles'
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
@@ -753,6 +774,7 @@ export interface FileRouteTypes {
     | '/_public/dev/examples/preferences'
     | '/_public/dev/examples/seo'
     | '/_public/dev/examples/streaming'
+    | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
@@ -951,6 +973,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_admin/admin/audit': {
+      id: '/_admin/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAdminAuditRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
     '/_admin/admin/roles': {
       id: '/_admin/admin/roles'
       path: '/roles'
@@ -1048,6 +1077,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/portfolio/work/$slug'
       preLoaderRoute: typeof PortfolioWorkSlugRouteImport
       parentRoute: typeof PortfolioRouteRoute
+    }
+    '/_admin/admin/audit/': {
+      id: '/_admin/admin/audit/'
+      path: '/'
+      fullPath: '/admin/audit/'
+      preLoaderRoute: typeof AdminAdminAuditIndexRouteImport
+      parentRoute: typeof AdminAdminAuditRouteRoute
     }
     '/_admin/admin/roles/': {
       id: '/_admin/admin/roles/'
@@ -1244,6 +1280,17 @@ const PortfolioRouteRouteWithChildren = PortfolioRouteRoute._addFileChildren(
   PortfolioRouteRouteChildren,
 )
 
+interface AdminAdminAuditRouteRouteChildren {
+  AdminAdminAuditIndexRoute: typeof AdminAdminAuditIndexRoute
+}
+
+const AdminAdminAuditRouteRouteChildren: AdminAdminAuditRouteRouteChildren = {
+  AdminAdminAuditIndexRoute: AdminAdminAuditIndexRoute,
+}
+
+const AdminAdminAuditRouteRouteWithChildren =
+  AdminAdminAuditRouteRoute._addFileChildren(AdminAdminAuditRouteRouteChildren)
+
 interface AdminAdminRolesRouteRouteChildren {
   AdminAdminRolesPermissionsRoute: typeof AdminAdminRolesPermissionsRoute
   AdminAdminRolesIndexRoute: typeof AdminAdminRolesIndexRoute
@@ -1287,6 +1334,7 @@ const AdminAdminUsersRouteRouteWithChildren =
   AdminAdminUsersRouteRoute._addFileChildren(AdminAdminUsersRouteRouteChildren)
 
 interface AdminAdminRouteRouteChildren {
+  AdminAdminAuditRouteRoute: typeof AdminAdminAuditRouteRouteWithChildren
   AdminAdminRolesRouteRoute: typeof AdminAdminRolesRouteRouteWithChildren
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
@@ -1294,6 +1342,7 @@ interface AdminAdminRouteRouteChildren {
 }
 
 const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
+  AdminAdminAuditRouteRoute: AdminAdminAuditRouteRouteWithChildren,
   AdminAdminRolesRouteRoute: AdminAdminRolesRouteRouteWithChildren,
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,

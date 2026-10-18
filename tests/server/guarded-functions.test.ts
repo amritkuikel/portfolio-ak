@@ -30,7 +30,12 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["listUsers", "users:read"],
 		["setUserRoles", "users:update"],
 		["setUserBanned", "users:ban"],
+		["revokeUserSessions", "users:ban"],
+		["inviteUser", "users:invite"],
+		// Admins only on top: the service refuses everyone else (decisions.md 0134).
+		["impersonateUser", "users:update"],
 	],
+	"audit.ts": [["listAuditEvents", "audit:read"]],
 	"attachments.ts": [
 		["getUploadSettings", "attachments:upload"],
 		["signImageUpload", "attachments:upload"],
@@ -49,7 +54,7 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
  */
 const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<string> }> = {
 	"auth.ts": {
-		why: "the session itself; per-user functions use requireUserMiddleware, the admin gate requireAdminAccessMiddleware",
+		why: "the session itself; per-user functions use requireUserMiddleware (account changes requireAccountOwnerMiddleware), the admin gate requireAdminAccessMiddleware",
 		functions: [
 			"getSession",
 			"getAuthFeatures",
@@ -58,6 +63,7 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"revokeMySession",
 			"getAccountSecurity",
 			"setMyPassword",
+			"stopImpersonating",
 		],
 	},
 	"test-crud-public.ts": {

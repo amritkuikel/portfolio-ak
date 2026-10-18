@@ -18,6 +18,7 @@ import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { verifyJWT } from "better-auth/crypto";
 import { admin, captcha, emailOTP, haveIBeenPwned, twoFactor } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq } from "drizzle-orm";
 import { clientEnv } from "@/lib/client-env";
 import type { Locale } from "@/paraglide/runtime";
 import { accountOwner, prepareAccountDeletion } from "../account/service";
@@ -29,7 +30,7 @@ import { serverEnv } from "../env";
 import { errorFields, log } from "../log";
 import { CLIENT_IP_HEADER } from "./client-ip";
 import { DISABLED_ADMIN_PATHS } from "./disabled-paths";
-import { hasTwoFactor, refuseEmailCodeWithTwoFactor } from "./hooks";
+import { hasTwoFactor, refuseEmailCodeWithTwoFactor, refuseOwnerOnlyWhileImpersonating } from "./hooks";
 import { resolveEmailLocale } from "./locale";
 import { BREACHED_PASSWORD_PATHS, CAPTCHA_PATHS } from "./policy";
 
@@ -44,7 +45,7 @@ export const AUTH_LIFETIMES = {
 const minutes = (seconds: number) => Math.round(seconds / 60);
 
 /** Fire-and-forget email delivery that never blocks or fails the auth response. */
-const deliver = (task: Promise<unknown>) => {
+export const deliver = (task: Promise<unknown>) => {
 	waitUntil(
 		task.catch((error: unknown) => {
 			log("error", "auth email delivery failed", errorFields(error));
@@ -65,7 +66,7 @@ const readEmailChange = async (request: Request | undefined) => {
 	return payload?.email && payload.updateTo ? { previousEmail: payload.email, newEmail: payload.updateTo } : null;
 };
 
-const localizedUrl = (locale: Locale, path: string) =>
+export const localizedUrl = (locale: Locale, path: string) =>
 	new URL(locale === "en" ? path : `/${locale}${path}`, serverEnv.BETTER_AUTH_URL).toString();
 
 const accountUrl = (locale: Locale) => localizedUrl(locale, "/account");
@@ -104,6 +105,13 @@ export const auth = betterAuth({
 		maxPasswordLength: 128,
 		resetPasswordTokenExpiresIn: AUTH_LIFETIMES.passwordResetSeconds,
 		revokeSessionsOnPasswordReset: true,
+		// Only the address's owner could open the reset link, so it's now verified. This is
+		// also how an invitation is accepted (src/server/auth/invite.ts, decisions.md 0133).
+		onPasswordReset: async ({ user }) => {
+			if (!user.emailVerified) {
+				await db.update(schema.user).set({ emailVerified: true }).where(eq(schema.user.id, user.id));
+			}
+		},
 		sendResetPassword: async ({ user, url }, request) => {
 			deliver(
 				sendEmail({
@@ -229,6 +237,9 @@ export const auth = betterAuth({
 	},
 
 	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			await refuseOwnerOnlyWhileImpersonating(ctx);
+		}),
 		after: createAuthMiddleware(async (ctx) => {
 			await refuseEmailCodeWithTwoFactor(ctx);
 			if (ctx.path === "/unlink-account" && !isAPIError(ctx.context.returned) && ctx.context.session) {

@@ -1,6 +1,6 @@
 # Roles and permissions (RBAC)
 
-Who may do what, how it's enforced, and how to add a permission. Decisions 0094–0097 explain the choices.
+Who may do what, how it's enforced, how to add a permission, and the audit log, invitations and impersonation. Decisions 0094–0097 and 0132–0135 explain the choices.
 
 ## The model
 
@@ -13,6 +13,8 @@ Who may do what, how it's enforced, and how to add a permission. Decisions 0094�
 | Custom roles | `role`, `role_permission`, `user_role` tables | Created on the Roles page; permissions ticked in the matrix; assigned on the Users page. |
 
 A user's permissions are: everything (admin), or the baseline plus their custom roles. Banned users have none. They are resolved from the database on every request (`getServerSession` → `permissionsForUser`) and carried in the `Session`.
+
+**Two sources, one rule each (0135):** Better Auth's `user.role === "admin"` is the superuser flag: every permission, plus what only an admin may do (make or unmake admins, act on an admin, impersonate). The RBAC tables hold everything else. The `admin` row in `role` is there for display and has no permission rows; don't assign it in `user_role`. Code that asks "is this an admin?" reads `role === "admin"` (`Actor.isAdmin` in the service, `useActor().isAdmin` in the UI); code that asks "may they do X?" checks the permission.
 
 ## Enforcing a permission (all three layers)
 
@@ -58,12 +60,47 @@ Removing a permission from the catalog makes stored grants of it inert: resoluti
 - The Admin role is fixed and only admins make or unmake admins.
 - There is always at least one active admin. Demoting or banning an admin locks the admin rows inside the change's transaction, so two at once can't both pass (0115).
 - Nobody changes their own roles or bans themselves.
-- A non-admin only grants, revokes, assigns or removes permissions they hold themselves, and can't touch an admin's roles or ban an admin.
+- A non-admin only grants, revokes, assigns or removes permissions they hold themselves, and can't change an admin's roles, ban an admin or sign one out.
+- Nobody signs themselves out everywhere from the Users page (the account page does that).
+- Only admins impersonate, never another admin or a banned user, and never from an impersonated session (0134).
 - System roles can't be renamed or deleted, and role names are unique.
 
 Each violation is a `ruleError` with a localized message (`fieldErrors._form`), shown by `errorMessage()`. The UI disables what the actor can't change, using the same rules (`UserRolesDialog`, `PermissionMatrix`).
 
 These rules only hold because every change goes through `src/functions/rbac.ts`: Better Auth's own `/api/auth/admin/*` endpoints are disabled (0112). Don't use `authClient.admin.*`.
+
+## The audit log (0132)
+
+Every change above writes an `audit_event` row **in the same transaction** as the change, so a refused or failed change leaves none. A new admin action follows the same shape:
+
+```ts
+// src/server/<feature>/service.ts: the actor comes from auditActorFrom(context) in the server function
+export async function archiveProject(db: Db, actor: AuditActor, id: string) {
+	await db.transaction(async (tx) => {
+		const before = await repo.lockProject(tx, id);
+		await repo.archive(tx, id);
+		await recordAudit(tx, actor, {
+			action: "project.archive", // add it to AUDIT_ACTIONS and AUDIT_ACTION_LABELS
+			target: { type: "project", id, label: before.name }, // a new type goes in AUDIT_TARGETS
+			before: { status: before.status },
+			after: { status: "archived" },
+		});
+	});
+}
+```
+
+- **What's recorded:** the actor (and the admin behind an impersonated session), the action, the target and its name at the time, the fields that changed (summaries, never secrets), the request id (the same as the response's `x-request-id`, the logs and Sentry) and the client IP.
+- **Reading it:** `/admin/audit` (`audit:read`) filters by target name, id or request id, by actor, action, target type and day. Paste a request id from an error page or a log line into the search to find what that request changed.
+- **Deleted accounts** stay named by their email from the time (`actor_label`).
+
+## Inviting users and signing them out (0133)
+
+- **Invite** (`users:invite`): name, email and the email's language. The account is created at once with the baseline role; the email links to `/reset-password?token=…&invite=1` (a reset token valid for 3 days). Choosing the password verifies the address. Give roles from the list afterwards. An expired invitation: "Forgot password" with the same address.
+- **Sign out everywhere** (`users:ban`): deletes all of the user's sessions. Banning does it too.
+
+## Impersonation (0134)
+
+"View as this user" (admins only) opens a session as that user for up to an hour: their permissions, their data, a banner on every page with "Back to my account". Start and stop are audited, and rows written meanwhile name the admin as impersonator. The impersonated session can read everything the user can, but can't change their password, email, two-factor, linked accounts or sessions, or delete the account (`OWNER_ONLY_PATHS` and `requireAccountOwnerMiddleware`). It's a recipe: to remove it, delete the row action on `/admin/users`, `impersonateUser`, `stopImpersonating` and `ImpersonationBanner`.
 
 ## What users see when refused
 
@@ -78,20 +115,25 @@ These rules only hold because every change goes through `src/functions/rbac.ts`:
 
 ## Pages
 
-- `/admin/users` (`users:read`): filter by role or status. Edit roles needs `users:update`; ban/unban needs `users:ban`.
+- `/admin/users` (`users:read`): filter by role or status. Inviting needs `users:invite`; edit roles needs `users:update`; ban/unban and sign out everywhere need `users:ban`; view as this user needs the admin flag.
 - `/admin/roles` (`roles:read`): create, rename or delete custom roles (`roles:manage`).
 - `/admin/roles/permissions` (`roles:read`): the matrix. Editing needs `roles:manage`, and each change saves at once with rollback.
+- `/admin/audit` (`audit:read`): the audit log, read only.
 
 ## Testing
 
 - **`tests/server/rbac.test.ts`:** resolution, role management and every escalation or lockout rule, on PGlite.
+- **`tests/server/audit.test.ts`:** a row (with its request id) for every admin action, none for refused ones, the list filters, invitations, sign-out-everywhere and the impersonation rules.
+- **`tests/server/auth-hardening.test.ts`:** an impersonated session refused on Better Auth's account endpoints, on a real Better Auth instance.
 - **`tests/server/auth-middleware.test.ts`:** `requirePermission` and the admin gate.
 - **`tests/server/route-guards.test.ts`:** the `_admin` layout.
 - **`tests/components/rbac/can.test.tsx`:** `<Can>`, `useCan` and the sidebar per permission.
 - **`src/features/rbac/components/rbac.stories.tsx`:**
   - the matrix: save, rollback, manager limits and read-only;
   - the role dialog;
-  - the user-roles dialog.
+  - the user-roles dialog and the invite dialog;
+  - the audit table (`src/features/audit/components/audit.stories.tsx`) and the impersonation banner (`layout.stories.tsx`).
+- **`e2e/flows/admin-users.spec.ts`:** an invitation from email to sign-in, sign out everywhere, impersonation and back, each found in the audit log by its request id; an editor refused on the audit page and its function.
 - **Live checks:** replay a captured server call from a session without the permission. Server-function errors come back as a serialized payload with HTTP 200 (`x-tss-serialized`), so assert the `FORBIDDEN` code in the body, and that the data didn't change.
 
 ## Live example

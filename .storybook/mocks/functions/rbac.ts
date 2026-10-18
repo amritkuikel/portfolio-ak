@@ -16,3 +16,8 @@ export const listUsers = fn(
 ).mockName("listUsers");
 export const setUserRoles = fn(async (_options: { data: unknown }) => {}).mockName("setUserRoles");
 export const setUserBanned = fn(async (_options: { data: unknown }) => {}).mockName("setUserBanned");
+export const revokeUserSessions = fn(async (_options: { data: unknown }) => ({ revoked: 2 })).mockName(
+	"revokeUserSessions",
+);
+export const inviteUser = fn(async (_options: { data: unknown }) => ({ id: "user-new" })).mockName("inviteUser");
+export const impersonateUser = fn(async (_options: { data: unknown }) => {}).mockName("impersonateUser");

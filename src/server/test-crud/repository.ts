@@ -294,22 +294,39 @@ export async function setTestCrudStatus(
 	return item;
 }
 
-/** Deletes rows; their images are marked removed (returned, for asset deletion). */
+/** An item's title and status, locked until the transaction ends (call inside `db.transaction`); null when missing. */
+export async function lockTestCrudStatus(
+	tx: Db,
+	id: string,
+): Promise<{ title: string; status: TestCrudStatus } | null> {
+	const [row] = await tx
+		.select({ title: testCrud.title, status: testCrud.status })
+		.from(testCrud)
+		.where(eq(testCrud.id, id))
+		.for("update");
+	return row ?? null;
+}
+
+/** Deletes rows; their images are marked removed (returned, for asset deletion). `items` are the rows deleted. */
 export async function deleteTestCrud(
 	db: Db,
 	ids: ReadonlyArray<string>,
-): Promise<{ deleted: number; removed: AttachmentRow[] }> {
+): Promise<{
+	deleted: number;
+	items: Array<{ id: string; title: string; status: TestCrudStatus }>;
+	removed: AttachmentRow[];
+}> {
 	return db.transaction(async (tx) => {
-		const deleted = await tx
+		const items = await tx
 			.delete(testCrud)
 			.where(inArray(testCrud.id, [...ids]))
-			.returning({ id: testCrud.id });
+			.returning({ id: testCrud.id, title: testCrud.title, status: testCrud.status });
 		const removed = await removeForEntities(
 			tx,
 			ENTITY,
-			deleted.map((row) => row.id),
+			items.map((row) => row.id),
 		);
-		return { deleted: deleted.length, removed };
+		return { deleted: items.length, items, removed };
 	});
 }
 

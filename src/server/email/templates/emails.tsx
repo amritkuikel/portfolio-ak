@@ -12,6 +12,8 @@ export type OtpCodeProps = EmailBaseProps & WithName & WithExpiry & { code: stri
 export type PasswordResetProps = EmailBaseProps & WithName & WithUrl & WithExpiry;
 export type EmailChangedProps = EmailBaseProps & WithName & WithUrl & { newEmail: string };
 export type WelcomeProps = EmailBaseProps & WithUrl & { name: string };
+/** An admin invited this person; the link lets them choose a password. */
+export type InviteProps = EmailBaseProps & WithName & WithUrl & { inviter: string; expiresInDays: number };
 
 const minutes = (value: number, locale: EmailBaseProps["locale"]) => formatNumber(value, {}, locale);
 
@@ -75,6 +77,20 @@ export function Welcome({ locale, siteName, name, url }: WelcomeProps) {
 			</Heading>
 			<Text style={styles.text}>{m.email_welcome_body({}, { locale })}</Text>
 			<ActionButton locale={locale} href={url} label={m.email_welcome_button({}, { locale })} />
+		</EmailLayout>
+	);
+}
+
+export function Invite({ locale, siteName, name, url, inviter, expiresInDays }: InviteProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={m.email_invite_preview({}, { locale })}>
+			<Greeting locale={locale} name={name} />
+			<Text style={styles.text}>{m.email_invite_body({ inviter, site: siteName }, { locale })}</Text>
+			<ActionButton locale={locale} href={url} label={m.email_invite_button({}, { locale })} />
+			<Text style={styles.muted}>
+				{m.email_invite_expires({ days: formatNumber(expiresInDays, {}, locale) }, { locale })}
+			</Text>
+			<Text style={styles.muted}>{m.email_invite_ignore({}, { locale })}</Text>
 		</EmailLayout>
 	);
 }

@@ -25,4 +25,9 @@ export type Session = {
 	 * (decisions.md 0126).
 	 */
 	twoFactorRequired?: true;
+	/**
+	 * Set on a session an admin opened as this user (impersonation, decisions.md
+	 * 0134): the admin's user id. The app shows a banner with a way back.
+	 */
+	impersonatedBy?: string;
 };

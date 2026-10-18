@@ -13,6 +13,7 @@ import {
 import { zodInput } from "@/lib/fn-input";
 import { requirePermission } from "@/middleware/auth";
 import { imageStore } from "@/server/attachments/store";
+import { auditActorFrom } from "@/server/audit/actor";
 import { db } from "@/server/db/client";
 import { listTestCrud as listRows, listTestCrudTags as listTags } from "@/server/test-crud/repository";
 import { createItem, deleteItems, getItemOrThrow, setItemStatus, updateItem } from "@/server/test-crud/service";
@@ -54,10 +55,14 @@ export const updateTestCrud = createServerFn({ method: "POST" })
 export const setTestCrudStatusFn = createServerFn({ method: "POST" })
 	.middleware([requirePermission("test-crud:publish")])
 	.validator(zodInput(testCrudStatusUpdateSchema))
-	.handler(({ data, context }): Promise<TestCrudListItem> => setItemStatus(db, imageStore, data, context.user.id));
+	.handler(
+		({ data, context }): Promise<TestCrudListItem> => setItemStatus(db, imageStore, data, auditActorFrom(context)),
+	);
 
 /** Deletes one or many (bulk delete). Missing ids are ignored; returns how many were deleted. */
 export const deleteTestCrudFn = createServerFn({ method: "POST" })
 	.middleware([requirePermission("test-crud:delete")])
 	.validator(zodInput(testCrudIdsSchema))
-	.handler(({ data, context }): Promise<{ deleted: number }> => deleteItems(db, imageStore, data.ids, context.user.id));
+	.handler(
+		({ data, context }): Promise<{ deleted: number }> => deleteItems(db, imageStore, data.ids, auditActorFrom(context)),
+	);

@@ -757,7 +757,7 @@ Part 3 turns the finished app into a base template: it runs its own gates in CI,
 | 27 | 23 | Committed e2e and browser-review suite. Done (decision 0121) |
 | 28 | 24 | Data integrity and request tracing. Done (decisions 0122–0125) |
 | 29 | 25 | Auth hardening and account lifecycle. Done (decisions 0126–0131) |
-| 30 | 26 | Audit log and admin user management |
+| 30 | 26 | Audit log and admin user management. Done (decisions 0132–0135) |
 | 31 | 27 | Frontend quality: compiler, accessibility, real-user metrics |
 | 32 | 28 | Template ergonomics: scaffolder, strip-demo, structure |
 | 33 | 29 | Recipes for optional features |

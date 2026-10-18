@@ -58,6 +58,9 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/roles", as: "admin" },
 	{ route: "/admin/roles/permissions", as: "admin" },
 	{ route: "/admin/users", as: "admin" },
+	{ route: "/admin/audit", as: "admin" },
+	// The editor's roles don't include audit:read (decisions.md 0132).
+	{ route: "/admin/audit", as: "editor", status: 403, label: "forbidden" },
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },
 ];

@@ -3,6 +3,7 @@ import { expect } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin, sampleUser } from "../../../.storybook/mocks/data";
 import { AdminSidebar } from "./admin-sidebar";
+import { ImpersonationBanner } from "./impersonation-banner";
 import { LanguageSwitcher } from "./language-switcher";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
@@ -28,6 +29,17 @@ export const HeaderAdmin: Story = {
 };
 
 export const Footer: Story = { render: () => <SiteFooter /> };
+
+/** An admin viewing the app as Sita: whose view it is, and the way back. */
+export const ImpersonatingBanner: Story = {
+	parameters: { app: { session: { ...sampleUser, impersonatedBy: "admin-1" } } },
+	render: () => <ImpersonationBanner />,
+	play: async ({ canvas }) => {
+		await expect(canvas.getByText(m.impersonation_banner({ name: "Sita", email: "sita@example.com" }))).toBeVisible();
+		// Leaving reloads the page (not possible in a story); the e2e account flow clicks it.
+		await expect(canvas.getByRole("button", { name: m.impersonation_stop() })).toBeEnabled();
+	},
+};
 
 /** Keeps the current path when switching (/test-crud <-> /ne/test-crud). */
 export const LanguageSwitch: Story = {

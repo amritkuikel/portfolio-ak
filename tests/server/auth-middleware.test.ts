@@ -3,6 +3,7 @@ import { ALL_PERMISSIONS, type Permission } from "@/features/rbac/permissions";
 import { AppError } from "@/lib/errors";
 import type { Session } from "@/lib/session";
 import {
+	requireAccountOwnerMiddleware,
 	requireAdminAccessMiddleware,
 	requirePermission,
 	requireUserMiddleware,
@@ -58,12 +59,26 @@ describe("auth middleware", () => {
 		const editor = session("user", ["test-crud:read"]);
 		const { next } = await runServer(requireUserMiddleware, { session: editor });
 		expect(next).toHaveBeenCalledWith({
-			context: { user: editor.user, permissions: ["test-crud:read"], twoFactorRequired: false },
+			context: { user: editor.user, permissions: ["test-crud:read"], twoFactorRequired: false, impersonatedBy: null },
 		});
 		const pending: Session = { ...session("admin", []), twoFactorRequired: true };
 		const { next: nextPending } = await runServer(requireUserMiddleware, { session: pending });
 		expect(nextPending).toHaveBeenCalledWith({
-			context: { user: pending.user, permissions: [], twoFactorRequired: true },
+			context: { user: pending.user, permissions: [], twoFactorRequired: true, impersonatedBy: null },
+		});
+		const viewed: Session = { ...session("user", []), impersonatedBy: "admin-1" };
+		const { next: nextViewed } = await runServer(requireUserMiddleware, { session: viewed });
+		expect(nextViewed).toHaveBeenCalledWith({
+			context: { user: viewed.user, permissions: [], twoFactorRequired: false, impersonatedBy: "admin-1" },
+		});
+	});
+
+	it("requireAccountOwnerMiddleware refuses an impersonated session and lets the owner through", async () => {
+		// Its own step reads what requireUserMiddleware passed on.
+		const { next } = await runServer(requireAccountOwnerMiddleware, { impersonatedBy: null });
+		expect(next).toHaveBeenCalledOnce();
+		await expect(runServer(requireAccountOwnerMiddleware, { impersonatedBy: "admin-1" })).rejects.toMatchObject({
+			code: "FORBIDDEN",
 		});
 	});
 

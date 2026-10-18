@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TestCrudInput } from "@/features/test-crud/schema";
 import { isStaleError } from "@/lib/concurrency";
@@ -35,6 +35,9 @@ beforeEach(async () => {
 	cloud = createFakeCloudinary();
 	captureServerEvent.mockClear();
 });
+
+/** The audit actor of the calls below: the test database's admin (createTestDb's default id). */
+const ADMIN = { id: "admin-1" };
 
 const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
 	title: "Momo Kitchen",
@@ -160,6 +163,14 @@ describe("update", () => {
 });
 
 describe("status, delete and reads", () => {
+	/** The audit rows about one item, oldest first. */
+	const auditOf = (id: string) =>
+		testDb.db
+			.select()
+			.from(schema.auditEvent)
+			.where(eq(schema.auditEvent.targetId, id))
+			.orderBy(asc(schema.auditEvent.createdAt));
+
 	it("publishes, records the status change and makes the item public", async () => {
 		const created = await createItem(testDb.db, cloud.store, input(), testDb.adminId);
 		await expect(getPublishedOrThrow(testDb.db, cloud.store, "momo-kitchen")).rejects.toMatchObject({
@@ -169,9 +180,28 @@ describe("status, delete and reads", () => {
 			testDb.db,
 			cloud.store,
 			{ id: created.id, status: "published" },
-			testDb.adminId,
+			{ id: testDb.adminId, requestId: "req-publish", ip: "203.0.113.7" },
 		);
 		expect(published.status).toBe("published");
+		expect(await auditOf(created.id)).toMatchObject([
+			{
+				action: "test-crud.publish",
+				actorId: testDb.adminId,
+				actorLabel: "admin@example.com",
+				targetType: "test-crud",
+				targetLabel: "Momo Kitchen",
+				before: { status: "draft" },
+				after: { status: "published" },
+				requestId: "req-publish",
+				ip: "203.0.113.7",
+			},
+		]);
+		// Publishing again changes nothing, so nothing more is recorded.
+		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "published" }, ADMIN);
+		expect(await auditOf(created.id)).toHaveLength(1);
+		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "draft" }, ADMIN);
+		expect((await auditOf(created.id)).map((row) => row.action)).toEqual(["test-crud.publish", "test-crud.unpublish"]);
+		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "published" }, ADMIN);
 		expect(captureServerEvent).toHaveBeenLastCalledWith("test_crud_updated", testDb.adminId, {
 			item_id: created.id,
 			change: "status",
@@ -186,11 +216,16 @@ describe("status, delete and reads", () => {
 		const a = await createItem(testDb.db, cloud.store, input({ slug: "a", images: [image] }), testDb.adminId);
 		const b = await createItem(testDb.db, cloud.store, input({ slug: "b" }), testDb.adminId);
 		captureServerEvent.mockClear();
-		expect(await deleteItems(testDb.db, cloud.store, [a.id, b.id, MISSING], testDb.adminId)).toEqual({ deleted: 2 });
+		expect(await deleteItems(testDb.db, cloud.store, [a.id, b.id, MISSING], ADMIN)).toEqual({ deleted: 2 });
+		expect(await auditOf(a.id)).toMatchObject([
+			{ action: "test-crud.delete", targetLabel: "Momo Kitchen", before: { title: "Momo Kitchen", status: "draft" } },
+		]);
+		expect(await auditOf(b.id)).toHaveLength(1);
+		expect(await auditOf(MISSING)).toEqual([]);
 		expect(cloud.destroyed).toEqual([image.publicId]);
 		expect(captureServerEvent).toHaveBeenCalledWith("test_crud_deleted", testDb.adminId, { count: 2 });
 		captureServerEvent.mockClear();
-		expect(await deleteItems(testDb.db, cloud.store, [MISSING], testDb.adminId)).toEqual({ deleted: 0 });
+		expect(await deleteItems(testDb.db, cloud.store, [MISSING], ADMIN)).toEqual({ deleted: 0 });
 		expect(captureServerEvent).not.toHaveBeenCalled();
 	});
 });

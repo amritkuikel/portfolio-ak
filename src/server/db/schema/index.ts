@@ -6,9 +6,11 @@
  * - test-crud.ts: the Test CRUD reference feature (and its uploaded images).
  * - rbac.ts: roles, role permissions and user roles.
  * - attachments.ts: files stored in Cloudinary, linked to entities.
+ * - audit.ts: the audit log of admin actions.
  */
 
 export * from "./attachments";
+export * from "./audit";
 export * from "./auth";
 export * from "./rbac";
 export * from "./test-crud";

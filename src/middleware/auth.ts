@@ -1,7 +1,8 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { canEnterAdmin, hasAll, type Permission } from "@/features/rbac/permissions";
-import { AppError } from "@/lib/errors";
+import { AppError, ruleError } from "@/lib/errors";
 import type { Session } from "@/lib/session";
+import { m } from "@/paraglide/messages";
 
 /**
  * The session for the current request, from Better Auth, with the user's
@@ -21,8 +22,9 @@ export const sessionMiddleware = createMiddleware({ type: "function" }).server(a
 );
 
 /**
- * Rejects anonymous calls with UNAUTHORIZED; adds `context.user`, `context.permissions`
- * and `context.twoFactorRequired` (admin permissions held back until 2FA is on, 0126).
+ * Rejects anonymous calls with UNAUTHORIZED; adds `context.user`, `context.permissions`,
+ * `context.twoFactorRequired` (admin permissions held back until 2FA is on, 0126) and
+ * `context.impersonatedBy` (the admin behind an impersonated session, or null; 0134).
  */
 export const requireUserMiddleware = createMiddleware({ type: "function" })
 	.middleware([sessionMiddleware])
@@ -33,8 +35,23 @@ export const requireUserMiddleware = createMiddleware({ type: "function" })
 				user: context.session.user,
 				permissions: context.session.permissions,
 				twoFactorRequired: context.session.twoFactorRequired === true,
+				impersonatedBy: context.session.impersonatedBy ?? null,
 			},
 		});
+	});
+
+/**
+ * For changes only the account's owner may make (password, signing out devices):
+ * refused with FORBIDDEN in an impersonated session. Better Auth's own account
+ * endpoints are refused the same way by a hook (src/server/auth/hooks.ts).
+ */
+export const requireAccountOwnerMiddleware = createMiddleware({ type: "function" })
+	.middleware([requireUserMiddleware])
+	.server(({ next, context }) => {
+		if (context.impersonatedBy) {
+			throw ruleError("FORBIDDEN", "Account change while impersonating", m.auth_error_impersonating());
+		}
+		return next();
 	});
 
 /**

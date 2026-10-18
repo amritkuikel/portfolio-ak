@@ -1,4 +1,5 @@
 import type { ImageAsset } from "../../src/features/attachments/schema";
+import type { AuditEventItem } from "../../src/features/audit/schema";
 import { ALL_PERMISSIONS } from "../../src/features/rbac/permissions";
 import type { RoleSummary, UserListItem } from "../../src/features/rbac/schema";
 import type { PublicTestCrudCard, TestCrudDetail, TestCrudListItem } from "../../src/features/test-crud/schema";
@@ -156,4 +157,44 @@ export const sampleUsers: UserListItem[] = [
 		createdAt: "2026-09-10T08:00:00.000Z",
 	},
 	sampleBannedUser,
+];
+
+/** Audit rows: a permission change, an impersonated delete, and a row whose actor was deleted. */
+export const sampleAuditEvents: AuditEventItem[] = [
+	{
+		id: "audit-1",
+		action: "role.permissions",
+		actor: { id: "admin-1", name: "Admin", email: "admin@example.com" },
+		impersonator: null,
+		target: { type: "role", id: "role-editor", label: "Editor" },
+		before: { permissions: ["test-crud:read"] },
+		after: { permissions: ["test-crud:read", "test-crud:update"] },
+		requestId: "5b0f6c1e-8a4d-4f7e-9d3a-2c1b0a9f8e7d",
+		ip: "203.0.113.7",
+		createdAt: "2026-10-01T09:30:00.000Z",
+	},
+	{
+		id: "audit-2",
+		action: "test-crud.delete",
+		actor: { id: "editor-1", name: "Gita", email: "gita@example.com" },
+		impersonator: "admin@example.com",
+		target: { type: "test-crud", id: "item-1", label: "Momo masterclass" },
+		before: { title: "Momo masterclass", status: "draft" },
+		after: null,
+		requestId: "0d9e8f7a-6b5c-4d3e-8f2a-1b0c9d8e7f6a",
+		ip: "198.51.100.4",
+		createdAt: "2026-10-01T09:00:00.000Z",
+	},
+	{
+		id: "audit-3",
+		action: "user.ban",
+		actor: { id: null, name: "", email: "former@example.com" },
+		impersonator: null,
+		target: { type: "user", id: "user-1", label: "sita@example.com" },
+		before: { banned: false },
+		after: { banned: true },
+		requestId: null,
+		ip: null,
+		createdAt: "2026-09-30T16:45:00.000Z",
+	},
 ];

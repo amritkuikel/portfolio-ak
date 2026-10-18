@@ -1,4 +1,4 @@
-import { DatabaseIcon, KeyRoundIcon, type LucideIcon, ShieldCheckIcon, UsersIcon } from "lucide-react";
+import { DatabaseIcon, KeyRoundIcon, type LucideIcon, ScrollTextIcon, ShieldCheckIcon, UsersIcon } from "lucide-react";
 import type { Permission } from "@/features/rbac/permissions";
 import { m } from "@/paraglide/messages";
 
@@ -8,7 +8,7 @@ import { m } from "@/paraglide/messages";
  * in `beforeLoad`, and each server function checks its own.
  */
 export type AdminSection = {
-	to: "/admin/test-crud" | "/admin/users" | "/admin/roles" | "/admin/roles/permissions";
+	to: "/admin/test-crud" | "/admin/users" | "/admin/roles" | "/admin/roles/permissions" | "/admin/audit";
 	label: () => string;
 	description: () => string;
 	icon: LucideIcon;
@@ -46,5 +46,12 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		description: m.matrix_description,
 		icon: KeyRoundIcon,
 		permission: "roles:read",
+	},
+	{
+		to: "/admin/audit",
+		label: m.admin_nav_audit,
+		description: m.audit_description,
+		icon: ScrollTextIcon,
+		permission: "audit:read",
 	},
 ];

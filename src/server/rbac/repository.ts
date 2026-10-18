@@ -202,6 +202,38 @@ export async function getAuthSubject(db: Db, userId: string): Promise<AuthSubjec
 	return row ?? null;
 }
 
+/** A user as the user-management rules see them (and as audit rows name them). */
+export type UserTarget = AuthSubject & { name: string; email: string };
+
+export async function getUserTarget(db: Db, userId: string): Promise<UserTarget | null> {
+	const [row] = await db
+		.select({ id: user.id, name: user.name, email: user.email, role: user.role, banned: user.banned })
+		.from(user)
+		.where(eq(user.id, userId));
+	return row ?? null;
+}
+
+export async function emailTaken(db: Db, email: string): Promise<boolean> {
+	const [row] = await db.select({ id: user.id }).from(user).where(sql`lower(${user.email}) = lower(${email})`).limit(1);
+	return row !== undefined;
+}
+
+/** An invited account: the baseline role, no password and no sessions until they accept. */
+export async function createInvitedUser(db: Db, input: { name: string; email: string }) {
+	const [created] = await db
+		.insert(user)
+		.values({ id: crypto.randomUUID(), name: input.name, email: input.email, emailVerified: false, role: "user" })
+		.returning({ id: user.id, name: user.name, email: user.email });
+	if (!created) throw new Error("User insert returned no row");
+	return created;
+}
+
+/** Deletes every session of a user (signed out everywhere); returns how many there were. */
+export async function deleteUserSessions(db: Db, userId: string): Promise<number> {
+	const deleted = await db.delete(session).where(eq(session.userId, userId)).returning({ id: session.id });
+	return deleted.length;
+}
+
 /**
  * Ids of the admins who can still sign in, with their rows locked until the
  * transaction ends (call inside `db.transaction`). The lockout guard uses this so

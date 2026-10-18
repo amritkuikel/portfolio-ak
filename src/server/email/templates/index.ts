@@ -7,6 +7,8 @@ import {
 	type DeleteAccountProps,
 	EmailChanged,
 	type EmailChangedProps,
+	Invite,
+	type InviteProps,
 	OtpCode,
 	type OtpCodeProps,
 	PasswordReset,
@@ -27,6 +29,7 @@ export interface EmailPropsMap {
 	"password-reset": PasswordResetProps;
 	"email-changed": EmailChangedProps;
 	welcome: WelcomeProps;
+	invite: InviteProps;
 	"delete-account": DeleteAccountProps;
 	"account-deleted": AccountDeletedProps;
 	"security-notice": SecurityNoticeProps;
@@ -73,6 +76,16 @@ export const emailTemplates: EmailRegistry = {
 		component: Welcome,
 		subject: ({ locale, siteName }) => m.email_welcome_subject({ site: siteName }, { locale }),
 		sample: { name: "Sita Sharma", url: "https://example.com/account" },
+	},
+	invite: {
+		component: Invite,
+		subject: ({ locale, siteName }) => m.email_invite_subject({ site: siteName }, { locale }),
+		sample: {
+			name: "Sita Sharma",
+			inviter: "Ram Thapa",
+			url: "https://example.com/reset-password?token=sample&invite=1",
+			expiresInDays: 3,
+		},
 	},
 	"delete-account": {
 		component: DeleteAccount,

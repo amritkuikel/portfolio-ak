@@ -19,3 +19,4 @@ export const getAccountSecurity = fn(
 	}),
 ).mockName("getAccountSecurity");
 export const setMyPassword = fn(async () => undefined).mockName("setMyPassword");
+export const stopImpersonating = fn(async () => undefined).mockName("stopImpersonating");

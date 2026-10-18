@@ -12,18 +12,22 @@ import { m } from "@/paraglide/messages";
 /**
  * Target of the emailed reset link. Better Auth validates the token and redirects
  * here with ?token=…, or with ?error=INVALID_TOKEN when it's invalid or expired.
+ *
+ * An invitation links here directly with ?token=…&invite=1 (the token is a reset
+ * token, decisions.md 0133): the same form, worded as accepting the invitation.
  */
 export const Route = createFileRoute("/_public/reset-password")({
 	validateSearch: z.object({
 		token: z.string().max(512).optional().catch(undefined),
 		error: z.string().max(64).optional().catch(undefined),
+		invite: z.literal("1").optional().catch(undefined),
 	}),
-	head: () => privateHead(m.auth_reset_title()),
+	head: ({ match }) => privateHead(match.search.invite ? m.auth_invite_title() : m.auth_reset_title()),
 	component: ResetPasswordPage,
 });
 
 function ResetPasswordPage() {
-	const { token, error } = Route.useSearch();
+	const { token, error, invite } = Route.useSearch();
 	const [errors, setErrors] = useState<FieldErrors<"password" | "confirm">>({});
 	const [formError, setFormError] = useState<string>();
 	const [done, setDone] = useState(false);
@@ -54,17 +58,22 @@ function ResetPasswordPage() {
 
 	return (
 		<main className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16" data-testid="reset-password-page">
-			<h1 className="font-semibold text-2xl tracking-tight">{m.auth_reset_title()}</h1>
+			<div className="flex flex-col gap-2">
+				<h1 className="font-semibold text-2xl tracking-tight">
+					{invite ? m.auth_invite_title() : m.auth_reset_title()}
+				</h1>
+				{invite && !done ? <p className="text-muted-foreground text-sm">{m.auth_invite_description()}</p> : null}
+			</div>
 			{done ? (
 				<>
-					<FormMessage tone="success">{m.auth_reset_success()}</FormMessage>
+					<FormMessage tone="success">{invite ? m.auth_invite_success() : m.auth_reset_success()}</FormMessage>
 					<Button asChild>
 						<Link to="/login">{m.auth_submit_login()}</Link>
 					</Button>
 				</>
 			) : error || !token ? (
 				<>
-					<FormMessage tone="error">{m.auth_reset_invalid()}</FormMessage>
+					<FormMessage tone="error">{invite ? m.auth_invite_invalid() : m.auth_reset_invalid()}</FormMessage>
 					<Link to="/forgot-password" className="text-sm underline underline-offset-4">
 						{m.auth_forgot_submit()}
 					</Link>
@@ -88,7 +97,7 @@ function ResetPasswordPage() {
 						error={errors.confirm}
 					/>
 					<Button type="submit" disabled={pending}>
-						{pending ? m.auth_submitting() : m.auth_reset_submit()}
+						{pending ? m.auth_submitting() : invite ? m.auth_invite_submit() : m.auth_reset_submit()}
 					</Button>
 				</form>
 			)}
