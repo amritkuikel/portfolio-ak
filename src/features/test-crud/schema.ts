@@ -60,7 +60,6 @@ export const formImageSchema = z.object({
 	alt: optionalText({ max: ALT_MAX }),
 	preview: z.custom<ImageAsset>(),
 });
-export type FormImage = z.output<typeof formImageSchema>;
 
 /** The admin form: the shared input, with image previews for the editor. */
 export const testCrudFormSchema = testCrudInputSchema.extend({

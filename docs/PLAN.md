@@ -736,3 +736,141 @@ A design-studio-style portfolio for a full-stack developer: big type, art direct
 - [x] Every portfolio page is server-rendered complete, indexable with JSON-LD, and listed in the sitemap. A filtered work index is noindex.
 - [x] Both locales, both themes, at 390/768/1280: no axe violations, no overflow, no console errors (apart from the browser's own line for the intentional 404), no CSP violations, and CLS ≤ 0.01.
 - [x] Typecheck, check, test, test:storybook, build and build-storybook are green with no warnings.
+
+---
+
+## 9. Part 3: template hardening (Tasks 25–33)
+
+Part 3 turns the finished app into a base template: it runs its own gates in CI, makes the browser review reproducible, closes the auth and data-integrity gaps a real product needs on day one, and makes starting a new project from it a short, scripted job. It comes from a review of the whole app against current starter kits (Epic Stack, the Better Auth and TanStack Start kits) and the official docs (2026-10-18).
+
+### Part 3 rules (in addition to sections 1 and 7)
+
+- **Core vs recipe:** items marked *(core)* ship in the base. Items marked *(recipe)* ship as a guide section plus a dev example or a script, not as code every project carries. When in doubt, it's a recipe.
+- **Research first:** each task checks the current official docs (Better Auth plugins, TanStack Start, React, Vercel, Neon) before writing code, and records every choice in `docs/decisions.md`.
+- **Nothing silently changes behaviour:** a change that existing users would notice (2FA enforcement, captcha, conflicts on save) is behind a documented setting or env var, with the default recorded in a decision.
+- **Each task ends** with the section 7 gates. From Task 27 on, the browser review is the committed e2e suite, not an outside script.
+
+| Task | Phase | Name |
+| --- | --- | --- |
+| 25 | 21 | Part 3 plan (this section). Done |
+| 26 | 22 | Housekeeping, CI and repo hygiene. Done (decisions 0118–0120) |
+| 27 | 23 | Committed e2e and browser-review suite |
+| 28 | 24 | Data integrity and request tracing |
+| 29 | 25 | Auth hardening and account lifecycle |
+| 30 | 26 | Audit log and admin user management |
+| 31 | 27 | Frontend quality: compiler, accessibility, real-user metrics |
+| 32 | 28 | Template ergonomics: scaffolder, strip-demo, structure |
+| 33 | 29 | Recipes for optional features |
+
+### Phase 22: Housekeeping, CI and repo hygiene (Task 26)
+
+**Deliverables**
+- **Dependencies:** remove `cn` (unused third-party package; `cn` comes from `src/lib/utils.ts`) and `date-fns` (not imported; `react-day-picker` brings its own). Remove the `db:push` script: the project is migration-based and `push` changes the schema without a migration.
+- **Knip** for unused files, exports and dependencies, configured for the Start, Storybook and Vitest entry points. `pnpm knip` runs in CI and before push.
+- **Git hooks with lefthook:** Biome on staged files before commit; typecheck and `knip --dependencies` before push.
+- **CI (GitHub Actions):** on every PR and push to `main`, run typecheck, check, knip, test, test:storybook, build and build-storybook, with the pnpm store cached (story tests use the runner's installed Chrome, so there is no browser download). Migrations are checked by applying `drizzle/` to a fresh PGlite/Postgres.
+- **Dependency updates:** Dependabot, grouped (TanStack, Storybook, Vitest, Better Auth), with the pinning policy below.
+- **Repo files:** `.nvmrc`/`.node-version` matching `engines`, a `LICENSE`, and `package.json` renamed from `portfolio` to the template's name.
+- **Decisions:** a version-pinning policy (exact vs caret; today it's mixed), and the reason for running a dated Nitro 3 beta in production, with an upgrade trigger.
+
+**Acceptance criteria**
+- A PR with an unused export, an unused dependency, a lint warning or a failing story fails CI.
+- `pnpm install && pnpm knip` is clean on `main`.
+
+### Phase 23: Committed e2e and browser-review suite (Task 27)
+
+**Deliverables**
+- A Playwright project (`pnpm test:e2e`) that builds and starts a production server (`EMAIL_PROVIDER=resend` with a placeholder key, PGlite or a CI Postgres, `db:seed-demo`).
+- **Browser review as code:** every page in en/ne × light/dark × 390/768/1280 is checked for axe violations, horizontal overflow, console errors and warnings, hydration warnings, CSP violations (`securitypolicyviolation` listener) and CLS ≤ 0.01 (a `PerformanceObserver` on `layout-shift`). The page list comes from the route tree, so a new route is reviewed automatically or fails until it's listed.
+- **Flows:** sign up → verify email → sign in; sign-in code; password reset; admin creates, edits, publishes and deletes a Test CRUD item; permission matrix grant and revoke; a 403 for a user without a permission; JS-disabled search and pagination.
+- Runs in CI (sharded if slow). `docs/guides/testing.md` replaces "the scripts live outside the repo" with how to run and extend the suite.
+
+**Acceptance criteria**
+- The section 7 browser review can be run by anyone with one command, locally and in CI.
+
+### Phase 24: Data integrity and request tracing (Task 28)
+
+**Deliverables**
+- **Optimistic concurrency** *(core)*: edits send the version they started from (`updatedAt`); the repository updates only when it still matches and otherwise the service throws `CONFLICT`. The shared form shows "changed by someone else" with a reload action. Test CRUD and roles adopt it, and the conventions guide makes it part of the feature recipe.
+- **Request IDs** *(core)*: one ID per request, returned as `x-request-id`, attached to every log line, Sentry event and error page (errors already carry `requestId`).
+- **Health endpoint** *(core)*: a JSON server route for uptime monitors (`200` with DB latency, `503` when the DB is unreachable, no details leaked). The `/health` page stays as the human view.
+- **Idempotency keys** *(recipe)*: a key on create/send actions so a double submit or retry doesn't duplicate rows or emails.
+
+**Acceptance criteria**
+- Two sessions editing the same item: the second save is refused with a localized conflict message and no data is lost (PGlite test and e2e).
+- A server error's request ID appears in the response header, the log line and the Sentry event.
+
+### Phase 25: Auth hardening and account lifecycle (Task 29)
+
+**Deliverables**
+- **Two-factor authentication** *(core)*: Better Auth `twoFactor` (TOTP + backup codes), set up and managed on the account page. A setting requires it for users with any admin permission. Better Auth's second factor only guards password sign-in, so the decision records the policy for email-code and Google sign-in.
+- **Breached passwords** *(core)*: Better Auth `haveIBeenPwned` on sign-up, reset and change, with a localized message.
+- **Bot protection** *(core)*: Better Auth `captcha` with Cloudflare Turnstile on register, forgot-password and sign-in-code (CSP updated, disabled cleanly when unconfigured), plus a honeypot field in the shared auth forms.
+- **Account deletion and data export** *(core)*: delete confirmed by email (Better Auth `deleteUser`), cleaning up sessions and attachments; an export of the user's own data as JSON.
+- **Linked accounts** *(core)*: a Google-only user can set a password; link and unlink Google, never leaving an account with no way in.
+- **Last login method** and **passkeys** *(recipe)*: Better Auth `lastLoginMethod` and `@better-auth/passkey`.
+- Emails for each new flow in both languages; rate limits for each new endpoint in `src/server/auth/auth.ts`.
+
+**Acceptance criteria**
+- An admin without 2FA is asked to set it up before entering `/admin` (when the setting is on); a breached password is refused; a deleted account can't sign in and its attachments are queued for cleanup.
+
+### Phase 26: Audit log and admin user management (Task 30)
+
+**Deliverables**
+- **Audit log** *(core)*: an `audit_events` table (actor, action, target type and ID, before/after summary, request ID, IP, time), written by services inside the same transaction as the change (role edits, permission matrix saves, role assignments, bans, deletes, Test CRUD publish/delete). An admin list page built from the list contract, filtered by actor, action, target and date, guarded by a new `audit:read` permission.
+- **User management** *(core)*: invite or create a user (email invite in both languages), revoke a user's sessions (and on ban), all through `src/functions/rbac.ts` with `requirePermission` (Better Auth's admin endpoints stay disabled, decision 0112).
+- **Roles model documented:** `rbac.md` states that Better Auth's `user.role === "admin"` is the superuser flag and the RBAC tables hold everything else, or the flag moves into the RBAC tables; the choice is a decision.
+- **Impersonation** *(recipe)*: guarded, audited, with a visible banner and a one-click exit.
+
+**Acceptance criteria**
+- Every admin action listed above leaves an audit row with its request ID; an Editor without `audit:read` gets a 403 on the audit page and its server function.
+
+### Phase 27: Frontend quality (Task 31)
+
+**Deliverables**
+- **React Compiler** *(core, measured)*: `@rolldown/plugin-babel` with `reactCompilerPreset()` (React's docs for `@vitejs/plugin-react` 6+). Record build-time and bundle impact; remove manual memoization only where the compiler covers it.
+- **Accessibility in the main app** *(core)*: a skip-to-content link in the shared layouts, and `prefers-reduced-motion` handling in `app.css` (the portfolio already has it).
+- **Real-user Web Vitals** *(core)*: CLS, LCP and INP from visitors, sent to PostHog (respecting consent) or Sentry, so the CLS ≤ 0.01 rule is checked in production, not only locally.
+- **CSP reporting** *(core)*: `report-to` with violations forwarded to Sentry, rate-limited.
+- **Admin view transitions** and an **admin command palette** (`cmdk`, permission-filtered) *(recipe)*.
+
+**Acceptance criteria**
+- The compiler decision has before/after numbers; skip link and reduced motion pass the e2e suite; a forced CSP violation in a preview deploy shows up in Sentry.
+
+### Phase 28: Template ergonomics (Task 32)
+
+**Deliverables**
+- **Feature scaffolder** *(core)*: `pnpm new:feature <name>` generates the Test CRUD shape (table, schema, repository + service with PGlite tests, permissions, guarded functions and their guarded-functions test entry, queries, admin routes, messages in both languages, sidebar link, stories). The generated feature passes every gate unchanged.
+- **Strip the demo** *(core)*: a documented "starting a new project" checklist plus `scripts/strip-demo.mjs` that removes the portfolio, `/stack` and the Intl showcase (with their messages, sitemap entries and tests) and keeps Test CRUD and `/dev/examples` as references. The home page becomes a neutral landing.
+- **Thin routes:** `_authed/account.tsx` and `admin/test-crud/index.tsx` move their UI into `src/features/<name>/components`, so the reference feature matches the conventions it teaches.
+- **Docs:** CLAUDE.md's pitfalls split into "always relevant" and "per area" (the rest move into the guides); `src/lib` grouped by area (`list/`, `seo/`, `env/`) *(recipe)*.
+
+**Acceptance criteria**
+- A fresh clone → strip-demo → new:feature → all gates green, with no manual edits.
+
+### Phase 29: Recipes for optional features (Task 33)
+
+Each recipe is a guide section with a dev example or script, decided and documented, not shipped in every project:
+- **Background jobs:** Vercel Workflow, Inngest or Trigger.dev (no long-running worker on Vercel), with retries; bulk email moves off the request.
+- **Cursor pagination** in `src/server/db/list.ts` for large tables and feeds, next to the offset default.
+- **Caching public pages:** `s-maxage`/`stale-while-revalidate` headers or prerendering for static content such as `/portfolio`.
+- **Rate limiting server functions** with database storage, for public endpoints.
+- **Contact form** (Resend, rate limit, Turnstile) for the portfolio.
+- **Avatar upload** on the account page, through attachments.
+- **CSV export** from `DataTable`; **soft delete** with undo toasts; **saved list views** (stored search strings).
+- **Offline development:** mocks so `pnpm dev` runs without Cloudinary, Resend, PostHog or Sentry keys.
+- **Preview deploys** with a Neon branch per PR and migrations applied automatically.
+- **Changelog** with changesets or a conventional-commit check.
+- **Organizations and billing** (Better Auth `organization` and Stripe plugins), as a recipe only: multi-tenancy stays a non-goal of the base.
+
+### Part 3 Definition of Done
+
+- [ ] CI runs every gate, knip and the e2e suite on each PR; hooks run Biome and knip locally.
+- [ ] The browser review is a committed suite covering every route in both locales, both themes and three widths.
+- [ ] Concurrent edits are refused with a conflict message; request IDs link responses, logs and Sentry; a JSON health endpoint exists.
+- [ ] 2FA, breached-password checks, captcha, account deletion/export and linked accounts work in both languages.
+- [ ] Admin actions are audited and viewable; admins can invite users and revoke their sessions.
+- [ ] React Compiler decided with numbers; skip link, reduced motion, Web Vitals and CSP reporting in place.
+- [ ] Clone → strip-demo → new:feature → green gates, with no manual edits.
+- [ ] Every recipe has a guide section and a working example or script.
+- [ ] All gates are green with no warnings: typecheck, check, knip, test, test:storybook, test:e2e, build and build-storybook.

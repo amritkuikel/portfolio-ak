@@ -191,5 +191,4 @@ export const auth = betterAuth({
 	],
 });
 
-export type Auth = typeof auth;
 export const authFeatures = { google: googleConfigured } as const;

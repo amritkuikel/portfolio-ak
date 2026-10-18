@@ -13,7 +13,6 @@ export const EXAMPLE_PRIORITIES = ["low", "medium", "high"] as const;
 export type ExamplePriority = (typeof EXAMPLE_PRIORITIES)[number];
 
 export const EXAMPLE_SORTS = ["-created", "created", "title", "-title"] as const;
-export type ExampleSort = (typeof EXAMPLE_SORTS)[number];
 
 export const EXAMPLE_PAGE_SIZE = 6;
 
@@ -49,7 +48,6 @@ export const exampleTasksDoneSchema = bulkIdsSchema().extend({
 
 /** The forms example's server-validated sign-up. */
 export const exampleSignupSchema = z.object({ username: required({ max: 32 }), email: email() });
-export type ExampleSignup = z.output<typeof exampleSignupSchema>;
 
 /** Error cases the errors example can trigger on the server. */
 export const EXAMPLE_ERROR_CASES = ["forbidden", "not-found", "crash"] as const;

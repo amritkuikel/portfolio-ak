@@ -18,8 +18,8 @@
 
 ## Every release
 
-- **Gates:** run `typecheck`, `check`, `test`, `test:storybook`, `build` and `build-storybook`.
-- **Schema changes:** run `pnpm db:generate`, commit the SQL in `drizzle/`, and run `pnpm db:migrate` before (or with) the deploy. Keep a migration compatible with the version still running (add columns and tables first; drop them in a later release).
+- **Gates:** CI runs `typecheck`, `check`, `knip`, `test`, `test:storybook`, `build` and `build-storybook` on every PR and on `main`. Deploy only a green commit.
+- **Schema changes:** run `pnpm db:generate`, commit the SQL in `drizzle/` (CI fails if the schema and migrations disagree), and run `pnpm db:migrate` before (or with) the deploy. Keep a migration compatible with the version still running (add columns and tables first; drop them in a later release).
 - **One-off scripts:** `pnpm attachments:import-legacy` moved Part 1 images from Postgres to Cloudinary. Once it has run everywhere, a migration can drop the legacy `test_crud.image` column and `test_crud_image` table.
 
 ## Running a production build locally

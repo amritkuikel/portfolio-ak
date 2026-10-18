@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (117 entries)</summary>
+<summary>Index (120 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -123,6 +123,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0115](#0115-the-last-admin-guard-locks-the-admin-rows-inside-the-changes-transaction): The last-admin guard locks the admin rows inside the change's transaction
 - [0116](#0116-list-pages-share-uselistpage-and-tablelistinput): List pages share useListPage() and tableListInput()
 - [0117](#0117-every-server-function-file-is-declared-in-the-guard-test-demo-data-is-a-seeded-script): Every server function file is declared in the guard test; demo data is a seeded script
+- [0118](#0118-knip-guards-against-dead-code-cn-date-fns-and-dbpush-removed): Knip guards against dead code; `cn`, `date-fns` and `db:push` removed
+- [0119](#0119-version-pinning-caret-by-default-exact-only-with-a-reason): Version pinning: caret by default, exact only with a reason
+- [0120](#0120-ci-on-github-actions-git-hooks-with-lefthook-dependabot-for-updates): CI on GitHub Actions, git hooks with lefthook, Dependabot for updates
 </details>
 
 ---
@@ -1487,3 +1490,36 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `tests/server/guarded-functions.test.ts` reads `src/functions/` and fails for any file that isn't listed, either with each function's permission or as deliberately unguarded with a reason and its function names. `pnpm db:seed-demo` (`scripts/seed-demo.mjs`, data in `scripts/lib/demo-data.mjs`, tested on PGlite) adds an editor and a viewer role, three users (one without a role, to see the forbidden page) and 30 Test CRUD items.
 - **Why:** the old test only checked the files it already listed, so a new `src/functions/<feature>.ts` without `requirePermission` passed. The demo seed makes the permission flows (forbidden page, read-only admin, pagination) testable by hand on a fresh database. It is plain SQL with Better Auth's own password hash, so it runs with `node` alone; the app's TypeScript modules use path aliases Node can't resolve.
 - **Alternatives considered:** a lint rule for `requirePermission` (can't express "public on purpose"); seeding through the app's repositories with a TypeScript runner (a new dev dependency for one script).
+
+## 0118: Knip guards against dead code; cn, date-fns and db:push removed
+
+- **What:** `pnpm knip` (config in `knip.json`) reports unused files, exports, types and dependencies, and runs in CI. Entries knip can't find on its own are listed: Nitro routes and plugins (named by string in `vite.config.ts`), the email preview (loaded by a Vite plugin), `src/lib/zod.ts` (an alias target), the Storybook mocks (alias targets), `tests/` and `scripts/`. CSS is part of the project so `@import`/`@plugin` count as uses. `src/components/ui/` is ignored: it's the vendored shadcn kit, kept whole so a component's unused parts are there when needed. `ignoreExportsUsedInFile` is on: exporting a constant the file itself uses is harmless.
+- **Removed on the first run:** the `cn` package, `date-fns`, the unused `src/components/filters/index.ts` barrel, and type exports nothing imported (`Auth`, `FormImage`, `WorkSearch`, `ExampleSort`, `ExampleSignup`, and four barrel re-exports). Also the `db:push` script.
+- **Why:**
+  - `cn` was an unrelated npm package, most likely installed to satisfy the shadcn CLI's `import { cn } from "cn"` (see the README). With it installed, that wrong import type-checked and shipped someone else's code; without it, `pnpm typecheck` fails until the import is fixed, as intended.
+  - `date-fns` was never imported; `react-day-picker` depends on its own copy.
+  - `db:push` changes the database schema without writing a migration. The app is migration-based (0018), so push could leave production and `drizzle/` out of step. CI now also fails when the schema changes without a migration (`drizzle-kit generate` must produce nothing) and runs `pnpm db:check`.
+  - Biome and TypeScript see one file at a time; only a whole-project tool notices that nothing uses an export or a package.
+- **Alternatives considered:** depcheck (dependencies only, no exports); TypeScript's `noUnusedLocals` (file-local only); listing every shadcn export as used (noise for vendored code).
+
+## 0119: Version pinning: caret by default, exact only with a reason
+
+- **What:** dependencies use `^` unless one of these applies, in which case they are exact and the reason is recorded:
+  - **Pre-release:** `nitro` (3.0 beta, 0004) and `@sentry/tanstackstart-react` (beta, 0073).
+  - **Output that gates check:** `@biomejs/biome` (formatting and lint rules change in minors, failing `pnpm check`); the Anek fonts (fallback metrics measured per version, 0108, 0110).
+  - **Families that must match:** Storybook packages, and `@vitest/*` with `playwright`.
+  - **Verified privacy behaviour:** `posthog-js` and `posthog-node`. The consent flow (no request before consent, cookie and storage removed on withdrawal, 0074) was checked against these versions; an update is re-verified before the pin moves.
+  The lockfile is what installs; the range only says what an update may move to. Dependabot (0120) opens grouped PRs for both kinds, and CI runs every gate on them.
+- **Nitro beta in production:** kept because it's the server build TanStack Start generates for Vercel (0004), and there is no stable Nitro 3 yet. Move to the first stable Nitro 3 release (or the version the TanStack CLI then pins) in its own PR with a full production browser review; re-check the dev-only routing workarounds (0067, 0103) at that point.
+- **Why:** the repo had both styles with no rule, so nobody could tell a deliberate pin from an accident.
+- **Alternatives considered:** pin everything exactly (every update becomes a manual edit; the lockfile already gives reproducible installs); caret everywhere (beta and output-changing packages would move under the gates without a decision).
+
+## 0120: CI on GitHub Actions, git hooks with lefthook, Dependabot for updates
+
+- **What:**
+  - `.github/workflows/ci.yml` runs on every PR and push to `main`, in four parallel jobs: typecheck + check + knip + the migration check; `pnpm test`; `pnpm test:storybook` + `build-storybook`; `pnpm build`. The build gets placeholder `VITE_` values (only public variables are needed at build time, 0011). Story tests use the runner's installed Chrome, as locally.
+  - `lefthook.yml`: Biome on staged files before commit (fixes re-staged; warnings block), `pnpm typecheck` and `knip --dependencies` before push. `pnpm install` installs the hooks via `scripts/install-hooks.mjs`, which skips CI and installs without a `.git` folder (Vercel builds), where `lefthook install` fails.
+  - `.github/dependabot.yml`: weekly npm and GitHub Actions updates, grouped by packages that move together (TanStack, Storybook, Vitest + Playwright, Better Auth, Tiptap, Tailwind, Drizzle, React, `@types`).
+  - `.nvmrc` is `24` (the current LTS, used to verify the gates); `engines` stays `>=22`. The package is named `start-template` and licensed MIT.
+- **Why:** the gates only ran on the author's machine, so a PR could merge red. Hooks catch the cheap mistakes before a push; CI is the authority. The browser review joins CI in Task 27.
+- **Alternatives considered:** Husky + lint-staged (two packages and a shell script per hook; lefthook is one binary with parallel commands); Renovate (more options, but needs a GitHub app; Dependabot's groups cover what's needed); one sequential CI job (simpler, about twice as slow); running the full `knip` before push (unused exports are normal mid-work; CI runs it).

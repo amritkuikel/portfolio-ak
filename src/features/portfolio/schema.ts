@@ -195,7 +195,6 @@ export type MetricRecord = z.infer<typeof metricRecordSchema>;
 export const workSearchSchema = z.object({
 	discipline: disciplineSchema.optional().catch(undefined),
 });
-export type WorkSearch = z.infer<typeof workSearchSchema>;
 
 /** Path params of detail pages: anything that isn't a slug can't exist (the route doesn't match). */
 export const portfolioSlugParamSchema = z.object({ slug });

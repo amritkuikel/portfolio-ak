@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–26 are done. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -40,7 +40,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 - **Validation, i18n, env:** Zod 4.6 (aliased, jitless), Paraglide 2.25, T3 Env.
 - **Data and auth:** Better Auth 1.7, Drizzle 0.45 + Neon Postgres (PGlite in tests).
 - **Services:** Cloudinary (REST, no SDK), React Email 6 + Resend, Sentry 11, PostHog.
-- **Tooling:** Vitest 5 + Storybook 10.6, Biome 2.4, pnpm 10, Node ≥ 22, Vite 8.
+- **Tooling:** Vitest 5 + Storybook 10.6, Biome 2.4, Knip 6, lefthook 2, pnpm 10, Node ≥ 22 (`.nvmrc`: 24), Vite 8. CI: GitHub Actions; updates: Dependabot.
 
 ## Commands
 
@@ -48,15 +48,16 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 pnpm dev                 # http://localhost:3000
 pnpm typecheck           # compiles messages, then tsc
 pnpm check               # Biome lint + format check (warnings fail). pnpm check:fix to fix
+pnpm knip                # unused files, exports, types and dependencies (knip.json)
 pnpm test                # unit + server (PGlite) + jsdom component tests
 pnpm test:storybook      # every story in real Chrome, twice: en/light and ne/dark (a11y violations fail)
 pnpm test:coverage       # v8 coverage + per-area table
 pnpm build               # production build (.output/); pnpm start runs it
 pnpm build-storybook
-pnpm db:generate | db:migrate | db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
+pnpm db:generate | db:migrate | db:check | db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
 ```
 
-A task is done when `typecheck`, `check`, `test`, `test:storybook`, `build` and `build-storybook` are all green with no warnings, and the touched pages pass a browser review on a production build (en/ne × light/dark × 390/768/1280: axe, overflow, console, CSP, CLS ≤ 0.01).
+A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `build` and `build-storybook` are all green (CI runs them on every PR) with no warnings, and the touched pages pass a browser review on a production build (en/ne × light/dark × 390/768/1280: axe, overflow, console, CSP, CLS ≤ 0.01).
 
 ## Where everything lives
 
@@ -74,6 +75,7 @@ src/lib/               isomorphic helpers: list + search (URL contract), query (
 messages/              en.json, ne.json        drizzle/   SQL migrations        public/   icons, og-default.png
 tests/                 unit/, server/, components/, i18n/, email/, utils/ (test-db, fake-cloudinary)
 docs/                  PLAN.md, decisions.md, guides/
+.github/               CI workflow, Dependabot        lefthook.yml   git hooks        knip.json   dead-code config
 ```
 
 ## Golden rules
@@ -129,4 +131,7 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **Better Auth's `/api/auth/admin/*` endpoints are disabled** (0112). Manage users, roles and bans through `src/functions/rbac.ts`, never `authClient.admin.*`; a Better Auth upgrade that adds an admin endpoint fails `auth-disabled-paths.test.ts` until it's listed.
 - **Session tokens never go to the browser** (0114): revoke another device with `revokeMySession({ id })`.
 - **Raw SQL inserts into Better Auth tables** (seeds, scripts) must set `updated_at` on `account` and `session`: those columns have no database default.
+- **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
+- **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
+- **Schema changes need a migration:** CI fails when `drizzle-kit generate` would produce one. There is no `db:push` (0118).
 - **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

@@ -8,7 +8,7 @@ The plan, phases and Definition of Done are in [docs/PLAN.md](docs/PLAN.md). Eve
 
 ## Requirements
 
-- Node.js 22 or newer
+- Node.js 22 or newer (`.nvmrc` pins 24, the version CI uses)
 - pnpm 10 (`corepack enable` picks up the version pinned in `package.json`)
 - On Windows, clone to a short path of about 90 characters or fewer, such as `C:\dev\portfolio`. pnpm's nested `node_modules/.pnpm` paths add about 170 characters. Past about 260 in total, Node misreads ES modules, and tests and builds fail with `ERR_REQUIRE_CYCLE_MODULE`.
 
@@ -105,19 +105,24 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm typecheck` | TypeScript in strict mode, no emit. |
 | `pnpm check` | Biome lint + format check. Warnings fail the run. |
 | `pnpm check:fix` | Apply Biome fixes and formatting. |
+| `pnpm knip` | Report unused files, exports, types and dependencies (`knip.json`). |
 | `pnpm test` | Run the unit, component and server tests once (Vitest project `unit`). |
 | `pnpm test:watch` | Run the unit project in watch mode. |
 | `pnpm test:coverage` | Unit run with v8 coverage (`coverage/`, HTML included), then a per-area table. |
 | `pnpm test:storybook` | Render every story in headless Chrome, twice (English/light, then Nepali/dark), run play functions and fail on any a11y violation. Uses the installed Chrome. |
 | `pnpm db:generate` | Generate a SQL migration in `drizzle/` from schema changes. |
 | `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
-| `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
+| `pnpm db:check` | Check the migrations in `drizzle/` for consistency. |
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
 | `pnpm attachments:import-legacy` | Move Part 1 images from Postgres to Cloudinary (`--dry-run` to preview). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
+
+## CI and git hooks
+
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, check, knip, a schema-vs-migrations check, test, test:storybook, build and build-storybook on every pull request and push to `main`. `pnpm install` installs git hooks (`lefthook.yml`): Biome on staged files before a commit, typecheck and unused-dependency checks before a push. Dependabot opens grouped update PRs weekly. Version pinning rules: decision 0119.
 
 ## Testing
 
@@ -211,4 +216,8 @@ pnpm db:seed-admin --email you@example.com --password "at-least-12-chars" --name
 pnpm dlx shadcn@latest add <component>
 ```
 
-The shadcn CLI (4.21.0) currently writes `import { cn } from "cn"`. Replace it with `import { cn } from "@/lib/utils"` after adding a component. `pnpm typecheck` fails until you do.
+The shadcn CLI (4.21.0) currently writes `import { cn } from "cn"`. Replace it with `import { cn } from "@/lib/utils"` after adding a component. `pnpm typecheck` fails until you do. Never install the `cn` npm package to make it pass: it's an unrelated library (decision 0118).
+
+## License
+
+MIT. See [LICENSE](LICENSE).

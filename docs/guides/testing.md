@@ -1,6 +1,6 @@
 # Testing
 
-Vitest for logic, server code and components; Storybook for every component in a real browser; scripted browser reviews for pages. A task is done when `typecheck`, `check`, `test`, `test:storybook`, `build` and `build-storybook` are green with no warnings.
+Vitest for logic, server code and components; Storybook for every component in a real browser; scripted browser reviews for pages. A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `build` and `build-storybook` are green with no warnings. CI (`.github/workflows/ci.yml`) runs all of them on every pull request and push to `main`; story tests there use the runner's installed Chrome.
 
 ## The suites
 
