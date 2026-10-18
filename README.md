@@ -82,7 +82,7 @@ A request goes through the server entry (Sentry, locale), request middleware (he
 | [Attachments](docs/guides/attachments.md) | Cloudinary uploads and images |
 | [SEO](docs/guides/seo.md) | Head tags, JSON-LD, sitemap, robots, manifest, icons |
 | [i18n](docs/guides/i18n.md) | Messages, locale URLs, formatting |
-| [Testing](docs/guides/testing.md) | Vitest, PGlite, Storybook, browser review |
+| [Testing](docs/guides/testing.md) | Vitest, PGlite, Storybook, Playwright e2e and browser review |
 | [Observability](docs/guides/observability.md) | Logs, Sentry, PostHog, feature flags |
 | [Security](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing |
 | [Deployment](docs/guides/deployment.md) | Vercel + Neon, migrations, cron |
@@ -110,6 +110,7 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm test:watch` | Run the unit project in watch mode. |
 | `pnpm test:coverage` | Unit run with v8 coverage (`coverage/`, HTML included), then a per-area table. |
 | `pnpm test:storybook` | Render every story in headless Chrome, twice (English/light, then Nepali/dark), run play functions and fail on any a11y violation. Uses the installed Chrome. |
+| `pnpm test:e2e` | Build and start a production server (in-memory PGlite, emails captured by a fake Resend API), then run the flows (sign-up, sign-in code, password reset, Test CRUD, permissions, no-JS lists) and the browser review of every page in en/ne × light/dark × 390/768/1280. Uses the installed Chrome. |
 | `pnpm db:generate` | Generate a SQL migration in `drizzle/` from schema changes. |
 | `pnpm db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set). |
 | `pnpm db:check` | Check the migrations in `drizzle/` for consistency. |
@@ -122,11 +123,11 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 
 ## CI and git hooks
 
-GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, check, knip, a schema-vs-migrations check, test, test:storybook, build and build-storybook on every pull request and push to `main`. `pnpm install` installs git hooks (`lefthook.yml`): Biome on staged files before a commit, typecheck and unused-dependency checks before a push. Dependabot opens grouped update PRs weekly. Version pinning rules: decision 0119.
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, check, knip, a schema-vs-migrations check, test, test:storybook, test:e2e (3 shards, on Postgres), build and build-storybook on every pull request and push to `main`. `pnpm install` installs git hooks (`lefthook.yml`): Biome on staged files before a commit, typecheck and unused-dependency checks before a push. Dependabot opens grouped update PRs weekly. Version pinning rules: decision 0119.
 
 ## Testing
 
-`pnpm test` runs unit, server (real SQL on PGlite) and jsdom component tests; `pnpm test:storybook` renders every story in Chrome twice (en/light, ne/dark) and fails on any accessibility violation; `pnpm test:coverage` prints coverage by area. What lives where and the patterns to copy: [docs/guides/testing.md](docs/guides/testing.md).
+`pnpm test` runs unit, server (real SQL on PGlite) and jsdom component tests; `pnpm test:storybook` renders every story in Chrome twice (en/light, ne/dark) and fails on any accessibility violation; `pnpm test:e2e` runs the flows and the browser review against a production build; `pnpm test:coverage` prints coverage by area. What lives where and the patterns to copy: [docs/guides/testing.md](docs/guides/testing.md).
 
 ## Storybook
 
@@ -159,7 +160,7 @@ Query for server data you read, a TanStack DB collection for server data you edi
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
 6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
 7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
-8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`.
+8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`. List any new route in `e2e/support/pages.ts` and run `pnpm test:e2e`.
 
 The Test CRUD files for each layer:
 

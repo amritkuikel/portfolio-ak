@@ -14,6 +14,7 @@
 		"src/**/*.{ts,tsx,css}",
 		"tests/**/*.{ts,tsx}",
 		"scripts/**/*.{mjs,mts}",
+		"e2e/**/*.ts",
 		".storybook/**/*.{ts,tsx}",
 		"vite/**/*.ts"
 	],

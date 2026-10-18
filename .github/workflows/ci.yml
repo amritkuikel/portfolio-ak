@@ -72,6 +72,44 @@ jobs:
       - run: pnpm test:storybook
       - run: pnpm build-storybook
 
+  e2e:
+    name: E2E and browser review (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    # A real Postgres here; locally the harness uses in-memory PGlite (decision 0121).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U e2e" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://e2e:e2e@localhost:5432/e2e
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Builds, migrates, seeds and starts the production server itself (e2e/harness/server.ts).
+      # Uses the runner's installed Chrome, like the story tests.
+      - run: pnpm test:e2e --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 14
+
   build:
     name: Production build
     runs-on: ubuntu-latest

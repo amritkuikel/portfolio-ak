@@ -12,6 +12,9 @@ dist-ssr
 .vinxi
 storybook-static
 coverage
+test-results
+playwright-report
+e2e/.auth
 
 # env (keep .env.example)
 .env
