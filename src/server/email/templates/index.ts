@@ -1,12 +1,18 @@
 import type { ReactElement } from "react";
 import { m } from "@/paraglide/messages";
 import {
+	AccountDeleted,
+	type AccountDeletedProps,
+	DeleteAccount,
+	type DeleteAccountProps,
 	EmailChanged,
 	type EmailChangedProps,
 	OtpCode,
 	type OtpCodeProps,
 	PasswordReset,
 	type PasswordResetProps,
+	SecurityNotice,
+	type SecurityNoticeProps,
 	VerifyEmail,
 	type VerifyEmailProps,
 	Welcome,
@@ -21,6 +27,9 @@ export interface EmailPropsMap {
 	"password-reset": PasswordResetProps;
 	"email-changed": EmailChangedProps;
 	welcome: WelcomeProps;
+	"delete-account": DeleteAccountProps;
+	"account-deleted": AccountDeletedProps;
+	"security-notice": SecurityNoticeProps;
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -64,6 +73,21 @@ export const emailTemplates: EmailRegistry = {
 		component: Welcome,
 		subject: ({ locale, siteName }) => m.email_welcome_subject({ site: siteName }, { locale }),
 		sample: { name: "Sita Sharma", url: "https://example.com/account" },
+	},
+	"delete-account": {
+		component: DeleteAccount,
+		subject: ({ locale, siteName }) => m.email_delete_subject({ site: siteName }, { locale }),
+		sample: { name: "Sita Sharma", url: "https://example.com/account/delete?token=sample", expiresInMinutes: 60 },
+	},
+	"account-deleted": {
+		component: AccountDeleted,
+		subject: ({ locale, siteName }) => m.email_deleted_subject({ site: siteName }, { locale }),
+		sample: { name: "Sita Sharma" },
+	},
+	"security-notice": {
+		component: SecurityNotice,
+		subject: ({ locale, siteName }) => m.email_notice_subject({ site: siteName }, { locale }),
+		sample: { name: "Sita Sharma", kind: "two-factor-enabled", url: "https://example.com/account" },
 	},
 };
 

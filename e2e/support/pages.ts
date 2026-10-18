@@ -48,6 +48,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/sign-in-code" },
 	// Account and admin
 	{ route: "/account", as: "member" },
+	// Without the emailed token it only explains where the link comes from (nothing is deleted).
+	{ route: "/account/delete", as: "member" },
 	{ route: "/admin", as: "admin" },
 	{ route: "/admin", as: "member", status: 403, label: "forbidden" },
 	{ route: "/admin/test-crud", as: "admin" },
@@ -66,6 +68,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/sitemap.xml": "not a page (XML); the review reads it to find $slug URLs",
 	"/api/auth/$": "Better Auth's HTTP API",
 	"/api/health": "JSON for uptime monitors (checked by e2e/flows/health.spec.ts)",
+	"/api/account/export": "a JSON download (checked by e2e/flows/account.spec.ts)",
 	"/dev": "dev-only: 404 in production builds",
 };
 

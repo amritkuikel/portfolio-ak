@@ -4,7 +4,8 @@
  * Scripts: only those carrying this request's nonce ('strict-dynamic' lets them
  * load their own chunks, e.g. route code, Tiptap, posthog-js), so injected
  * <script> tags can't run. Network: same origin plus the configured Sentry,
- * PostHog and Cloudinary upload hosts. Images: same origin plus Cloudinary delivery. Styles allow inline style attributes (Radix positions popovers
+ * PostHog and Cloudinary upload hosts. Images: same origin plus Cloudinary delivery. Frames: none, or
+ * Cloudflare Turnstile's challenge when a captcha is configured. Styles allow inline style attributes (Radix positions popovers
  * with them); stylesheets themselves are same-origin.
  */
 export type CspOptions = {
@@ -13,6 +14,8 @@ export type CspOptions = {
 	connectOrigins?: ReadonlyArray<string>;
 	/** Extra origins images may load from (Cloudinary delivery). */
 	imgOrigins?: ReadonlyArray<string>;
+	/** Origins that may be framed and serve scripts our code loads (Cloudflare Turnstile). */
+	frameOrigins?: ReadonlyArray<string>;
 	/** Adds upgrade-insecure-requests (production only; it would break http://localhost). */
 	upgradeInsecureRequests?: boolean;
 };
@@ -30,15 +33,18 @@ export function buildCsp({
 	nonce,
 	connectOrigins = [],
 	imgOrigins = [],
+	frameOrigins = [],
 	upgradeInsecureRequests = false,
 }: CspOptions): string {
 	const directives: Record<string, ReadonlyArray<string>> = {
 		"default-src": ["'self'"],
-		"script-src": [`'nonce-${nonce}'`, "'strict-dynamic'"],
+		// Host sources only matter to browsers without 'strict-dynamic' (which ignore them otherwise).
+		"script-src": [`'nonce-${nonce}'`, "'strict-dynamic'", ...frameOrigins],
 		"style-src": ["'self'", "'unsafe-inline'"],
 		"img-src": ["'self'", "data:", "blob:", ...imgOrigins],
 		"font-src": ["'self'"],
 		"connect-src": ["'self'", ...connectOrigins],
+		...(frameOrigins.length > 0 ? { "frame-src": frameOrigins } : {}),
 		"object-src": ["'none'"],
 		"base-uri": ["'self'"],
 		"form-action": ["'self'"],

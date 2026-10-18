@@ -38,6 +38,52 @@ What protects the app, and the rules that keep it that way. Most of it is enforc
 - **Expired sessions:** any server function that answers UNAUTHORIZED in the browser sends the user to `/login?redirect=…` (`src/middleware/session-expiry.ts`, 0113). Client route guards read a session at most a minute old (0111); server functions always check it themselves.
 - **Admin plugin endpoints are off:** `/api/auth/admin/*` answers 404 (`src/server/auth/disabled-paths.ts`, 0112), so nothing skips the RBAC rules in `src/server/rbac/service.ts`.
 - **Session tokens stay on the server:** the account page lists sessions by id and revokes them with `revokeMySession` (0114).
+- **Two-factor (0126):** TOTP with backup codes (Better Auth `twoFactor`), turned on from the account page; the login form asks for the code after the password. `AUTH_REQUIRE_ADMIN_2FA=true` (default off) holds back every admin permission until it's on: the session comes back with `permissions: []` and `twoFactorRequired`, so every `requirePermission` refuses and `/admin` redirects to the account page. Email-code sign-in is refused for accounts with two-factor on (`src/server/auth/hooks.ts`); Google sign-in relies on Google's own second factor.
+- **Breached passwords (0127):** sign-up, reset, change and set-password refuse passwords found in Have I Been Pwned (only 5 hash characters leave the server). `AUTH_BREACHED_PASSWORD_CHECK=false` turns it off (the e2e harness does).
+- **Bot protection (0128):** with `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` set, register, forgot-password and sign-in-code need a Turnstile token (`CAPTCHA_PATHS`, `src/server/auth/policy.ts`) and the CSP allows Cloudflare's challenge frame. Every auth form has a honeypot field (`bot-check.tsx`).
+- **Account lifecycle (0129, 0130):** deleting an account always takes an emailed link to `/account/delete`; the last active admin can't be deleted; unsaved uploads are queued for cleanup. `GET /api/account/export` returns the user's own data (never hashes, tokens or 2FA secrets). Users can add a password, link and unlink Google, but never remove their last way in. Each change to how someone signs in emails a `security-notice`.
+- **Rate limits for each endpoint** are in `src/server/auth/auth.ts` (`customRules`): two-factor 10 a minute, account deletion 3, linking and unlinking 5.
+
+## Recipes: last login method, passkeys
+
+Not in the base (0131). Both are Better Auth plugins; add them to `src/server/auth/auth.ts` before `tanstackStartCookies()`, which stays last.
+
+**Last login method** ("you last used Google" on the login page):
+
+```ts
+// src/server/auth/auth.ts
+import { lastLoginMethod } from "better-auth/plugins";
+plugins: [/* … */ lastLoginMethod(), tanstackStartCookies()],
+
+// src/lib/auth-client.ts
+import { lastLoginMethodClient } from "better-auth/client/plugins";
+plugins: [/* … */ lastLoginMethodClient()],
+
+// login page: "email", "email-otp" or "google"
+const last = authClient.getLastUsedLoginMethod();
+```
+
+It's a cookie by default, so read it in an effect (the server-rendered page can't know it) and show a small badge that doesn't move the layout. `lastLoginMethod({ storeInDatabase: true })` keeps it on the user row instead: run `pnpm auth:schema` and `pnpm db:generate` for the new column.
+
+**Passkeys** (WebAuthn):
+
+```ts
+// pnpm add @better-auth/passkey
+// src/server/auth/auth.ts
+import { passkey } from "@better-auth/passkey";
+plugins: [/* … */ passkey({ rpID: new URL(serverEnv.BETTER_AUTH_URL).hostname, rpName: clientEnv.VITE_APP_TITLE }), tanstackStartCookies()],
+
+// src/lib/auth-client.ts
+import { passkeyClient } from "@better-auth/passkey/client";
+plugins: [/* … */ passkeyClient()],
+
+// account page: register one for the signed-in user
+await authClient.passkey.addPasskey({ name: "This device" });
+// login page
+await authClient.signIn.passkey();
+```
+
+Then `pnpm auth:schema` + `pnpm db:generate` (a `passkey` table), messages in both languages, rate limits for `/passkey/*`, and a decision on how passkeys relate to two-factor: a passkey sign-in doesn't go through the TOTP step, which is fine (a passkey is already two factors: the device and its unlock) but should be written down, together with whether a passkey counts as a "way in" when unlinking Google. `rpID` must be the site's domain, so passkeys made on a preview URL don't work in production.
 
 ## Content
 

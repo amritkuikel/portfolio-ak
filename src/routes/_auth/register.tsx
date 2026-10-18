@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
+import { captchaFetchOptions, Honeypot, isBot, useTurnstile } from "@/features/auth/components/bot-check";
 import { CheckEmail } from "@/features/auth/components/check-email";
 import { authErrorMessage } from "@/features/auth/errors";
+import { authFeaturesQueryOptions } from "@/features/auth/queries";
 import { localizedPath } from "@/features/auth/use-auth-actions";
 import {
 	collectErrors,
@@ -15,10 +17,13 @@ import {
 	validateRequired,
 } from "@/features/auth/validation";
 import { authClient } from "@/lib/auth-client";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/register")({
+	// The Turnstile site key, when a captcha is configured.
+	loader: ({ context }) => ensureQuery(context.queryClient, authFeaturesQueryOptions()),
 	head: () => ({ meta: [{ title: pageTitle(m.auth_register_title()) }] }),
 	component: RegisterPage,
 });
@@ -27,6 +32,8 @@ type Field = "name" | "email" | "password" | "confirm";
 
 function RegisterPage() {
 	const search = Route.useSearch();
+	const { turnstileSiteKey } = Route.useLoaderData();
+	const captcha = useTurnstile(turnstileSiteKey);
 	const [errors, setErrors] = useState<FieldErrors<Field>>({});
 	const [formError, setFormError] = useState<string>();
 	const [pending, setPending] = useState(false);
@@ -47,6 +54,9 @@ function RegisterPage() {
 		setErrors(invalid ?? {});
 		setFormError(undefined);
 		if (invalid) return;
+		// A bot filled the hidden field: look successful, send nothing.
+		if (isBot(form)) return setSentTo(email);
+		if (!captcha.ready) return setFormError(m.auth_error_captcha());
 
 		setPending(true);
 		// Verification is required: no session until the emailed link is opened.
@@ -55,8 +65,10 @@ function RegisterPage() {
 			email,
 			password,
 			callbackURL: localizedPath("/verify-email"),
+			...captchaFetchOptions(captcha.token),
 		});
 		setPending(false);
+		captcha.reset();
 		if (error) {
 			setFormError(authErrorMessage(error));
 			return;
@@ -88,6 +100,8 @@ function RegisterPage() {
 					label={m.auth_confirm_password_label()}
 					error={errors.confirm}
 				/>
+				<Honeypot />
+				{captcha.element}
 				<Button type="submit" disabled={pending}>
 					{pending ? m.auth_submitting() : m.auth_submit_register()}
 				</Button>

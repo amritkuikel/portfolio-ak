@@ -1,13 +1,16 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { z } from "zod";
 import { errorMessage } from "@/components/errors/error-page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AccountDataSection } from "@/features/auth/components/account-data-section";
+import { AccountSection as Section, type Status } from "@/features/auth/components/account-section";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
+import { SignInMethodsSection } from "@/features/auth/components/sign-in-methods-section";
+import { TwoFactorSection } from "@/features/auth/components/two-factor-section";
 import { authErrorMessage } from "@/features/auth/errors";
-import { accountSessionsQueryOptions, authKeys } from "@/features/auth/queries";
+import { accountSecurityQueryOptions, accountSessionsQueryOptions, authKeys } from "@/features/auth/queries";
 import { localizedPath, useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { describeUserAgent } from "@/features/auth/user-agent";
 import {
@@ -27,19 +30,26 @@ import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_authed/account")({
-	// ?emailChanged=1 is the callback after confirming a new email address.
-	validateSearch: z.object({ emailChanged: z.literal(1).optional().catch(undefined) }),
-	loader: ({ context }) => ensureQuery(context.queryClient, accountSessionsQueryOptions()),
+	// ?emailChanged=1 is the callback after confirming a new email address;
+	// ?twoFactor=required comes from the admin area when it needs two-factor first (0126).
+	validateSearch: z.object({
+		emailChanged: z.literal(1).optional().catch(undefined),
+		twoFactor: z.literal("required").optional().catch(undefined),
+	}),
+	loader: ({ context }) =>
+		Promise.all([
+			ensureQuery(context.queryClient, accountSessionsQueryOptions()),
+			ensureQuery(context.queryClient, accountSecurityQueryOptions()),
+		]),
 	head: () => ({ meta: [{ title: pageTitle(m.account_title()) }] }),
 	component: AccountPage,
 });
 
-type Status = { tone: "error" | "success"; text: string } | undefined;
-
 function AccountPage() {
 	const { session } = Route.useRouteContext();
-	const { emailChanged } = Route.useSearch();
+	const { emailChanged, twoFactor } = Route.useSearch();
 	const { signOut } = useAuthNavigation();
+	const { data: security } = useSuspenseQuery(accountSecurityQueryOptions());
 
 	return (
 		<main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-12" data-testid="account-page">
@@ -57,23 +67,16 @@ function AccountPage() {
 			{emailChanged ? <FormMessage tone="success">{m.account_email_changed()}</FormMessage> : null}
 			<ProfileSection name={session.user.name} />
 			<EmailSection email={session.user.email} />
-			<PasswordSection />
+			{security.hasPassword ? <PasswordSection /> : null}
+			<TwoFactorSection
+				enabled={security.twoFactorEnabled}
+				required={security.twoFactorRequired || twoFactor === "required"}
+				hasPassword={security.hasPassword}
+			/>
+			<SignInMethodsSection security={security} />
 			<SessionsSection />
+			<AccountDataSection email={session.user.email} />
 		</main>
-	);
-}
-
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>
-					<h2>{title}</h2>
-				</CardTitle>
-				{description ? <CardDescription>{description}</CardDescription> : null}
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">{children}</CardContent>
-		</Card>
 	);
 }
 

@@ -22,7 +22,7 @@ type BeforeLoad = (ctx: Record<string, unknown>) => unknown;
 const beforeLoad = (route: { options: unknown }) => (route.options as { beforeLoad: BeforeLoad }).beforeLoad;
 
 const session = (role: "user" | "admin"): Session => ({
-	user: { id: "u1", email: "a@example.com", name: "A", role },
+	user: { id: "u1", email: "a@example.com", name: "A", role, twoFactorEnabled: false },
 	permissions: role === "admin" ? ["test-crud:read", "users:read", "roles:read"] : [],
 });
 const location = { href: "/account?tab=sessions" };

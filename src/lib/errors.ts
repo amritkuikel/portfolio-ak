@@ -34,9 +34,11 @@ export const HTTP_STATUS: Readonly<Record<AppErrorCode, number>> = {
 /**
  * Why an error happened, when the client acts on it beyond showing a message:
  * "stale" is a CONFLICT because the row changed since the client loaded it
- * (optimistic concurrency, src/lib/concurrency.ts).
+ * (optimistic concurrency, src/lib/concurrency.ts). "two-factor-required" is a
+ * FORBIDDEN because the user must turn on two-factor authentication before using
+ * their admin permissions (AUTH_REQUIRE_ADMIN_2FA, decisions.md 0126).
  */
-export const APP_ERROR_REASONS = ["stale"] as const;
+export const APP_ERROR_REASONS = ["stale", "two-factor-required"] as const;
 export type AppErrorReason = (typeof APP_ERROR_REASONS)[number];
 
 /** Field path -> error keys/messages, e.g. from Zod input validation. */

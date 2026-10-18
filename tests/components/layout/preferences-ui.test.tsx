@@ -40,7 +40,7 @@ async function renderWithPreferences(ui: ReactNode, initial: Partial<Preferences
 	// The sidebar shows sections by permission, read from the session query.
 	const queryClient = new QueryClient();
 	const session: Session = {
-		user: { id: "a", email: "a@example.com", name: "A", role: "admin" },
+		user: { id: "a", email: "a@example.com", name: "A", role: "admin", twoFactorEnabled: false },
 		permissions: [...ALL_PERMISSIONS],
 	};
 	queryClient.setQueryData(sessionQueryOptions().queryKey, session);

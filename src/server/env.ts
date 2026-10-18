@@ -18,6 +18,13 @@ if (typeof window !== "undefined") {
 
 const isEmail = (value: string) => z.email().safeParse(value).success;
 
+/** An on/off setting written as "true" or "false", with its default when unset. */
+const flag = (fallback: boolean) =>
+	z
+		.enum(["true", "false"], "Use true or false.")
+		.default(fallback ? "true" : "false")
+		.transform((value) => value === "true");
+
 /** Accepts `hello@example.com` or `Portfolio <hello@example.com>`. */
 const emailFrom = z
 	.string({ error: (issue) => (issue.input === undefined ? "Required." : undefined) })
@@ -52,6 +59,16 @@ export const serverEnvSchema = {
 	// Optional Google sign-in. Set both or neither; the button only appears when both are set.
 	GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
 	GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
+	// Users with any admin permission must turn on two-factor authentication before
+	// they can use the admin area (decisions.md 0126). Off by default.
+	AUTH_REQUIRE_ADMIN_2FA: flag(false),
+	// Refuse passwords found in Have I Been Pwned's breach corpus on sign-up, reset and
+	// change (only 5 characters of the SHA-1 hash leave the server). On by default (0127).
+	AUTH_BREACHED_PASSWORD_CHECK: flag(true),
+	// Optional Cloudflare Turnstile on register, forgot-password and sign-in-code (0128).
+	// Set both or neither; unset, there's no captcha (the honeypot field still applies).
+	TURNSTILE_SITE_KEY: z.string().trim().min(1).optional(),
+	TURNSTILE_SECRET_KEY: z.string().trim().min(1).optional(),
 	// Optional defaults for `pnpm db:seed-admin` (CLI flags override them).
 	ADMIN_EMAIL: z.email().optional(),
 	ADMIN_PASSWORD: z.string().min(12, "Use at least 12 characters for the admin password.").optional(),
@@ -96,6 +113,13 @@ export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) 
 						code: "custom",
 						path: [env.GOOGLE_CLIENT_ID ? "GOOGLE_CLIENT_SECRET" : "GOOGLE_CLIENT_ID"],
 						message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither.",
+					});
+				}
+				if (Boolean(env.TURNSTILE_SITE_KEY) !== Boolean(env.TURNSTILE_SECRET_KEY)) {
+					ctx.addIssue({
+						code: "custom",
+						path: [env.TURNSTILE_SITE_KEY ? "TURNSTILE_SECRET_KEY" : "TURNSTILE_SITE_KEY"],
+						message: "Set both TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY, or neither.",
 					});
 				}
 				const sentryUpload = [env.SENTRY_AUTH_TOKEN, env.SENTRY_ORG, env.SENTRY_PROJECT].filter(Boolean).length;

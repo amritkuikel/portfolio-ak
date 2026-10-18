@@ -69,6 +69,7 @@ These rules only hold because every change goes through `src/functions/rbac.ts`:
 
 - **A route they may not open** (`assertRoutePermission` in `beforeLoad`): the forbidden page, "Access denied", with a real 403 during SSR and a "Go back" action (`src/components/errors/error-page.tsx`).
 - **Signed out, or the session expired:** layouts redirect to `/login?redirect=…`. A server function answering UNAUTHORIZED in the browser does the same, through the global `sessionExpiryMiddleware` (0113).
+- **An admin without two-factor, when `AUTH_REQUIRE_ADMIN_2FA=true`:** their session carries no permissions (`twoFactorRequired`), so every guarded function refuses; entering `/admin` redirects to `/account?twoFactor=required#two-factor` (FORBIDDEN with the `two-factor-required` reason, 0126). Turning two-factor on gives the permissions back on the next request.
 - **An action they may not take:** the server function answers FORBIDDEN and the caller shows `errorMessage(error)` in a toast. Hide the control with `useCan`/`<Can>` so this is rare.
 
 ## Trying it by hand

@@ -35,6 +35,14 @@ describe("buildCsp", () => {
 		expect(csp["img-src"]).toEqual(["'self'", "data:", "blob:", "https://res.cloudinary.com"]);
 	});
 
+	it("allows no frames, unless a captcha's challenge origin is configured", () => {
+		expect(directives(buildCsp({ nonce: "n" }))["frame-src"]).toBeUndefined();
+		const csp = directives(buildCsp({ nonce: "n", frameOrigins: ["https://challenges.cloudflare.com"] }));
+		expect(csp["frame-src"]).toEqual(["https://challenges.cloudflare.com"]);
+		expect(csp["script-src"]).toEqual(["'nonce-n'", "'strict-dynamic'", "https://challenges.cloudflare.com"]);
+		expect(csp["frame-ancestors"]).toEqual(["'none'"]);
+	});
+
 	it("upgrades insecure requests only when asked (production)", () => {
 		expect(buildCsp({ nonce: "n" })).not.toContain("upgrade-insecure-requests");
 		expect(buildCsp({ nonce: "n", upgradeInsecureRequests: true })).toMatch(/; upgrade-insecure-requests$/);

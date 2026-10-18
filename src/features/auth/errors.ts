@@ -17,8 +17,27 @@ const byCode: Readonly<Record<string, () => string>> = {
 	INVALID_TOKEN: m.auth_reset_invalid,
 	TOKEN_EXPIRED: m.auth_reset_invalid,
 	EMAIL_MISMATCH: m.auth_error_same_email,
-	SESSION_NOT_FRESH: m.error_unauthorized,
+	SESSION_NOT_FRESH: m.auth_error_session_not_fresh,
+	SESSION_EXPIRED: m.auth_error_session_not_fresh,
+	// Breached passwords (haveIBeenPwned) and captcha (Turnstile).
+	PASSWORD_COMPROMISED: m.auth_error_password_breached,
+	MISSING_RESPONSE: m.auth_error_captcha,
+	VERIFICATION_FAILED: m.auth_error_captcha,
+	// Two-factor sign-in and setup.
+	INVALID_CODE: m.auth_error_invalid_code,
+	INVALID_BACKUP_CODE: m.auth_error_invalid_backup_code,
+	ACCOUNT_TEMPORARILY_LOCKED: m.auth_error_two_factor_locked,
+	INVALID_TWO_FACTOR_COOKIE: m.auth_error_two_factor_expired,
+	TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: m.auth_error_two_factor_expired,
+	TWO_FACTOR_USE_PASSWORD: m.auth_error_two_factor_use_password,
+	// Sign-in methods and deletion.
+	FAILED_TO_UNLINK_LAST_ACCOUNT: m.account_methods_unlink_last,
+	LAST_ADMIN: m.account_delete_last_admin,
 };
+
+/** Turnstile refused the request (no token, or a token that didn't verify). */
+export const isCaptchaError = (error: AuthClientError | null | undefined) =>
+	error?.code === "MISSING_RESPONSE" || error?.code === "VERIFICATION_FAILED";
 
 /**
  * Localized text for a Better Auth client error. Unknown codes get a generic

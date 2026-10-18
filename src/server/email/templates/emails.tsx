@@ -78,3 +78,66 @@ export function Welcome({ locale, siteName, name, url }: WelcomeProps) {
 		</EmailLayout>
 	);
 }
+
+export type DeleteAccountProps = EmailBaseProps & WithName & WithUrl & WithExpiry;
+export type AccountDeletedProps = EmailBaseProps & WithName;
+
+/** Changes to how someone signs in, each told to the account's address. */
+export const SECURITY_NOTICE_KINDS = [
+	"two-factor-enabled",
+	"two-factor-disabled",
+	"password-set",
+	"google-linked",
+	"google-unlinked",
+] as const;
+export type SecurityNoticeKind = (typeof SECURITY_NOTICE_KINDS)[number];
+export type SecurityNoticeProps = EmailBaseProps & WithName & WithUrl & { kind: SecurityNoticeKind };
+
+export function DeleteAccount({ locale, siteName, name, url, expiresInMinutes }: DeleteAccountProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={m.email_delete_preview({}, { locale })}>
+			<Greeting locale={locale} name={name} />
+			<Text style={styles.text}>{m.email_delete_body({}, { locale })}</Text>
+			<ActionButton locale={locale} href={url} label={m.email_delete_button({}, { locale })} />
+			<Text style={styles.muted}>
+				{m.email_link_expires({ minutes: minutes(expiresInMinutes, locale) }, { locale })}
+			</Text>
+			<Text style={styles.muted}>{m.email_delete_ignore({}, { locale })}</Text>
+		</EmailLayout>
+	);
+}
+
+export function AccountDeleted({ locale, siteName, name }: AccountDeletedProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={m.email_deleted_preview({}, { locale })}>
+			<Greeting locale={locale} name={name} />
+			<Text style={styles.text}>{m.email_deleted_body({}, { locale })}</Text>
+		</EmailLayout>
+	);
+}
+
+const noticeText = (kind: SecurityNoticeKind, locale: EmailBaseProps["locale"]) => {
+	switch (kind) {
+		case "two-factor-enabled":
+			return m.email_notice_two_factor_enabled({}, { locale });
+		case "two-factor-disabled":
+			return m.email_notice_two_factor_disabled({}, { locale });
+		case "password-set":
+			return m.email_notice_password_set({}, { locale });
+		case "google-linked":
+			return m.email_notice_google_linked({}, { locale });
+		case "google-unlinked":
+			return m.email_notice_google_unlinked({}, { locale });
+	}
+};
+
+export function SecurityNotice({ locale, siteName, name, url, kind }: SecurityNoticeProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={noticeText(kind, locale)}>
+			<Greeting locale={locale} name={name} />
+			<Text style={styles.text}>{noticeText(kind, locale)}</Text>
+			<Text style={styles.text}>{m.email_notice_warning({}, { locale })}</Text>
+			<ActionButton locale={locale} href={url} label={m.email_changed_button({}, { locale })} />
+		</EmailLayout>
+	);
+}

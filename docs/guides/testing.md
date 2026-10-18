@@ -18,7 +18,7 @@ Vitest for logic, server code and components; Storybook for every component in a
 | `tests/components/` | jsdom tests of fields, filters, breadcrumbs, masking, preferences UI, permissions UI, the attachments editor |
 | `tests/i18n/` | Message parity, translation, unused keys, locale routing |
 | `tests/email/` | Every template in both languages |
-| `e2e/` | Playwright: `review.spec.ts` (every page), `flows/` (auth, Test CRUD, edit conflicts, permissions, no-JS lists, health), `harness/` (the server it runs against), `support/` (fixtures, page list, checks) |
+| `e2e/` | Playwright: `review.spec.ts` (every page), `flows/` (auth, account, Test CRUD, edit conflicts, permissions, no-JS lists, health), `harness/` (the server it runs against), `support/` (fixtures, page list, checks) |
 
 ## Patterns
 
@@ -89,6 +89,7 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 ### Flows (`e2e/flows/`)
 
 - **Auth:** sign up → verify → log in; refused log-in while unverified; log-in code; password reset. Links and codes come from the captured emails (`harness.nextEmail(to, template)`).
+- **Account:** turn on two-factor (the code comes from `support/totp.ts`, a tiny authenticator), then log in with an app code and with a backup code, and an emailed sign-in code is refused; download the data export; delete the account through the emailed link, after which logging in fails. The harness turns off the breached-password check (no outside calls); `tests/server/auth-hardening.test.ts` covers it against a real Better Auth instance with a stubbed range API.
 - **Test CRUD:** create, edit, publish (the public page appears) and delete (it 404s), as admin.
 - **Conflicts:** two tabs edit the same item; the second save is refused with the "changed by someone else" notice, its response carries an `x-request-id` that matches the error, and reloading then saving keeps both changes.
 - **Permissions:** a 403 page for a missing permission; actions a role lacks aren't offered; granting and revoking in the matrix takes effect on the next request.

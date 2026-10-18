@@ -20,6 +20,7 @@ const messages: Record<AppErrorCode, () => string> = {
 export const errorMessage = (error: unknown): string => {
 	if (!isAppError(error)) return m.error_internal();
 	if (error.reason === "stale") return m.error_stale();
+	if (error.reason === "two-factor-required") return m.error_two_factor_required();
 	return error.fieldErrors?.[FORM_ERROR_KEY]?.[0] ?? messages[error.code]();
 };
 

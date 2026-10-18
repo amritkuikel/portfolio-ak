@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sessionIdSchema } from "@/features/auth/schema";
+import { type AccountSecurity, sessionIdSchema, setPasswordSchema } from "@/features/auth/schema";
 import { zodInput } from "@/lib/fn-input";
 import type { Session } from "@/lib/session";
 import { requireAdminAccessMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
@@ -70,4 +70,43 @@ export const revokeMySession = createServerFn({ method: "POST" })
 			import("@tanstack/react-start/server"),
 		]);
 		await revokeOwnSession(auth.api, getRequestHeaders(), data.id);
+	});
+
+/** How the signed-in user signs in (password, Google, two-factor), for the account page. */
+export const getAccountSecurity = createServerFn({ method: "GET" })
+	.middleware([requireUserMiddleware])
+	.handler(async ({ context }): Promise<AccountSecurity> => {
+		const [{ auth, authFeatures }, { getRequestHeaders }] = await Promise.all([
+			import("@/server/auth/auth"),
+			import("@tanstack/react-start/server"),
+		]);
+		const accounts = await auth.api.listUserAccounts({ headers: getRequestHeaders() });
+		const google = accounts.find((account) => account.providerId === "google");
+		return {
+			hasPassword: accounts.some((account) => account.providerId === "credential"),
+			google: { available: authFeatures.google, accountId: google?.id ?? null },
+			twoFactorEnabled: context.user.twoFactorEnabled,
+			twoFactorRequired: context.twoFactorRequired,
+		};
+	});
+
+/** Adds a password to an account that has none (signed up with Google). */
+export const setMyPassword = createServerFn({ method: "POST" })
+	.middleware([requireUserMiddleware])
+	.validator(zodInput(setPasswordSchema))
+	.handler(async ({ data }): Promise<void> => {
+		const [{ auth }, { setOwnPassword }, { serverEnv }, { isPasswordCompromised }, { getRequestHeaders }] =
+			await Promise.all([
+				import("@/server/auth/auth"),
+				import("@/server/auth/password"),
+				import("@/server/env"),
+				import("better-auth/plugins/haveibeenpwned"),
+				import("@tanstack/react-start/server"),
+			]);
+		await setOwnPassword(
+			auth.api,
+			getRequestHeaders(),
+			data.newPassword,
+			serverEnv.AUTH_BREACHED_PASSWORD_CHECK ? isPasswordCompromised : null,
+		);
 	});

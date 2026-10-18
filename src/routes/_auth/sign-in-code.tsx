@@ -2,11 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
-import { authErrorMessage } from "@/features/auth/errors";
+import { captchaFetchOptions, Honeypot, isBot, useTurnstile } from "@/features/auth/components/bot-check";
+import { authErrorMessage, isCaptchaError } from "@/features/auth/errors";
+import { authFeaturesQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { field, validateEmail, validateOtp } from "@/features/auth/validation";
 import { authClient } from "@/lib/auth-client";
 import { formatNumber } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
@@ -14,12 +17,16 @@ import { m } from "@/paraglide/messages";
 const OTP_MINUTES = 5;
 
 export const Route = createFileRoute("/_auth/sign-in-code")({
+	// The Turnstile site key, when a captcha is configured.
+	loader: ({ context }) => ensureQuery(context.queryClient, authFeaturesQueryOptions()),
 	head: () => ({ meta: [{ title: pageTitle(m.auth_otp_title()) }] }),
 	component: SignInCodePage,
 });
 
 function SignInCodePage() {
 	const search = Route.useSearch();
+	const { turnstileSiteKey } = Route.useLoaderData();
+	const captcha = useTurnstile(turnstileSiteKey);
 	const { afterSignIn } = useAuthNavigation();
 	const [email, setEmail] = useState<string>();
 	const [error, setError] = useState<string>();
@@ -28,17 +35,26 @@ function SignInCodePage() {
 
 	const sendCode = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		const value = field(new FormData(event.currentTarget), "email").trim();
+		const form = new FormData(event.currentTarget);
+		const value = field(form, "email").trim();
 		const invalid = validateEmail(value);
 		setError(invalid);
 		setFormError(undefined);
 		if (invalid) return;
+		if (isBot(form)) return setEmail(value);
+		if (!captcha.ready) return setFormError(m.auth_error_captcha());
 
 		setPending(true);
-		const { error: failure } = await authClient.emailOtp.sendVerificationOtp({ email: value, type: "sign-in" });
+		const { error: failure } = await authClient.emailOtp.sendVerificationOtp({
+			email: value,
+			type: "sign-in",
+			...captchaFetchOptions(captcha.token),
+		});
 		setPending(false);
-		// Only rate limiting is surfaced; unknown emails get the same "sent" message (no account enumeration).
-		if (failure?.status === 429) {
+		captcha.reset();
+		// Only rate limiting and a refused captcha are surfaced; unknown emails get the same
+		// "sent" message (no account enumeration).
+		if (failure?.status === 429 || isCaptchaError(failure)) {
 			setFormError(authErrorMessage(failure));
 			return;
 		}
@@ -97,6 +113,8 @@ function SignInCodePage() {
 				>
 					<p className="text-muted-foreground">{m.auth_otp_intro()}</p>
 					<AuthField name="email" type="email" autoComplete="email" label={m.auth_email_label()} error={error} />
+					<Honeypot />
+					{captcha.element}
 					<Button type="submit" disabled={pending}>
 						{pending ? m.auth_submitting() : m.auth_otp_send()}
 					</Button>

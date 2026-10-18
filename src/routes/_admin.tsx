@@ -10,7 +10,8 @@ import { NOINDEX } from "@/lib/seo";
  * Admin area. Entering it (and every SSR request) checks the role ON THE SERVER
  * (ensureAdminAccess: the user must hold at least one permission, read from the database).
  * Anonymous visitors go to /login with a return URL; signed-in non-admins get
- * the localized FORBIDDEN error page.
+ * the localized FORBIDDEN error page; admins who must turn on two-factor first
+ * (AUTH_REQUIRE_ADMIN_2FA) go to the account page's two-factor section.
  *
  * Navigations inside the area (another admin page, a filter or page change)
  * reuse the session the root route already loaded instead of another round
@@ -26,6 +27,10 @@ export const Route = createFileRoute("/_admin")({
 		} catch (error) {
 			if (isAppError(error) && error.code === "UNAUTHORIZED") {
 				throw redirect({ to: "/login", search: { redirect: location.href } });
+			}
+			// AUTH_REQUIRE_ADMIN_2FA: set up two-factor on the account page first (0126).
+			if (isAppError(error) && error.reason === "two-factor-required") {
+				throw redirect({ to: "/account", search: { twoFactor: "required" }, hash: "two-factor" });
 			}
 			// Serve the FORBIDDEN page with a real 403 during SSR.
 			await setErrorStatus(error);

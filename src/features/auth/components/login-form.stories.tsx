@@ -56,3 +56,20 @@ export const SignsIn: Story = {
 		});
 	},
 };
+
+/** Two-factor on (the mock answers 2fa@example.com that way): the code step replaces the form. */
+export const TwoFactorStep: Story = {
+	play: async ({ canvas, userEvent, args }) => {
+		await userEvent.type(canvas.getByLabelText(m.auth_email_label()), "2fa@example.com");
+		await userEvent.type(canvas.getByLabelText(m.auth_password_label()), "admin-password-123");
+		await userEvent.click(canvas.getByRole("button", { name: m.auth_submit_login() }));
+		await expect(await canvas.findByText(m.auth_2fa_intro())).toBeVisible();
+		await expect(args.onSignedIn).not.toHaveBeenCalled();
+
+		await userEvent.type(canvas.getByLabelText(m.auth_code_label()), "123456");
+		await userEvent.click(canvas.getByLabelText(m.auth_2fa_trust_device()));
+		await userEvent.click(canvas.getByRole("button", { name: m.auth_otp_verify() }));
+		await waitFor(() => expect(args.onSignedIn).toHaveBeenCalledOnce());
+		await expect(authClient.twoFactor.verifyTotp).toHaveBeenCalledWith({ code: "123456", trustDevice: true });
+	},
+};

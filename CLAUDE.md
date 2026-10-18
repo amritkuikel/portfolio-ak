@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–28 are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–29 are done. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -139,4 +139,5 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **E2E against a stale build:** locally, `pnpm test:e2e` reuses a server already on port 3100 (`node e2e/harness/server.ts`). Restart it after changing app code, or the suite tests the old build. Auth endpoints are rate limited per IP: tests that sign in call `harness.resetRateLimits()` first.
 - **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. Forms catch the stale `CONFLICT` with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert` (0122).
 - **Server logs go through `log()`** (`src/server/log.ts`), not `console.*`, so each line carries the request id; the id comes from AsyncLocalStorage set by `src/server.ts` (0123). Uptime monitors use `GET /api/health`, not the `/health` page (0124).
+- **Auth hardening (0126–0130):** with `AUTH_REQUIRE_ADMIN_2FA=true` an admin without two-factor gets a session with **no permissions** (`twoFactorRequired`), so don't read an empty `permissions` as "not an admin" in that case. Email-code sign-in is refused for two-factor accounts by an `after` hook (`src/server/auth/hooks.ts`); keep it when touching auth hooks. Better Auth's `setPassword` has no path, so the breached-password plugin skips it: `setOwnPassword` checks itself. New auth endpoints get a rate limit in `customRules`. Account deletion goes through `/account/delete?token=…`, never Better Auth's GET callback.
 - **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

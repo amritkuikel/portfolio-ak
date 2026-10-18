@@ -95,7 +95,10 @@ function Harness({ initial, onSubmit }: { initial: FieldImage[]; onSubmit: (valu
 
 function renderField(initial: FieldImage[], permissions = [...ALL_PERMISSIONS]) {
 	const queryClient = new QueryClient();
-	const session: Session = { user: { id: "u", email: "u@example.com", name: "U", role: "user" }, permissions };
+	const session: Session = {
+		user: { id: "u", email: "u@example.com", name: "U", role: "user", twoFactorEnabled: false },
+		permissions,
+	};
 	queryClient.setQueryData(sessionQueryOptions().queryKey, session);
 	const onSubmit = vi.fn<(value: FieldImage[]) => void>();
 	render(

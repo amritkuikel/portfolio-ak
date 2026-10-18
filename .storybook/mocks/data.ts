@@ -7,16 +7,16 @@ import type { Session } from "../../src/lib/session";
 
 /** Fixed sample data for stories (stable values keep screenshots and a11y runs deterministic). */
 export const sampleAdmin: Session = {
-	user: { id: "admin-1", email: "admin@example.com", name: "Admin", role: "admin" },
+	user: { id: "admin-1", email: "admin@example.com", name: "Admin", role: "admin", twoFactorEnabled: false },
 	permissions: [...ALL_PERMISSIONS],
 };
 export const sampleUser: Session = {
-	user: { id: "user-1", email: "sita@example.com", name: "Sita", role: "user" },
+	user: { id: "user-1", email: "sita@example.com", name: "Sita", role: "user", twoFactorEnabled: false },
 	permissions: [],
 };
 /** A custom "Editor" role: Test CRUD read/create/update only. */
 export const sampleEditor: Session = {
-	user: { id: "editor-1", email: "editor@example.com", name: "Gita", role: "user" },
+	user: { id: "editor-1", email: "editor@example.com", name: "Gita", role: "user", twoFactorEnabled: false },
 	permissions: ["test-crud:read", "test-crud:create", "test-crud:update"],
 };
 

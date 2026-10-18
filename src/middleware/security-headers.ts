@@ -28,6 +28,16 @@ const loadCloudinaryOrigins = () => {
 	return cloudinaryOrigins;
 };
 
+/** Cloudflare Turnstile's script and challenge frame, when a captcha is configured (decisions.md 0128). */
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+let turnstileOrigins: Promise<string[]> | undefined;
+const loadTurnstileOrigins = () => {
+	turnstileOrigins ??= import("@/server/env").then(({ serverEnv }) =>
+		serverEnv.TURNSTILE_SITE_KEY ? [TURNSTILE_ORIGIN] : [],
+	);
+	return turnstileOrigins;
+};
+
 const createNonce = () => {
 	const bytes = new Uint8Array(16);
 	crypto.getRandomValues(bytes);
@@ -47,13 +57,14 @@ export const securityHeadersMiddleware = createMiddleware().server(async ({ next
 	const nonce = createNonce();
 	const result = await next({ context: { nonce } });
 	if (import.meta.env.PROD && result.response.headers.get("content-type")?.includes("text/html")) {
-		const cloudinary = await loadCloudinaryOrigins();
+		const [cloudinary, frameOrigins] = await Promise.all([loadCloudinaryOrigins(), loadTurnstileOrigins()]);
 		result.response.headers.set(
 			"content-security-policy",
 			buildCsp({
 				nonce,
 				connectOrigins: [...new Set([...clientConnectOrigins, ...cloudinary.connect])],
 				imgOrigins: cloudinary.img,
+				frameOrigins,
 				upgradeInsecureRequests: true,
 			}),
 		);

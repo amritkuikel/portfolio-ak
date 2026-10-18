@@ -7,7 +7,7 @@
 1. **Database:** create a Neon project. Use the pooled connection string as `DATABASE_URL` and the direct one as `DATABASE_URL_UNPOOLED` (used for migrations).
 2. **Environment** (Vercel project settings; full table in the README):
    - Required: `VITE_APP_TITLE`, `VITE_SITE_URL` (your domain, no trailing slash), `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EMAIL_FROM`, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`.
-   - Optional: Cloudinary (all three), `CRON_SECRET`, Sentry, PostHog, Google sign-in.
+   - Optional: Cloudinary (all three), `CRON_SECRET`, Sentry, PostHog, Google sign-in, Turnstile (both keys), `AUTH_REQUIRE_ADMIN_2FA=true` once every admin has set up two-factor.
    - `VITE_` variables are baked in at build time. Changing one needs a rebuild.
 3. **Migrate and seed:** from CI or locally against production, run `pnpm db:migrate` (it uses `DATABASE_URL_UNPOOLED`), then `pnpm db:seed-admin --email … --password … --name …`.
 4. **Deploy.** Then open `/health` (database status; point your uptime monitor at `/api/health`, which answers 503 when the database is down), `/robots.txt`, `/sitemap.xml` (absolute URLs on your domain) and sign in at `/login`.

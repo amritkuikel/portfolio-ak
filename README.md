@@ -43,6 +43,9 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 | `EMAIL_PROVIDER` | prod | `console` (dev) or `resend`. Production refuses to start with `console`. |
 | `RESEND_API_KEY` | with Resend | Resend API key (`re_…`). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | Enable "Continue with Google" (both or neither). |
+| `AUTH_REQUIRE_ADMIN_2FA` | no | `true` requires two-factor for everyone with an admin permission before they can use `/admin` (default `false`). |
+| `AUTH_BREACHED_PASSWORD_CHECK` | no | `false` turns off the Have I Been Pwned check on new passwords (default `true`). |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Cloudflare Turnstile on register, forgot-password and sign-in-code (both or neither). |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | no | Defaults for `pnpm db:seed-admin`. |
 | `DEMO_PASSWORD` | no | Default password for `pnpm db:seed-demo`'s users. |
 | `VITE_SENTRY_DSN` | no | Turns Sentry on (browser + server). |
@@ -190,6 +193,9 @@ Better Auth (`src/server/auth/auth.ts`) provides:
 - password reset;
 - email change, with a security notice to the old address;
 - password change and session management;
+- two-factor authentication (authenticator app + backup codes), optionally required for admins;
+- breached-password checks, an optional Turnstile captcha and a honeypot on the auth forms;
+- account deletion confirmed by email, a JSON export of your data, and linking or unlinking Google;
 - optional Google sign-in, which appears only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set;
 - an `admin` flag for the first administrator; everything else is roles and permissions edited in the admin area ([docs/guides/rbac.md](docs/guides/rbac.md)).
 

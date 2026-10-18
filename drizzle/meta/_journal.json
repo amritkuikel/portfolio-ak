@@ -50,6 +50,13 @@
 			"when": 1791542711424,
 			"tag": "0006_attachments",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1792352441662,
+			"tag": "0007_auth_hardening",
+			"breakpoints": true
 		}
 	]
 }

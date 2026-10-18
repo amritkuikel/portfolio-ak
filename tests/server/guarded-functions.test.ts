@@ -50,7 +50,15 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<string> }> = {
 	"auth.ts": {
 		why: "the session itself; per-user functions use requireUserMiddleware, the admin gate requireAdminAccessMiddleware",
-		functions: ["getSession", "getAuthFeatures", "ensureAdminAccess", "listMySessions", "revokeMySession"],
+		functions: [
+			"getSession",
+			"getAuthFeatures",
+			"ensureAdminAccess",
+			"listMySessions",
+			"revokeMySession",
+			"getAccountSecurity",
+			"setMyPassword",
+		],
 	},
 	"test-crud-public.ts": {
 		why: "public reads; the repository only returns published rows",

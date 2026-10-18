@@ -8,4 +8,5 @@ export const authKeys = {
 	session: ["auth", "session"] as const,
 	features: ["auth", "features"] as const,
 	sessions: ["auth", "sessions"] as const,
+	security: ["auth", "security"] as const,
 };

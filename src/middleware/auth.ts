@@ -20,12 +20,21 @@ export const sessionMiddleware = createMiddleware({ type: "function" }).server(a
 	next({ context: { session: await resolveSession() } }),
 );
 
-/** Rejects anonymous calls with UNAUTHORIZED; adds `context.user` and `context.permissions`. */
+/**
+ * Rejects anonymous calls with UNAUTHORIZED; adds `context.user`, `context.permissions`
+ * and `context.twoFactorRequired` (admin permissions held back until 2FA is on, 0126).
+ */
 export const requireUserMiddleware = createMiddleware({ type: "function" })
 	.middleware([sessionMiddleware])
 	.server(({ next, context }) => {
 		if (!context.session) throw new AppError("UNAUTHORIZED", "Authentication required");
-		return next({ context: { user: context.session.user, permissions: context.session.permissions } });
+		return next({
+			context: {
+				user: context.session.user,
+				permissions: context.session.permissions,
+				twoFactorRequired: context.session.twoFactorRequired === true,
+			},
+		});
 	});
 
 /**
@@ -45,10 +54,17 @@ export const requirePermission = (...required: [Permission, ...Permission[]]) =>
 			return next();
 		});
 
-/** The admin area's gate: any admin permission is enough (pages and functions check their own). */
+/**
+ * The admin area's gate: any admin permission is enough (pages and functions check
+ * their own). A user who must set up two-factor first gets FORBIDDEN with the
+ * "two-factor-required" reason, which the _admin layout turns into a redirect.
+ */
 export const requireAdminAccessMiddleware = createMiddleware({ type: "function" })
 	.middleware([requireUserMiddleware])
 	.server(({ next, context }) => {
+		if (context.twoFactorRequired) {
+			throw new AppError("FORBIDDEN", "Two-factor authentication required", { reason: "two-factor-required" });
+		}
 		if (!canEnterAdmin(context.permissions)) throw new AppError("FORBIDDEN", "No admin permissions");
 		return next();
 	});

@@ -23,7 +23,9 @@ import type { RouterContext } from "@/router";
 async function renderAs(permissions: Permission[] | null, ui: ReactNode) {
 	const queryClient = new QueryClient();
 	const session: Session | null =
-		permissions === null ? null : { user: { id: "u1", email: "u@example.com", name: "U", role: "user" }, permissions };
+		permissions === null
+			? null
+			: { user: { id: "u1", email: "u@example.com", name: "U", role: "user", twoFactorEnabled: false }, permissions };
 	queryClient.setQueryData(sessionQueryOptions().queryKey, session);
 	const root = createRootRouteWithContext<Pick<RouterContext, "preferences">>()({ component: Outlet });
 	const page = createRoute({ getParentRoute: () => root, path: "/admin", component: () => <>{ui}</> });

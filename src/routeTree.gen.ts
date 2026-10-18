@@ -37,10 +37,12 @@ import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
+import { Route as AuthedAccountDeleteRouteImport } from './routes/_authed/account_.delete'
 import { Route as PublicDevExamplesRouteRouteImport } from './routes/_public/dev/examples/route'
 import { Route as PublicDevFormsRouteImport } from './routes/_public/dev/forms'
 import { Route as PublicTestCrudIndexRouteImport } from './routes/_public/test-crud/index'
 import { Route as PublicTestCrudSlugRouteImport } from './routes/_public/test-crud/$slug'
+import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as PortfolioJournalIndexRouteImport } from './routes/portfolio/journal/index'
 import { Route as PortfolioJournalSlugRouteImport } from './routes/portfolio/journal/$slug'
@@ -207,6 +209,11 @@ const AdminAdminUsersRouteRoute = AdminAdminUsersRouteRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
+const AuthedAccountDeleteRoute = AuthedAccountDeleteRouteImport.update({
+  id: '/account_/delete',
+  path: '/account/delete',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const PublicDevExamplesRouteRoute = PublicDevExamplesRouteRouteImport.update({
   id: '/examples',
   path: '/examples',
@@ -226,6 +233,11 @@ const PublicTestCrudSlugRoute = PublicTestCrudSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => PublicTestCrudRouteRoute,
+} as any)
+const ApiAccountExportRoute = ApiAccountExportRouteImport.update({
+  id: '/api/account/export',
+  path: '/api/account/export',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -412,8 +424,10 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples': typeof PublicDevExamplesRouteRouteWithChildren
+  '/account/delete': typeof AuthedAccountDeleteRoute
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
   '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
@@ -464,8 +478,10 @@ export interface FileRoutesByTo {
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
   '/portfolio': typeof PortfolioIndexRoute
+  '/account/delete': typeof AuthedAccountDeleteRoute
   '/dev/forms': typeof PublicDevFormsRoute
   '/test-crud/$slug': typeof PublicTestCrudSlugRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
   '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
@@ -527,8 +543,10 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/_public/dev/examples': typeof PublicDevExamplesRouteRouteWithChildren
+  '/_authed/account_/delete': typeof AuthedAccountDeleteRoute
   '/_public/dev/forms': typeof PublicDevFormsRoute
   '/_public/test-crud/$slug': typeof PublicTestCrudSlugRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/portfolio/journal/$slug': typeof PortfolioJournalSlugRoute
   '/portfolio/work/$slug': typeof PortfolioWorkSlugRoute
@@ -588,8 +606,10 @@ export interface FileRouteTypes {
     | '/admin/test-crud'
     | '/admin/users'
     | '/dev/examples'
+    | '/account/delete'
     | '/dev/forms'
     | '/test-crud/$slug'
+    | '/api/account/export'
     | '/api/auth/$'
     | '/portfolio/journal/$slug'
     | '/portfolio/work/$slug'
@@ -640,8 +660,10 @@ export interface FileRouteTypes {
     | '/portfolio/about'
     | '/portfolio/contact'
     | '/portfolio'
+    | '/account/delete'
     | '/dev/forms'
     | '/test-crud/$slug'
+    | '/api/account/export'
     | '/api/auth/$'
     | '/portfolio/journal/$slug'
     | '/portfolio/work/$slug'
@@ -702,8 +724,10 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
     | '/_public/dev/examples'
+    | '/_authed/account_/delete'
     | '/_public/dev/forms'
     | '/_public/test-crud/$slug'
+    | '/api/account/export'
     | '/api/auth/$'
     | '/portfolio/journal/$slug'
     | '/portfolio/work/$slug'
@@ -746,6 +770,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiAccountExportRoute: typeof ApiAccountExportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -947,6 +972,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminUsersRouteRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_authed/account_/delete': {
+      id: '/_authed/account_/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AuthedAccountDeleteRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_public/dev/examples': {
       id: '/_public/dev/examples'
       path: '/examples'
@@ -974,6 +1006,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/test-crud/$slug'
       preLoaderRoute: typeof PublicTestCrudSlugRouteImport
       parentRoute: typeof PublicTestCrudRouteRoute
+    }
+    '/api/account/export': {
+      id: '/api/account/export'
+      path: '/api/account/export'
+      fullPath: '/api/account/export'
+      preLoaderRoute: typeof ApiAccountExportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -1293,10 +1332,12 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
+  AuthedAccountDeleteRoute: typeof AuthedAccountDeleteRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
+  AuthedAccountDeleteRoute: AuthedAccountDeleteRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -1422,6 +1463,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiAccountExportRoute: ApiAccountExportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

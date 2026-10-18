@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (125 entries)</summary>
+<summary>Index (131 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -131,6 +131,12 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0123](#0123-one-request-id-per-request-kept-in-asynclocalstorage-by-the-server-entry): One request id per request, kept in AsyncLocalStorage by the server entry
 - [0124](#0124-get-apihealth-for-monitors-the-health-page-stays-for-people): GET /api/health for monitors; the /health page stays for people
 - [0125](#0125-idempotency-keys-are-a-recipe-not-core): Idempotency keys are a recipe, not core
+- [0126](#0126-two-factor-is-totp-with-backup-codes-admins-can-be-required-to-use-it): Two-factor is TOTP with backup codes; admins can be required to use it
+- [0127](#0127-breached-passwords-are-refused-through-have-i-been-pwned-on-by-default): Breached passwords are refused through Have I Been Pwned, on by default
+- [0128](#0128-turnstile-on-the-endpoints-that-send-email-or-create-accounts-plus-a-honeypot): Turnstile on the endpoints that send email or create accounts, plus a honeypot
+- [0129](#0129-account-deletion-always-takes-an-emailed-link-the-export-is-a-json-download): Account deletion always takes an emailed link; the export is a JSON download
+- [0130](#0130-linked-accounts-add-a-password-link-and-unlink-google-never-the-last-way-in): Linked accounts: add a password, link and unlink Google, never the last way in
+- [0131](#0131-last-login-method-and-passkeys-are-recipes): Last login method and passkeys are recipes
 </details>
 
 ---
@@ -1581,3 +1587,58 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `/dev/examples/idempotency` and the routing guide's "Idempotency keys" section. `createIdempotencyStore()` (`src/server/examples/idempotency.ts`) runs an action once per key, answers repeats (a double submit, a retry after a lost response) with the first result, makes a duplicate that arrives while the first is still running wait for it, refuses a key reused with different input or by another user, and forgets a key whose action failed. The guide shows the Postgres version a real feature uses.
 - **Why a recipe:** the shared submit button already disables itself while saving, and the app's creates are admin forms where a duplicate is visible and deletable. Keys matter for actions with side effects outside the database (emails, payments, webhooks), which the base doesn't have. The in-memory store is for the example only (one process).
 - **Alternatives considered:** a core `idempotency_key` table and middleware on every POST (a table and a write per call for a problem the base doesn't have); unique constraints alone (they stop duplicate rows, not duplicate emails).
+
+## 0126: Two-factor is TOTP with backup codes; admins can be required to use it
+
+- **What:** Better Auth's `twoFactor` plugin (TOTP + 10 encrypted backup codes, migration `0007_auth_hardening`). The account page's two-factor section turns it on (password, scan a QR code or type the key, confirm a code, save the backup codes), issues new backup codes and turns it off. The login form shows a second step (app code or backup code, "trust this browser for 30 days"). `AUTH_REQUIRE_ADMIN_2FA=true` makes it mandatory for anyone holding an admin permission.
+- **Choices:**
+  - **Enforcement in one place:** `getServerSession` (`src/server/auth/session.ts`) gives a user who must set it up (`mustSetUpTwoFactor`, `src/server/auth/policy.ts`) no permissions and `twoFactorRequired: true`. Every `requirePermission` then refuses, `useCan` hides admin UI, and `requireAdminAccessMiddleware` throws FORBIDDEN with the new `two-factor-required` reason, which the `_admin` layout turns into a redirect to `/account?twoFactor=required#two-factor`. Nothing else in the app needed to learn about it.
+  - **Default off** (Part 3 rule: nothing silently changes behaviour). Existing admins would otherwise be locked out of `/admin` on deploy.
+  - **Policy for the other sign-in methods.** Better Auth's second factor only runs after password sign-in. An emailed sign-in code would get around it, so an email-code sign-in to an account with two-factor on is undone and refused (`refuseEmailCodeWithTwoFactor`, `src/server/auth/hooks.ts`, an `after` hook that deletes the new session and clears the cookie). It runs after the code is checked, so only someone holding a valid code learns that the account uses two-factor. **Google sign-in is trusted as is:** Google runs its own second factor, and asking for ours after an OAuth redirect needs a challenge flow Better Auth doesn't have for social sign-in. A password reset doesn't sign in, so it doesn't bypass anything.
+  - **`allowPasswordless: true`:** a Google-only admin can still satisfy the requirement (the factor applies once they set a password).
+  - **QR code:** `uqr` (zero dependencies) renders the `otpauth://` URI as an SVG shown through a `data:` image (allowed by `img-src`), with the key as text next to it.
+  - **Rate limits:** `/two-factor/*` 10 a minute, on top of the plugin's account lockout (10 failed codes lock the account for 15 minutes).
+  - **Notices:** turning it on or off emails a `security-notice` (Better Auth's `user.update.after` hook, by path).
+- **Why:** a password alone is one leaked credential away from an admin takeover.
+- **Alternatives considered:** email or SMS codes as the second factor (email is the account-recovery channel already, SMS costs money and is phishable); blocking `/admin` with a route check only (functions would still answer, so the requirement would be cosmetic); refusing email-code sign-in before the code is checked (tells anyone who types an address whether it has two-factor).
+
+## 0127: Breached passwords are refused through Have I Been Pwned, on by default
+
+- **What:** Better Auth's `haveIBeenPwned` plugin on `/sign-up/email`, `/change-password` and `/reset-password` (`BREACHED_PASSWORD_PATHS`). `setMyPassword` (a Google user adding a password) calls `isPasswordCompromised` itself, because Better Auth's set-password endpoint is server-only with no path, so the plugin can't see it. The `PASSWORD_COMPROMISED` code shows a localized message.
+- **Choices:** on by default (`AUTH_BREACHED_PASSWORD_CHECK`): only the first 5 characters of the SHA-1 hash leave the server (k-anonymity, with response padding), and existing users only notice when they pick a breached password. If the API is down, the plugin fails closed (sign-up answers an error) rather than letting a breached password through; turn the check off with the variable during an outage. The e2e harness turns it off so the suite makes no outside calls; `tests/server/auth-hardening.test.ts` runs the plugin on a real Better Auth instance against a stubbed range API.
+- **Why:** password reuse from other breaches is the most common way accounts are taken over.
+- **Alternatives considered:** a local list of common passwords (stale and large); zxcvbn-style strength scoring only (a strong-looking password can still be in a breach; the forms already show strength hints).
+
+## 0128: Turnstile on the endpoints that send email or create accounts, plus a honeypot
+
+- **What:** Better Auth's `captcha` plugin with Cloudflare Turnstile on `/sign-up/email`, `/request-password-reset` and `/email-otp/send-verification-otp` (`CAPTCHA_PATHS`), when `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are both set. The site key reaches the forms through `getAuthFeatures`; `useTurnstile` (`src/features/auth/components/bot-check.tsx`) loads the script, renders the widget (65 px reserved, so no layout shift) and sends the token as `x-captcha-response`. Every auth form also has a honeypot field: hidden from people and assistive tech; when it's filled the form shows its success state and sends nothing.
+- **Choices:**
+  - **Off unless configured.** No keys, no widget, no CSP change. With keys, the CSP adds `frame-src https://challenges.cloudflare.com` (and the same host to `script-src` for browsers without `'strict-dynamic'`); the script itself is allowed because our nonced code adds it.
+  - **Not on password sign-in:** it's rate limited (5 a minute per IP) and a captcha there costs every user on every visit. The three endpoints above are the ones that let anyone make the app send email to any address, or create rows.
+  - **Server env, not `VITE_`:** the site key is public, but serving it from the server means turning the captcha on or off doesn't need a rebuild.
+  - A refused token shows "complete the security check"; forgot-password and sign-in-code otherwise keep showing the same "sent" message whether or not the account exists.
+- **Why:** sign-up and reset forms are where bots send email in bulk on someone else's behalf.
+- **Alternatives considered:** hCaptcha or reCAPTCHA (heavier, tracking concerns); Vercel BotID (ties the template to Vercel); the honeypot alone (only stops bots that fill forms in a browser).
+
+## 0129: Account deletion always takes an emailed link; the export is a JSON download
+
+- **What:** Better Auth's `deleteUser` with `sendDeleteAccountVerification`. "Email me a deletion link" on the account page sends a `delete-account` email whose link opens `/account/delete?token=…` (signed-in only), where one more click sends the token back (`authClient.deleteUser({ token })`). `beforeDelete` runs `prepareAccountDeletion` (`src/server/account/service.ts`): it refuses the last active admin (`LAST_ADMIN`, the same lock as the RBAC rules) and marks the user's unsaved uploads removed so the cleanup job deletes them from Cloudinary. Sessions, sign-in methods, two-factor rows and role assignments go with the user row (foreign keys cascade); records they created stay, with no author. `afterDelete` sends an `account-deleted` email. `GET /api/account/export` returns the user's data as a JSON download (profile, sign-in methods, sessions, roles, uploads, items they created; never password hashes, tokens or 2FA secrets).
+- **Choices:**
+  - **Email always, password never enough:** a stolen session (or an unlocked laptop) can't delete the account. The link opens our page, not Better Auth's GET callback, so a mail scanner opening it deletes nothing.
+  - **Linked images stay:** an image saved with a record belongs to that record (other editors use it); only uploads nobody saved are queued.
+  - **The last-admin check isn't in the same transaction as Better Auth's delete** (it can't be: Better Auth runs its own queries). Two last admins deleting themselves in the same instant is the remaining race; it's documented rather than worked around.
+  - **Export as a server route**, so it's a plain link that works before hydration; a cross-site page can make the browser request it but can't read the answer.
+- **Why:** users must be able to leave and take their data with them (and in many places the law says so).
+- **Alternatives considered:** deleting with the password (no proof of inbox control, and Google users have no password); soft delete (a recipe in Task 33; a deleted account should be gone); an emailed export (a file with personal data sitting in an inbox).
+
+## 0130: Linked accounts: add a password, link and unlink Google, never the last way in
+
+- **What:** the account page's "Ways to sign in" section. A user without a password (signed up with Google) can set one (`setMyPassword` → Better Auth's server-only `setPassword`). Google can be linked (`authClient.linkSocial`, only when its verified address matches) and unlinked (`authClient.unlinkAccount`) while a password remains; Better Auth refuses to remove the last account (`allowUnlinkingAll: false`), and the button is disabled in that case. Adding a password or linking Google (also Better Auth's automatic linking when a Google sign-in matches an existing address) and unlinking send a `security-notice` email. The change-password section shows only when there's a password.
+- **Why:** a Google-only user had no way to stop using Google, and nothing told a user that a new way into their account had appeared.
+- **Alternatives considered:** allowing different addresses on linked accounts (an account takeover path when an attacker controls a Google account with another address); counting email-code sign-in as a way in, so Google could be unlinked without a password (it would leave the inbox as the only factor; Better Auth's rule is simpler and stricter).
+
+## 0131: Last login method and passkeys are recipes
+
+- **What:** `docs/guides/security.md` ("Recipes: last login method, passkeys") shows how to add Better Auth's `lastLoginMethod` plugin (a "last used" hint on the login page) and `@better-auth/passkey` (WebAuthn sign-in, with its own table and two-factor interplay).
+- **Why a recipe:** last login method is a convenience with a cookie or an extra column; passkeys need a new dependency, a table, a migration and per-browser testing that not every project wants on day one. Both are a guide section only, with the exact code: a dev example would need the dependency and schema in every project, which is what the recipe avoids.
+- **Alternatives considered:** shipping passkeys in the base (most templates built on this won't use them, and they change the sign-in UI's shape).

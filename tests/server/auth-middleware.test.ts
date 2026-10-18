@@ -30,7 +30,7 @@ const session = (
 	role: "user" | "admin",
 	permissions: Permission[] = role === "admin" ? [...ALL_PERMISSIONS] : [],
 ): Session => ({
-	user: { id: "u1", email: "a@example.com", name: "A", role },
+	user: { id: "u1", email: "a@example.com", name: "A", role, twoFactorEnabled: false },
 	permissions,
 });
 
@@ -57,7 +57,14 @@ describe("auth middleware", () => {
 	it("requireUserMiddleware passes the user and their permissions on", async () => {
 		const editor = session("user", ["test-crud:read"]);
 		const { next } = await runServer(requireUserMiddleware, { session: editor });
-		expect(next).toHaveBeenCalledWith({ context: { user: editor.user, permissions: ["test-crud:read"] } });
+		expect(next).toHaveBeenCalledWith({
+			context: { user: editor.user, permissions: ["test-crud:read"], twoFactorRequired: false },
+		});
+		const pending: Session = { ...session("admin", []), twoFactorRequired: true };
+		const { next: nextPending } = await runServer(requireUserMiddleware, { session: pending });
+		expect(nextPending).toHaveBeenCalledWith({
+			context: { user: pending.user, permissions: [], twoFactorRequired: true },
+		});
 	});
 
 	it("requirePermission rejects users missing any required permission with FORBIDDEN", async () => {
@@ -82,6 +89,12 @@ describe("auth middleware", () => {
 		});
 		const { next } = await runServer(requireAdminAccessMiddleware, { permissions: ["users:read"] });
 		expect(next).toHaveBeenCalledOnce();
+	});
+
+	it("the admin gate asks for two-factor first when the setting holds the user's permissions back", async () => {
+		await expect(
+			runServer(requireAdminAccessMiddleware, { permissions: [], twoFactorRequired: true }),
+		).rejects.toMatchObject({ code: "FORBIDDEN", reason: "two-factor-required" });
 	});
 
 	it("builds the chain: permission requires user requires session", () => {

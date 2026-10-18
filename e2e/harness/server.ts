@@ -21,7 +21,8 @@ import { servePglite } from "./pglite-server.ts";
 const log = (message: string) => console.log(`[e2e] ${message}`);
 
 /** App settings a developer's shell may export; the server under test gets only the harness's values. */
-const APP_ENV = /^(VITE_|DATABASE_|EMAIL_|RESEND_|BETTER_AUTH_|GOOGLE_|ADMIN_|DEMO_|SENTRY_|CLOUDINARY_|CRON_)/;
+const APP_ENV =
+	/^(VITE_|DATABASE_|EMAIL_|RESEND_|BETTER_AUTH_|AUTH_|TURNSTILE_|GOOGLE_|ADMIN_|DEMO_|SENTRY_|CLOUDINARY_|CRON_)/;
 const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !APP_ENV.test(key)));
 
 const publicEnv = {
@@ -101,6 +102,8 @@ const app = spawn(process.execPath, [".output/server/index.mjs"], {
 		RESEND_API_KEY: "re_e2e_placeholder",
 		RESEND_BASE_URL: E2E.harnessURL,
 		EMAIL_FROM: `${E2E.appTitle} <e2e@example.com>`,
+		// No calls to Have I Been Pwned from the suite (tests/server/auth-hardening.test.ts covers it).
+		AUTH_BREACHED_PASSWORD_CHECK: "false",
 	},
 });
 log(`server: ${E2E.baseURL}`);
