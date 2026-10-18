@@ -35,6 +35,9 @@ What protects the app, and the rules that keep it that way. Most of it is enforc
 - **Email:** sign-up requires a verified email. An email change sends a notice to the old address.
 - **Rate limits:** stored in the database (they hold across serverless instances) and keyed by a trusted client IP (`src/server/auth/client-ip.ts`). Sign-in is limited to 5 a minute. Behind a proxy other than Vercel, set its trusted header there.
 - **Redirects:** the sign-in `?redirect=` target must be a same-site path (`src/lib/redirect.ts`).
+- **Expired sessions:** any server function that answers UNAUTHORIZED in the browser sends the user to `/login?redirect=…` (`src/middleware/session-expiry.ts`, 0113). Client route guards read a session at most a minute old (0111); server functions always check it themselves.
+- **Admin plugin endpoints are off:** `/api/auth/admin/*` answers 404 (`src/server/auth/disabled-paths.ts`, 0112), so nothing skips the RBAC rules in `src/server/rbac/service.ts`.
+- **Session tokens stay on the server:** the account page lists sessions by id and revokes them with `revokeMySession` (0114).
 
 ## Content
 

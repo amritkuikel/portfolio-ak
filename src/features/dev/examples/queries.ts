@@ -11,7 +11,7 @@ export const exampleKeys = {
 };
 
 /**
- * Loader + Query example. The loader awaits ensureQueryData on the server; the
+ * Loader + Query example. The loader awaits ensureQuery on the server; the
  * result is dehydrated into the page, so the component's useSuspenseQuery reads
  * it from the cache: no request while hydrating, none until it's stale.
  */

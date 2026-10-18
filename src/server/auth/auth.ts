@@ -20,6 +20,7 @@ import * as schema from "../db/schema";
 import { sendEmail } from "../email/send";
 import { serverEnv } from "../env";
 import { CLIENT_IP_HEADER } from "./client-ip";
+import { DISABLED_ADMIN_PATHS } from "./disabled-paths";
 import { resolveEmailLocale } from "./locale";
 
 /** Token and code lifetimes, shared with the email copy ("expires in N minutes"). */
@@ -64,6 +65,7 @@ export const auth = betterAuth({
 	secret: serverEnv.BETTER_AUTH_SECRET,
 	trustedOrigins: [serverEnv.BETTER_AUTH_URL],
 	database: drizzleAdapter(db, { provider: "pg", schema }),
+	disabledPaths: DISABLED_ADMIN_PATHS,
 
 	emailAndPassword: {
 		enabled: true,

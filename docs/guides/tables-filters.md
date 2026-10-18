@@ -21,11 +21,12 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 	busy={busy}                            // dims the rows while a new page loads
 	bulkActions={({ ids, clear }) => <Button onClick={() => remove(ids, clear)}>{m.delete()}</Button>}
 	rowActions={(row) => <DropdownMenuItem onSelect={() => edit(row)}>{m.edit()}</DropdownMenuItem>}
-	empty={<EmptyState description={m.things_empty()} />}
+	empty={<EmptyState description={m.things_empty()} action={filtered ? <ClearFiltersButton clearAll={CLEAR} /> : null} />}
 />
-<Pagination page={page.page} pageCount={page.pageCount} total={page.total}
-	pageSize={{ value: pageSize, options: PAGE_SIZES, onChange: setPageSize }} />
+<Pagination {...pagination} />   // from useListPage: summary, rows-per-page picker (saved per table), prev/next
 ```
+
+`page`, `busy` and `pagination` come from `useListPage({ tableId: "things", search, query: thingListQueryOptions })`; the loader uses `tableListInput` so both agree on the page size ([search-filters-masking.md](search-filters-masking.md)).
 
 - **Server-rendered:** rows come from the loader, sorting and paging are links, and the whole table is in the HTML.
 - **Selection** is local to the page; the bulk bar appears when rows are selected. Return `null` from `rowActions` for a row with no actions.

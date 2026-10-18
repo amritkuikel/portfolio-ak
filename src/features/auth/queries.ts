@@ -1,11 +1,8 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { getAuthFeatures, getSession, listMySessions } from "@/functions/auth";
+import { authKeys } from "./keys";
 
-export const authKeys = {
-	session: ["auth", "session"] as const,
-	features: ["auth", "features"] as const,
-	sessions: ["auth", "sessions"] as const,
-};
+export { authKeys };
 
 /**
  * The current session. Loaded once per SSR request and cached on the client for
@@ -24,4 +21,4 @@ export const accountSessionsQueryOptions = () =>
 
 /** Drop cached auth state after sign-in, sign-out or account changes. */
 export const refreshAuth = (queryClient: QueryClient) =>
-	queryClient.invalidateQueries({ queryKey: ["auth"], refetchType: "all" });
+	queryClient.invalidateQueries({ queryKey: authKeys.all, refetchType: "all" });

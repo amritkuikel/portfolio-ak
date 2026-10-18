@@ -1,29 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, stripSearchParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { errorMessage } from "@/components/errors/error-page";
+import { ClearFiltersButton } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
 import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
-import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useActor } from "@/features/rbac/can";
 import { userColumns } from "@/features/rbac/components/user-columns";
 import { UserRolesDialog } from "@/features/rbac/components/user-roles-dialog";
 import { hasAll } from "@/features/rbac/permissions";
 import { refreshRbac, roleOptionsQueryOptions, usersListQueryOptions } from "@/features/rbac/queries";
-import {
-	USER_SEARCH_DEFAULTS,
-	USERS_TABLE_ID,
-	type UserListInput,
-	type UserListItem,
-	type UserSearch,
-	userSearchSchema,
-} from "@/features/rbac/schema";
+import { USER_SEARCH_DEFAULTS, USERS_TABLE_ID, type UserListItem, userSearchSchema } from "@/features/rbac/schema";
 import {
 	CLEAR_USER_FILTERS,
 	UserActiveFilters,
@@ -31,20 +24,11 @@ import {
 	userFilterChips,
 } from "@/features/rbac/user-filters";
 import { setUserBanned } from "@/functions/rbac";
-import { loadList } from "@/lib/query";
+import { ensureQuery, loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
-import { useTablePreferences } from "@/lib/stores/hooks";
-import { PAGE_SIZES, type Preferences } from "@/lib/stores/preferences";
+import { tableListInput, useListPage } from "@/lib/use-list-page";
 import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
-
-const DEFAULT_PAGE_SIZE = 20;
-
-const listInput = (search: UserSearch, saved: number | undefined): UserListInput => ({
-	...search,
-	pageSize: search.pageSize ?? saved ?? DEFAULT_PAGE_SIZE,
-});
-const savedPageSize = (preferences: Preferences) => preferences.tables[USERS_TABLE_ID]?.pageSize;
 
 export const Route = createFileRoute("/_admin/admin/users/")({
 	validateSearch: userSearchSchema,
@@ -54,10 +38,10 @@ export const Route = createFileRoute("/_admin/admin/users/")({
 		await Promise.all([
 			loadList(
 				context.queryClient,
-				usersListQueryOptions(listInput(deps, savedPageSize(context.preferences.state))),
+				usersListQueryOptions(tableListInput(deps, context.preferences.state, USERS_TABLE_ID)),
 				cause,
 			),
-			context.queryClient.ensureQueryData(roleOptionsQueryOptions()),
+			ensureQuery(context.queryClient, roleOptionsQueryOptions()),
 		]);
 	},
 	head: () => ({ meta: [{ title: pageTitle(m.users_title()) }] }),
@@ -69,14 +53,10 @@ type BanRequest = { user: UserListItem; banned: boolean };
 
 function UsersPage() {
 	const search = Route.useSearch();
-	const navigate = useNavigate({ from: Route.fullPath });
 	const queryClient = useQueryClient();
 	const actor = useActor();
-	const table = useTablePreferences(USERS_TABLE_ID, { pageSize: DEFAULT_PAGE_SIZE });
-	const input = listInput(search, table.pageSize);
-	const { data: page, busy, error } = useListQuery(usersListQueryOptions(input));
+	const { page, busy, pagination } = useListPage({ tableId: USERS_TABLE_ID, search, query: usersListQueryOptions });
 	const { data: roles = [] } = useListQuery(roleOptionsQueryOptions());
-	if (error && !page) throw error;
 
 	const [editing, setEditing] = useState<UserListItem | null>(null);
 	const [banRequest, setBanRequest] = useState<BanRequest | null>(null);
@@ -106,7 +86,7 @@ function UsersPage() {
 				<UserActiveFilters search={search} roles={roles} />
 			</div>
 
-			{page ? (
+			{page && pagination ? (
 				<>
 					<DataTable
 						tableId={USERS_TABLE_ID}
@@ -140,34 +120,11 @@ function UsersPage() {
 						empty={
 							<EmptyState
 								description={m.users_empty()}
-								action={
-									filtered ? (
-										<Button variant="outline" asChild>
-											<Link
-												from={Route.fullPath}
-												search={(prev) => ({ ...prev, ...CLEAR_USER_FILTERS, page: undefined })}
-											>
-												{m.test_crud_clear_filters()}
-											</Link>
-										</Button>
-									) : null
-								}
+								action={filtered ? <ClearFiltersButton clearAll={CLEAR_USER_FILTERS} /> : null}
 							/>
 						}
 					/>
-					<Pagination
-						page={page.page}
-						pageCount={page.pageCount}
-						total={page.total}
-						pageSize={{
-							value: input.pageSize,
-							options: PAGE_SIZES,
-							onChange: (size) => {
-								table.setPageSize(size);
-								void navigate({ search: (prev) => ({ ...prev, pageSize: size, page: undefined }) });
-							},
-						}}
-					/>
+					<Pagination {...pagination} />
 				</>
 			) : (
 				<DataTableSkeleton columns={4} rows={8} />

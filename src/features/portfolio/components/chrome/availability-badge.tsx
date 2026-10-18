@@ -10,18 +10,23 @@ const LABELS: Record<Status, () => string> = {
 	closed: m.portfolio_availability_closed,
 };
 
-/** "● Limited availability": a pulsing dot (accent when open or limited) and the status. */
+/** "◆ Limited availability": a pulsing diamond (jade when open, marigold when limited) and the status. */
 export function AvailabilityBadge({ status, className }: { status: Status; className?: string | undefined }) {
 	return (
 		<span className={cn("pf-label inline-flex items-center gap-2", className)}>
 			<span aria-hidden className="relative flex size-2">
 				{status === "closed" ? null : (
-					<span className="absolute inline-flex size-full animate-ping rounded-full bg-pf-accent opacity-60 motion-reduce:hidden" />
+					<span
+						className={cn(
+							"absolute inline-flex size-full rotate-45 animate-ping opacity-60 motion-reduce:hidden",
+							status === "open" ? "bg-pf-jade" : "bg-pf-marigold",
+						)}
+					/>
 				)}
 				<span
 					className={cn(
-						"relative inline-flex size-2 rounded-full",
-						status === "closed" ? "bg-pf-stone" : "bg-pf-accent",
+						"relative inline-flex size-2 rotate-45",
+						status === "closed" ? "bg-pf-stone" : status === "open" ? "bg-pf-jade" : "bg-pf-marigold",
 					)}
 				/>
 			</span>

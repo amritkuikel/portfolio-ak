@@ -194,13 +194,18 @@ export async function getAuthSubject(db: Db, userId: string): Promise<AuthSubjec
 	return row ?? null;
 }
 
-/** Admins who can still sign in (the lockout guard counts these). */
-export async function countActiveAdmins(db: Db): Promise<number> {
-	const [row] = await db
-		.select({ total: count() })
+/**
+ * Ids of the admins who can still sign in, with their rows locked until the
+ * transaction ends (call inside `db.transaction`). The lockout guard uses this so
+ * two concurrent demotions can't both see "another admin is left".
+ */
+export async function lockActiveAdmins(tx: Db): Promise<string[]> {
+	const rows = await tx
+		.select({ id: user.id })
 		.from(user)
-		.where(and(eq(user.role, "admin"), or(eq(user.banned, false), sql`${user.banned} is null`)));
-	return row?.total ?? 0;
+		.where(and(eq(user.role, "admin"), or(eq(user.banned, false), sql`${user.banned} is null`)))
+		.for("update");
+	return rows.map((row) => row.id);
 }
 
 /** Custom role ids a user holds. */

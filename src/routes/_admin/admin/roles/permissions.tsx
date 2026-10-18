@@ -6,12 +6,13 @@ import { useActor, useCan } from "@/features/rbac/can";
 import { PermissionMatrix } from "@/features/rbac/components/permission-matrix";
 import { rolesQueryOptions } from "@/features/rbac/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/roles/permissions")({
 	// Awaited: the whole matrix is in the SSR HTML.
-	loader: ({ context }) => context.queryClient.ensureQueryData(rolesQueryOptions()),
+	loader: ({ context }) => ensureQuery(context.queryClient, rolesQueryOptions()),
 	staticData: { breadcrumb: staticCrumb(m.admin_nav_permissions) },
 	head: () => ({ meta: [{ title: pageTitle(m.matrix_title()) }] }),
 	component: PermissionsPage,

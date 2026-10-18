@@ -56,6 +56,8 @@ export const serverEnvSchema = {
 	ADMIN_EMAIL: z.email().optional(),
 	ADMIN_PASSWORD: z.string().min(12, "Use at least 12 characters for the admin password.").optional(),
 	ADMIN_NAME: z.string().trim().min(1).optional(),
+	// Optional default password for `pnpm db:seed-demo`'s users (development data).
+	DEMO_PASSWORD: z.string().min(12, "Use at least 12 characters for the demo password.").optional(),
 	// Sentry source map upload during `pnpm build` (all three or none). Never needed at runtime.
 	SENTRY_AUTH_TOKEN: z.string().trim().min(1).optional(),
 	SENTRY_ORG: z.string().trim().min(1).optional(),

@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { sessionIdSchema } from "@/features/auth/schema";
+import { zodInput } from "@/lib/fn-input";
 import type { Session } from "@/lib/session";
 import { requireAdminAccessMiddleware, requireUserMiddleware, sessionMiddleware } from "@/middleware/auth";
 
@@ -22,9 +24,9 @@ export const ensureAdminAccess = createServerFn({ method: "GET" })
 	.middleware([requireAdminAccessMiddleware])
 	.handler(({ context }): Session => ({ user: context.user, permissions: context.permissions }));
 
+/** A session as the account page sees it. No token: tokens never leave the server. */
 export type AccountSession = {
 	id: string;
-	token: string;
 	current: boolean;
 	createdAt: string;
 	userAgent: string | null;
@@ -49,11 +51,23 @@ export const listMySessions = createServerFn({ method: "GET" })
 			sessions: sessions
 				.map((session) => ({
 					id: session.id,
-					token: session.token,
 					current: session.id === current?.session.id,
 					createdAt: new Date(session.createdAt).toISOString(),
 					userAgent: session.userAgent ?? null,
 				}))
 				.sort((a, b) => Number(b.current) - Number(a.current) || b.createdAt.localeCompare(a.createdAt)),
 		};
+	});
+
+/** Signs out one of the user's other sessions by id (the token is looked up on the server). */
+export const revokeMySession = createServerFn({ method: "POST" })
+	.middleware([requireUserMiddleware])
+	.validator(zodInput(sessionIdSchema))
+	.handler(async ({ data }): Promise<void> => {
+		const [{ auth }, { revokeOwnSession }, { getRequestHeaders }] = await Promise.all([
+			import("@/server/auth/auth"),
+			import("@/server/auth/sessions"),
+			import("@tanstack/react-start/server"),
+		]);
+		await revokeOwnSession(auth.api, getRequestHeaders(), data.id);
 	});

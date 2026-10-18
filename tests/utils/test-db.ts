@@ -16,6 +16,8 @@ export async function createTestDb(adminId = "admin-1") {
 	const db: Db = pglite;
 	return {
 		db,
+		/** The raw PGlite client, for code that runs plain SQL (scripts/). */
+		client,
 		adminId,
 		/** Removes Test CRUD rows and attachments between tests. */
 		reset: async () => {

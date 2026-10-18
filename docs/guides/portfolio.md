@@ -50,24 +50,29 @@ Write an adapter that implements `PortfolioSource`, then export it from `sources
 - **Keeping `{ en, ne }`:** store the localized fields as JSON or as one column per language, and reuse `resolveLocalized` on the server.
 - **Real images:** replace `CoverArt` and `ScreenArt` with `CloudImage` (attachments guide), keeping `CoverFrame` for the fixed ratio and the view-transition name.
 
-## Design system: "Ink & Paper"
+## Design system: "Dhaka"
 
-Everything is scoped: the tokens live under `.portfolio`, and every utility and token is prefixed `pf-`.
+Named after the handloom cloth of Palpa: an indigo ground, threads of crimson, marigold, jade and cotton, and stepped geometry woven on a grid (decision 0110). Everything is scoped: the tokens live under `.portfolio`, and every utility and token is prefixed `pf-`.
 
-- **Colour:** `pf-paper`, `pf-paper-2`, `pf-ink`, `pf-ink-2`, `pf-stone` (muted text), `pf-line` (hairlines), `pf-accent` (sindoor vermilion). Use them as Tailwind colours: `bg-pf-paper`, `text-pf-stone`, `border-pf-line`, `fill-pf-accent`. Every text pair is at least 4.5:1.
-- **Bands:** `pf-inverse` flips a section to the other palette (an ink band in light mode, a paper band in dark mode). `pf-accent-band` is the vermilion band with paper text, and it keeps focus rings visible.
-- **Type:**
-  - Fraunces (display: `pf-display`, with sizes `text-pf-h3` … `text-pf-mega`).
-  - Inter (body: `text-pf-body`, `text-pf-lead`, `text-pf-small`).
-  - JetBrains Mono (`pf-label`: eyebrows, indices, metadata).
-  - Noto Serif Devanagari for Nepali display type.
+- **Colour:**
+  - Tokens: `pf-paper` (cotton white, indigo night in dark mode), `pf-paper-2`, `pf-ink` (indigo), `pf-ink-2`, `pf-stone` (muted text), `pf-line` (hairlines) and `pf-accent` (crimson, the only thread that carries text).
+  - Threads: `pf-crimson`, `pf-marigold` and `pf-jade` are the same in both themes. Use them for weaves, markers and bands, not for text.
+  - Use them as Tailwind colours: `bg-pf-paper`, `text-pf-stone`, `fill-pf-jade`. Every text pair is at least 4.5:1.
+- **Bands:** `pf-inverse` flips a section to the other palette (indigo in light mode, cotton in dark mode). `pf-accent-band` is the marigold band, always with the light palette's indigo ink.
+- **Type:** Anek Latin and Anek Devanagari, one family for both scripts. Its width axis does the work:
+  - `pf-display`: condensed (`font-stretch: 75%`) and bold, with sizes `text-pf-h2` … `text-pf-mega`. `text-pf-h3` opens up to the normal width at 600.
+  - `pf-quote`: large running text (manifesto, quotes), normal width, medium weight. There is no italic.
+  - Body (`text-pf-body`, `text-pf-lead`, `text-pf-small`) is set by `pf-canvas`.
+  - `pf-label`: small semibold labels in sentence case. Don't uppercase them.
+  - JetBrains Mono (`font-pf-mono`) is for code blocks only.
   - Sizes are fluid (`clamp()`). `Display` takes the element (`as`) and the look (`size`) separately.
+- **Markers:** `Eyebrow` marks a label with a diamond in the chapter's thread (`index` picks it, and `threadBg(i)` gives the class). Use numerals only for real sequences, such as process steps.
 - **Layout:**
   - `pf-container` is the centred column with the fluid margin.
   - `pf-grid` is 4 columns on phones and 12 from 48rem, used with `col-span-*` and `md:col-start-*`.
   - `pf-section` is the vertical rhythm between chapters.
   - `pf-measure` caps line length at 62ch.
-- **Links and focus:** `pf-link` draws an underline in on hover and focus; `pf-focus` adds the accent focus ring.
+- **Links and focus:** `pf-link` draws a crimson thread under the text on hover and focus. `pf-focus` adds the accent focus ring.
 - **`cn` in portfolio components** comes from `features/portfolio/lib/cn.ts`. It teaches tailwind-merge the `text-pf-*` size scale. With the app's `cn`, `text-pf-h2 text-pf-accent` would lose the size.
 
 ### Motion (CSS only)
@@ -77,6 +82,7 @@ All of it is progressive enhancement. Content is visible by default, and animati
 | Effect | How |
 | --- | --- |
 | Hero lines rise on load | `.pf-line` masks each line, and `--i` staggers them |
+| Hero cloth weaves in, row by row | `<Weave animate>` / `.pf-weaving`, a `steps()` clip-path animation |
 | Blocks wipe into view | `<Reveal>` / `.pf-reveal`, a scroll-driven `animation-timeline: view()` |
 | Manifesto inks in word by word | `<SplitWords>` sets `--i`/`--n` per word, `.pf-words` |
 | Covers settle while scrolling | `.pf-parallax` |
@@ -86,15 +92,16 @@ All of it is progressive enhancement. Content is visible by default, and animati
 
 ### Generated art
 
-- **`CoverArt`** draws a project's cover as SVG from a seed (the slug), a motif and a glyph. **`ScreenArt`** draws a browser window with a table, a chart or cards.
+- **`Weave`** draws a piece of Dhaka cloth from a seed (`lib/weave.ts`): mirrored bands of stripes, zigzags, stepped diamonds, triangles and checks on a cell grid, merged into runs. The ground is the ink token and cotton is the paper token, so indigo cloth becomes white cloth in dark mode.
+- **`CoverArt`** is a project's cloth, with its glyph on a cotton label. The motif sets the cell size (a fine or a bold weave). **`ScreenArt`** draws a browser window with a table, a chart or cards.
 - **Determinism:** both use a seeded generator (`lib/seeded-random.ts`) and round coordinates, so server and browser print identical markup.
 - **Theming:** colours are token classes, so the art follows the theme and the bands.
 - **No layout shift:** wrap them in `CoverFrame` (a fixed aspect ratio).
 
 ### Fonts and layout shift
 
-- **Loading:** the faces load lazily (`@font-face` is only fetched when used). The layout preloads the Fraunces Latin file, plus the Devanagari serif on Nepali pages (`lib/fonts.ts`, production only).
-- **Why the optical size is pinned:** Fraunces changes width with its optical size, so `pf-display` pins it (opsz 144, and 36 for `text-pf-h3`). Each of those has a fallback face whose `size-adjust` was measured in Chrome against Georgia. The measured CLS on every portfolio page is 0.
+- **Loading:** the faces load lazily (`@font-face` is only fetched when used). The layout preloads Anek Latin, plus Anek Devanagari on Nepali pages (`lib/fonts.ts`, production only).
+- **One fallback per width:** Anek changes width along its `wdth` axis and Arial has none, so the body (100%) and the condensed display (75%, bold) each have a fallback face whose `size-adjust` was measured in Chrome. Line heights are always explicit, so matching widths keeps the line breaks. A new width or weight for large type needs its own measurement.
 - **Never inline fonts:** `vite.config.ts` never inlines font files, because the CSP's `font-src 'self'` would block a `data:` font.
 
 ## Chrome

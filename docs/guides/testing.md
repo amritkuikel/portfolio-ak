@@ -21,7 +21,7 @@ Vitest for logic, server code and components; Storybook for every component in a
 ## Patterns
 
 - **Database:** `createTestDb()` (`tests/utils/test-db.ts`) is an in-process Postgres (PGlite) with the committed migrations and one admin user. Repositories and services take a `db`, so tests call them directly.
-- **Server functions** run only inside Start. Test the functions they call, and the wiring with static checks: `tests/server/test-crud-functions.test.ts` asserts each function's `requirePermission`, and `env-boundary.test.ts` asserts no client code imports `src/server`.
+- **Server functions** run only inside Start. Test the functions they call, and the wiring with static checks: `tests/server/guarded-functions.test.ts` asserts each function's `requirePermission` and that every file in `src/functions` is declared, and `env-boundary.test.ts` asserts no client code imports `src/server`.
 - **Routes:**
   - `createRouter({ routeTree, context: {} as RouterContext })` resolves real route ids (see `route-seo.test.ts`, `dev-examples.test.ts`);
   - `createMemoryHistory` plus a test route tree renders components that need a router (`breadcrumbs.test.tsx`, `route-masking.test.tsx`).

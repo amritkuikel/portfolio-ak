@@ -1,5 +1,6 @@
 import { XIcon } from "lucide-react";
 import { SearchLink, type SearchPatch } from "@/components/navigation/search-link";
+import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 
 /** One applied filter: its readable label ("Status: Draft") and the search change that removes it. */
@@ -18,6 +19,20 @@ export function rangeValue(from: string | undefined, to: string | undefined): st
 
 const chipClass =
 	"inline-flex h-7 items-center gap-1 rounded-full border bg-muted/50 ps-3 pe-2 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
+/**
+ * "Clear filters" as a button, for a list's empty state when filters hid every
+ * row. A link (works without JavaScript); returns to page 1.
+ *
+ *   empty={<EmptyState description={…} action={filtered ? <ClearFiltersButton clearAll={CLEAR} /> : <NewButton />} />}
+ */
+export function ClearFiltersButton({ clearAll }: { clearAll: SearchPatch }) {
+	return (
+		<Button variant="outline" asChild>
+			<SearchLink patch={{ ...clearAll, page: undefined }}>{m.filters_clear()}</SearchLink>
+		</Button>
+	);
+}
 
 /**
  * The filters currently applied, each removable, plus "Clear all". They are

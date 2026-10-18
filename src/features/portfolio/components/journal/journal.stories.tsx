@@ -43,8 +43,8 @@ export const WorkIndex: Story = {
 	parameters: { app: { route: "/portfolio/work" } },
 	render: () => (
 		<ul className="pf-container py-12">
-			{demo().summaries.map((project, position) => (
-				<WorkRow key={project.slug} project={project} index={position + 1} />
+			{demo().summaries.map((project) => (
+				<WorkRow key={project.slug} project={project} />
 			))}
 		</ul>
 	),

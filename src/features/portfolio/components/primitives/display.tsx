@@ -20,7 +20,7 @@ type DisplayProps = {
 	children: ReactNode;
 };
 
-/** Editorial display type (Fraunces): heading level and visual size are chosen separately. */
+/** Display type (Anek, condensed and heavy): heading level and visual size are chosen separately. */
 export function Display({ as: Tag = "h2", size, id, className, children }: DisplayProps) {
 	return (
 		<Tag id={id} className={cn("pf-display", SIZES[size], className)}>

@@ -17,8 +17,8 @@ function MarqueeList({ items, label }: { items: ReadonlyArray<string>; label?: s
 			{items.map((item) => (
 				<Fragment key={item}>
 					<li className="px-[0.35em]">{item}</li>
-					<li aria-hidden className="px-[0.35em] text-pf-accent">
-						✳
+					<li aria-hidden className="px-[0.35em]">
+						<span className="inline-block size-[0.28em] rotate-45 bg-pf-crimson align-middle" />
 					</li>
 				</Fragment>
 			))}

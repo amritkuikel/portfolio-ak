@@ -62,7 +62,7 @@ function ArticlePage() {
 				</div>
 				<Eyebrow className="col-span-4 md:col-span-12">
 					<time dateTime={post.publishedAt}>{published}</time>
-					{" · "}
+					{" / "}
 					{m.portfolio_journal_reading_time({ minutes: formatNumber(post.readingMinutes) })}
 				</Eyebrow>
 				<Display as="h1" id="article-title" size="h1" className="col-span-4 md:col-span-10">

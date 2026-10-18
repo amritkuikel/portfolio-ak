@@ -8,23 +8,23 @@ import { PortfolioMenu } from "./portfolio-menu";
 
 const navLink =
 	"pf-focus pf-label relative py-2 text-pf-ink-2 transition-colors hover:text-pf-ink data-[status=active]:text-pf-ink " +
-	"after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-pf-accent " +
+	"after:absolute after:inset-x-0 after:-bottom-0.5 after:h-[3px] after:origin-left after:scale-x-0 after:bg-pf-accent " +
 	"after:transition-transform after:duration-(--pf-dur-2) hover:after:scale-x-100 data-[status=active]:after:scale-x-100";
 
 /**
  * The portfolio's own header (the app's SiteHeader is hidden by the layout's
- * `chrome: "bare"`). Sticky, translucent paper, a monogram, the sections and
+ * `chrome: "bare"`). Sticky, solid cotton, a woven-label monogram, the sections and
  * the language and theme controls the rest of the app uses.
  */
 export function PortfolioHeader({ profile }: { profile: Pick<Profile, "name" | "initials" | "role"> }) {
 	return (
-		<header className="sticky top-0 z-40 border-pf-line border-b bg-pf-paper/85 backdrop-blur-md">
+		<header className="sticky top-0 z-40 border-pf-line border-b bg-pf-paper">
 			<div className="pf-container flex h-(--pf-header-h) items-center gap-6">
 				{/* The link's name is the visible name (WCAG 2.5.3); on phones it is visually hidden, not removed. */}
 				<Link to="/portfolio" className="pf-focus group/brand flex min-w-0 items-center gap-3">
 					<span
 						aria-hidden
-						className="pf-display flex size-10 shrink-0 items-center justify-center rounded-full bg-pf-ink text-lg text-pf-paper transition-colors duration-(--pf-dur-2) group-hover/brand:bg-pf-accent"
+						className="pf-display flex size-10 shrink-0 items-center justify-center bg-pf-ink pt-0.5 text-xl text-pf-paper shadow-[inset_0_-4px_0_var(--pf-crimson)] transition-colors duration-(--pf-dur-2) group-hover/brand:bg-pf-crimson group-hover/brand:text-pf-light-paper"
 					>
 						{profile.initials}
 					</span>

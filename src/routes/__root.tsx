@@ -20,9 +20,11 @@ import appCss from "@/styles/app.css?url";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
 	// Fill the session slot for every route. On the server this is a per-request
-	// lookup; on the client it comes from the Query cache (see sessionQueryOptions).
+	// lookup. In the browser it comes from the Query cache while it's fresh (its
+	// staleTime), then is fetched again, so route guards never trust a session
+	// that expired long ago. Server functions check the session themselves either way.
 	beforeLoad: async ({ context }) => ({
-		session: await context.queryClient.ensureQueryData(sessionQueryOptions()),
+		session: await context.queryClient.query(sessionQueryOptions()),
 	}),
 	head: () => ({
 		meta: [

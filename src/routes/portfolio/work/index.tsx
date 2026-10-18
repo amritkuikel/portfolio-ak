@@ -40,7 +40,7 @@ export const Route = createFileRoute("/portfolio/work/")({
 });
 
 const filterLink =
-	"pf-focus pf-label inline-flex items-center gap-2 rounded-full border border-pf-line px-4 py-2 transition-colors " +
+	"pf-focus pf-label inline-flex items-center gap-2 border-2 border-pf-line px-4 py-2 transition-colors " +
 	"hover:border-pf-ink aria-[current=page]:border-pf-ink aria-[current=page]:bg-pf-ink aria-[current=page]:text-pf-paper";
 
 function WorkIndexPage() {
@@ -97,11 +97,7 @@ function WorkIndexPage() {
 				</p>
 				<ul>
 					{projects.map((project) => (
-						<WorkRow
-							key={project.slug}
-							project={project}
-							index={all.findIndex((each) => each.slug === project.slug) + 1}
-						/>
+						<WorkRow key={project.slug} project={project} />
 					))}
 				</ul>
 			</div>

@@ -8,6 +8,7 @@ import { testCrudIdParamSchema } from "@/features/test-crud/schema";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
+import { ensureQuery } from "@/lib/query";
 import { parseParams } from "@/lib/search";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/_admin/admin/test-crud/$id")({
 	beforeLoad: ({ context }) => assertRoutePermission(context.session, "test-crud:update"),
 	loader: async ({ context, params }) => {
 		try {
-			const item = await context.queryClient.ensureQueryData(testCrudDetailQueryOptions(params.id));
+			const item = await ensureQuery(context.queryClient, testCrudDetailQueryOptions(params.id));
 			// Only what the breadcrumb needs; the item itself travels in the Query cache.
 			return { title: item.title };
 		} catch (error) {

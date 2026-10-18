@@ -5,19 +5,20 @@ import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { exampleSnapshotQueryOptions } from "@/features/dev/examples/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatDateTime, formatNumber } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 /**
  * Loader + Query, the SSR pattern of every page:
- * 1. the loader awaits ensureQueryData (on the server for the first request);
+ * 1. the loader awaits ensureQuery (on the server for the first request);
  * 2. the result is dehydrated into the HTML with the Query cache;
  * 3. the component reads it with useSuspenseQuery: no request while hydrating.
  * The loader returns nothing: the data lives in the Query cache, not in loader data.
  */
 export const Route = createFileRoute("/_public/dev/examples/loader-query")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(exampleSnapshotQueryOptions());
+		await ensureQuery(context.queryClient, exampleSnapshotQueryOptions());
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_loader_title) },
 	head: () => privateHead(m.examples_loader_title()),

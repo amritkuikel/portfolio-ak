@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { homeFlagsQueryOptions } from "@/features/flags/queries";
 import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { seo } from "@/lib/seo";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/")({
 	// Feature flags are evaluated on the server and SSR'd with the page (see feature-flags.ts).
-	loader: ({ context }) => context.queryClient.ensureQueryData(homeFlagsQueryOptions()),
+	loader: ({ context }) => ensureQuery(context.queryClient, homeFlagsQueryOptions()),
 	// The site name alone as the title; WebSite + Organization describe the site to search engines.
 	head: () =>
 		seo({

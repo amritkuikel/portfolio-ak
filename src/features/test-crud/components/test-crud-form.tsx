@@ -17,7 +17,7 @@ import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { STATUS_LABELS } from "../labels";
-import { testCrudKeys } from "../queries";
+import { invalidateTestCrudLists, testCrudKeys } from "../queries";
 import {
 	slugify,
 	TEST_CRUD_STATUSES,
@@ -77,9 +77,7 @@ export function TestCrudForm({
 					: await createTestCrud({ data: input });
 				saved.current = true;
 				queryClient.setQueryData(testCrudKeys.detail(result.id), result);
-				await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
-				void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
-				void queryClient.invalidateQueries({ queryKey: testCrudKeys.tags() });
+				await invalidateTestCrudLists(queryClient);
 				toast.success(item ? m.test_crud_toast_saved() : m.test_crud_toast_created());
 				if (onSaved) onSaved(result);
 				else await navigate({ to: "/admin/test-crud" });

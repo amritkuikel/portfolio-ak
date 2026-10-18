@@ -8,6 +8,7 @@ import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { PRIORITY_LABELS } from "@/features/dev/examples/labels";
 import { exampleTaskQueryOptions, exampleTasksQueryOptions } from "@/features/dev/examples/queries";
 import { EXAMPLE_SEARCH_DEFAULTS, type ExampleTaskSearch } from "@/features/dev/examples/schema";
+import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
@@ -23,7 +24,7 @@ const LIST: ExampleTaskSearch = { ...EXAMPLE_SEARCH_DEFAULTS, done: undefined };
 export const Route = createFileRoute("/_public/dev/examples/masking/")({
 	validateSearch: z.object({ open: z.uuid().optional().catch(undefined) }),
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(exampleTasksQueryOptions(LIST));
+		await ensureQuery(context.queryClient, exampleTasksQueryOptions(LIST));
 	},
 	head: () => privateHead(m.examples_masking_title()),
 	component: MaskingExample,

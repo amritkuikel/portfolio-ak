@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
-/** A hairline pill for disciplines, tags and stack items. */
+/** A woven-label tag for disciplines, tags and stack items: a cotton patch with a thread down its edge. */
 export function Tag({ className, children }: { className?: string | undefined; children: ReactNode }) {
 	return (
 		<span
 			className={cn(
-				"pf-label inline-flex items-center rounded-full border border-pf-line px-3 py-1 text-pf-ink-2",
+				"pf-label inline-flex items-center border-pf-ink border-l-2 bg-pf-paper-2 px-2.5 py-1 text-pf-ink-2",
 				className,
 			)}
 		>

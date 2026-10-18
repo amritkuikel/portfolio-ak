@@ -19,6 +19,7 @@ pnpm install
 cp .env.example .env    # then fill in real values (see "Environment variables")
 pnpm db:migrate         # create the tables in your Neon database
 pnpm db:seed-admin --email you@example.com --password "at-least-12-chars" --name "You"
+pnpm db:seed-demo --password "at-least-12-chars"   # optional: demo roles, users and items
 pnpm dev                # http://localhost:3000
 ```
 
@@ -43,6 +44,7 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 | `RESEND_API_KEY` | with Resend | Resend API key (`re_…`). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | Enable "Continue with Google" (both or neither). |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | no | Defaults for `pnpm db:seed-admin`. |
+| `DEMO_PASSWORD` | no | Default password for `pnpm db:seed-demo`'s users. |
 | `VITE_SENTRY_DSN` | no | Turns Sentry on (browser + server). |
 | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` | no | Turn PostHog on (opt-in, behind the consent banner). |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | no | Upload source maps to Sentry during `pnpm build` (all three or none). |
@@ -112,6 +114,7 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:push` | Push the schema straight to the database, for prototyping only. |
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
+| `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
 | `pnpm attachments:import-legacy` | Move Part 1 images from Postgres to Cloudinary (`--dry-run` to preview). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
@@ -130,7 +133,7 @@ English lives at `/`, Nepali under `/ne/`; every string is a message in `message
 
 ## Routing, data and server functions
 
-Loaders call `queryClient.ensureQueryData(...)` and components read with `useSuspenseQuery`, so pages render on the server and hydrate without refetching. Server functions are `createServerFn().middleware([requirePermission("…")]).validator(zodInput(schema)).handler(…)`. See [docs/guides/routing-data.md](docs/guides/routing-data.md).
+Loaders call `ensureQuery(queryClient, …)` and components read with `useSuspenseQuery`, so pages render on the server and hydrate without refetching. Server functions are `createServerFn().middleware([requirePermission("…")]).validator(zodInput(schema)).handler(…)`. See [docs/guides/routing-data.md](docs/guides/routing-data.md).
 
 ## Forms
 
@@ -147,9 +150,9 @@ Query for server data you read, a TanStack DB collection for server data you edi
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
 2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
 3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
-4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/test-crud-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
+4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
-6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `Pagination`, `EmptyState` and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
+6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
 7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
 8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`.
 
@@ -161,7 +164,7 @@ The Test CRUD files for each layer:
 | Shared schema | `src/features/test-crud/schema.ts` | One Zod schema for the form and the server, plus list search params and DTOs |
 | Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
 | Server functions | `src/functions/test-crud.ts` | `requirePermission("test-crud:<action>")` on every function, `.validator(zodInput(schema))` input, and images as attachment ids (JSON) |
-| Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQueryData` for SSR, and a TanStack DB collection for optimistic changes with rollback |
+| Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQuery` for SSR, and a TanStack DB collection for optimistic changes with rollback |
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
 | Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
 

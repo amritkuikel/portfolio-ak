@@ -30,7 +30,7 @@ export function CaseStudyHero({ project, index, total }: CaseStudyHeroProps) {
 					</p>
 				</div>
 				<p className="pf-label col-span-4 text-pf-accent md:col-span-12">
-					{project.client} · {formatNumber(project.year, { useGrouping: false })}
+					{project.client}, {formatNumber(project.year, { useGrouping: false })}
 				</p>
 				<Display as="h1" id="case-title" size="hero" className="col-span-4 md:col-span-12">
 					{project.title}

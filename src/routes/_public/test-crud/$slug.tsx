@@ -14,6 +14,7 @@ import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
 import { formatCurrency, formatDate } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { parseParams } from "@/lib/search";
 import { seo } from "@/lib/seo";
 import { productJsonLd } from "@/lib/structured-data";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/_public/test-crud/$slug")({
 	params: { parse: (raw) => parseParams(testCrudSlugParamSchema, raw) },
 	loader: async ({ context, params }) => {
 		try {
-			const item = await context.queryClient.ensureQueryData(publicTestCrudDetailQueryOptions(params.slug));
+			const item = await ensureQuery(context.queryClient, publicTestCrudDetailQueryOptions(params.slug));
 			// Only what head() and the breadcrumb need: the full item (with its body) already
 			// travels to the browser in the Query cache, so returning it would send it twice.
 			const { title, summary, publishedAt, price, tags, image } = item;

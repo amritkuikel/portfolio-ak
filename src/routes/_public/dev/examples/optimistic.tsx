@@ -16,6 +16,7 @@ import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleTasksQueryOptions } from "@/features/dev/examples/queries";
 import type { ExampleTask } from "@/features/dev/examples/schema";
 import { staticCrumb } from "@/lib/breadcrumbs";
+import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
@@ -30,7 +31,7 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/_public/dev/examples/optimistic")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(exampleTasksQueryOptions(OPTIMISTIC_SEARCH));
+		await ensureQuery(context.queryClient, exampleTasksQueryOptions(OPTIMISTIC_SEARCH));
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_optimistic_title) },
 	head: () => privateHead(m.examples_optimistic_title()),

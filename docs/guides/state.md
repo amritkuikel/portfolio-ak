@@ -4,7 +4,7 @@ Pick the tool by what the state is (decision 0064). Examples: `/dev/examples/loa
 
 | State | Tool | Example |
 | --- | --- | --- |
-| Server data you read | **TanStack Query**: `queryOptions` in `features/<name>/queries.ts`, `ensureQueryData` in loaders, `useSuspenseQuery` in components | `/stack`, the session (`sessionQueryOptions`) |
+| Server data you read | **TanStack Query**: `queryOptions` in `features/<name>/queries.ts`, `ensureQuery` in loaders, `useSuspenseQuery` in components | `/stack`, the session (`sessionQueryOptions`) |
 | Server data you edit with instant feedback | **TanStack DB** query collection over the same query key | Test CRUD admin table: status changes and deletes show at once and roll back on refusal |
 | UI preferences that persist | **TanStack Store** (`src/lib/stores`), saved in cookies | Theme, admin sidebar, table page size and hidden columns, analytics consent |
 | Values being typed | **TanStack Form** ([forms.md](forms.md)) | Every form |

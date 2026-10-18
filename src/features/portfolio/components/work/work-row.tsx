@@ -4,14 +4,13 @@ import { DISCIPLINE_LABELS } from "../../lib/labels";
 import type { ProjectSummary } from "../../types";
 import { CoverArt } from "../primitives/cover-art";
 import { CoverFrame } from "../primitives/cover-frame";
-import { formatIndex } from "../primitives/eyebrow";
 
 /**
- * One project in the work index: a wide row (number, title, client,
+ * One project in the work index: a wide row (title, client,
  * disciplines, year) with its cover. On phones the cover sits above the text;
  * from tablets up it waits at the end of the row and wipes open on hover.
  */
-export function WorkRow({ project, index }: { project: ProjectSummary; index: number }) {
+export function WorkRow({ project }: { project: ProjectSummary }) {
 	return (
 		<li className="border-pf-line border-t last:border-b">
 			<Link
@@ -27,10 +26,7 @@ export function WorkRow({ project, index }: { project: ProjectSummary; index: nu
 						</CoverFrame>
 					</div>
 				</div>
-				<span aria-hidden className="pf-label hidden text-pf-stone md:col-span-1 md:block">
-					{formatIndex(index)}
-				</span>
-				<div className="col-span-4 md:col-span-5">
+				<div className="col-span-4 md:col-span-6">
 					<h2 className="pf-display text-pf-h2 transition-transform duration-(--pf-dur-2) ease-(--pf-ease-out) md:group-hover/row:translate-x-3">
 						{project.title}
 					</h2>

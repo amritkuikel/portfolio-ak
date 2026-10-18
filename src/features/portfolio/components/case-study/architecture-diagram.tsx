@@ -26,7 +26,7 @@ export function ArchitectureDiagram({ block }: { block: ArchitectureBlock }) {
 	const labelOf = (id: string) => block.nodes.find((node) => node.id === id)?.label ?? id;
 
 	return (
-		<figure className="flex flex-col gap-8 rounded-sm border border-pf-line p-5 md:p-8">
+		<figure className="flex flex-col gap-8 border-2 border-pf-line p-5 md:p-8">
 			<div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
 				{tiers.map((column, position) => (
 					<div key={column.tier} className="contents">
@@ -40,7 +40,7 @@ export function ArchitectureDiagram({ block }: { block: ArchitectureBlock }) {
 							<p className="pf-label text-pf-stone">{TIER_LABELS[column.tier]()}</p>
 							<ul className="flex flex-col gap-2">
 								{column.nodes.map((node) => (
-									<li key={node.id} className="rounded-sm bg-pf-paper-2 px-4 py-3">
+									<li key={node.id} className="border-pf-jade border-l-4 bg-pf-paper-2 px-4 py-3">
 										<span className="block font-medium">{node.label}</span>
 										<span className="font-pf-mono text-pf-small text-pf-ink-2">{node.detail}</span>
 									</li>

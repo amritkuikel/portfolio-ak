@@ -67,12 +67,27 @@ keys by the router's `stringifySearch` (`src/lib/search.ts`, wired in
    validateSearch: projectSearchSchema,
    search: { middlewares: [stripSearchParams(SEARCH_DEFAULTS)] },  // defaults never appear in URLs
    loaderDeps: ({ search: { edit: _edit, ...list } }) => list,    // dialog params don't reload the list
-   loader: ({ context, deps, cause }) => loadList(context.queryClient, projectListQueryOptions(deps), cause),
+   loader: ({ context, deps, cause }) =>
+   	loadList(context.queryClient, projectListQueryOptions(tableListInput(deps, context.preferences.state, PROJECTS_TABLE_ID)), cause),
    ```
 
-   In the component: `const { data, busy } = useListQuery(projectListQueryOptions(search))`, then pass `busy` to `<DataTable busy>` (or `aria-busy` on a grid).
+   In the component, `useListPage` (`src/lib/use-list-page.ts`) does the rest: it resolves the page size the same way as the loader (URL, then the user's saved choice for this table, then 20), reads the list, and returns the props for `<Pagination>`:
 
-4. **Filters UI:** put the controls in `<FilterBar values={search} preserve={["sort", "pageSize"]}>` (see `features/test-crud/filters.tsx`). Build the chips with `chipLabel`/`rangeValue` and render them with `<ActiveFilters chips={…} clearAll={…}>`. Labels are messages, called at render time.
+   ```tsx
+   const { edit, ...listSearch } = Route.useSearch();   // UI-only params stay out of the list input
+   const { input, page, busy, pagination } = useListPage({ tableId: PROJECTS_TABLE_ID, search: listSearch, query: projectListQueryOptions });
+   …
+   {page && pagination ? (
+   	<>
+   		<DataTable tableId={PROJECTS_TABLE_ID} rows={page.items} busy={busy} … />
+   		<Pagination {...pagination} />
+   	</>
+   ) : <DataTableSkeleton columns={5} rows={8} />}
+   ```
+
+   Lists without a table (public card grids) read with `useListQuery(options)` directly and pass `busy` as `aria-busy`.
+
+4. **Filters UI:** put the controls in `<FilterBar values={search} preserve={["sort", "pageSize"]}>` (see `features/test-crud/filters.tsx`). Build the chips with `chipLabel`/`rangeValue` and render them with `<ActiveFilters chips={…} clearAll={…}>`. When filters hide every row, the empty state's action is `<ClearFiltersButton clearAll={…} />`. Labels are messages, called at render time.
 
 **What you get without extra work:**
 - server rendering;

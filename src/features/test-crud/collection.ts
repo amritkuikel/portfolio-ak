@@ -2,7 +2,7 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { collectionOptions } from "@tanstack/react-db";
 import { deleteTestCrudFn, listTestCrud, setTestCrudStatusFn } from "@/functions/test-crud";
 import { queryClientOf } from "@/lib/db";
-import { testCrudKeys } from "./queries";
+import { invalidateTestCrudLists, testCrudKeys } from "./queries";
 import type { TestCrudListInput, TestCrudListItem } from "./schema";
 
 /**
@@ -19,15 +19,18 @@ import type { TestCrudListInput, TestCrudListItem } from "./schema";
  */
 const descriptors = new Map<string, ReturnType<typeof createPageCollection>>();
 
+/**
+ * Descriptors kept at most (the most recently used). They're cheap option objects,
+ * but the map is module-level, also used during SSR, and keyed by search input, so
+ * without a cap every distinct search would stay in memory for the process's life.
+ */
+const MAX_DESCRIPTORS = 50;
+
 const createPageCollection = (input: TestCrudListInput, id: string) =>
 	collectionOptions(id, (client) => {
 		const queryClient = queryClientOf(client);
 		const refreshLists = async () => {
-			await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
-			// Public pages cached in this tab may now show stale (un)published items.
-			void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
-			// Deleting rows can retire tags from the tag filter.
-			void queryClient.invalidateQueries({ queryKey: testCrudKeys.tags() });
+			await invalidateTestCrudLists(queryClient);
 			// The invalidation above already refetched this page.
 			return { refetch: false };
 		};
@@ -56,10 +59,13 @@ const createPageCollection = (input: TestCrudListInput, id: string) =>
 /** The collection descriptor for a list page (memoized, so each page has one collection per DbClient). */
 export const testCrudPageCollection = (input: TestCrudListInput) => {
 	const id = `test-crud:${JSON.stringify(testCrudKeys.list(input))}`;
-	let descriptor = descriptors.get(id);
-	if (!descriptor) {
-		descriptor = createPageCollection(input, id);
-		descriptors.set(id, descriptor);
+	const descriptor = descriptors.get(id) ?? createPageCollection(input, id);
+	// Re-insert as the newest entry (Map keeps insertion order), then drop the oldest beyond the cap.
+	descriptors.delete(id);
+	descriptors.set(id, descriptor);
+	for (const oldest of descriptors.keys()) {
+		if (descriptors.size <= MAX_DESCRIPTORS) break;
+		descriptors.delete(oldest);
 	}
 	return descriptor;
 };

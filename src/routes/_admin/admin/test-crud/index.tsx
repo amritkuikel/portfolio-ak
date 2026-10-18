@@ -1,11 +1,12 @@
 import { useDbClient, useLiveQuery } from "@tanstack/react-db";
-import { createFileRoute, Link, stripSearchParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, stripSearchParams } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { errorMessage } from "@/components/errors/error-page";
+import { ClearFiltersButton } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
 import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
@@ -28,27 +29,16 @@ import { testCrudListQueryOptions, testCrudTagsQueryOptions } from "@/features/t
 import {
 	TEST_CRUD_SEARCH_DEFAULTS,
 	TEST_CRUD_TABLE_ID,
-	type TestCrudListInput,
 	type TestCrudListItem,
-	type TestCrudSearch,
 	type TestCrudStatus,
 	testCrudAdminRouteSearchSchema,
 } from "@/features/test-crud/schema";
 import { formatNumber } from "@/lib/intl";
-import { loadList } from "@/lib/query";
+import { ensureQuery, loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
-import { useTablePreferences } from "@/lib/stores/hooks";
-import { PAGE_SIZES, type Preferences } from "@/lib/stores/preferences";
+import { tableListInput, useListPage } from "@/lib/use-list-page";
 import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
-
-const DEFAULT_PAGE_SIZE = 20;
-
-/** The list input: the list params of the URL (not `edit`), page size falling back to the saved preference. */
-const listInput = ({ edit: _edit, ...search }: TestCrudSearch & { edit?: string }, savedPageSize: number | undefined) =>
-	({ ...search, pageSize: search.pageSize ?? savedPageSize ?? DEFAULT_PAGE_SIZE }) satisfies TestCrudListInput;
-
-const savedPageSize = (preferences: Preferences) => preferences.tables[TEST_CRUD_TABLE_ID]?.pageSize;
 
 export const Route = createFileRoute("/_admin/admin/test-crud/")({
 	validateSearch: testCrudAdminRouteSearchSchema,
@@ -62,10 +52,10 @@ export const Route = createFileRoute("/_admin/admin/test-crud/")({
 		await Promise.all([
 			loadList(
 				context.queryClient,
-				testCrudListQueryOptions(listInput(deps, savedPageSize(context.preferences.state))),
+				testCrudListQueryOptions(tableListInput(deps, context.preferences.state, TEST_CRUD_TABLE_ID)),
 				cause,
 			),
-			context.queryClient.ensureQueryData(testCrudTagsQueryOptions()),
+			ensureQuery(context.queryClient, testCrudTagsQueryOptions()),
 		]);
 	},
 	head: () => ({ meta: [{ title: pageTitle(m.test_crud_title()) }] }),
@@ -91,12 +81,14 @@ function NewItemButton() {
 
 function TestCrudAdminPage() {
 	const search = Route.useSearch();
-	const navigate = useNavigate({ from: Route.fullPath });
-	const table = useTablePreferences(TEST_CRUD_TABLE_ID, { pageSize: DEFAULT_PAGE_SIZE });
-	const input = listInput(search, table.pageSize);
-	const { data: page, busy, error } = useListQuery(testCrudListQueryOptions(input));
+	// `edit` only opens the dialog; the rest is the list's input.
+	const { edit, ...listSearch } = search;
+	const { input, page, busy, pagination } = useListPage({
+		tableId: TEST_CRUD_TABLE_ID,
+		search: listSearch,
+		query: testCrudListQueryOptions,
+	});
 	const { data: tags = [] } = useListQuery(testCrudTagsQueryOptions());
-	if (error && !page) throw error;
 
 	// TanStack DB collection over this page; rows render from it so optimistic
 	// changes (and rollbacks) show immediately. Until it's ready (SSR, first
@@ -175,7 +167,7 @@ function TestCrudAdminPage() {
 				<TestCrudActiveFilters search={search} />
 			</div>
 
-			{page ? (
+			{page && pagination ? (
 				<>
 					<DataTable
 						tableId={TEST_CRUD_TABLE_ID}
@@ -237,36 +229,11 @@ function TestCrudAdminPage() {
 							<EmptyState
 								data-testid="empty"
 								description={filtered ? m.test_crud_empty_filtered() : m.test_crud_empty()}
-								action={
-									filtered ? (
-										<Button variant="outline" asChild>
-											<Link
-												from={Route.fullPath}
-												search={(prev) => ({ ...prev, ...TEST_CRUD_CLEAR_FILTERS, page: undefined })}
-											>
-												{m.test_crud_clear_filters()}
-											</Link>
-										</Button>
-									) : (
-										<NewItemButton />
-									)
-								}
+								action={filtered ? <ClearFiltersButton clearAll={TEST_CRUD_CLEAR_FILTERS} /> : <NewItemButton />}
 							/>
 						}
 					/>
-					<Pagination
-						page={page.page}
-						pageCount={page.pageCount}
-						total={page.total}
-						pageSize={{
-							value: input.pageSize,
-							options: PAGE_SIZES,
-							onChange: (size) => {
-								table.setPageSize(size);
-								void navigate({ search: (prev) => ({ ...prev, pageSize: size, page: undefined }) });
-							},
-						}}
-					/>
+					<Pagination {...pagination} />
 				</>
 			) : (
 				<DataTableSkeleton columns={5} rows={8} />
@@ -288,7 +255,7 @@ function TestCrudAdminPage() {
 				onCancel={() => setPendingDelete(null)}
 			/>
 
-			{search.edit && can("test-crud:update") ? <TestCrudEditDialog id={search.edit} /> : null}
+			{edit && can("test-crud:update") ? <TestCrudEditDialog id={edit} /> : null}
 		</Page>
 	);
 }

@@ -1,5 +1,8 @@
-import { type FetchQueryOptions, QueryClient, type QueryKey } from "@tanstack/react-query";
+import { noop, QueryClient, type QueryExecuteOptions, type QueryKey } from "@tanstack/react-query";
 import { isAppError } from "./errors";
+
+/** What `queryOptions(...)` produces, as `queryClient.query()` accepts it. */
+type LoaderQueryOptions<TData, TKey extends QueryKey> = QueryExecuteOptions<TData, Error, TData, TData, TKey>;
 
 /**
  * One QueryClient per request on the server (created in getRouter), one per tab
@@ -21,6 +24,29 @@ export const createQueryClient = () =>
 	});
 
 /**
+ * Loader read: the cached data when there is any (fresh or stale), otherwise
+ * fetched and awaited. Components then read the same options with
+ * `useSuspenseQuery`, which refreshes stale data in the background.
+ *
+ *   loader: ({ context }) => ensureQuery(context.queryClient, thingQueryOptions(id)),
+ *
+ * Query 5.104 deprecated `ensureQueryData`; this is its documented replacement
+ * (`query()` with `staleTime: "static"`), kept in one place (decisions.md 0111).
+ */
+export const ensureQuery = <TData, TKey extends QueryKey>(
+	queryClient: QueryClient,
+	options: LoaderQueryOptions<TData, TKey>,
+): Promise<TData> => queryClient.query({ ...options, staleTime: "static" });
+
+/** Starts loading a query without waiting for it or failing on errors (replaces `prefetchQuery`). */
+export const prefetch = <TData, TKey extends QueryKey>(
+	queryClient: QueryClient,
+	options: LoaderQueryOptions<TData, TKey>,
+): void => {
+	queryClient.query(options).catch(noop);
+};
+
+/**
  * Loader body for a list driven by URL search (filters, sort, page).
  *
  * - Entering the route and SSR (`cause` "enter"/"preload"): await the data, so the
@@ -33,12 +59,12 @@ export const createQueryClient = () =>
  */
 export function loadList<TData, TKey extends QueryKey>(
 	queryClient: QueryClient,
-	options: FetchQueryOptions<TData, Error, TData, TKey>,
+	options: LoaderQueryOptions<TData, TKey>,
 	cause: "enter" | "stay" | "preload",
 ): Promise<unknown> | undefined {
 	if (cause === "stay") {
-		void queryClient.prefetchQuery(options);
+		prefetch(queryClient, options);
 		return undefined;
 	}
-	return queryClient.ensureQueryData(options);
+	return ensureQuery(queryClient, options);
 }

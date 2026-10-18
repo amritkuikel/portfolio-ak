@@ -30,7 +30,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [security.md](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing, secrets |
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [audit.md](docs/guides/audit.md) | The Part 2 module review and what each task changed |
-| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Ink & Paper" design system, motion |
+| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Dhaka" design system, motion |
 
 ## Stack
 
@@ -53,7 +53,7 @@ pnpm test:storybook      # every story in real Chrome, twice: en/light and ne/da
 pnpm test:coverage       # v8 coverage + per-area table
 pnpm build               # production build (.output/); pnpm start runs it
 pnpm build-storybook
-pnpm db:generate | db:migrate | db:seed-admin
+pnpm db:generate | db:migrate | db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
 ```
 
 A task is done when `typecheck`, `check`, `test`, `test:storybook`, `build` and `build-storybook` are all green with no warnings, and the touched pages pass a browser review on a production build (en/ne × light/dark × 390/768/1280: axe, overflow, console, CSP, CLS ≤ 0.01).
@@ -78,10 +78,10 @@ docs/                  PLAN.md, decisions.md, guides/
 
 ## Golden rules
 
-1. **Server-render everything.** The loader awaits `queryClient.ensureQueryData(opts)` and the component calls `useSuspenseQuery(opts)`. No first-paint fetching in effects. Loaders return only what `head`/`staticData` need.
+1. **Server-render everything.** The loader awaits `ensureQuery(queryClient, opts)` (`src/lib/query.ts`; Query 5.104 deprecated `ensureQueryData`, 0111) and the component calls `useSuspenseQuery(opts)`. No first-paint fetching in effects. Loaders return only what `head`/`staticData` need.
 2. **Reuse before writing.** Pages are built from `src/components/page`, `data-table`, `filters`, `navigation`, `dialogs` and `forms`. Feature code supplies columns, filters, fields and actions. A pattern used twice becomes shared.
-3. **The URL is the state** for lists (`q`, filters, `sort`, `page`, `pageSize`). These come from the shared list contract: `src/lib/list.ts` + `src/lib/search.ts` on both sides, plus `src/server/db/list.ts` for SQL. Filters go in `<FilterBar>`, which works without JS. List loaders use `loadList`/`useListQuery`.
-4. **The server is the authority.** Every protected server function runs `requirePermission("<resource>:<action>")` (a test checks each function's permission), validates input with the feature's Zod schema, and calls into `src/server/**`. Routes add `assertRoutePermission` in `beforeLoad`; the UI only hides (`useCan`, `<Can>`) what the server would refuse.
+3. **The URL is the state** for lists (`q`, filters, `sort`, `page`, `pageSize`). These come from the shared list contract: `src/lib/list.ts` + `src/lib/search.ts` on both sides, plus `src/server/db/list.ts` for SQL. Filters go in `<FilterBar>`, which works without JS. List pages call `tableListInput` + `loadList` in the loader and `useListPage` in the component, which also wires `<Pagination>` (0116).
+4. **The server is the authority.** Every protected server function runs `requirePermission("<resource>:<action>")` (`tests/server/guarded-functions.test.ts` makes every file in `src/functions` declare its guards), validates input with the feature's Zod schema, and calls into `src/server/**`. Routes add `assertRoutePermission` in `beforeLoad`; the UI only hides (`useCan`, `<Can>`) what the server would refuse.
 5. **Server-only code stays server-only:** `src/server/**` and `*.server.ts`, enforced by Start import protection and tests.
 6. **i18n:** every user-visible string is a Paraglide message in `messages/en.json` and `messages/ne.json`. Call `m.key()` at render time, never in module-level constants. Delete keys whose UI is gone (a test checks).
 7. **Import Zod as `"zod"`.** It resolves to `src/lib/zod.ts` (jitless). The CSP forbids eval (decision 0086).
@@ -124,5 +124,9 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown below `/portfolio` renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/portfolio/route.tsx`).
 - **Fonts are never inlined:** a font file under Vite's 4 kB limit would become a `data:` URL, which the CSP's `font-src 'self'` blocks. `vite.config.ts` turns inlining off for `.woff`/`.woff2` (0108).
 - **Custom `text-*` sizes and tailwind-merge:** `cn("text-pf-h2", "text-pf-accent")` drops the size with the app's `cn` (both look like colours). Portfolio components import `cn` from `features/portfolio/lib/cn.ts`, which registers the scale.
-- **Variable fonts with optical sizing change width with size:** a metric-matched fallback only works at a pinned `opsz` (`pf-display` pins 144, and 36 for `text-pf-h3`). Measure fallback `size-adjust` in a browser at that setting (0108).
+- **Variable fonts with a width axis need one fallback per width:** Anek's `wdth` changes its advance widths and Arial has no such axis, so the portfolio has a fallback face per width it uses (100% body, 75% bold display). A new width or weight for large type needs its own measured `size-adjust` (0110).
+- **Expired sessions are handled once, globally:** `src/middleware/session-expiry.ts` sends any UNAUTHORIZED server-function answer in the browser to `/login?redirect=…` (0113). Don't add per-call login redirects; FORBIDDEN stays the caller's to show (toast, or the forbidden page via `assertRoutePermission`).
+- **Better Auth's `/api/auth/admin/*` endpoints are disabled** (0112). Manage users, roles and bans through `src/functions/rbac.ts`, never `authClient.admin.*`; a Better Auth upgrade that adds an admin endpoint fails `auth-disabled-paths.test.ts` until it's listed.
+- **Session tokens never go to the browser** (0114): revoke another device with `revokeMySession({ id })`.
+- **Raw SQL inserts into Better Auth tables** (seeds, scripts) must set `updated_at` on `account` and `session`: those columns have no database default.
 - **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

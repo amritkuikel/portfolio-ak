@@ -7,7 +7,6 @@ import type { ProjectSummary } from "../../types";
 import { ArrowLink } from "../primitives/arrow-link";
 import { CoverArt } from "../primitives/cover-art";
 import { CoverFrame } from "../primitives/cover-frame";
-import { formatIndex } from "../primitives/eyebrow";
 import { Reveal } from "../primitives/reveal";
 
 type ProjectCardProps = {
@@ -47,11 +46,8 @@ export function ProjectCard({ project, index, flip = false }: ProjectCardProps) 
 				</Link>
 			</Reveal>
 			<div className={cn("col-span-4 md:col-span-4 md:pb-4", flip ? "md:order-1 md:col-start-1" : "md:col-start-9")}>
-				<p aria-hidden className="pf-display mb-6 text-pf-h1 text-pf-stone tabular-nums">
-					{formatIndex(index)}
-				</p>
 				<p className="pf-label mb-4 text-pf-stone">
-					{project.client} · {formatNumber(project.year, { useGrouping: false })}
+					{project.client}, {formatNumber(project.year, { useGrouping: false })}
 				</p>
 				<h3 id={titleId} className="pf-display text-pf-h2">
 					<Link to="/portfolio/work/$slug" params={{ slug: project.slug }} viewTransition className="pf-focus pf-link">

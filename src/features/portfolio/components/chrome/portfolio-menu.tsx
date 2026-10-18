@@ -24,7 +24,7 @@ export function PortfolioMenu({ className }: { className?: string | undefined })
 
 	return (
 		<details ref={details} className={cn("group", className)} onKeyDown={onKeyDown}>
-			<summary className="pf-focus pf-label flex cursor-pointer list-none items-center gap-2 rounded-full border border-pf-line px-4 py-2 [&::-webkit-details-marker]:hidden">
+			<summary className="pf-focus pf-label flex cursor-pointer list-none items-center gap-2 border-2 border-pf-ink px-4 py-2 [&::-webkit-details-marker]:hidden">
 				<span className="group-open:hidden">{m.portfolio_menu_open()}</span>
 				<span className="hidden group-open:inline">{m.portfolio_menu_close()}</span>
 			</summary>

@@ -32,7 +32,7 @@ export function CopyEmailButton({ email }: { email: string }) {
 			<button
 				type="button"
 				onClick={copy}
-				className="pf-focus pf-label inline-flex items-center gap-2 rounded-full border border-pf-line px-4 py-2 transition-colors hover:border-pf-ink"
+				className="pf-focus pf-label inline-flex items-center gap-2 border-2 border-pf-line px-4 py-2 transition-colors hover:border-pf-ink"
 			>
 				{copied ? <CheckIcon aria-hidden className="size-3.5" /> : <CopyIcon aria-hidden className="size-3.5" />}
 				{m.portfolio_contact_copy()}

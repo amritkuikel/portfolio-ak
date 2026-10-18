@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (104 entries)</summary>
+<summary>Index (117 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -115,6 +115,14 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0107](#0107-portfolio-content-is-localized-in-the-data--en-ne--ui-chrome-in-paraglide): Portfolio content is localized in the data (`{ en, ne }`), UI chrome in Paraglide
 - [0108](#0108-the-portfolios-design-system-is-scoped-under-portfolio-generated-art-fonts-pinned-to-an-optical-size): The portfolio's design system is scoped under `.portfolio`; generated art; fonts pinned to an optical size
 - [0109](#0109-portfolio-motion-is-css-only-scroll-driven-animations-clip-path-reveals-and-view-transitions): Portfolio motion is CSS only: scroll-driven animations, clip-path reveals and View Transitions
+- [0110](#0110-the-portfolio-is-dressed-as-dhaka-cloth-anek-type-generated-weaves-no-house-style-defaults): The portfolio is dressed as Dhaka cloth: Anek type, generated weaves, no house-style defaults
+- [0111](#0111-loaders-read-through-ensurequery-not-the-deprecated-ensurequerydata): Loaders read through ensureQuery(), not the deprecated ensureQueryData
+- [0112](#0112-better-auths-admin-endpoints-are-disabled-over-http): Better Auth's admin endpoints are disabled over HTTP
+- [0113](#0113-expired-sessions-are-handled-by-a-global-client-middleware-not-an-http-interceptor): Expired sessions are handled by a global client middleware, not an HTTP interceptor
+- [0114](#0114-session-tokens-stay-on-the-server-the-account-page-revokes-sessions-by-id): Session tokens stay on the server; the account page revokes sessions by id
+- [0115](#0115-the-last-admin-guard-locks-the-admin-rows-inside-the-changes-transaction): The last-admin guard locks the admin rows inside the change's transaction
+- [0116](#0116-list-pages-share-uselistpage-and-tablelistinput): List pages share useListPage() and tableListInput()
+- [0117](#0117-every-server-function-file-is-declared-in-the-guard-test-demo-data-is-a-seeded-script): Every server function file is declared in the guard test; demo data is a seeded script
 </details>
 
 ---
@@ -1419,3 +1427,63 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives considered:**
   - GSAP or Motion: richer choreography, but tens of kB on every portfolio page, and work that must wait for hydration.
   - IntersectionObserver reveals in React: needs JavaScript, and risks content hidden until hydration (or forever if it fails).
+
+## 0110: The portfolio is dressed as Dhaka cloth: Anek type, generated weaves, no house-style defaults
+
+- **What:**
+  - **Identity:** the "Ink & Paper" look (cream paper, Fraunces, a vermilion accent, uppercase mono eyebrows numbered "01 ——") is replaced by "Dhaka", after the handloom cloth of Palpa. Cotton-white ground and indigo ink. Dark mode is an indigo night. Three thread colours (crimson, marigold, jade) are shared by both themes.
+  - **Type:** Anek Latin + Anek Devanagari, one family for both scripts. Headlines are condensed (`wdth` 75) and bold. Body, quotes and labels are at normal width. Labels are sentence case. JetBrains Mono remains for code blocks only.
+  - **Weaves:** `lib/weave.ts` generates stepped, mirrored bands (stripes, zigzags, diamonds, triangles, checks) on a cell grid from a seed. `Weave` draws them as SVG runs. The hero's cloth weaves in row by row once on load (`.pf-weaving`, a `steps()` clip-path animation). Every project cover is its own cloth with the glyph on a cotton label. The footer is edged with a selvedge.
+  - **Markers:** chapters are marked by a diamond in the next thread colour. Numerals only appear on real sequences (process steps, project n of m).
+  - **Fallback metrics:** "Anek Fallback" (Arial, 93.51%) and "Anek Display Fallback" (Arial Bold, 67.12%), measured in Chrome.
+- **Why:**
+  - **Distinctive, not generic:** the previous look matched a widely shared house style. Dhaka ties the site to its owner (a Nepali developer) and to the craft (a loom is a grid and its rows). It stays coherent in both scripts and both themes: the indigo ground of a weave becomes white cloth in dark mode, because the ground is the ink token.
+  - **One family:** Anek's width axis gives the contrast two families would, and its Latin and Devanagari cuts are designed together, so Nepali pages look as intended rather than as a fallback.
+  - **Generated, not drawn:** same reasons as 0108. It is deterministic (integer cells, seeded), themeable and causes no layout shift. Runs of the same thread merge, which keeps a cover to a few hundred `<rect>`s.
+  - **No cotton stripes:** a full row of cotton is the page colour and reads as a hole in the cloth.
+- **Alternatives considered:**
+  - Prayer-flag colours as section bands: the five colours carry religious meaning, and flat bands of colour say less than woven geometry.
+  - A topographic (contour-line) theme: common on developer portfolios.
+  - Keeping Fraunces with a new palette: the serif display would still read as the same house style.
+
+## 0111: Loaders read through ensureQuery(), not the deprecated ensureQueryData
+
+- **What:** `src/lib/query.ts` has `ensureQuery(queryClient, options)` (`queryClient.query({ ...options, staleTime: "static" })`) and `prefetch(queryClient, options)` (`query(options).catch(noop)`); `loadList` uses both. Every loader outside the portfolio calls `ensureQuery`. The root route reads the session with `queryClient.query(sessionQueryOptions())`, which honours the session's one-minute `staleTime`.
+- **Why:** TanStack Query 5.104 deprecates `ensureQueryData`, `fetchQuery` and `prefetchQuery` (to be removed in v6); `query()` with `staleTime: "static"` is the documented replacement. One helper keeps the "static" detail out of every route and makes the next change one edit. `ensureQueryData` also never refetched cached data, so client-side route guards could trust a session for as long as the tab stayed open; the root now refetches it once it is a minute old.
+- **Alternatives considered:** calling `queryClient.query({ ..., staleTime: "static" })` inline in each loader (repetitive, easy to forget the option); `revalidateIfStale` on the session (deprecated with `ensureQueryData`, and it doesn't wait, so the guard would still decide with the old value). The portfolio routes still use `ensureQueryData` until that work is next touched; it keeps working until Query v6.
+
+## 0112: Better Auth's admin endpoints are disabled over HTTP
+
+- **What:** every `/api/auth/admin/*` path of the admin plugin is in `disabledPaths` (`src/server/auth/disabled-paths.ts`); Better Auth answers 404. A test compares the list with the plugin's endpoints, so an upgrade that adds one fails until it is listed.
+- **Why:** the plugin let any `role: "admin"` user call set-role, ban-user, remove-user, impersonate-user and set-user-password directly, skipping `src/server/rbac/service.ts` (an admin could demote the last admin, or themselves). The UI never used them; roles and bans go through `src/functions/rbac.ts`. The plugin stays for its `role`/`banned` fields and sign-in checks; `disabledPaths` only affects the HTTP router, so server code (and `db:seed-admin`'s CLI) can still call `auth.api.*`.
+- **Alternatives considered:** removing the admin plugin (loses the banned-user sign-in refusal and the `role` field the schema relies on); re-implementing the service rules inside Better Auth hooks (two places for one set of rules).
+
+## 0113: Expired sessions are handled by a global client middleware, not an HTTP interceptor
+
+- **What:** `src/middleware/session-expiry.ts` is a `createMiddleware({ type: "function" }).client(...)` registered in `createStart({ functionMiddleware })`. When any server function answers UNAUTHORIZED in the browser, it clears the cached session and navigates to `/login?redirect=<current page>`, then rethrows so the caller's own handling still runs. FORBIDDEN is left to the caller (a toast, or the forbidden page).
+- **Why:** server functions don't go through axios or a `fetch` wrapper the app owns; Start's function middleware is the documented place for logic around every call on the client, the equivalent of a response interceptor. Before, an expired session showed "Please log in" in a toast or error page without taking the user anywhere.
+- **Alternatives considered:** axios interceptors (server functions don't use axios); `QueryCache`/`MutationCache` `onError` (misses server functions called outside Query, e.g. forms and TanStack DB handlers); throwing `redirect()` from the middleware (the router only handles it inside loaders and `beforeLoad`, not in event handlers).
+
+## 0114: Session tokens stay on the server; the account page revokes sessions by id
+
+- **What:** `listMySessions` no longer returns tokens. `revokeMySession({ id })` (requireUserMiddleware) looks the token up among the caller's own sessions on the server and revokes it; ids that aren't the caller's are NOT_FOUND, and the current session is refused.
+- **Why:** session tokens are bearer credentials. Sending every session's token to the page meant one injected script could take over all of a user's devices. The browser only needs an id to say which device to sign out.
+- **Alternatives considered:** Better Auth's client `revokeSession({ token })` (needs the token in the browser); deleting the session row directly (bypasses Better Auth's hooks and cookie handling).
+
+## 0115: The last-admin guard locks the admin rows inside the change's transaction
+
+- **What:** demoting or banning an admin runs in one transaction that first locks the active admins (`SELECT … FOR UPDATE`, `lockActiveAdmins`) and refuses the change if the target is the last one. The repository writes run inside it (nested as savepoints).
+- **Why:** the count used to run before, and outside, the write. Two admins demoting each other at the same moment could both see "another admin is left" and leave none. With the lock, the second transaction waits, re-reads the rows (one admin left) and is refused.
+- **Alternatives considered:** a database trigger (rules split between SQL and the service); `SERIALIZABLE` isolation (retries to handle wherever it's used).
+
+## 0116: List pages share useListPage() and tableListInput()
+
+- **What:** `src/lib/use-list-page.ts`. `tableListInput(search, preferences, tableId)` resolves the page size (URL, then the table's saved preference, then 20) and is called by the loader. `useListPage({ tableId, search, query })` uses the same resolution, reads the list with `useListQuery`, rethrows a first-load error to the route's error page, and returns `pagination` props for `<Pagination>` whose rows-per-page picker saves the preference and updates the URL. `<ClearFiltersButton>` is the filtered empty state's action.
+- **Why:** the Test CRUD and users pages repeated the same ~60 lines (page-size fallback, saved preference, pagination wiring, the empty state's clear link), and every new CRUD would have copied them again (golden rule 2). Loader and component sharing one resolution keep SSR and hydration on the same page size.
+- **Alternatives considered:** a `<ListPage>` component taking columns, filters and actions (hides too much: pages differ in dialogs, bulk actions and data sources such as the TanStack DB collection); leaving it as documented copy-paste.
+
+## 0117: Every server function file is declared in the guard test; demo data is a seeded script
+
+- **What:** `tests/server/guarded-functions.test.ts` reads `src/functions/` and fails for any file that isn't listed, either with each function's permission or as deliberately unguarded with a reason and its function names. `pnpm db:seed-demo` (`scripts/seed-demo.mjs`, data in `scripts/lib/demo-data.mjs`, tested on PGlite) adds an editor and a viewer role, three users (one without a role, to see the forbidden page) and 30 Test CRUD items.
+- **Why:** the old test only checked the files it already listed, so a new `src/functions/<feature>.ts` without `requirePermission` passed. The demo seed makes the permission flows (forbidden page, read-only admin, pagination) testable by hand on a fresh database. It is plain SQL with Better Auth's own password hash, so it runs with `node` alone; the app's TypeScript modules use path aliases Node can't resolve.
+- **Alternatives considered:** a lint rule for `requirePermission` (can't express "public on purpose"); seeding through the app's repositories with a TypeScript runner (a new dev dependency for one script).

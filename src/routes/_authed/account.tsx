@@ -2,6 +2,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { z } from "zod";
+import { errorMessage } from "@/components/errors/error-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
@@ -18,16 +19,17 @@ import {
 	validatePassword,
 	validateRequired,
 } from "@/features/auth/validation";
-import type { AccountSession } from "@/functions/auth";
+import { type AccountSession, revokeMySession } from "@/functions/auth";
 import { authClient } from "@/lib/auth-client";
 import { formatRelativeTimeFrom } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_authed/account")({
 	// ?emailChanged=1 is the callback after confirming a new email address.
 	validateSearch: z.object({ emailChanged: z.literal(1).optional().catch(undefined) }),
-	loader: ({ context }) => context.queryClient.ensureQueryData(accountSessionsQueryOptions()),
+	loader: ({ context }) => ensureQuery(context.queryClient, accountSessionsQueryOptions()),
 	head: () => ({ meta: [{ title: pageTitle(m.account_title()) }] }),
 	component: AccountPage,
 });
@@ -235,25 +237,30 @@ function SessionsSection() {
 	const queryClient = useQueryClient();
 	const { data } = useSuspenseQuery(accountSessionsQueryOptions());
 	const [status, setStatus] = useState<Status>();
-	const [pendingToken, setPendingToken] = useState<string>();
+	/** The session being signed out ("others" for all of them), while the request runs. */
+	const [pending, setPending] = useState<string>();
 
-	const afterRevoke = async (failure: Parameters<typeof authErrorMessage>[0]) => {
-		setPendingToken(undefined);
-		if (failure) return setStatus({ tone: "error", text: authErrorMessage(failure) });
+	const afterRevoke = async (errorText?: string) => {
+		setPending(undefined);
+		if (errorText) return setStatus({ tone: "error", text: errorText });
 		setStatus({ tone: "success", text: m.account_sessions_revoked() });
 		await queryClient.invalidateQueries({ queryKey: authKeys.sessions });
 	};
 
-	const revoke = async (token: string) => {
-		setPendingToken(token);
-		const { error } = await authClient.revokeSession({ token });
-		await afterRevoke(error);
+	const revoke = async (id: string) => {
+		setPending(id);
+		try {
+			await revokeMySession({ data: { id } });
+			await afterRevoke();
+		} catch (error) {
+			await afterRevoke(errorMessage(error));
+		}
 	};
 
 	const revokeOthers = async () => {
-		setPendingToken("others");
+		setPending("others");
 		const { error } = await authClient.revokeOtherSessions();
-		await afterRevoke(error);
+		await afterRevoke(error ? authErrorMessage(error) : undefined);
 	};
 
 	const others = data.sessions.filter((session) => !session.current);
@@ -278,8 +285,8 @@ function SessionsSection() {
 								type="button"
 								variant="outline"
 								size="sm"
-								disabled={pendingToken !== undefined}
-								onClick={() => revoke(session.token)}
+								disabled={pending !== undefined}
+								onClick={() => revoke(session.id)}
 							>
 								{m.account_session_revoke()}
 							</Button>
@@ -292,7 +299,7 @@ function SessionsSection() {
 					type="button"
 					variant="outline"
 					className="self-start"
-					disabled={pendingToken !== undefined}
+					disabled={pending !== undefined}
 					onClick={revokeOthers}
 				>
 					{m.account_session_revoke_others()}

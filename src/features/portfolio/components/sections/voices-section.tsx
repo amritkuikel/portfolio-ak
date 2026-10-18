@@ -21,11 +21,11 @@ export function VoicesSection({ testimonials, index }: { testimonials: ReadonlyA
 	return (
 		<Chapter id="voices" index={index} label={m.portfolio_chapter_voices()} title={m.portfolio_voices_heading()}>
 			<Reveal as="figure" className="pf-grid gap-y-6">
-				<span aria-hidden className="pf-display col-span-4 text-pf-mega text-pf-accent leading-none md:col-span-1">
+				<span aria-hidden className="pf-display col-span-4 text-pf-mega text-pf-crimson leading-none md:col-span-1">
 					“
 				</span>
 				<div className="col-span-4 md:col-span-10">
-					<blockquote className="pf-display text-[clamp(1.75rem,1rem+2.6vw,3.75rem)] italic leading-[1.15]">
+					<blockquote className="pf-quote text-[clamp(1.75rem,1rem+2.6vw,3.75rem)] leading-[1.15]">
 						<p>{lead.quote}</p>
 					</blockquote>
 					<Attribution testimonial={lead} />

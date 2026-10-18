@@ -14,12 +14,12 @@ type CodeBlockProps = {
  */
 export function CodeBlock({ code, language, caption, className }: CodeBlockProps) {
 	return (
-		<figure className={cn("pf-inverse overflow-clip rounded-sm", className)}>
+		<figure className={cn("pf-inverse overflow-clip", className)}>
 			<div className="flex items-center justify-between gap-4 border-pf-line border-b px-5 py-3">
-				<span aria-hidden className="flex gap-1.5">
-					<span className="size-2.5 rounded-full bg-pf-accent" />
-					<span className="size-2.5 rounded-full bg-pf-stone opacity-50" />
-					<span className="size-2.5 rounded-full bg-pf-stone opacity-50" />
+				<span aria-hidden className="flex gap-2">
+					<span className="size-2 rotate-45 bg-pf-crimson" />
+					<span className="size-2 rotate-45 bg-pf-marigold" />
+					<span className="size-2 rotate-45 bg-pf-jade" />
 				</span>
 				<span className="pf-label text-pf-stone">{language}</span>
 			</div>

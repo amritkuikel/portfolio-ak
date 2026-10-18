@@ -18,11 +18,12 @@ import { refreshRbac, rolesQueryOptions } from "@/features/rbac/queries";
 import type { RoleSummary } from "@/features/rbac/schema";
 import { deleteRole } from "@/functions/rbac";
 import { formatNumber } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/roles/")({
-	loader: ({ context }) => context.queryClient.ensureQueryData(rolesQueryOptions()),
+	loader: ({ context }) => ensureQuery(context.queryClient, rolesQueryOptions()),
 	head: () => ({ meta: [{ title: pageTitle(m.roles_title()) }] }),
 	component: RolesPage,
 });

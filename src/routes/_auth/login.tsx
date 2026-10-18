@@ -3,11 +3,12 @@ import { GoogleButton } from "@/features/auth/components/google-button";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { authFeaturesQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
+import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/login")({
-	loader: ({ context }) => context.queryClient.ensureQueryData(authFeaturesQueryOptions()),
+	loader: ({ context }) => ensureQuery(context.queryClient, authFeaturesQueryOptions()),
 	head: () => ({ meta: [{ title: pageTitle(m.auth_login_title()) }] }),
 	component: LoginPage,
 });

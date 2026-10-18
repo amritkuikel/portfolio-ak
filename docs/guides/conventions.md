@@ -65,6 +65,9 @@ export const projectColumns: ReadonlyArray<DataTableColumn<ProjectListItem>> = [
 ];
 
 // routes/_admin/admin/projects/index.tsx
+// loader: loadList(context.queryClient, projectListQueryOptions(tableListInput(deps, context.preferences.state, PROJECT_TABLE_ID)), cause)
+const { page, busy, pagination } = useListPage({ tableId: PROJECT_TABLE_ID, search, query: projectListQueryOptions });
+
 <Page width="admin">
 	<PageHeader title={m.projects_title()} description={…} actions={<NewProjectButton />} />
 	<FilterBar values={search} preserve={["sort", "pageSize"]}>{/* filter controls */}</FilterBar>
@@ -74,9 +77,10 @@ export const projectColumns: ReadonlyArray<DataTableColumn<ProjectListItem>> = [
 		tableId={PROJECT_TABLE_ID} rows={rows} columns={projectColumns}
 		getRowId={(row) => row.id} getRowLabel={(row) => row.title} sort={search.sort}
 		bulkActions={({ ids, clear }) => …} rowActions={(row) => <DropdownMenuItem …/>}
-		empty={<EmptyState description={…} action={…} />}
+		busy={busy}
+		empty={<EmptyState description={…} action={filtered ? <ClearFiltersButton clearAll={CLEAR_FILTERS} /> : <NewProjectButton />} />}
 	/>
-	<Pagination page={page.page} pageCount={page.pageCount} total={page.total} pageSize={…} />
+	<Pagination {...pagination} />   {/* render both only once `page` and `pagination` exist; DataTableSkeleton before */}
 	<ConfirmDialog open={…} destructive title={…} description={…} onConfirm={…} onCancel={…} />
 </Page>
 ```
@@ -114,14 +118,14 @@ export const Route = createFileRoute("/_admin/admin/projects")({
 });
 // a detail route: the loader returns { title }, and the crumb reads it
 staticData: { breadcrumb: loaderTitleCrumb },
-loader: async (…) => { const item = await queryClient.ensureQueryData(…); return { title: item.title }; },
+loader: async (…) => { const item = await ensureQuery(queryClient, …); return { title: item.title }; },
 ```
 
 `<PageHeader>` renders the trail. Pass `breadcrumbsJsonLd` on indexable public pages. A detail page without a `PageHeader` renders `<Breadcrumbs jsonLd />` itself.
 
 ## Rules
 
-- **Everything renders on the server.** Loaders `await queryClient.ensureQueryData(...)` and components read the data with `useSuspenseQuery`. Never fetch first-paint data in an effect.
+- **Everything renders on the server.** Loaders `await ensureQuery(queryClient, …)` (`src/lib/query.ts`) and components read the data with `useSuspenseQuery`. Never fetch first-paint data in an effect.
 - **Lists keep their results while a new search loads:** `loadList` in the loader, `useListQuery` in the page (never a pending screen for a filter change).
 - **The URL is the state** for search, filters, sort and page. Change it with `<SearchLink patch>`, `<Link search>` or `navigate({ search })`, never with local state. Defaults are stripped with `stripSearchParams`.
 - **Read messages at render time.** Never put `m.foo()` (or JSX containing it) in a module-level constant. On the server it would freeze the first request's locale. Use a component or a function, or pass the message function itself (`header: m.foo`).

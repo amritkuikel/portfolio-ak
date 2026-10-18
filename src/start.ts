@@ -5,6 +5,7 @@ import { localeFunctionMiddleware } from "@/lib/i18n/locale-middleware";
 import { csrfMiddleware } from "@/middleware/csrf";
 import { errorNormalizationMiddleware } from "@/middleware/errors";
 import { securityHeadersMiddleware } from "@/middleware/security-headers";
+import { sessionExpiryMiddleware } from "@/middleware/session-expiry";
 
 export const startInstance = createStart(() => ({
 	// Runs for every request; the CSRF check itself only applies to server functions.
@@ -14,6 +15,7 @@ export const startInstance = createStart(() => ({
 	requestMiddleware: [sentryGlobalRequestMiddleware, securityHeadersMiddleware, csrfMiddleware],
 	// Order matters: locale first, then request logging + error normalisation
 	// (errorNormalizationMiddleware pulls in requestLoggingMiddleware).
-	functionMiddleware: [localeFunctionMiddleware, errorNormalizationMiddleware],
+	// sessionExpiryMiddleware is client-only: UNAUTHORIZED in the browser -> /login.
+	functionMiddleware: [localeFunctionMiddleware, sessionExpiryMiddleware, errorNormalizationMiddleware],
 	serializationAdapters: [appErrorSerializationAdapter],
 }));

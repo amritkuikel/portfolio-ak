@@ -4,6 +4,7 @@ import { formatMetric } from "@/features/portfolio/lib/format-metric";
 import { isLocalized, resolveLocalized } from "@/features/portfolio/lib/localize";
 import { readingMinutes } from "@/features/portfolio/lib/reading-time";
 import { hashString, round, seededRandom } from "@/features/portfolio/lib/seeded-random";
+import { weave } from "@/features/portfolio/lib/weave";
 import { isBareChrome } from "@/lib/chrome";
 
 describe("resolveLocalized", () => {
@@ -72,6 +73,46 @@ describe("seededRandom", () => {
 			expect([1, 2, 3]).toContain(int);
 		}
 		expect(round(1.2345)).toBe(1.2);
+	});
+});
+
+describe("weave", () => {
+	const size = { columns: 31, rows: 60 };
+
+	it("weaves the same cloth from the same seed, and a different one from another", () => {
+		expect(weave({ seed: "haat", ...size })).toEqual(weave({ seed: "haat", ...size }));
+		expect(weave({ seed: "haat", ...size })).not.toEqual(weave({ seed: "khoj", ...size }));
+	});
+
+	it("keeps every run inside the cloth, merged and in whole cells", () => {
+		const runs = weave({ seed: "bounds", ...size });
+		expect(runs.length).toBeGreaterThan(0);
+		for (const run of runs) {
+			expect(Number.isInteger(run.x) && Number.isInteger(run.y) && Number.isInteger(run.width)).toBe(true);
+			expect(run.x).toBeGreaterThanOrEqual(0);
+			expect(run.width).toBeGreaterThan(0);
+			expect(run.x + run.width).toBeLessThanOrEqual(size.columns);
+			expect(run.y).toBeLessThan(size.rows);
+		}
+	});
+
+	it("mirrors left to right on an odd width", () => {
+		const runs = weave({ seed: "mirror", ...size });
+		const cells = new Map<string, string>();
+		for (const run of runs) {
+			for (let x = run.x; x < run.x + run.width; x++) cells.set(`${x},${run.y}`, run.thread);
+		}
+		for (const [key, thread] of cells) {
+			const [x, y] = key.split(",").map(Number) as [number, number];
+			expect(cells.get(`${size.columns - 1 - x},${y}`)).toBe(thread);
+		}
+	});
+
+	it("never weaves a full row of cotton (it would read as a hole)", () => {
+		for (const seed of ["a", "b", "c", "d", "e", "f"]) {
+			const fullRows = weave({ seed, ...size }).filter((run) => run.width === size.columns);
+			expect(fullRows.every((run) => run.thread !== "cotton")).toBe(true);
+		}
 	});
 });
 

@@ -1,7 +1,8 @@
 import { m } from "@/paraglide/messages";
+import { cn } from "../../lib/cn";
 import type { Capability } from "../../types";
 import { Chapter } from "../primitives/chapter";
-import { formatIndex } from "../primitives/eyebrow";
+import { threadBg } from "../primitives/eyebrow";
 import { Marquee } from "../primitives/marquee";
 import { Reveal } from "../primitives/reveal";
 
@@ -24,7 +25,7 @@ export function CapabilitiesSection({ capabilities, toolbox, index }: Capabiliti
 			<ul className="grid grid-cols-1 gap-x-(--pf-gutter) gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
 				{capabilities.map((capability, position) => (
 					<Reveal as="li" key={capability.id} className="flex flex-col gap-5 border-pf-line border-t pt-6">
-						<span className="pf-label text-pf-accent">{formatIndex(position + 1)}</span>
+						<span aria-hidden className={cn("h-2 w-10", threadBg(position))} />
 						<h3 className="pf-display text-pf-h3">{capability.title}</h3>
 						<p className="text-pf-body text-pf-ink-2">{capability.summary}</p>
 						<ul

@@ -18,7 +18,7 @@ import { createTestDb } from "../utils/test-db";
  * The Test CRUD server functions' work (src/server/test-crud/service.ts) against
  * a real Postgres (PGlite) and the real Cloudinary client over a fake API. Auth
  * is the middleware's job (auth-middleware.test.ts) and every function is checked
- * to use it (test-crud-functions.test.ts).
+ * to use it (guarded-functions.test.ts).
  */
 const captureServerEvent = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/server/analytics/posthog", () => ({ captureServerEvent }));

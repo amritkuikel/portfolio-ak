@@ -10,6 +10,7 @@ import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
 import { setErrorStatus } from "@/lib/http-status";
 import { formatDate } from "@/lib/intl";
+import { ensureQuery } from "@/lib/query";
 import { parseParams } from "@/lib/search";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/_public/dev/examples/masking/$id")({
 	params: { parse: (raw) => parseParams(exampleTaskIdSchema, raw) },
 	loader: async ({ context, params }) => {
 		try {
-			const task = await context.queryClient.ensureQueryData(exampleTaskQueryOptions(params.id));
+			const task = await ensureQuery(context.queryClient, exampleTaskQueryOptions(params.id));
 			return { title: task.title };
 		} catch (error) {
 			if (isAppError(error) && error.code === "NOT_FOUND") throw notFound();

@@ -6,6 +6,7 @@ import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { homeFlagsQueryOptions } from "@/features/flags/queries";
 import { analyticsKey, analyticsRunning, track } from "@/lib/analytics";
 import { staticCrumb } from "@/lib/breadcrumbs";
+import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { usePreferences, usePreferencesStore } from "@/lib/stores/hooks";
 import type { AnalyticsConsent } from "@/lib/stores/preferences";
@@ -22,7 +23,7 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/_public/dev/examples/analytics")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(homeFlagsQueryOptions());
+		await ensureQuery(context.queryClient, homeFlagsQueryOptions());
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_analytics_title) },
 	head: () => privateHead(m.examples_analytics_title()),

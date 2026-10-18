@@ -1,4 +1,4 @@
-export { ActiveFilters, chipLabel, type FilterChip, rangeValue } from "./active-filters";
+export { ActiveFilters, ClearFiltersButton, chipLabel, type FilterChip, rangeValue } from "./active-filters";
 export { FilterBar, FilterField } from "./filter-bar";
 export {
 	BooleanFilter,

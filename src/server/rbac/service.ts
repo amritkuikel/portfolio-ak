@@ -89,10 +89,22 @@ async function targetOrThrow(db: Db, userId: string) {
 	return target;
 }
 
-async function assertNotLastAdmin(db: Db, target: repo.AuthSubject) {
-	if (target.role === "admin" && !target.banned && (await repo.countActiveAdmins(db)) <= 1) {
-		throw ruleError("CONFLICT", "Last active admin", m.rbac_error_last_admin());
-	}
+/**
+ * Runs `change` in a transaction. When it takes away an active admin
+ * (`removesAdmin`), the active admins are locked and re-read first, and the change
+ * is refused if `userId` is the last one. Concurrent demotions therefore run one
+ * after the other, and the second sees the first's result.
+ */
+async function guardLastAdmin(db: Db, userId: string, removesAdmin: boolean, change: (tx: Db) => Promise<void>) {
+	await db.transaction(async (tx) => {
+		if (removesAdmin) {
+			const active = await repo.lockActiveAdmins(tx);
+			if (active.includes(userId) && active.length <= 1) {
+				throw ruleError("CONFLICT", "Last active admin", m.rbac_error_last_admin());
+			}
+		}
+		await change(tx);
+	});
 }
 
 export async function setUserRoles(db: Db, actor: Actor, input: UserRolesInput) {
@@ -101,7 +113,6 @@ export async function setUserRoles(db: Db, actor: Actor, input: UserRolesInput) 
 	const wasAdmin = target.role === "admin";
 	if (wasAdmin !== input.admin) {
 		if (!actor.isAdmin) throw forbidden("Admin flag change by non-admin", m.rbac_error_admin_only());
-		if (wasAdmin) await assertNotLastAdmin(db, target);
 	} else if (wasAdmin && !actor.isAdmin) {
 		throw forbidden("Non-admin editing an admin", m.rbac_error_admin_target());
 	}
@@ -121,15 +132,15 @@ export async function setUserRoles(db: Db, actor: Actor, input: UserRolesInput) 
 	const permissions = await repo.rolePermissions(db, changed);
 	assertWithinOwn(actor, [...permissions.values()].flat());
 
-	await repo.setUserRoles(db, input.userId, { admin: input.admin, roleIds: requested });
+	await guardLastAdmin(db, input.userId, wasAdmin && !input.admin, (tx) =>
+		repo.setUserRoles(tx, input.userId, { admin: input.admin, roleIds: requested }),
+	);
 }
 
 export async function setUserBanned(db: Db, actor: Actor, userId: string, banned: boolean) {
 	if (userId === actor.id) throw forbidden("Ban self", m.rbac_error_ban_self());
 	const target = await targetOrThrow(db, userId);
-	if (target.role === "admin") {
-		if (!actor.isAdmin) throw forbidden("Non-admin banning an admin", m.rbac_error_admin_target());
-		if (banned) await assertNotLastAdmin(db, target);
-	}
-	await repo.setUserBanned(db, userId, banned);
+	const isAdmin = target.role === "admin";
+	if (isAdmin && !actor.isAdmin) throw forbidden("Non-admin banning an admin", m.rbac_error_admin_target());
+	await guardLastAdmin(db, userId, isAdmin && banned, (tx) => repo.setUserBanned(tx, userId, banned));
 }

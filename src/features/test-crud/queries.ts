@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { getTestCrud, listTestCrud, listTestCrudTags } from "@/functions/test-crud";
 import { getPublicTestCrud, listPublicTestCrud } from "@/functions/test-crud-public";
 import type { TestCrudListInput, TestCrudPublicSearch } from "./schema";
@@ -20,6 +20,17 @@ export const testCrudKeys = {
 	publicList: (search: TestCrudPublicSearch) => [...testCrudKeys.public(), "list", search] as const,
 	publicDetail: (slug: string) => [...testCrudKeys.public(), "detail", slug] as const,
 };
+
+/**
+ * After any write (create, edit, publish, delete): every admin list page (totals
+ * and page membership change), the tag filter (tags can appear or retire) and the
+ * public pages cached in this tab. Resolves once the admin lists have refetched.
+ */
+export async function invalidateTestCrudLists(queryClient: QueryClient) {
+	void queryClient.invalidateQueries({ queryKey: testCrudKeys.public() });
+	void queryClient.invalidateQueries({ queryKey: testCrudKeys.tags() });
+	await queryClient.invalidateQueries({ queryKey: testCrudKeys.lists() });
+}
 
 export const testCrudListQueryOptions = (input: TestCrudListInput) =>
 	queryOptions({

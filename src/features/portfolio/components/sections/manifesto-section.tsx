@@ -8,10 +8,10 @@ export function ManifestoSection({ profile }: { profile: Pick<Profile, "manifest
 	return (
 		<Chapter id="manifesto" index={1} label={m.portfolio_chapter_manifesto()} className="border-pf-line border-t">
 			<div className="pf-grid gap-y-10">
-				<p className="pf-display col-span-4 text-[clamp(1.75rem,0.9rem+3.2vw,4.25rem)] leading-[1.12] md:col-span-10 md:col-start-2">
+				<p className="pf-quote col-span-4 text-[clamp(1.75rem,0.9rem+3.2vw,4.25rem)] leading-[1.1] md:col-span-10 md:col-start-2">
 					<SplitWords text={profile.manifesto} />
 				</p>
-				<p className="pf-label col-span-4 text-pf-stone md:col-span-6 md:col-start-2">— {profile.name}</p>
+				<p className="pf-label col-span-4 text-pf-stone md:col-span-6 md:col-start-2">{profile.name}</p>
 			</div>
 		</Chapter>
 	);
