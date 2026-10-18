@@ -24,6 +24,10 @@ export const dropExpectedErrors = (event: ErrorEvent, hint: EventHint): ErrorEve
 	return event;
 };
 
+/** Tags a server event with the request it happened in (kept if the event already has one). */
+export const tagRequestId = (event: ErrorEvent, requestId: string | undefined): ErrorEvent =>
+	requestId && !event.tags?.requestId ? { ...event, tags: { ...event.tags, requestId } } : event;
+
 export const sentryOptions = (dsn: string) => ({
 	dsn,
 	environment: import.meta.env.MODE,

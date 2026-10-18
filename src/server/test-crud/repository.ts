@@ -12,6 +12,7 @@ import type {
 	TestCrudPage,
 	TestCrudStatus,
 } from "@/features/test-crud/schema";
+import { staleError } from "@/lib/concurrency";
 import { AppError, ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 import type { ImageStore } from "@/server/attachments/cloudinary";
@@ -22,6 +23,7 @@ import {
 	removeForEntities,
 	syncEntityAttachments,
 } from "@/server/attachments/repository";
+import { sameVersion } from "@/server/db/concurrency";
 import {
 	allOf,
 	countRows,
@@ -220,22 +222,28 @@ export async function createTestCrud(
 /**
  * Updates an item and its images in one transaction. Returns the images it no
  * longer has (marked removed) so the caller can delete the assets.
+ *
+ * `version` is the `updatedAt` the edit started from: if the row changed since
+ * (another save, a publish from the list), nothing is written and it throws a
+ * stale CONFLICT. The row is locked while it's checked, so two saves of the
+ * same version can't both pass.
  */
 export async function updateTestCrud(
 	db: Db,
 	id: string,
 	input: TestCrudInput,
-	options: { userId: string; store: ImageStore | null; now?: Date },
+	options: { userId: string; store: ImageStore | null; version: string; now?: Date },
 ): Promise<{ item: TestCrudDetail; removed: AttachmentRow[] }> {
 	const now = options.now ?? new Date();
 	try {
 		const { row, removed } = await db.transaction(async (tx) => {
 			const [current] = await tx
-				.select({ publishedAt: testCrud.publishedAt })
+				.select({ publishedAt: testCrud.publishedAt, current: sameVersion(testCrud.updatedAt, options.version) })
 				.from(testCrud)
 				.where(eq(testCrud.id, id))
 				.for("update");
 			if (!current) throw notFound();
+			if (!current.current) throw staleError("Test CRUD item");
 			const [updated] = await tx
 				.update(testCrud)
 				.set({ ...fields(input), publishedAt: publishedAtFor(input.status, current.publishedAt, now) })

@@ -25,7 +25,7 @@ pnpm dev                # http://localhost:3000
 
 Sign in at `/login` with the admin account, then open `/admin/test-crud`.
 
-`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Set `VITE_SITE_URL` to the public origin (for example `https://example.com`) in every deployed environment: canonical, hreflang and Open Graph URLs are built from it. Visit `/health` to confirm the database connection.
+`pnpm dev` and `pnpm start` validate the whole environment before serving. `pnpm build` validates only the public `VITE_` variables, because those are baked into the bundle. Each command stops with a message naming every missing or invalid variable. See [.env.example](.env.example) for the full list. Set `VITE_SITE_URL` to the public origin (for example `https://example.com`) in every deployed environment: canonical, hreflang and Open Graph URLs are built from it. Visit `/health` to confirm the database connection; uptime monitors use `GET /api/health` (503 when the database is down).
 
 ## Environment variables
 
@@ -155,7 +155,7 @@ Query for server data you read, a TanStack DB collection for server data you edi
 
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
 2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
-3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Test both with `createTestDb()` (PGlite).
+3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Updates take the version the edit started from (`updatedAt`) and refuse a stale one (`sameVersion`, `staleError()`; see [docs/guides/forms.md](docs/guides/forms.md)). Test both with `createTestDb()` (PGlite), including a stale save.
 4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
 6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
@@ -180,7 +180,7 @@ For a public page's head, use `seo({ title, description, path, image, jsonLd })`
 
 ## Observability: Sentry and PostHog
 
-Both optional and off without their variables. Sentry reports unexpected errors with a request id; PostHog is opt-in behind a consent banner; feature flags are evaluated on the server. See [docs/guides/observability.md](docs/guides/observability.md).
+Both optional and off without their variables. Every response carries an `x-request-id`, also in the log lines, the Sentry event and the error page; Sentry reports unexpected errors; PostHog is opt-in behind a consent banner; feature flags are evaluated on the server. See [docs/guides/observability.md](docs/guides/observability.md).
 
 ## Authentication
 

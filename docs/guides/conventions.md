@@ -131,6 +131,7 @@ loader: async (…) => { const item = await ensureQuery(queryClient, …); retur
 - **Read messages at render time.** Never put `m.foo()` (or JSX containing it) in a module-level constant. On the server it would freeze the first request's locale. Use a component or a function, or pass the message function itself (`header: m.foo`).
 - **Return little from loaders.** Data already travels in the Query cache; return only what `head` or `staticData` need.
 - **Server functions are thin.** Middleware (auth), `.validator(zodInput(schema))`, one call. Logic goes in `src/server/<name>/` over an injected `Db`, so it can be tested on PGlite.
+- **Edits carry their version.** An update sends the record's `updatedAt` (`versionSchema()`), the repository checks it with `sameVersion` and throws `staleError()`, and the form shows `StaleVersionAlert` ([forms.md](forms.md), 0122). Whole-record edits only: single-field toggles and deletes don't need it.
 - **Import Zod as `zod`.** It resolves to `src/lib/zod.ts` (jitless, CSP-safe). Never import `zod/v4` directly in app code.
 - **Every string goes through Paraglide** in en and ne. Delete keys when their UI goes away; `tests/i18n/message-usage.test.ts` enforces it.
 - **No layout shift:** fixed image aspect boxes, skeletons with the page's footprint, and preferences read from cookies on the server.

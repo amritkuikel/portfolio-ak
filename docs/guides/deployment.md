@@ -10,7 +10,7 @@
    - Optional: Cloudinary (all three), `CRON_SECRET`, Sentry, PostHog, Google sign-in.
    - `VITE_` variables are baked in at build time. Changing one needs a rebuild.
 3. **Migrate and seed:** from CI or locally against production, run `pnpm db:migrate` (it uses `DATABASE_URL_UNPOOLED`), then `pnpm db:seed-admin --email … --password … --name …`.
-4. **Deploy.** Then open `/health` (database status), `/robots.txt`, `/sitemap.xml` (absolute URLs on your domain) and sign in at `/login`.
+4. **Deploy.** Then open `/health` (database status; point your uptime monitor at `/api/health`, which answers 503 when the database is down), `/robots.txt`, `/sitemap.xml` (absolute URLs on your domain) and sign in at `/login`.
 
 ## Scheduled jobs
 

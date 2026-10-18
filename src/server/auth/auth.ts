@@ -19,6 +19,7 @@ import { db } from "../db/client";
 import * as schema from "../db/schema";
 import { sendEmail } from "../email/send";
 import { serverEnv } from "../env";
+import { errorFields, log } from "../log";
 import { CLIENT_IP_HEADER } from "./client-ip";
 import { DISABLED_ADMIN_PATHS } from "./disabled-paths";
 import { resolveEmailLocale } from "./locale";
@@ -36,7 +37,7 @@ const minutes = (seconds: number) => Math.round(seconds / 60);
 const deliver = (task: Promise<unknown>) => {
 	waitUntil(
 		task.catch((error: unknown) => {
-			console.error("[auth] email delivery failed:", error instanceof Error ? error.message : error);
+			log("error", "auth email delivery failed", errorFields(error));
 		}),
 	);
 };

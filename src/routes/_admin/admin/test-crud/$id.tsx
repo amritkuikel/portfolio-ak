@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Page, PageHeader } from "@/components/page/page";
 import { assertRoutePermission } from "@/features/rbac/route-guard";
-import { TestCrudForm } from "@/features/test-crud/components/test-crud-form";
+import { TestCrudForm, testCrudFormKey } from "@/features/test-crud/components/test-crud-form";
 import { testCrudDetailQueryOptions } from "@/features/test-crud/queries";
 import { testCrudIdParamSchema } from "@/features/test-crud/schema";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
@@ -40,8 +40,8 @@ function EditTestCrudPage() {
 	return (
 		<Page width="admin">
 			<PageHeader title={m.test_crud_edit_title()} />
-			{/* Keyed by id: switching items resets the form's defaults. */}
-			<TestCrudForm key={item.id} item={item} />
+			{/* Another item, or a reloaded newer version, resets the form's defaults. */}
+			<TestCrudForm key={testCrudFormKey(item)} item={item} />
 		</Page>
 	);
 }

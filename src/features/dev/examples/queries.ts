@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getExampleSnapshot, getExampleTask, listExampleTasks } from "@/functions/examples";
+import { getExampleSnapshot, getExampleTask, listExampleMessages, listExampleTasks } from "@/functions/examples";
 import type { ExampleTaskSearch } from "./schema";
 
 export const exampleKeys = {
@@ -32,4 +32,11 @@ export const exampleTaskQueryOptions = (id: string) =>
 	queryOptions({
 		queryKey: exampleKeys.task(id),
 		queryFn: () => getExampleTask({ data: { id } }),
+	});
+
+/** Idempotency example: the messages sent so far (refetched after each send). */
+export const exampleMessagesQueryOptions = () =>
+	queryOptions({
+		queryKey: [...exampleKeys.all, "messages"] as const,
+		queryFn: () => listExampleMessages(),
 	});

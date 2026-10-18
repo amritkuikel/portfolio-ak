@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { versionSchema } from "@/lib/concurrency";
 import { enumParam, type Paged, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list";
 import { optionalText, required } from "@/lib/validation";
 import { isPermission, type Permission } from "./permissions";
@@ -21,7 +22,8 @@ export type RoleInput = z.output<typeof roleInputSchema>;
 export type RoleFormValues = z.input<typeof roleInputSchema>;
 
 export const roleIdSchema = z.object({ id: z.uuid() });
-export const roleUpdateSchema = roleInputSchema.extend({ id: z.uuid() });
+/** Rename: plus which role and the version the edit started from (its `updatedAt`). */
+export const roleUpdateSchema = roleInputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
 
 /** Matrix edits: permissions to add to and remove from one role (a checkbox, or a whole resource). */
 export const rolePermissionsUpdateSchema = z.object({
@@ -41,6 +43,8 @@ export type RoleSummary = {
 	/** Stored permissions; for `admin` this is every permission (implicit). */
 	permissions: Permission[];
 	userCount: number;
+	/** Changes on rename only (the version the role dialog sends back); permission edits are deltas. */
+	updatedAt: string;
 };
 
 /** Lowercase ASCII key from a role name ("Content editor" -> "content-editor"); "" for non-Latin names. */

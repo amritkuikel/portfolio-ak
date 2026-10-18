@@ -1,30 +1,55 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
-import { errorMessage } from "@/components/errors/error-page";
-import { applyServerFieldErrors, clearServerErrorOnChange, formValidators, useAppForm } from "@/components/forms";
+import {
+	clearServerErrorOnChange,
+	formValidators,
+	handleSaveError,
+	StaleVersionAlert,
+	useAppForm,
+} from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createRole, updateRole } from "@/functions/rbac";
 import { m } from "@/paraglide/messages";
-import { refreshRbac } from "../queries";
+import { refreshRbac, rolesQueryOptions } from "../queries";
 import { ROLE_NAME_MAX, type RoleFormValues, type RoleSummary, roleInputSchema } from "../schema";
 
-/** Create a custom role, or rename one (`role` given). Permissions are set in the matrix. */
-export function RoleDialog({ role, onClose }: { role?: RoleSummary; onClose: () => void }) {
+/**
+ * Create a custom role, or rename one (`role` given). Permissions are set in the
+ * matrix. A rename sends the role's `updatedAt`; if someone renamed it since,
+ * StaleVersionAlert offers to reload it into the form.
+ */
+export function RoleDialog({ role: opened, onClose }: { role?: RoleSummary; onClose: () => void }) {
 	const queryClient = useQueryClient();
+	const [role, setRole] = useState(opened);
+	const [stale, setStale] = useState(false);
+	const reload = async () => {
+		if (!role) return;
+		const roles = await queryClient.fetchQuery({ ...rolesQueryOptions(), staleTime: 0 });
+		const latest = roles.find((each) => each.id === role.id);
+		if (!latest) {
+			toast.error(m.error_not_found());
+			onClose();
+			return;
+		}
+		setRole(latest);
+		setStale(false);
+		form.reset({ name: latest.name, description: latest.description });
+	};
 	const form = useAppForm({
 		defaultValues: { name: role?.name ?? "", description: role?.description ?? "" } satisfies RoleFormValues,
 		validators: formValidators(roleInputSchema),
 		listeners: { onChange: clearServerErrorOnChange },
 		onSubmit: async ({ value, formApi }) => {
 			try {
-				if (role) await updateRole({ data: { id: role.id, ...value } });
+				if (role) await updateRole({ data: { id: role.id, updatedAt: role.updatedAt, ...value } });
 				else await createRole({ data: value });
 				await refreshRbac(queryClient);
 				toast.success(role ? m.roles_toast_saved() : m.roles_toast_created());
 				onClose();
 			} catch (error) {
-				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
+				handleSaveError(formApi, error, () => setStale(true));
 			}
 		},
 	});
@@ -37,6 +62,7 @@ export function RoleDialog({ role, onClose }: { role?: RoleSummary; onClose: () 
 				</DialogHeader>
 				<form.AppForm>
 					<form.Form className="flex flex-col gap-6">
+						{stale ? <StaleVersionAlert onReload={reload} /> : null}
 						<form.FormErrorSummary />
 						<form.AppField name="name">
 							{(field) => <field.TextField label={m.roles_field_name()} maxLength={ROLE_NAME_MAX} />}

@@ -3,6 +3,7 @@ import { getCookie } from "@tanstack/react-start/server";
 import { PostHog } from "posthog-node";
 import { analyticsHost, analyticsKey, posthogCookieName } from "@/lib/analytics";
 import { PREFERENCE_COOKIES } from "@/lib/stores/preferences";
+import { errorFields, log } from "../log";
 
 /**
  * Server-side PostHog (posthog-node). Same consent rule as the browser: events
@@ -54,7 +55,7 @@ export async function captureServerEvent(
 	try {
 		await posthog.captureImmediate({ event, distinctId, properties, disableGeoip: true });
 	} catch (error) {
-		console.warn("[analytics] capture failed:", error instanceof Error ? error.message : error);
+		log("warn", "analytics capture failed", errorFields(error));
 	}
 }
 

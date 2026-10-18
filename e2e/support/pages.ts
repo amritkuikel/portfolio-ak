@@ -65,6 +65,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/robots.txt": "not a page (text)",
 	"/sitemap.xml": "not a page (XML); the review reads it to find $slug URLs",
 	"/api/auth/$": "Better Auth's HTTP API",
+	"/api/health": "JSON for uptime monitors (checked by e2e/flows/health.spec.ts)",
 	"/dev": "dev-only: 404 in production builds",
 };
 

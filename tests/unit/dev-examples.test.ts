@@ -20,7 +20,8 @@ describe("/dev/examples", () => {
 	});
 
 	it("covers every module named in the plan", () => {
-		expect(EXAMPLES).toHaveLength(14);
+		// 14 from Part 2, plus idempotency keys (Task 28 recipe).
+		expect(EXAMPLES).toHaveLength(15);
 	});
 
 	it("each example's source file and guide exist", () => {

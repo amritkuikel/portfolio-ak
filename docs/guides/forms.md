@@ -17,7 +17,7 @@ function ThingForm() {
 				await saveThing({ data: value });
 				toast.success(m.things_saved());
 			} catch (error) {
-				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
+				handleSaveError(formApi, error);       // field errors on their fields, the rest a toast
 			}
 		},
 	});
@@ -36,7 +36,17 @@ function ThingForm() {
 
 - **One schema:** the server function validates with the same schema (`validator(zodInput(schema))`), so the rules can't drift. Build schemas from `src/lib/validation.ts`: its helpers return localized messages and parse what the fields store.
 - **When errors show:** after a field is left or a submit is tried. A failed submit shows `FormErrorSummary`, which takes focus and links to each field.
-- **Server errors:** a refusal with `fieldErrors` (e.g. `CONFLICT` on `slug`) appears on that field. Editing the field clears it. Other errors go to a toast.
+- **Server errors:** a refusal with `fieldErrors` (e.g. `CONFLICT` on `slug`) appears on that field. Editing the field clears it. Other errors go to a toast (`handleSaveError`).
+- **Edits of an existing record send its version** (optimistic concurrency, 0122). The update schema adds `updatedAt: versionSchema()`, the form sends `item.updatedAt`, and the repository writes only while the row still has it (`sameVersion`), else `staleError()`. In the form:
+
+  ```tsx
+  const [stale, setStale] = useState(false);
+  // onSubmit: await updateThing({ data: { ...value, id: item.id, updatedAt: item.updatedAt } });
+  // catch:    handleSaveError(formApi, error, () => setStale(true));
+  {stale ? <StaleVersionAlert onReload={reload} /> : null}   // first thing inside form.Form
+  ```
+
+  `reload` refetches the record (`queryClient.fetchQuery({ ...detailOptions(id), staleTime: 0 })`). Key the form by id and version (`testCrudFormKey(item)`) so the newer record remounts it with fresh defaults, or call `form.reset(latest)` as the role dialog does. Examples: `features/test-crud/components/test-crud-form.tsx`, `features/rbac/components/role-dialog.tsx`.
 - **Unsaved changes:** `<UnsavedChangesGuard when={() => !saved.current && !form.state.isDefaultValue} />` blocks navigation and asks first.
 - **Form arrays updated from async work** (uploads): use the field's atomic helpers (`field.pushValue`), never a value read earlier (0099).
 - **`method="post"`:** `form.Form` sets it, and every hand-written `<form>` must too (a test checks). A submit before hydration then posts the values instead of putting them in the URL (0104).

@@ -49,19 +49,46 @@ export const updateThing = createServerFn({ method: "POST" })
 
 - **Thin:** the middleware checks the permission, `zodInput` validates with the shared schema (field errors come back keyed by field), and the handler is one call into `src/server/**`. Logic lives there, where tests run it on PGlite.
 - **Every protected function** runs `requirePermission` first, and `tests/server/guarded-functions.test.ts` lists each function with its permission ([rbac.md](rbac.md)). Use `requireUserMiddleware` for "any signed-in user" and `devOnlyMiddleware` for `/dev` helpers.
-- **Global function middleware** (`src/start.ts`): it sends the page locale as a header (so `m.*` and `getLocale()` work inside handlers), assigns a request id, logs one JSON line per call, and normalises errors.
+- **Global function middleware** (`src/start.ts`): it sends the page locale as a header (so `m.*` and `getLocale()` work inside handlers), passes on the request's id (`context.requestId`, the same as the `x-request-id` header, 0123), logs one JSON line per call, and normalises errors.
 - **Runtime:** server functions run only inside Start. Test the plain functions they call, not the wrappers.
 
 ## Errors
 
-- **Throw `AppError(code, devMessage, { fieldErrors })`** for expected failures: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`. User-facing text is picked on the client by code (`errorMessage(error)`). `fieldErrors` hold localized messages for form fields; `ruleError(code, dev, user)` makes a whole-form message.
+- **Throw `AppError(code, devMessage, { fieldErrors })`** for expected failures: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`. User-facing text is picked on the client by code (`errorMessage(error)`). `fieldErrors` hold localized messages for form fields; `ruleError(code, dev, user)` makes a whole-form message; `staleError(what)` is the `CONFLICT` for an edit that started from an older version (`reason: "stale"`, see [forms.md](forms.md)).
 - **Anything else** becomes `INTERNAL` with only a request id. The original is logged and sent to Sentry once (`src/middleware/errors.ts`).
 - **Over HTTP**, a server-function error is a 200 with a serialized payload (`x-tss-serialized`). Look for the code in the body.
 - **In loaders:**
   - `throw notFound()` for missing records, which renders the localized 404.
   - For an `AppError`, call `await setErrorStatus(error)` before rethrowing, so the SSR response carries 403/404 instead of 500.
   - The route's error component is `ErrorPage`; `src/client.tsx` doesn't log expected errors.
-- **In actions:** catch where they happen. Use `applyServerFieldErrors(form, error)` for forms, otherwise a toast with `errorMessage(error)`.
+- **In actions:** catch where they happen. Use `handleSaveError(form, error, onStale?)` for forms, otherwise a toast with `errorMessage(error)`.
+
+## Idempotency keys (recipe)
+
+For actions with side effects outside the database (sending an email or an invite, charging, calling a webhook), a double submit or a retry after a lost response must not do it twice. The client makes one key per intended action (when the form opens, a new one after success; never per click) and sends it with every attempt; the server runs the action once per key and answers repeats with the first result. Live example: `/dev/examples/idempotency` (in memory, `src/server/examples/idempotency.ts`). The base doesn't need it: its creates are admin forms and the submit button disables itself while saving (0125).
+
+In a real feature, keep keys in Postgres so every instance sees them:
+
+```ts
+// schema: key, scope (user + action), fingerprint (the input), response (jsonb), created_at; primary key (key)
+export async function once<T>(db: Db, key: string, scope: string, input: unknown, run: (tx: Tx) => Promise<T>) {
+	const fingerprint = JSON.stringify(input);
+	return db.transaction(async (tx) => {
+		// Claims the key, or waits for the transaction that holds it and sees its row.
+		const [claimed] = await tx.insert(idempotencyKey).values({ key, scope, fingerprint }).onConflictDoNothing().returning();
+		if (!claimed) {
+			const [row] = await tx.select().from(idempotencyKey).where(eq(idempotencyKey.key, key));
+			if (row?.scope !== scope || row.fingerprint !== fingerprint) throw new AppError("CONFLICT", "Key reused");
+			return row.response as T;
+		}
+		const response = await run(tx); // the insert and the side effect's record commit together
+		await tx.update(idempotencyKey).set({ response }).where(eq(idempotencyKey.key, key));
+		return response;
+	});
+}
+```
+
+The server function takes the key in its input (`key: z.uuid()`), the scope is `${context.user.id}:<action>`, and a scheduled job deletes keys older than a day. Send emails after the transaction commits (or from an outbox table), so a rollback doesn't leave a sent email behind.
 
 ## Server-only code
 

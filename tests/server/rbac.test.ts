@@ -65,6 +65,12 @@ const rejection = async (run: () => Promise<unknown>) => {
 	return error as AppError;
 };
 const userMessage = (error: AppError) => error.fieldErrors?.[FORM_ERROR_KEY]?.[0];
+/** A role's version as the roles list sends it (what the rename dialog sends back). */
+const versionOf = async (id: string) => {
+	const role = (await listRoles(db())).find((each) => each.id === id);
+	if (!role) throw new Error(`no role ${id}`);
+	return role.updatedAt;
+};
 
 describe("system roles (migration seed)", () => {
 	it("exist: admin and user, marked as system", async () => {
@@ -121,14 +127,18 @@ describe("role management", () => {
 		expect(error).toMatchObject({ code: "CONFLICT", fieldErrors: { name: ["Another role already has this name."] } });
 		const second = await rbac.createRole(db(), { name: "संपादक", description: "" });
 		expect(second.key).toBe("role");
-		await rbac.updateRole(db(), first.id, { name: "Writer", description: "Writes" });
+		await rbac.updateRole(db(), first.id, { name: "Writer", description: "Writes" }, await versionOf(first.id));
 		expect(await getRole(db(), first.id)).toMatchObject({ key: "content-editor", name: "Writer" });
 	});
 
 	it("system roles can't be renamed or deleted; admin's permissions are fixed", async () => {
 		const admin = await roleId("admin");
 		expect(
-			userMessage(await rejection(async () => rbac.updateRole(db(), admin, { name: "Boss", description: "" }))),
+			userMessage(
+				await rejection(async () =>
+					rbac.updateRole(db(), admin, { name: "Boss", description: "" }, await versionOf(admin)),
+				),
+			),
 		).toBe("System roles can't be renamed or deleted.");
 		await rejection(async () => rbac.deleteRole(db(), {} as rbac.Actor, admin));
 		const fixed = await rejection(async () =>
@@ -147,6 +157,35 @@ describe("role management", () => {
 		await rbac.setUserRoles(db(), await ADMIN(), { userId: id, admin: false, roleIds: [editor] });
 		await rbac.deleteRole(db(), await ADMIN(), editor);
 		expect(await permissionsForUser(db(), { id, role: "user", banned: false })).toEqual([]);
+	});
+});
+
+describe("role rename conflicts", () => {
+	it("refuses a rename started from an older version and keeps the first one", async () => {
+		const { id } = await rbac.createRole(db(), { name: "Editor", description: "" });
+		const opened = await versionOf(id);
+		await rbac.updateRole(db(), id, { name: "Writer", description: "" }, opened);
+		const error = await rejection(async () => rbac.updateRole(db(), id, { name: "Author", description: "" }, opened));
+		expect(error).toMatchObject({ code: "CONFLICT", reason: "stale" });
+		expect(await getRole(db(), id)).toMatchObject({ name: "Writer" });
+		await rbac.updateRole(db(), id, { name: "Author", description: "" }, await versionOf(id));
+		expect(await getRole(db(), id)).toMatchObject({ name: "Author" });
+	});
+
+	it("doesn't count permission edits as a change (the matrix sends deltas)", async () => {
+		const id = await createEditor();
+		const opened = await versionOf(id);
+		await rbac.updateRolePermissions(db(), await ADMIN(), { roleId: id, grant: ["users:read"], revoke: [] });
+		await rbac.updateRole(db(), id, { name: "Writer", description: "" }, opened);
+		expect(await getRole(db(), id)).toMatchObject({ name: "Writer" });
+	});
+
+	it("reports NOT_FOUND when the role was deleted in between", async () => {
+		const { id } = await rbac.createRole(db(), { name: "Editor", description: "" });
+		const opened = await versionOf(id);
+		await rbac.deleteRole(db(), await ADMIN(), id);
+		const error = await rejection(async () => rbac.updateRole(db(), id, { name: "Writer", description: "" }, opened));
+		expect(error.code).toBe("NOT_FOUND");
 	});
 });
 

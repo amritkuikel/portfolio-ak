@@ -46,7 +46,7 @@ export const createRole = createServerFn({ method: "POST" })
 export const updateRole = createServerFn({ method: "POST" })
 	.middleware([requirePermission("roles:manage")])
 	.validator(zodInput(roleUpdateSchema))
-	.handler(({ data: { id, ...input } }) => rbac.updateRole(db, id, input));
+	.handler(({ data: { id, updatedAt, ...input } }) => rbac.updateRole(db, id, input, updatedAt));
 
 export const deleteRole = createServerFn({ method: "POST" })
 	.middleware([requirePermission("roles:manage")])

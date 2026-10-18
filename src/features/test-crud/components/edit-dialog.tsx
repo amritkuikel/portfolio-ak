@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
 import { testCrudDetailQueryOptions } from "../queries";
-import { TestCrudForm } from "./test-crud-form";
+import { TestCrudForm, testCrudFormKey } from "./test-crud-form";
 
 const CLOSE = { edit: undefined };
 
@@ -36,8 +36,14 @@ export function TestCrudEditDialog({ id }: { id: string }) {
 					</DialogDescription>
 				</DialogHeader>
 				{item ? (
-					// Keyed by id: another item gets fresh form defaults.
-					<TestCrudForm key={item.id} item={item} onSaved={close} onCancel={close} className="max-w-none" />
+					// Another item, or a reloaded newer version, gets fresh form defaults.
+					<TestCrudForm
+						key={testCrudFormKey(item)}
+						item={item}
+						onSaved={close}
+						onCancel={close}
+						className="max-w-none"
+					/>
 				) : error ? (
 					<div className="flex flex-col items-start gap-3">
 						<p className="text-destructive text-sm" role="alert">

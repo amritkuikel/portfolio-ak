@@ -17,8 +17,11 @@ const messages: Record<AppErrorCode, () => string> = {
 };
 
 /** Localized user-facing text for any error. Never shows raw error messages. */
-export const errorMessage = (error: unknown): string =>
-	isAppError(error) ? (error.fieldErrors?.[FORM_ERROR_KEY]?.[0] ?? messages[error.code]()) : m.error_internal();
+export const errorMessage = (error: unknown): string => {
+	if (!isAppError(error)) return m.error_internal();
+	if (error.reason === "stale") return m.error_stale();
+	return error.fieldErrors?.[FORM_ERROR_KEY]?.[0] ?? messages[error.code]();
+};
 
 /** Codes that retrying won't fix: the page offers a way forward instead. */
 const titles: Partial<Record<AppErrorCode, () => string>> = {

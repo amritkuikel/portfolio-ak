@@ -9,6 +9,7 @@ import {
 	type UserListItem,
 	type UserPage,
 } from "@/features/rbac/schema";
+import { sameVersion } from "@/server/db/concurrency";
 import { allOf, countRows, orderBySort, paginate, textSearch } from "@/server/db/list";
 import { role, rolePermission, session, user, userRole } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
@@ -112,6 +113,7 @@ export async function listRoles(db: Db): Promise<RoleSummary[]> {
 			system: row.system,
 			permissions,
 			userCount,
+			updatedAt: row.updatedAt.toISOString(),
 		};
 	});
 }
@@ -151,8 +153,14 @@ export async function createRole(db: Db, input: RoleInput): Promise<RoleRow> {
 	return created;
 }
 
-export async function updateRole(db: Db, id: string, input: RoleInput): Promise<void> {
-	await db.update(role).set({ name: input.name, description: input.description }).where(eq(role.id, id));
+/** Renames a role if it still has `version` (its `updatedAt`); false when it changed since (or is gone). */
+export async function updateRole(db: Db, id: string, input: RoleInput, version: string): Promise<boolean> {
+	const updated = await db
+		.update(role)
+		.set({ name: input.name, description: input.description })
+		.where(and(eq(role.id, id), sameVersion(role.updatedAt, version)))
+		.returning({ id: role.id });
+	return updated.length > 0;
 }
 
 /** Deletes a role; its permissions and assignments go with it (FK cascade). */

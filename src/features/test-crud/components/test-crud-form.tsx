@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { errorMessage } from "@/components/errors/error-page";
 import {
-	applyServerFieldErrors,
 	clearServerErrorOnChange,
 	formValidators,
+	handleSaveError,
+	StaleVersionAlert,
 	UnsavedChangesGuard,
 	useAppForm,
 } from "@/components/forms";
@@ -17,7 +17,7 @@ import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { STATUS_LABELS } from "../labels";
-import { invalidateTestCrudLists, testCrudKeys } from "../queries";
+import { invalidateTestCrudLists, testCrudDetailQueryOptions, testCrudKeys } from "../queries";
 import {
 	slugify,
 	TEST_CRUD_STATUSES,
@@ -39,10 +39,17 @@ const toFormValues = (item: TestCrudDetail | undefined): TestCrudFormValues => (
 	images: (item?.images ?? []).map((preview) => ({ id: preview.id, alt: preview.alt, preview })),
 });
 
+/** The form's React key: a new item, or a newer version of the same one, gets fresh defaults. */
+export const testCrudFormKey = (item: TestCrudDetail) => `${item.id}@${item.updatedAt}`;
+
 /**
  * Create and edit form, built only from the reusable fields. The same Zod schema
  * validates here and on the server; server-only failures (slug taken, image
  * rejected) come back as field errors on the matching fields.
+ *
+ * Edits send the item's `updatedAt`: if someone changed it since, the save is
+ * refused and StaleVersionAlert offers a reload. Render it keyed by
+ * `testCrudFormKey(item)` so the reloaded item remounts it with fresh defaults.
  */
 export function TestCrudForm({
 	item,
@@ -64,6 +71,10 @@ export function TestCrudForm({
 	const uploading = useRef(false);
 	// New items: the slug follows the title until the user edits it themselves.
 	const slugEdited = useRef(Boolean(item));
+	const [stale, setStale] = useState(false);
+	// The newer item replaces this one in the cache; the parent's key remounts the form with it.
+	const reload = () =>
+		item ? queryClient.fetchQuery({ ...testCrudDetailQueryOptions(item.id), staleTime: 0 }) : Promise.resolve();
 
 	const form = useAppForm({
 		defaultValues: toFormValues(item),
@@ -73,7 +84,7 @@ export function TestCrudForm({
 			try {
 				const input = toTestCrudInput(testCrudFormSchema.parse(value));
 				const result = item
-					? await updateTestCrud({ data: { ...input, id: item.id } })
+					? await updateTestCrud({ data: { ...input, id: item.id, updatedAt: item.updatedAt } })
 					: await createTestCrud({ data: input });
 				saved.current = true;
 				queryClient.setQueryData(testCrudKeys.detail(result.id), result);
@@ -82,7 +93,7 @@ export function TestCrudForm({
 				if (onSaved) onSaved(result);
 				else await navigate({ to: "/admin/test-crud" });
 			} catch (error) {
-				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
+				handleSaveError(formApi, error, () => setStale(true));
 			}
 		},
 	});
@@ -92,6 +103,7 @@ export function TestCrudForm({
 		<form.AppForm>
 			<UnsavedChangesGuard when={() => !saved.current && !form.state.isDefaultValue} />
 			<form.Form className={cn("flex max-w-3xl flex-col gap-6", className)} data-testid="test-crud-form">
+				{stale ? <StaleVersionAlert onReload={reload} /> : null}
 				<form.FormErrorSummary />
 				<form.AppField
 					name="title"

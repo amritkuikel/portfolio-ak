@@ -101,8 +101,18 @@ export const sampleRoles: RoleSummary[] = [
 		system: true,
 		permissions: [...ALL_PERMISSIONS],
 		userCount: 1,
+		updatedAt: "2026-09-01T08:00:00.000Z",
 	},
-	{ id: "role-user", key: "user", name: "User", description: "", system: true, permissions: [], userCount: 3 },
+	{
+		id: "role-user",
+		key: "user",
+		name: "User",
+		description: "",
+		system: true,
+		permissions: [],
+		userCount: 3,
+		updatedAt: "2026-09-01T08:00:00.000Z",
+	},
 	{
 		id: "role-editor",
 		key: "editor",
@@ -111,6 +121,7 @@ export const sampleRoles: RoleSummary[] = [
 		system: false,
 		permissions: ["test-crud:read", "test-crud:create", "test-crud:update"],
 		userCount: 1,
+		updatedAt: "2026-09-01T08:00:00.000Z",
 	},
 ];
 

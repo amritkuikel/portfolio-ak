@@ -72,6 +72,9 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"resetExampleTasks",
 			"submitExampleSignup",
 			"failExample",
+			"listExampleMessages",
+			"sendExampleMessage",
+			"resetExampleMessages",
 		],
 	},
 };

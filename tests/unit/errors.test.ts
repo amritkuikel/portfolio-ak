@@ -1,6 +1,7 @@
 import { notFound, redirect } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { isStaleError } from "@/lib/concurrency";
 import { APP_ERROR_CODES, AppError, appErrorSerializationAdapter, HTTP_STATUS, isAppError } from "@/lib/errors";
 import { zodInput } from "@/lib/fn-input";
 import { normalizeServerError } from "@/middleware/errors";
@@ -30,6 +31,17 @@ describe("AppError", () => {
 			fieldErrors: { email: ["Invalid email"] },
 			requestId: "req-1",
 		});
+	});
+});
+
+describe("AppError reason", () => {
+	it("survives the wire and withRequestId", () => {
+		const stale = new AppError("CONFLICT", "changed", { reason: "stale" });
+		const wire = JSON.parse(JSON.stringify(appErrorSerializationAdapter.toSerializable(stale)));
+		expect(appErrorSerializationAdapter.fromSerializable(wire)).toMatchObject({ code: "CONFLICT", reason: "stale" });
+		expect(stale.withRequestId("req-5")).toMatchObject({ code: "CONFLICT", reason: "stale", requestId: "req-5" });
+		expect(isStaleError(stale)).toBe(true);
+		expect(isStaleError(new AppError("CONFLICT"))).toBe(false);
 	});
 });
 

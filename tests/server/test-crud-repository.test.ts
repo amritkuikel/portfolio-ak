@@ -57,7 +57,13 @@ const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
 });
 const cloud = createFakeCloudinary();
 const store = cloud.store;
-const opts = (extra: { now?: Date; userId?: string } = {}) => ({ userId: USER_ID, store, ...extra });
+/** `version` is only checked by updates (any value for the others). */
+const opts = (extra: { now?: Date; userId?: string; version?: string } = {}) => ({
+	userId: USER_ID,
+	store,
+	version: "",
+	...extra,
+});
 let uploads = 0;
 /** A verified pending upload by `ownerId` (what confirmUpload records). */
 const pending = async (ownerId = USER_ID) => {
@@ -301,7 +307,7 @@ describe("update, status and delete", () => {
 			db,
 			created.id,
 			input({ title: "Renamed", tags: [], images: [c, { id: a.id, alt: "Now described" }] }),
-			opts(),
+			opts({ version: created.updatedAt }),
 		);
 		expect(item).toMatchObject({ title: "Renamed", tags: [] });
 		expect(item.images.map((image) => [image.id, image.alt])).toEqual([
@@ -310,7 +316,7 @@ describe("update, status and delete", () => {
 		]);
 		expect(removed.map((row) => row.id)).toEqual([b.id]);
 		expect(await liveAttachments()).toBe(2);
-		const cleared = await updateTestCrud(db, created.id, input(), opts());
+		const cleared = await updateTestCrud(db, created.id, input(), opts({ version: item.updatedAt }));
 		expect(cleared.item.image).toBeNull();
 		expect(await liveAttachments()).toBe(0);
 	});
@@ -319,11 +325,12 @@ describe("update, status and delete", () => {
 		const created = await createTestCrud(db, input(), opts());
 		const first = new Date("2026-02-01T00:00:00Z");
 		expect((await setTestCrudStatus(db, created.id, "published", store, first)).publishedAt).toBe(first.toISOString());
+		const published = await getTestCrud(db, created.id, store);
 		const edited = await updateTestCrud(
 			db,
 			created.id,
 			input({ status: "published" }),
-			opts({ now: new Date("2026-03-01T00:00:00Z") }),
+			opts({ now: new Date("2026-03-01T00:00:00Z"), version: published?.updatedAt ?? "" }),
 		);
 		expect(edited.item.publishedAt).toBe(first.toISOString());
 		expect((await setTestCrudStatus(db, created.id, "draft", store)).publishedAt).toBeNull();
@@ -332,9 +339,39 @@ describe("update, status and delete", () => {
 	it("reports NOT_FOUND for unknown ids", async () => {
 		const missing = "00000000-0000-4000-8000-000000000000";
 		await expect(setTestCrudStatus(db, missing, "published", store)).rejects.toMatchObject({ code: "NOT_FOUND" });
-		await expect(updateTestCrud(db, missing, input(), opts())).rejects.toMatchObject({
-			code: "NOT_FOUND",
-		});
+		await expect(
+			updateTestCrud(db, missing, input(), opts({ version: new Date().toISOString() })),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+
+	it("writes only while the row still has the version the edit started from", async () => {
+		const created = await createTestCrud(db, input(), opts());
+		// Inserted rows carry microseconds (defaultNow()); the ISO version has milliseconds and still matches.
+		const first = await updateTestCrud(db, created.id, input({ title: "One" }), opts({ version: created.updatedAt }));
+		expect(first.item.updatedAt).not.toBe(created.updatedAt);
+		const stale = await updateTestCrud(
+			db,
+			created.id,
+			input({ title: "Two" }),
+			opts({ version: created.updatedAt }),
+		).catch((caught: unknown) => caught);
+		expect(stale).toMatchObject({ code: "CONFLICT", reason: "stale" });
+		expect(await getTestCrud(db, created.id, store)).toMatchObject({ title: "One" });
+		// A publish from the list is a change too.
+		await setTestCrudStatus(db, created.id, "published", store);
+		await expect(
+			updateTestCrud(db, created.id, input({ title: "Three" }), opts({ version: first.item.updatedAt })),
+		).rejects.toMatchObject({ reason: "stale" });
+	});
+
+	it("lets only one of two concurrent saves of the same version through", async () => {
+		const created = await createTestCrud(db, input(), opts());
+		const results = await Promise.allSettled(
+			["A", "B"].map((title) => updateTestCrud(db, created.id, input({ title }), opts({ version: created.updatedAt }))),
+		);
+		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+		const [refused] = results.filter((result) => result.status === "rejected");
+		expect(refused?.reason).toMatchObject({ code: "CONFLICT", reason: "stale" });
 	});
 
 	it("deletes one or many rows, marks their images removed and reports the count", async () => {

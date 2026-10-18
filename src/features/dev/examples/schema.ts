@@ -53,3 +53,9 @@ export const exampleSignupSchema = z.object({ username: required({ max: 32 }), e
 export const EXAMPLE_ERROR_CASES = ["forbidden", "not-found", "crash"] as const;
 export type ExampleErrorCase = (typeof EXAMPLE_ERROR_CASES)[number];
 export const exampleErrorSchema = z.object({ case: z.enum(EXAMPLE_ERROR_CASES) });
+
+/** Idempotency example: a message to send, with the key the form made when it opened (none: every call sends). */
+export const exampleMessageSchema = z.object({
+	text: required({ max: 80 }),
+	key: z.uuid().optional(),
+});

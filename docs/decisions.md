@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (120 entries)</summary>
+<summary>Index (125 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -127,6 +127,10 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0119](#0119-version-pinning-caret-by-default-exact-only-with-a-reason): Version pinning: caret by default, exact only with a reason
 - [0120](#0120-ci-on-github-actions-git-hooks-with-lefthook-dependabot-for-updates): CI on GitHub Actions, git hooks with lefthook, Dependabot for updates
 - [0121](#0121-the-browser-review-is-a-playwright-suite-against-a-harnessed-production-server): The browser review is a Playwright suite against a harnessed production server
+- [0122](#0122-edits-carry-the-version-they-started-from-a-stale-save-is-a-conflict): Edits carry the version they started from; a stale save is a CONFLICT
+- [0123](#0123-one-request-id-per-request-kept-in-asynclocalstorage-by-the-server-entry): One request id per request, kept in AsyncLocalStorage by the server entry
+- [0124](#0124-get-apihealth-for-monitors-the-health-page-stays-for-people): GET /api/health for monitors; the /health page stays for people
+- [0125](#0125-idempotency-keys-are-a-recipe-not-core): Idempotency keys are a recipe, not core
 </details>
 
 ---
@@ -1541,3 +1545,39 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Traces only on the CI retry:** recording a trace for every test under parallel load on Windows failed with `ENOENT` on Playwright's artifact files, and doubled the run time.
 - **Why:** only whoever had the scripts could run the review, so a regression on a page nobody re-checked went unnoticed. Now it's one command, and CI runs it on every PR.
 - **Alternatives considered:** keeping the review scripts outside the repo (not reproducible); `@electric-sql/pglite-socket` (interleaving, above); requiring Docker or a local Postgres (more setup for every contributor); a test-only email provider in the app (production code would carry it); a Mailpit/SMTP container (Resend's API is what production calls); discovering pages by crawling (misses pages behind a sign-in or a seeded id, and can't tell a missing page from an intentionally private one).
+
+## 0122: Edits carry the version they started from; a stale save is a CONFLICT
+
+- **What:** an edit sends the row's `updatedAt` as it received it (`versionSchema()`, `src/lib/concurrency.ts`). The repository writes only while the row still has that version (`sameVersion(column, version)`, `src/server/db/concurrency.ts`) and otherwise throws `staleError()`: a `CONFLICT` with `reason: "stale"`. Forms catch it with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert`, whose "Reload" refetches the record and resets the form to it. Test CRUD's edit form and the role rename dialog use it.
+- **Choices:**
+  - **`updatedAt` is the version.** Both tables already have it, maintained by Drizzle's `$onUpdate`, so no migration and no extra column. Postgres keeps microseconds (an insert's `defaultNow()`) and a JS Date milliseconds, so the comparison is `date_trunc('milliseconds', updated_at) = $version`.
+  - **Checked under the row lock** in Test CRUD (the update already selects the row `for update`), so two saves of the same version can't both pass; for roles, the check is in the `UPDATE ... WHERE` itself. A zero-row update is then told apart as deleted (`NOT_FOUND`) or changed (stale).
+  - **A `reason` on AppError**, carried by the serialization adapter, rather than a magic `fieldErrors` key: the client branches on it (`isStaleError`) and `errorMessage` localizes it on the client.
+  - **What's versioned:** whole-record edits. The list's publish toggle and deletes aren't (one field or the whole row, and the edit form's version check catches a publish that happened meanwhile). The permission matrix sends grant/revoke deltas, which can't overwrite someone else's change, so it doesn't bump the role's version.
+  - **Reload, not merge:** the alert says nothing was saved and reloads the latest version. A field-by-field merge UI is a lot of code for a rare case; a feature that needs it can build it on `isStaleError`.
+  - Also fixed while here: `applyServerFieldErrors` treated `_form` (a `ruleError`'s message) as a field, so forms swallowed rule errors (e.g. "last admin") without a toast.
+- **Why:** before this, the second of two concurrent edits silently overwrote the first.
+- **Alternatives considered:** an integer `version` column (a migration per table, same result); ETags/`If-Match` headers (server functions aren't REST resources); `SELECT ... FOR UPDATE` alone (stops simultaneous writes, not a save from a form opened before someone else's save); last-write-wins with an audit trail (Task 30's audit log records changes but doesn't prevent loss).
+
+## 0123: One request id per request, kept in AsyncLocalStorage by the server entry
+
+- **What:** `src/server.ts` wraps every request in `runWithRequestId` (`src/server/http/request-id.ts`): a fresh UUID in AsyncLocalStorage, returned as `x-request-id`. Server functions get it as `context.requestId` (the logging middleware reads it, so `AppError.requestId` and the error page's reference match the header), `log()` (`src/server/log.ts`) adds it to every server log line, and `instrument.server.ts`'s `beforeSend` tags each Sentry event with it.
+- **Choices:**
+  - **Always generated**, never taken from an incoming `x-request-id`: that header is client input. Vercel's own `x-vercel-id` stays available in its logs for edge correlation.
+  - **AsyncLocalStorage**, like the existing per-request error status (`error-status.ts`) and Paraglide's locale: one place sets it, and code deep inside a request (the DB health check, auth email delivery, PostHog) reads it without threading a parameter.
+  - **`withHeader`** copies the response when its headers are immutable (`Response.redirect`).
+  - **Function middleware** reaches the server-only module by a dynamic import inside `.server()` (the same rule as the rest of `src/middleware`). Nitro routes (cron, manifest) bypass the Start entry and have no id.
+- **Why:** each server-function call made its own id, so a page request had none and its log lines couldn't be tied to the response or to Sentry.
+- **Alternatives considered:** trusting an upstream id (spoofable); a Start request middleware putting the id in context (it wouldn't reach code outside the middleware chain, such as Better Auth's hooks); OpenTelemetry trace ids (Sentry already traces; a separate id is simpler to show to users).
+
+## 0124: GET /api/health for monitors; the /health page stays for people
+
+- **What:** `src/routes/api/health.ts` (a server route, GET and HEAD) answers `200` with `{ status, checks: { database: { status, latencyMs } }, checkedAt }`, or `503` when the database doesn't answer, with `cache-control: no-store`. The ping times out after 3 s (`HEALTH_TIMEOUT_MS`), so a hung connection counts as down instead of hanging the monitor. The `/health` page renders the same check.
+- **Why:** monitors need a status code, not an HTML page that's 200 even when the database is down. No details leave the server (0019): the reason is in the log line.
+- **Alternatives considered:** a Nitro route (only needed for requests Vite intercepts in dev, 0103; monitors send ordinary requests); checking more dependencies (Cloudinary, Resend: their outages don't make the site unusable, and a monitor would page for a third party).
+
+## 0125: Idempotency keys are a recipe, not core
+
+- **What:** `/dev/examples/idempotency` and the routing guide's "Idempotency keys" section. `createIdempotencyStore()` (`src/server/examples/idempotency.ts`) runs an action once per key, answers repeats (a double submit, a retry after a lost response) with the first result, makes a duplicate that arrives while the first is still running wait for it, refuses a key reused with different input or by another user, and forgets a key whose action failed. The guide shows the Postgres version a real feature uses.
+- **Why a recipe:** the shared submit button already disables itself while saving, and the app's creates are admin forms where a duplicate is visible and deletable. Keys matter for actions with side effects outside the database (emails, payments, webhooks), which the base doesn't have. The in-memory store is for the example only (one process).
+- **Alternatives considered:** a core `idempotency_key` table and middleware on every POST (a table and a write per call for a problem the base doesn't have); unique constraints alone (they stop duplicate rows, not duplicate emails).

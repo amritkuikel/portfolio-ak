@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { hasAll, type Permission } from "@/features/rbac/permissions";
 import type { RoleInput, RolePermissionsUpdate, RoleSummary, UserRolesInput } from "@/features/rbac/schema";
+import { staleError } from "@/lib/concurrency";
 import { AppError, ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 import type { Db } from "@/server/db/types";
@@ -57,10 +58,15 @@ export async function createRole(db: Db, input: RoleInput) {
 	return { id: role.id, key: role.key };
 }
 
-export async function updateRole(db: Db, id: string, input: RoleInput) {
+/** Renames a custom role, if nobody changed it since `version` (else a stale CONFLICT). */
+export async function updateRole(db: Db, id: string, input: RoleInput, version: string) {
 	await customRoleOrThrow(db, id);
 	await assertNameFree(db, input.name, id);
-	await repo.updateRole(db, id, input);
+	if (!(await repo.updateRole(db, id, input, version))) {
+		// Deleted in between: NOT_FOUND; otherwise someone renamed it first.
+		await customRoleOrThrow(db, id);
+		throw staleError("Role");
+	}
 }
 
 export async function deleteRole(db: Db, actor: Actor, id: string) {

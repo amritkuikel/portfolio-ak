@@ -1,12 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sql } from "drizzle-orm";
-import { db } from "@/server/db/client";
-import { checkDatabaseHealth } from "@/server/db/health";
+import { checkAppDatabase } from "@/server/db/health";
 
 /**
- * Database health check. The handler runs only on the server; the Start compiler
- * replaces it with an RPC stub in the client bundle, which prunes the db imports.
+ * Database health check for the /health page (monitors use GET /api/health).
+ * The handler runs only on the server; the Start compiler replaces it with an
+ * RPC stub in the client bundle, which prunes the db imports.
  */
-export const getDbHealth = createServerFn({ method: "GET" }).handler(() =>
-	checkDatabaseHealth(() => db.execute(sql`select 1`)),
-);
+export const getDbHealth = createServerFn({ method: "GET" }).handler(() => checkAppDatabase());

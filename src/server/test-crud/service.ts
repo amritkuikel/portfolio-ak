@@ -46,17 +46,18 @@ export async function createItem(
 }
 
 /**
- * Saves the item and its images. Images it no longer uses are deleted from
- * Cloudinary right away; if that fails, the scheduled cleanup retries.
+ * Saves the item and its images, if nobody changed it since `updatedAt` (else a
+ * stale CONFLICT). Images it no longer uses are deleted from Cloudinary right
+ * away; if that fails, the scheduled cleanup retries.
  */
 export async function updateItem(
 	db: Db,
 	store: ImageStore | null,
-	data: TestCrudInput & { id: string },
+	data: TestCrudInput & { id: string; updatedAt: string },
 	userId: string,
 ): Promise<TestCrudDetail> {
-	const { id, ...input } = data;
-	const { item, removed } = await updateTestCrud(db, id, input, { userId, store });
+	const { id, updatedAt, ...input } = data;
+	const { item, removed } = await updateTestCrud(db, id, input, { userId, store, version: updatedAt });
 	await purge(db, store, removed);
 	await captureServerEvent("test_crud_updated", userId, { item_id: item.id, change: "edit" });
 	return item;

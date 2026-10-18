@@ -29,6 +29,7 @@ import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicTestCrudRouteRouteImport } from './routes/_public/test-crud/route'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as PortfolioIndexRouteImport } from './routes/portfolio/index'
 import { Route as PortfolioAboutRouteImport } from './routes/portfolio/about'
 import { Route as PortfolioContactRouteImport } from './routes/portfolio/contact'
@@ -59,6 +60,7 @@ import { Route as PublicDevExamplesErrorsRouteImport } from './routes/_public/de
 import { Route as PublicDevExamplesFiltersRouteImport } from './routes/_public/dev/examples/filters'
 import { Route as PublicDevExamplesFormsRouteImport } from './routes/_public/dev/examples/forms'
 import { Route as PublicDevExamplesI18nRouteImport } from './routes/_public/dev/examples/i18n'
+import { Route as PublicDevExamplesIdempotencyRouteImport } from './routes/_public/dev/examples/idempotency'
 import { Route as PublicDevExamplesLoaderQueryRouteImport } from './routes/_public/dev/examples/loader-query'
 import { Route as PublicDevExamplesMaskingRouteRouteImport } from './routes/_public/dev/examples/masking/route'
 import { Route as PublicDevExamplesOptimisticRouteImport } from './routes/_public/dev/examples/optimistic'
@@ -164,6 +166,11 @@ const PublicVerifyEmailRoute = PublicVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
   getParentRoute: () => PublicRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PortfolioIndexRoute = PortfolioIndexRouteImport.update({
   id: '/',
@@ -320,6 +327,12 @@ const PublicDevExamplesI18nRoute = PublicDevExamplesI18nRouteImport.update({
   path: '/i18n',
   getParentRoute: () => PublicDevExamplesRouteRoute,
 } as any)
+const PublicDevExamplesIdempotencyRoute =
+  PublicDevExamplesIdempotencyRouteImport.update({
+    id: '/idempotency',
+    path: '/idempotency',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
 const PublicDevExamplesLoaderQueryRoute =
   PublicDevExamplesLoaderQueryRouteImport.update({
     id: '/loader-query',
@@ -391,6 +404,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
   '/portfolio/': typeof PortfolioIndexRoute
@@ -418,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
   '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -445,6 +460,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
   '/portfolio': typeof PortfolioIndexRoute
@@ -467,6 +483,7 @@ export interface FileRoutesByTo {
   '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
   '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -501,6 +518,7 @@ export interface FileRoutesById {
   '/_public/reset-password': typeof PublicResetPasswordRoute
   '/_public/stack': typeof PublicStackRoute
   '/_public/verify-email': typeof PublicVerifyEmailRoute
+  '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
   '/_public/': typeof PublicIndexRoute
@@ -529,6 +547,7 @@ export interface FileRoutesById {
   '/_public/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/_public/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/_public/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
+  '/_public/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
   '/_public/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/_public/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/_public/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -561,6 +580,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
     | '/portfolio/'
@@ -588,6 +608,7 @@ export interface FileRouteTypes {
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
+    | '/dev/examples/idempotency'
     | '/dev/examples/loader-query'
     | '/dev/examples/optimistic'
     | '/dev/examples/permissions'
@@ -615,6 +636,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
     | '/portfolio'
@@ -637,6 +659,7 @@ export interface FileRouteTypes {
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
+    | '/dev/examples/idempotency'
     | '/dev/examples/loader-query'
     | '/dev/examples/optimistic'
     | '/dev/examples/permissions'
@@ -670,6 +693,7 @@ export interface FileRouteTypes {
     | '/_public/reset-password'
     | '/_public/stack'
     | '/_public/verify-email'
+    | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
     | '/_public/'
@@ -698,6 +722,7 @@ export interface FileRouteTypes {
     | '/_public/dev/examples/filters'
     | '/_public/dev/examples/forms'
     | '/_public/dev/examples/i18n'
+    | '/_public/dev/examples/idempotency'
     | '/_public/dev/examples/loader-query'
     | '/_public/dev/examples/optimistic'
     | '/_public/dev/examples/permissions'
@@ -720,6 +745,7 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -864,6 +890,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verify-email'
       preLoaderRoute: typeof PublicVerifyEmailRouteImport
       parentRoute: typeof PublicRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/portfolio/': {
       id: '/portfolio/'
@@ -1073,6 +1106,13 @@ declare module '@tanstack/react-router' {
       path: '/i18n'
       fullPath: '/dev/examples/i18n'
       preLoaderRoute: typeof PublicDevExamplesI18nRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/idempotency': {
+      id: '/_public/dev/examples/idempotency'
+      path: '/idempotency'
+      fullPath: '/dev/examples/idempotency'
+      preLoaderRoute: typeof PublicDevExamplesIdempotencyRouteImport
       parentRoute: typeof PublicDevExamplesRouteRoute
     }
     '/_public/dev/examples/loader-query': {
@@ -1287,6 +1327,7 @@ interface PublicDevExamplesRouteRouteChildren {
   PublicDevExamplesFiltersRoute: typeof PublicDevExamplesFiltersRoute
   PublicDevExamplesFormsRoute: typeof PublicDevExamplesFormsRoute
   PublicDevExamplesI18nRoute: typeof PublicDevExamplesI18nRoute
+  PublicDevExamplesIdempotencyRoute: typeof PublicDevExamplesIdempotencyRoute
   PublicDevExamplesLoaderQueryRoute: typeof PublicDevExamplesLoaderQueryRoute
   PublicDevExamplesOptimisticRoute: typeof PublicDevExamplesOptimisticRoute
   PublicDevExamplesPermissionsRoute: typeof PublicDevExamplesPermissionsRoute
@@ -1307,6 +1348,7 @@ const PublicDevExamplesRouteRouteChildren: PublicDevExamplesRouteRouteChildren =
     PublicDevExamplesFiltersRoute: PublicDevExamplesFiltersRoute,
     PublicDevExamplesFormsRoute: PublicDevExamplesFormsRoute,
     PublicDevExamplesI18nRoute: PublicDevExamplesI18nRoute,
+    PublicDevExamplesIdempotencyRoute: PublicDevExamplesIdempotencyRoute,
     PublicDevExamplesLoaderQueryRoute: PublicDevExamplesLoaderQueryRoute,
     PublicDevExamplesOptimisticRoute: PublicDevExamplesOptimisticRoute,
     PublicDevExamplesPermissionsRoute: PublicDevExamplesPermissionsRoute,
@@ -1379,6 +1421,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

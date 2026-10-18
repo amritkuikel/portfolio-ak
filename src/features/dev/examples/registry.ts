@@ -103,6 +103,13 @@ export const EXAMPLES = [
 		guide: "docs/guides/conventions.md",
 	},
 	{
+		slug: "idempotency",
+		title: m.examples_idempotency_title,
+		description: m.examples_idempotency_description,
+		source: route("idempotency.tsx"),
+		guide: "docs/guides/routing-data.md",
+	},
+	{
 		slug: "errors",
 		title: m.examples_errors_title,
 		description: m.examples_errors_description,

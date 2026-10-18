@@ -1,22 +1,20 @@
 import { createMiddleware } from "@tanstack/react-start";
+import { type LogLevel, writeLogLine } from "@/lib/log-line";
 
-type LogLevel = "info" | "warn" | "error";
-
-/** One JSON line per server function call. Sentry takes over error reporting in Phase 10. */
-export const logServerFn = (level: LogLevel, fields: Record<string, unknown>) => {
-	const line = JSON.stringify({ level, msg: "server-fn", ...fields });
-	if (level === "error") console.error(line);
-	else if (level === "warn") console.warn(line);
-	else console.info(line);
-};
+/** One JSON line per server function call, with its request id. */
+export const logServerFn = (level: LogLevel, fields: Record<string, unknown>) =>
+	writeLogLine(level, "server-fn", fields);
 
 /**
- * Assigns a request id (passed to downstream middleware as context.requestId)
- * and logs the function name, method, duration and outcome of every call.
+ * Passes the request's id (src/server/http/request-id.ts, the x-request-id
+ * header) to downstream middleware as context.requestId, and logs the function
+ * name, method, duration and outcome of every call.
  */
 export const requestLoggingMiddleware = createMiddleware({ type: "function" }).server(
 	async ({ next, serverFnMeta, method }) => {
-		const requestId = crypto.randomUUID();
+		// Server-only module, loaded inside the server callback (this file is in the client bundle too).
+		const { currentRequestId } = await import("@/server/http/request-id");
+		const requestId = currentRequestId() ?? crypto.randomUUID();
 		const started = performance.now();
 		const base = { fn: serverFnMeta.name, method, requestId };
 		try {

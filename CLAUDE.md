@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–27 are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–28 are done. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -98,7 +98,7 @@ docs/                  PLAN.md, decisions.md, guides/
 Follow the Test CRUD pattern (README, "Test CRUD: the template for new features") and the list-page recipe in [conventions.md](docs/guides/conventions.md):
 1. Table + migration.
 2. Shared schema (input, search params, DTOs).
-3. Repository + service over an injected `Db`, tested on PGlite.
+3. Repository + service over an injected `Db`, tested on PGlite. Updates check the version the edit started from (`updatedAt`, `sameVersion`, `staleError()`; 0122).
 4. Permissions in the catalog; thin server functions with `requirePermission`, listed in the guarded-functions test.
 5. Queries (and a collection for optimistic admin edits).
 6. Routes with `staticData.breadcrumb`, `seo()`/`privateHead()`; columns for `DataTable`, filters for `FilterBar`, forms with `useAppForm`.
@@ -137,4 +137,6 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 - **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
 - **Schema changes need a migration:** CI fails when `drizzle-kit generate` would produce one. There is no `db:push` (0118).
 - **E2E against a stale build:** locally, `pnpm test:e2e` reuses a server already on port 3100 (`node e2e/harness/server.ts`). Restart it after changing app code, or the suite tests the old build. Auth endpoints are rate limited per IP: tests that sign in call `harness.resetRateLimits()` first.
+- **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. Forms catch the stale `CONFLICT` with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert` (0122).
+- **Server logs go through `log()`** (`src/server/log.ts`), not `console.*`, so each line carries the request id; the id comes from AsyncLocalStorage set by `src/server.ts` (0123). Uptime monitors use `GET /api/health`, not the `/health` page (0124).
 - **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

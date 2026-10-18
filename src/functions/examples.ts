@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
 	type ExampleTaskPage,
 	exampleErrorSchema,
+	exampleMessageSchema,
 	exampleSignupSchema,
 	exampleTaskIdSchema,
 	exampleTaskSearchSchema,
@@ -12,6 +13,7 @@ import { zodInput } from "@/lib/fn-input";
 import { bulkIdsSchema } from "@/lib/list";
 import { devOnlyMiddleware } from "@/middleware/dev";
 import { m } from "@/paraglide/messages";
+import { listMessages, resetMessages, sendMessage } from "@/server/examples/idempotency";
 import { deleteTasks, getTask, listTasks, nextSnapshot, resetTasks, setTasksDone } from "@/server/examples/tasks";
 
 /**
@@ -94,4 +96,22 @@ export const failExample = createServerFn({ method: "POST" })
 		if (data.case === "forbidden") throw new AppError("FORBIDDEN", "Example refusal");
 		if (data.case === "not-found") throw new AppError("NOT_FOUND", "Example missing record");
 		throw new Error("Example crash: details stay in the server log");
+	});
+
+/** Idempotency: the messages sent so far. */
+export const listExampleMessages = createServerFn({ method: "GET" })
+	.middleware([devOnlyMiddleware])
+	.handler(() => listMessages());
+
+/** Idempotency: sends once per key (repeats answer with the first message, `replayed: true`). */
+export const sendExampleMessage = createServerFn({ method: "POST" })
+	.middleware([devOnlyMiddleware])
+	.validator(zodInput(exampleMessageSchema))
+	.handler(({ data }) => sendMessage(data));
+
+export const resetExampleMessages = createServerFn({ method: "POST" })
+	.middleware([devOnlyMiddleware])
+	.handler(() => {
+		resetMessages();
+		return { ok: true };
 	});

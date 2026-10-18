@@ -108,6 +108,10 @@ describe("with VITE_POSTHOG_KEY", () => {
 		cookies.set("analytics-consent", "granted");
 		posthog.captureImmediate.mockRejectedValueOnce(new Error("network down"));
 		await expect(analytics.captureServerEvent("e", "u")).resolves.toBeUndefined();
-		expect(warn).toHaveBeenCalledWith("[analytics] capture failed:", "network down");
+		expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toEqual({
+			level: "warn",
+			msg: "analytics capture failed",
+			error: "network down",
+		});
 	});
 });

@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { errorMessage } from "@/components/errors/error-page";
-import { applyServerFieldErrors, clearServerErrorOnChange, formValidators, useAppForm } from "@/components/forms";
+import { clearServerErrorOnChange, formValidators, handleSaveError, useAppForm } from "@/components/forms";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleSignupSchema } from "@/features/dev/examples/schema";
 import { submitExampleSignup } from "@/functions/examples";
@@ -17,7 +16,7 @@ import { m } from "@/paraglide/messages";
  * src/lib/validation.ts (localized messages).
  * - Simple: client validation only (on change, blur and submit), an error summary.
  * - Server field errors: the server validates the same schema plus its own rules;
- *   a refusal with `fieldErrors` lands on the matching field (applyServerFieldErrors)
+ *   a refusal with `fieldErrors` lands on the matching field (handleSaveError)
  *   and clears when the field is edited (clearServerErrorOnChange).
  */
 export const Route = createFileRoute("/_public/dev/examples/forms")({
@@ -76,7 +75,7 @@ function ServerErrorsForm() {
 				const result = await submitExampleSignup({ data: value });
 				setCreated(result.username);
 			} catch (error) {
-				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
+				handleSaveError(formApi, error);
 			}
 		},
 	});

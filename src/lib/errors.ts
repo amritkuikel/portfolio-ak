@@ -31,6 +31,14 @@ export const HTTP_STATUS: Readonly<Record<AppErrorCode, number>> = {
 	INTERNAL: 500,
 };
 
+/**
+ * Why an error happened, when the client acts on it beyond showing a message:
+ * "stale" is a CONFLICT because the row changed since the client loaded it
+ * (optimistic concurrency, src/lib/concurrency.ts).
+ */
+export const APP_ERROR_REASONS = ["stale"] as const;
+export type AppErrorReason = (typeof APP_ERROR_REASONS)[number];
+
 /** Field path -> error keys/messages, e.g. from Zod input validation. */
 export type FieldErrors = Readonly<Record<string, ReadonlyArray<string>>>;
 
@@ -40,7 +48,8 @@ export type AppErrorShape = {
 	/** Developer-facing detail. Never shown to users; "Internal error" for INTERNAL. */
 	message: string;
 	fieldErrors?: FieldErrors;
-	/** Correlates a client-visible error with the server log line. */
+	reason?: AppErrorReason;
+	/** The request's id: also in the x-request-id header, the log lines and the Sentry event. */
 	requestId?: string;
 };
 
@@ -52,18 +61,25 @@ export class AppError extends Error {
 	readonly code: AppErrorCode;
 	readonly status: number;
 	readonly fieldErrors: FieldErrors | undefined;
+	readonly reason: AppErrorReason | undefined;
 	readonly requestId: string | undefined;
 
 	constructor(
 		code: AppErrorCode,
 		message: string = code,
-		extra: { fieldErrors?: FieldErrors; requestId?: string; cause?: unknown } = {},
+		extra: { fieldErrors?: FieldErrors; reason?: AppErrorReason; requestId?: string; cause?: unknown } = {},
 	) {
 		super(message, extra.cause === undefined ? undefined : { cause: extra.cause });
 		this.code = code;
 		this.status = HTTP_STATUS[code];
 		this.fieldErrors = extra.fieldErrors;
+		this.reason = extra.reason;
 		this.requestId = extra.requestId;
+	}
+
+	/** The same error, tagged with the request it happened in. */
+	withRequestId(requestId: string): AppError {
+		return AppError.fromShape({ ...this.toShape(), requestId });
 	}
 
 	toShape(): AppErrorShape {
@@ -72,6 +88,7 @@ export class AppError extends Error {
 			status: this.status,
 			message: this.message,
 			...(this.fieldErrors ? { fieldErrors: this.fieldErrors } : {}),
+			...(this.reason ? { reason: this.reason } : {}),
 			...(this.requestId ? { requestId: this.requestId } : {}),
 		};
 	}
@@ -79,6 +96,7 @@ export class AppError extends Error {
 	static fromShape(shape: AppErrorShape): AppError {
 		return new AppError(shape.code, shape.message, {
 			...(shape.fieldErrors ? { fieldErrors: shape.fieldErrors } : {}),
+			...(shape.reason ? { reason: shape.reason } : {}),
 			...(shape.requestId ? { requestId: shape.requestId } : {}),
 		});
 	}

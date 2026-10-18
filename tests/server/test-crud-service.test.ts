@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TestCrudInput } from "@/features/test-crud/schema";
+import { isStaleError } from "@/lib/concurrency";
 import { confirmUpload } from "@/server/attachments/service";
 import * as schema from "@/server/db/schema";
 import {
@@ -60,6 +61,8 @@ const upload = async () => {
 	return { id: image.id, alt: "", publicId: ticket.publicId };
 };
 const MISSING = "00000000-0000-4000-8000-000000000000";
+/** Any version: the row doesn't exist, so it's never compared. */
+const VERSION = "2026-01-01T00:00:00.000Z";
 
 describe("create", () => {
 	it("saves the item with its uploaded images and records the event", async () => {
@@ -84,7 +87,7 @@ describe("update", () => {
 		const updated = await updateItem(
 			testDb.db,
 			cloud.store,
-			{ ...input({ title: "Renamed", images: [kept] }), id: created.id },
+			{ ...input({ title: "Renamed", images: [kept] }), id: created.id, updatedAt: created.updatedAt },
 			testDb.adminId,
 		);
 		expect(updated).toMatchObject({ title: "Renamed" });
@@ -102,18 +105,57 @@ describe("update", () => {
 		const image = await upload();
 		const created = await createItem(testDb.db, cloud.store, input({ images: [image] }), testDb.adminId);
 		cloud.failDestroy();
-		await updateItem(testDb.db, cloud.store, { ...input(), id: created.id }, testDb.adminId);
+		await updateItem(
+			testDb.db,
+			cloud.store,
+			{ ...input(), id: created.id, updatedAt: created.updatedAt },
+			testDb.adminId,
+		);
 		const [row] = await testDb.db.select().from(schema.attachment).where(eq(schema.attachment.id, image.id));
 		expect(row?.deletedAt).toBeInstanceOf(Date);
 	});
 
 	it("reports NOT_FOUND for an unknown id and records nothing", async () => {
-		await expect(updateItem(testDb.db, cloud.store, { ...input(), id: MISSING }, testDb.adminId)).rejects.toMatchObject(
-			{
-				code: "NOT_FOUND",
-			},
-		);
+		await expect(
+			updateItem(testDb.db, cloud.store, { ...input(), id: MISSING, updatedAt: VERSION }, testDb.adminId),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
 		expect(captureServerEvent).not.toHaveBeenCalled();
+	});
+
+	it("refuses a save started from an older version, keeps the other save and its images, records nothing", async () => {
+		const image = await upload();
+		const created = await createItem(testDb.db, cloud.store, input({ images: [image] }), testDb.adminId);
+		// Two sessions open the same version; the first saves.
+		const first = await updateItem(
+			testDb.db,
+			cloud.store,
+			{ ...input({ title: "First session", images: [image] }), id: created.id, updatedAt: created.updatedAt },
+			testDb.adminId,
+		);
+		captureServerEvent.mockClear();
+		// The second, still on the old version, drops the image: refused, nothing changes or is deleted.
+		const error = await updateItem(
+			testDb.db,
+			cloud.store,
+			{ ...input({ title: "Second session" }), id: created.id, updatedAt: created.updatedAt },
+			testDb.adminId,
+		).catch((caught: unknown) => caught);
+		expect(isStaleError(error)).toBe(true);
+		expect(error).toMatchObject({ code: "CONFLICT", status: 409 });
+		const current = await getItemOrThrow(testDb.db, cloud.store, created.id);
+		expect(current).toMatchObject({ title: "First session", updatedAt: first.updatedAt });
+		expect(current.images.map((each) => each.id)).toEqual([image.id]);
+		expect(cloud.destroyed).toEqual([]);
+		expect(captureServerEvent).not.toHaveBeenCalled();
+		// Starting again from the latest version works.
+		await expect(
+			updateItem(
+				testDb.db,
+				cloud.store,
+				{ ...input({ title: "Second session" }), id: created.id, updatedAt: current.updatedAt },
+				testDb.adminId,
+			),
+		).resolves.toMatchObject({ title: "Second session" });
 	});
 });
 

@@ -1,8 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
-import { errorMessage } from "@/components/errors/error-page";
-import { applyServerFieldErrors, formValidators, useAppForm } from "@/components/forms";
+import { formValidators, handleSaveError, useAppForm } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { setUserRoles } from "@/functions/rbac";
@@ -45,7 +44,7 @@ export function UserRolesDialog({
 				toast.success(m.users_toast_roles_saved());
 				onClose();
 			} catch (error) {
-				if (!applyServerFieldErrors(formApi, error)) toast.error(errorMessage(error));
+				handleSaveError(formApi, error);
 			}
 		},
 	});

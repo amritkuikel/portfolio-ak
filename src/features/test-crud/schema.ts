@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TEST_CRUD_MAX_IMAGES } from "@/features/attachments/constants";
 import { ALT_MAX, attachmentRefSchema, type ImageAsset } from "@/features/attachments/schema";
+import { versionSchema } from "@/lib/concurrency";
 import { formatNumber } from "@/lib/intl";
 import {
 	bulkIdsSchema,
@@ -51,8 +52,8 @@ export const testCrudInputSchema = z.object({
 });
 export type TestCrudInput = z.output<typeof testCrudInputSchema>;
 
-/** Update: the same fields plus which item. */
-export const testCrudUpdateSchema = testCrudInputSchema.extend({ id: z.uuid() });
+/** Update: the same fields plus which item and the version the edit started from (its `updatedAt`). */
+export const testCrudUpdateSchema = testCrudInputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
 
 /** One image in the form: the attachment, its alt text, and its preview (not sent to the server). */
 export const formImageSchema = z.object({

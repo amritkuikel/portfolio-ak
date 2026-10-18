@@ -17,12 +17,7 @@ export const normalizeServerError = (error: unknown, requestId: string): unknown
 	if (isRedirect(error) || isNotFound(error)) return error;
 
 	if (error instanceof AppError) {
-		return error.requestId
-			? error
-			: new AppError(error.code, error.message, {
-					...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
-					requestId,
-				});
+		return error.requestId ? error : error.withRequestId(requestId);
 	}
 
 	if (error instanceof z.ZodError) {
