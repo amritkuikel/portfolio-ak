@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { inArray } from "drizzle-orm";
 import { hasAll, type Permission } from "@/features/rbac/permissions";
 import type {
 	RoleInput,
@@ -10,7 +11,8 @@ import type {
 import { staleError } from "@/lib/concurrency";
 import { AppError, ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
-import { type AuditActor, recordAudit } from "@/server/audit/record";
+import { type AuditActor, type AuditEntry, recordAudit } from "@/server/audit/record";
+import { auditEvent } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import * as repo from "./repository";
 
@@ -271,8 +273,11 @@ export async function inviteUser(
 
 /**
  * Starts a session as another user. `start` does it (Better Auth's
- * impersonateUser, which swaps the session cookie); it runs inside the audit
- * row's transaction, so a failed start leaves no row and a failed row no session.
+ * impersonateUser, which swaps the session cookie). The audit row is written
+ * first and removed again if `start` fails, so a failed start leaves no row
+ * and a failed row no session. Not one transaction: Better Auth writes the
+ * session through its own connection, which would wait for the transaction
+ * (and the e2e PGlite, one backend, would wait forever).
  *
  * Admins only (the superuser flag): an impersonated session acts with all of the
  * target's permissions, so this isn't a permission a custom role could hold.
@@ -285,10 +290,7 @@ export async function impersonateUser(db: Db, actor: Actor, userId: string, star
 	const target = await targetOrThrow(db, userId);
 	if (target.role === "admin") throw forbidden("Impersonate an admin", m.rbac_error_impersonate_admin_target());
 	if (target.banned) throw ruleError("CONFLICT", "Impersonate a banned user", m.rbac_error_impersonate_banned());
-	await db.transaction(async (tx) => {
-		await recordAudit(tx, actor, { action: "user.impersonate", target: userTarget(target) });
-		await start();
-	});
+	await withAuditRow(db, actor, { action: "user.impersonate", target: userTarget(target) }, start);
 }
 
 /**
@@ -299,12 +301,21 @@ export async function stopImpersonating(db: Db, session: AuditActor, stop: () =>
 	const admin = session.impersonatorId;
 	if (!admin) throw new AppError("BAD_REQUEST", "Not an impersonated session");
 	const target = await targetOrThrow(db, session.id);
-	await db.transaction(async (tx) => {
-		await recordAudit(
-			tx,
-			{ id: admin, requestId: session.requestId, ip: session.ip },
-			{ action: "user.impersonate-stop", target: userTarget(target) },
-		);
-		await stop();
-	});
+	await withAuditRow(
+		db,
+		{ id: admin, requestId: session.requestId, ip: session.ip },
+		{ action: "user.impersonate-stop", target: userTarget(target) },
+		stop,
+	);
+}
+
+/** Records `entry`, runs `action`, and deletes the row again when the action fails. */
+async function withAuditRow(db: Db, actor: AuditActor, entry: AuditEntry, action: () => Promise<void>) {
+	const ids = await recordAudit(db, actor, entry);
+	try {
+		await action();
+	} catch (error) {
+		await db.delete(auditEvent).where(inArray(auditEvent.id, ids));
+		throw error;
+	}
 }

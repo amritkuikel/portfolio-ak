@@ -20,8 +20,9 @@ describe("/dev/examples", () => {
 	});
 
 	it("covers every module named in the plan", () => {
-		// 14 from Part 2, plus idempotency keys (Task 28 recipe).
-		expect(EXAMPLES).toHaveLength(15);
+		// 14 from Part 2, plus the recipes: idempotency keys (Task 28), the command palette (Task 31),
+		// list extras, caching, background jobs and the contact form (Task 33).
+		expect(EXAMPLES).toHaveLength(20);
 	});
 
 	it("each example's source file and guide exist", () => {

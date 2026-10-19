@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, originOf, STATIC_SECURITY_HEADERS } from "@/lib/csp";
+import { buildCsp, CSP_REPORT_GROUP, originOf, reportingEndpoints, STATIC_SECURITY_HEADERS } from "@/lib/csp";
 
 const directives = (policy: string) =>
 	Object.fromEntries(
@@ -41,6 +41,16 @@ describe("buildCsp", () => {
 		expect(csp["frame-src"]).toEqual(["https://challenges.cloudflare.com"]);
 		expect(csp["script-src"]).toEqual(["'nonce-n'", "'strict-dynamic'", "https://challenges.cloudflare.com"]);
 		expect(csp["frame-ancestors"]).toEqual(["'none'"]);
+	});
+
+	it("reports violations only when given a report URL, with report-to and report-uri", () => {
+		expect(buildCsp({ nonce: "n" })).not.toMatch(/report-(?:to|uri)/);
+		const csp = directives(buildCsp({ nonce: "n", reportUrl: "https://app.example/api/csp-report" }));
+		expect(csp["report-uri"]).toEqual(["https://app.example/api/csp-report"]);
+		expect(csp["report-to"]).toEqual([CSP_REPORT_GROUP]);
+		expect(reportingEndpoints("https://app.example/api/csp-report")).toBe(
+			`${CSP_REPORT_GROUP}="https://app.example/api/csp-report"`,
+		);
 	});
 
 	it("upgrades insecure requests only when asked (production)", () => {

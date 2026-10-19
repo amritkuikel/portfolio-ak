@@ -7,6 +7,7 @@ import { NotFoundPage } from "@/components/errors/not-found-page";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { ConsentBanner, ObservabilitySync } from "@/components/layout/observability";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SkipLink } from "@/components/layout/skip-link";
 import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { sessionQueryOptions } from "@/features/auth/queries";
@@ -75,6 +76,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<HeadContent />
 			</head>
 			<body className="flex min-h-dvh flex-col">
+				<SkipLink />
 				<ImpersonationBanner />
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">{children}</div>

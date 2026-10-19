@@ -8,6 +8,7 @@ import {
 	parseCookieHeader,
 	parsePreferences,
 } from "@/lib/stores/preferences";
+import { webVitalProperties } from "@/lib/web-vitals";
 
 describe("Sentry beforeSend", () => {
 	const event = (user?: ErrorEvent["user"]): ErrorEvent => ({
@@ -66,5 +67,27 @@ describe("setAnalyticsConsent", () => {
 		store.actions.setAnalyticsConsent("unset");
 		expect(store.state.analyticsConsent).toBe("unset");
 		expect(parseCookieHeader("")).toEqual({});
+	});
+});
+
+describe("real-user Web Vitals", () => {
+	it("sends the metric, a rounded value, its rating and the path only", () => {
+		expect(
+			webVitalProperties(
+				{ name: "CLS", value: 0.012345, rating: "needs-improvement", navigationType: "navigate" },
+				"/ne/test-crud",
+			),
+		).toEqual({
+			metric: "CLS",
+			value: 0.0123,
+			rating: "needs-improvement",
+			navigation_type: "navigate",
+			path: "/ne/test-crud",
+		});
+		expect(
+			webVitalProperties({ name: "LCP", value: 1234.56, rating: "good", navigationType: "reload" }, "/"),
+		).toMatchObject({
+			value: 1235,
+		});
 	});
 });

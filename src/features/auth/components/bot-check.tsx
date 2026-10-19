@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 
@@ -99,10 +99,10 @@ export function useTurnstile(siteKey: string | null) {
 		};
 	}, [siteKey]);
 
-	const reset = useCallback(() => {
+	const reset = () => {
 		setToken(undefined);
 		if (widget.current) window.turnstile?.reset(widget.current);
-	}, []);
+	};
 
 	// The widget is 65 px tall; the space is kept from the first paint so it doesn't shift the form.
 	const element = siteKey ? <div ref={container} className="min-h-[65px]" data-testid="turnstile" /> : null;

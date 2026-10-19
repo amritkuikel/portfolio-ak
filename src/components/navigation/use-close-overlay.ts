@@ -1,5 +1,4 @@
 import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
-import { useCallback } from "react";
 import type { SearchPatch } from "./search-link";
 
 /**
@@ -15,8 +14,8 @@ export function useCloseOverlay(remove: SearchPatch) {
 	const router = useRouter();
 	const canGoBack = useCanGoBack();
 	const navigate = useNavigate();
-	return useCallback(() => {
+	return () => {
 		if (canGoBack) router.history.back();
 		else void navigate({ to: ".", search: (prev: SearchPatch) => ({ ...prev, ...remove }), replace: true });
-	}, [canGoBack, router, navigate, remove]);
+	};
 }

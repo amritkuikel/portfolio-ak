@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/tanstackstart-react";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { type AppErrorCode, FORM_ERROR_KEY, isAppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
@@ -64,7 +65,11 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	};
 
 	return (
-		<main className="mx-auto flex max-w-xl flex-col items-start gap-4 px-4 py-16" data-testid="error-page">
+		<main
+			{...MAIN_CONTENT}
+			className="mx-auto flex max-w-xl flex-col items-start gap-4 px-4 py-16"
+			data-testid="error-page"
+		>
 			<h1 className="font-semibold text-2xl tracking-tight">{title()}</h1>
 			<p className="text-muted-foreground" role="alert" data-error-code={code ?? "UNKNOWN"}>
 				{errorMessage(error)}

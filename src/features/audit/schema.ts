@@ -24,10 +24,16 @@ export const AUDIT_ACTIONS = [
 	"test-crud.publish",
 	"test-crud.unpublish",
 	"test-crud.delete",
+	// @new-feature:audit-actions
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
-export const AUDIT_TARGETS = ["role", "user", "test-crud"] as const;
+export const AUDIT_TARGETS = [
+	"role",
+	"user",
+	"test-crud",
+	// @new-feature:audit-targets
+] as const;
 export type AuditTarget = (typeof AUDIT_TARGETS)[number];
 
 /** A summarized field value: short, JSON, never a secret. */

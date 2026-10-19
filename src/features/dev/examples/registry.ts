@@ -123,6 +123,41 @@ export const EXAMPLES = [
 		source: route("analytics.tsx"),
 		guide: "README.md",
 	},
+	{
+		slug: "command-palette",
+		title: m.examples_palette_title,
+		description: m.examples_palette_description,
+		source: route("command-palette.tsx"),
+		guide: "docs/guides/conventions.md",
+	},
+	{
+		slug: "list-extras",
+		title: m.examples_extras_title,
+		description: m.examples_extras_description,
+		source: route("list-extras.tsx"),
+		guide: "docs/guides/recipes.md",
+	},
+	{
+		slug: "caching",
+		title: m.examples_caching_title,
+		description: m.examples_caching_description,
+		source: route("caching.tsx"),
+		guide: "docs/guides/recipes.md",
+	},
+	{
+		slug: "background-jobs",
+		title: m.examples_jobs_title,
+		description: m.examples_jobs_description,
+		source: route("background-jobs.tsx"),
+		guide: "docs/guides/recipes.md",
+	},
+	{
+		slug: "contact",
+		title: m.examples_contact_title,
+		description: m.examples_contact_description,
+		source: route("contact.tsx"),
+		guide: "docs/guides/recipes.md",
+	},
 ] as const satisfies ReadonlyArray<Example>;
 
 export type ExampleSlug = (typeof EXAMPLES)[number]["slug"];

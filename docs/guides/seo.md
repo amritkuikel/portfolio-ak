@@ -107,3 +107,9 @@ To rebrand, replace these files at the same sizes. `theme-color` follows the the
 ## Live example
 
 - **seo() output and JSON-LD:** `/dev/examples/seo` (`src/routes/_public/dev/examples/seo.tsx`), with `pnpm dev`.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Duplicate meta names:** `head()` keeps one `<meta>` per `name`/`property` (the deepest route's). Tags that need several of the same name (`theme-color` per colour scheme) are rendered in `__root.tsx`'s `<head>`.

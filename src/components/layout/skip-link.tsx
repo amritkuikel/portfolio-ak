@@ -1,0 +1,28 @@
+import { useMatches } from "@tanstack/react-router";
+import { isBareChrome } from "@/lib/chrome";
+import { m } from "@/paraglide/messages";
+
+/**
+ * Spread on every page's <main> (the shared `Page` does it): the skip link's
+ * target. tabIndex -1 lets the link move focus there without adding a tab stop.
+ */
+export const MAIN_CONTENT = { id: "main-content", tabIndex: -1 } as const;
+
+/**
+ * The first tab stop of every page: jumps past the header (and the admin
+ * sidebar) to the page's <main>. Hidden until focused. Sections with their own
+ * chrome (staticData.chrome = "bare") bring their own skip link.
+ */
+export function SkipLink() {
+	const bare = useMatches({ select: isBareChrome });
+	if (bare) return null;
+	return (
+		<a
+			href={`#${MAIN_CONTENT.id}`}
+			className="sr-only z-50 rounded-md bg-background px-4 py-2 font-medium text-sm shadow-md outline-none ring-[3px] ring-ring/50 focus:not-sr-only focus:fixed focus:start-3 focus:top-3"
+			data-testid="skip-link"
+		>
+			{m.skip_to_content()}
+		</a>
+	);
+}

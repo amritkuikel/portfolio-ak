@@ -8,6 +8,7 @@ export const RESOURCE_LABELS: Record<Resource, () => string> = {
 	roles: m.perm_resource_roles,
 	attachments: m.perm_resource_attachments,
 	audit: m.perm_resource_audit,
+	// @new-feature:resource-labels
 };
 
 export const PERMISSION_LABELS: Record<Permission, () => string> = {
@@ -24,6 +25,7 @@ export const PERMISSION_LABELS: Record<Permission, () => string> = {
 	"roles:manage": m.perm_roles_manage,
 	"attachments:upload": m.perm_attachments_upload,
 	"audit:read": m.perm_audit_read,
+	// @new-feature:permission-labels
 };
 
 /** A role's display name: system roles are localized, custom roles use their own name. */

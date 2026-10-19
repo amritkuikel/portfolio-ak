@@ -1,7 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { analyticsHost, analyticsKey } from "@/lib/analytics";
 import { clientEnv } from "@/lib/client-env";
-import { buildCsp, originOf } from "@/lib/csp";
+import { buildCsp, CSP_REPORT_PATH, originOf, reportingEndpoints } from "@/lib/csp";
 
 /** Sentry ingest and PostHog hosts, only when those services are configured. */
 const clientConnectOrigins = [
@@ -47,17 +47,20 @@ const createNonce = () => {
 /**
  * A fresh CSP nonce per request, passed on as `context.nonce` (the router puts
  * it on Start's inline scripts via ssr.nonce, see src/router.tsx) and sent in
- * the Content-Security-Policy header of HTML responses.
+ * the Content-Security-Policy header of HTML responses, with violations
+ * reported to CSP_REPORT_PATH (Reporting-Endpoints names it for report-to).
  *
  * Production only: Vite's dev server and the TanStack Devtools inject inline
  * scripts without a nonce. The other security headers are static (Nitro
  * routeRules in vite.config.ts) and apply to every response.
  */
-export const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
+export const securityHeadersMiddleware = createMiddleware().server(async ({ next, request }) => {
 	const nonce = createNonce();
 	const result = await next({ context: { nonce } });
 	if (import.meta.env.PROD && result.response.headers.get("content-type")?.includes("text/html")) {
 		const [cloudinary, frameOrigins] = await Promise.all([loadCloudinaryOrigins(), loadTurnstileOrigins()]);
+		const reportUrl = new URL(CSP_REPORT_PATH, request.url).href;
+		result.response.headers.set("reporting-endpoints", reportingEndpoints(reportUrl));
 		result.response.headers.set(
 			"content-security-policy",
 			buildCsp({
@@ -66,6 +69,7 @@ export const securityHeadersMiddleware = createMiddleware().server(async ({ next
 				imgOrigins: cloudinary.img,
 				frameOrigins,
 				upgradeInsecureRequests: true,
+				reportUrl,
 			}),
 		);
 	}

@@ -46,6 +46,7 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["exampleReadItems", "test-crud:read"],
 		["exampleManageRoles", "roles:manage"],
 	],
+	// @new-feature:guarded-functions
 };
 
 /**
@@ -70,7 +71,7 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 		why: "public reads; the repository only returns published rows",
 		functions: ["listPublicTestCrud", "getPublicTestCrud"],
 	},
-	"stack.ts": { why: "public /stack page data (static)", functions: ["listStack", "getStackStats"] },
+	"stack.ts": { why: "public /stack page data (static)", functions: ["listStack", "getStackStats"] }, // @demo
 	"health.ts": { why: "public health check", functions: ["getDbHealth"] },
 	"feature-flags.ts": { why: "public feature flags for the current visitor", functions: ["getHomeFlags"] },
 	"dev.ts": { why: "dev-only, refuses in production", functions: ["previewRichText"] },
@@ -89,6 +90,8 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"listExampleMessages",
 			"sendExampleMessage",
 			"resetExampleMessages",
+			"submitExampleContact",
+			"runExampleJobFn",
 		],
 	},
 };

@@ -44,7 +44,7 @@ function PortfolioShell({ children }: { children: ReactNode }) {
 				href="#pf-main"
 				className="pf-focus pf-label sr-only z-50 bg-pf-ink px-4 py-3 text-pf-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
 			>
-				{m.portfolio_skip_to_content()}
+				{m.skip_to_content()}
 			</a>
 			<PortfolioHeader profile={profile} />
 			<main id="pf-main" tabIndex={-1} className="flex-1 outline-none">

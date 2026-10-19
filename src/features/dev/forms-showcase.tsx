@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { formValidators, useAppForm } from "@/components/forms";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,7 +131,7 @@ export function FormsShowcase() {
 	];
 
 	return (
-		<main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-12">
+		<main {...MAIN_CONTENT} className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-12">
 			<header className="flex flex-col gap-2">
 				<h1 className="font-semibold text-3xl tracking-tight">{m.showcase_title()}</h1>
 				<p className="text-muted-foreground">{m.showcase_intro()}</p>

@@ -32,9 +32,11 @@ export function SiteHeader() {
 					<Link to="/" className={navLink} activeOptions={{ exact: true }}>
 						{m.nav_home()}
 					</Link>
+					{/* demo:start */}
 					<Link to="/stack" className={navLink}>
 						{m.nav_stack()}
 					</Link>
+					{/* demo:end */}
 					<Link to="/test-crud" className={navLink}>
 						{m.nav_test_crud()}
 					</Link>

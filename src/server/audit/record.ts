@@ -32,25 +32,34 @@ export type AuditEntry = {
 	after?: AuditValues | null;
 };
 
-export async function recordAudit(db: Db, actor: AuditActor, entries: AuditEntry | ReadonlyArray<AuditEntry>) {
+/** Writes the rows; returns their ids. */
+export async function recordAudit(
+	db: Db,
+	actor: AuditActor,
+	entries: AuditEntry | ReadonlyArray<AuditEntry>,
+): Promise<string[]> {
 	const list = Array.isArray(entries) ? entries : [entries as AuditEntry];
-	if (list.length === 0) return;
+	if (list.length === 0) return [];
 	// The email is kept on the row, so the log still names the actor after their account is deleted.
 	const [account] = await db.select({ email: user.email }).from(user).where(eq(user.id, actor.id));
 	const requestId = actor.requestId ?? currentRequestId() ?? null;
-	await db.insert(auditEvent).values(
-		list.map((entry) => ({
-			actorId: account ? actor.id : null,
-			actorLabel: account?.email ?? actor.id,
-			impersonatorId: actor.impersonatorId ?? null,
-			action: entry.action,
-			targetType: entry.target.type,
-			targetId: entry.target.id,
-			targetLabel: entry.target.label ?? "",
-			before: entry.before ?? null,
-			after: entry.after ?? null,
-			requestId,
-			ip: actor.ip ?? null,
-		})),
-	);
+	const rows = await db
+		.insert(auditEvent)
+		.values(
+			list.map((entry) => ({
+				actorId: account ? actor.id : null,
+				actorLabel: account?.email ?? actor.id,
+				impersonatorId: actor.impersonatorId ?? null,
+				action: entry.action,
+				targetType: entry.target.type,
+				targetId: entry.target.id,
+				targetLabel: entry.target.label ?? "",
+				before: entry.before ?? null,
+				after: entry.after ?? null,
+				requestId,
+				ip: actor.ip ?? null,
+			})),
+		)
+		.returning({ id: auditEvent.id });
+	return rows.map((row) => row.id);
 }

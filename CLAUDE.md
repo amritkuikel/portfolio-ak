@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–30 are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–33 are done. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -30,7 +30,9 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [security.md](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing, secrets |
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [audit.md](docs/guides/audit.md) | The Part 2 module review and what each task changed |
-| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Dhaka" design system, motion |
+| [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
+| [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo`, renaming, first admin, `pnpm new:feature` |
+| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Dhaka" design system, motion <!-- @demo --> |
 
 ## Stack
 
@@ -46,6 +48,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 
 ```bash
 pnpm dev                 # http://localhost:3000
+pnpm dev:offline         # same, on in-memory PGlite with every outside service off (0149)
 pnpm typecheck           # compiles messages, then tsc
 pnpm check               # Biome lint + format check (warnings fail). pnpm check:fix to fix
 pnpm knip                # unused files, exports, types and dependencies (knip.json)
@@ -95,7 +98,7 @@ docs/                  PLAN.md, decisions.md, guides/
 
 ## Adding a feature
 
-Follow the Test CRUD pattern (README, "Test CRUD: the template for new features") and the list-page recipe in [conventions.md](docs/guides/conventions.md):
+Start with `pnpm new:feature <name>` (an admin section in this shape that passes every gate, 0141), then grow it. By hand, follow the Test CRUD pattern (README, "Test CRUD: the template for new features") and the list-page recipe in [conventions.md](docs/guides/conventions.md):
 1. Table + migration.
 2. Shared schema (input, search params, DTOs).
 3. Repository + service over an injected `Db`, tested on PGlite. Updates check the version the edit started from (`updatedAt`, `sameVersion`, `staleError()`; 0122).
@@ -107,39 +110,40 @@ Follow the Test CRUD pattern (README, "Test CRUD: the template for new features"
 
 ## Pitfalls already solved (don't reintroduce)
 
+### Always relevant
+
 - **Windows:** keep the checkout path short, about 90 characters at most (0029). In Git Bash, avoid apostrophes inside heredocs and `node -e`, and backslashes inside `node -e` strings; write a script file instead. In edit scripts, pass replacements to `String.replace` as functions: `$`` in a replacement string is a special pattern.
 - **Zod and the CSP:** Zod 4 probes eval when a `z.object` is created. Always import `"zod"` (aliased), never `zod/v4` in app code (0086).
 - **Server functions run only inside the Start runtime.** Keep them as thin wrappers and test the plain functions in `src/server/**` they call.
 - **Start-only helpers stay out of components:** modules using `createIsomorphicFn` or other `@tanstack/react-start` runtime APIs (e.g. `src/lib/http-status.ts`) may be imported by routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story that renders it. Example: `assertRoutePermission` lives in `rbac/route-guard.ts`, not `rbac/can.tsx`.
-- **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job and the web manifest. Nitro's dev server hands requests whose `Sec-Fetch-Dest` isn't a document (`image`, `manifest`…) to Vite unless a Nitro route matches, so a Start server route fetched that way is a 404 in dev only (0067, 0103).
 - **Locale frozen at module scope:** JSX or strings built from `m.*` at module level render in the first request's language on the server.
-- **Images are Cloudinary attachments** (0098): upload straight from the browser with a server signature, verify on the server, link in the item's save. Render with `CloudImage` (server-built URLs). Never stream files through a server function.
-- **Form arrays updated from async callbacks:** use the field's atomic helpers (`field.pushValue`), not a value read earlier; concurrent uploads lost images that way (0099).
 - **Forms handled in JavaScript set `method="post"`** (the shared `Form` does): without it a submit before hydration puts the fields, passwords included, in the URL. A test checks every `<form>` (0104).
-- **Masked routes need `unmaskOnReload: true`.** Without it a reload keeps the mask from history state, so the client renders something the server didn't (a hydration error).
-- **Admin guard:** `_admin` checks the server on entering the area and on SSR (any permission opens it); inner navigations reuse the session (0090). Never rely on it for data safety: every server function has its own `requirePermission`.
 - **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
-- **Duplicate meta names:** `head()` keeps one `<meta>` per `name`/`property` (the deepest route's). Tags that need several of the same name (`theme-color` per colour scheme) are rendered in `__root.tsx`'s `<head>`.
 - **Dev-only pages** live under `src/routes/_public/dev/` (the layout 404s in builds); their server functions use `devOnlyMiddleware`.
 - **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
-- **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.
-- **Running production locally** needs `EMAIL_PROVIDER=resend` and a `RESEND_API_KEY` (any `re_…` placeholder works when emails aren't sent). Production refuses the console email provider.
-- **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown below `/portfolio` renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/portfolio/route.tsx`).
-- **Fonts are never inlined:** a font file under Vite's 4 kB limit would become a `data:` URL, which the CSP's `font-src 'self'` blocks. `vite.config.ts` turns inlining off for `.woff`/`.woff2` (0108).
-- **Custom `text-*` sizes and tailwind-merge:** `cn("text-pf-h2", "text-pf-accent")` drops the size with the app's `cn` (both look like colours). Portfolio components import `cn` from `features/portfolio/lib/cn.ts`, which registers the scale.
-- **Variable fonts with a width axis need one fallback per width:** Anek's `wdth` changes its advance widths and Arial has no such axis, so the portfolio has a fallback face per width it uses (100% body, 75% bold display). A new width or weight for large type needs its own measured `size-adjust` (0110).
-- **Expired sessions are handled once, globally:** `src/middleware/session-expiry.ts` sends any UNAUTHORIZED server-function answer in the browser to `/login?redirect=…` (0113). Don't add per-call login redirects; FORBIDDEN stays the caller's to show (toast, or the forbidden page via `assertRoutePermission`).
-- **Better Auth's `/api/auth/admin/*` endpoints are disabled** (0112). Manage users, roles and bans through `src/functions/rbac.ts`, never `authClient.admin.*`; a Better Auth upgrade that adds an admin endpoint fails `auth-disabled-paths.test.ts` until it's listed.
-- **Session tokens never go to the browser** (0114): revoke another device with `revokeMySession({ id })`.
-- **Raw SQL inserts into Better Auth tables** (seeds, scripts) must set `updated_at` on `account` and `session`: those columns have no database default.
-- **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
 - **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
 - **Schema changes need a migration:** CI fails when `drizzle-kit generate` would produce one. There is no `db:push` (0118).
 - **E2E against a stale build:** locally, `pnpm test:e2e` reuses a server already on port 3100 (`node e2e/harness/server.ts`). Restart it after changing app code, or the suite tests the old build. Auth endpoints are rate limited per IP: tests that sign in call `harness.resetRateLimits()` first.
-- **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. Forms catch the stale `CONFLICT` with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert` (0122).
 - **Server logs go through `log()`** (`src/server/log.ts`), not `console.*`, so each line carries the request id; the id comes from AsyncLocalStorage set by `src/server.ts` (0123). Uptime monitors use `GET /api/health`, not the `/health` page (0124).
-- **Auth hardening (0126–0130):** with `AUTH_REQUIRE_ADMIN_2FA=true` an admin without two-factor gets a session with **no permissions** (`twoFactorRequired`), so don't read an empty `permissions` as "not an admin" in that case. Email-code sign-in is refused for two-factor accounts by an `after` hook (`src/server/auth/hooks.ts`); keep it when touching auth hooks. Better Auth's `setPassword` has no path, so the breached-password plugin skips it: `setOwnPassword` checks itself. New auth endpoints get a rate limit in `customRules`. Account deletion goes through `/account/delete?token=…`, never Better Auth's GET callback.
-- **Admin actions are audited in their transaction** (0132): a service that changes roles, users or publishes/deletes takes an `AuditActor` (built by `auditActorFrom(context)` in the server function) and calls `recordAudit(tx, actor, …)` with the same `tx` as the change. Writing it after the transaction, or with `db` instead of `tx`, can leave a change without its row. A new action goes in `AUDIT_ACTIONS` and its label.
-- **Impersonated sessions** (0134) carry `impersonatedBy`. Account changes are refused for them: a new Better Auth account endpoint goes in `OWNER_ONLY_PATHS`, a new app function that changes the account uses `requireAccountOwnerMiddleware`. Impersonation is checked on `user.role === "admin"` (the superuser flag, 0135), not a permission.
-- **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.
+- **Shared lists carry `// @new-feature:<slot>` markers** (permissions, labels, audit actions, admin sections, schema index, guard test, e2e pages): keep them when editing those lists, or `pnpm new:feature` can't insert there. Demo-only code in shared files sits between `demo:start`/`demo:end` or on a line ending in `// @demo`, for `pnpm strip-demo` (0141, 0142).
+- **Routes stay thin:** loader, search, head and a component that renders one from `src/features/<name>/components` (0143).
+- **Every `<main>` is the skip link's target** (0137): use `Page`, or spread `MAIN_CONTENT` (`components/layout/skip-link.tsx`) on a hand-written `<main>`. The browser review fails a page without it.
+- **The React Compiler memoizes client code** (0136): don't add `useMemo`/`useCallback` for speed. Keep `useMemo` where identity matters (creating a TanStack DB collection). It runs in Storybook too, not in SSR.
+
+### Per area
+
+Each guide ends with its own "Pitfalls already solved" list. Read it before you change that area:
+
+- [routing-data.md](docs/guides/routing-data.md): Nitro routes.
+- [attachments.md](docs/guides/attachments.md): Images are Cloudinary attachments.
+- [forms.md](docs/guides/forms.md): Form arrays updated from async callbacks; Edits without a version.
+- [search-filters-masking.md](docs/guides/search-filters-masking.md): Masked routes need `unmaskOnReload: true`.
+- [rbac.md](docs/guides/rbac.md): Admin guard; Better Auth's `/api/auth/admin/*` endpoints are disabled; Admin actions are audited in their transaction; Impersonated sessions.
+- [seo.md](docs/guides/seo.md): Duplicate meta names.
+- [testing.md](docs/guides/testing.md): Radix menus in tests.
+- [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
+- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width. <!-- @demo -->
+- [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
+- [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
+- [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; The app header is opt-out per section.

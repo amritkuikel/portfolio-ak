@@ -28,12 +28,13 @@ export const SEEDED_ITEM_SLUG = "momo-masterclass-1";
 export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	// Public site
 	{ route: "/" },
-	{ route: "/stack" },
+	{ route: "/stack" }, // @demo
 	{ route: "/health" },
 	{ route: "/test-crud" },
 	{ route: "/test-crud/$slug", params: { from: "sitemap" } },
 	{ route: "/verify-email" },
 	{ route: "/reset-password" },
+	// demo:start
 	{ route: "/portfolio" },
 	{ route: "/portfolio/about" },
 	{ route: "/portfolio/contact" },
@@ -41,6 +42,7 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/portfolio/work/$slug", params: { from: "sitemap" } },
 	{ route: "/portfolio/journal" },
 	{ route: "/portfolio/journal/$slug", params: { from: "sitemap" } },
+	// demo:end
 	// Signing in
 	{ route: "/login" },
 	{ route: "/register" },
@@ -61,6 +63,7 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/audit", as: "admin" },
 	// The editor's roles don't include audit:read (decisions.md 0132).
 	{ route: "/admin/audit", as: "editor", status: 403, label: "forbidden" },
+	// @new-feature:reviewed-pages
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },
 ];
@@ -72,7 +75,9 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/auth/$": "Better Auth's HTTP API",
 	"/api/health": "JSON for uptime monitors (checked by e2e/flows/health.spec.ts)",
 	"/api/account/export": "a JSON download (checked by e2e/flows/account.spec.ts)",
+	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
 	"/dev": "dev-only: 404 in production builds",
+	// @new-feature:not-reviewed
 };
 
 /** Dev-only routes (the /dev layout 404s in builds) need no entry of their own. */

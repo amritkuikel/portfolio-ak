@@ -81,7 +81,8 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
   - the HTTP status;
   - horizontal overflow, naming the elements that stick out;
   - CLS ≤ 0.01 from a `layout-shift` `PerformanceObserver`, naming what moved;
-  - axe: WCAG 2.2 AA plus best practices.
+  - axe: WCAG 2.2 AA plus best practices;
+  - the first tab stop is a skip link whose target is the page's `<main>` (0137).
 - **Always on** (the `guard` fixture in `e2e/support/fixtures.ts`, for flows too): any console error or warning (hydration mismatches included), uncaught error, or CSP violation (`securitypolicyviolation`) fails the test. A test that expects one calls `guard.allow(pattern)`, e.g. `RESOURCE_STATUS(403)` for the browser's own line on a refused page.
 - **Retries:** each test gets one retry (locally too). A test that passes only on the retry is listed as flaky in the summary and the report, with a trace; treat a page that keeps showing up there as a real problem.
 - **Warm-up load:** each page is loaded once before the measured load, so the fonts are cached. Cold, on a busy CPU, Chrome can paint the fallback faces before the preloaded fonts arrive, and CLS would depend on machine load (decision 0121).
@@ -96,6 +97,7 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 - **User management and the audit log:** an invitation from the email to the first sign-in; sign out everywhere (the user's session stops working); view as a user with the banner and back. Each is found in `/admin/audit` by its request id. An editor gets a 403 on the audit page, and the admin's captured call replayed with the editor's session answers FORBIDDEN.
 - **No JavaScript:** search and pagination on the public and admin lists.
 - **Health:** `GET`/`HEAD /api/health` answer 200 JSON, never cached; every response has its own `x-request-id`.
+- **Frontend:** the skip link moves focus to `<main>` (past the admin sidebar too); under reduced motion an animation and a transition, inline ones included, finish at once; pages name `/api/csp-report` in their CSP and `Reporting-Endpoints`, and the endpoint takes both report formats.
 
 ### Writing a test
 
@@ -105,3 +107,9 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 - Auth endpoints are rate limited per IP and every test is 127.0.0.1: call `harness.resetRateLimits()` before tests that sign in.
 - Use roles and labels from `messages/en.json`; give an exact name when one label contains another ("Edit" vs "Quick edit").
 - A new page needs nothing beyond its `REVIEWED_PAGES` entry.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.

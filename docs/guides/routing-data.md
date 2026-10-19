@@ -95,3 +95,9 @@ The server function takes the key in its input (`key: z.uuid()`), the scope is `
 `src/server/**` and `*.server.*` never reach the client: TanStack Start's import protection fails the build, and `tests/server/env-boundary.test.ts` scans imports. Allowed importers are `src/server`, `src/functions`, `src/middleware` (dynamic import inside `.server()` only), and server routes (`.ts` route files with only `server.handlers`, like `/sitemap.xml`).
 
 Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/http-status.ts`) are for routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job and the web manifest. Nitro's dev server hands requests whose `Sec-Fetch-Dest` isn't a document (`image`, `manifest`…) to Vite unless a Nitro route matches, so a Start server route fetched that way is a 404 in dev only (0067, 0103).

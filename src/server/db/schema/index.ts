@@ -7,6 +7,8 @@
  * - rbac.ts: roles, role permissions and user roles.
  * - attachments.ts: files stored in Cloudinary, linked to entities.
  * - audit.ts: the audit log of admin actions.
+ *
+ * `pnpm new:feature` adds its table's file above the marker line.
  */
 
 export * from "./attachments";
@@ -14,3 +16,4 @@ export * from "./audit";
 export * from "./auth";
 export * from "./rbac";
 export * from "./test-crud";
+// @new-feature:schema

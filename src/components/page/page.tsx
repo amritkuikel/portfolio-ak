@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import type { Crumb } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -23,7 +24,9 @@ export function Page({
 	className,
 	...props
 }: ComponentProps<"main"> & { width?: keyof typeof WIDTHS }) {
-	return <main className={cn("flex w-full min-w-0 flex-col gap-6", WIDTHS[width], className)} {...props} />;
+	return (
+		<main {...MAIN_CONTENT} className={cn("flex w-full min-w-0 flex-col gap-6", WIDTHS[width], className)} {...props} />
+	);
 }
 
 /**

@@ -122,3 +122,11 @@ All of it is progressive enhancement. Content is visible by default, and animati
 - **Components:** `tests/components/portfolio` (menu, marquee, copy email, split words) and `tests/components/layout/site-chrome.test.tsx` (existing pages keep the header).
 - **Stories:** `Portfolio/*`: primitives, every home section, chrome, case study and lists. They render the fixtures directly through `components/story-helpers.tsx`.
 - **Browser review:** the standard one (testing guide) on a production build: all seven pages plus a filtered index and the 404, en/ne × light/dark × 390/768/1280.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown below `/portfolio` renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/portfolio/route.tsx`).
+- **Custom `text-*` sizes and tailwind-merge:** `cn("text-pf-h2", "text-pf-accent")` drops the size with the app's `cn` (both look like colours). Portfolio components import `cn` from `features/portfolio/lib/cn.ts`, which registers the scale.
+- **Variable fonts with a width axis need one fallback per width:** Anek's `wdth` changes its advance widths and Arial has no such axis, so the portfolio has a fallback face per width it uses (100% body, 75% bold display). A new width or weight for large type needs its own measured `size-adjust` (0110).

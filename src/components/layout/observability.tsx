@@ -14,6 +14,7 @@ import {
 	track,
 } from "@/lib/analytics";
 import { usePreferences, usePreferencesStore } from "@/lib/stores/hooks";
+import { startWebVitals } from "@/lib/web-vitals";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -21,6 +22,7 @@ import { m } from "@/paraglide/messages";
  * - consent "granted" starts PostHog; anything else stops it (and before
  *   consent posthog-js isn't even downloaded);
  * - a pageview per resolved navigation while analytics runs;
+ * - real-user Web Vitals (CLS, LCP, INP) once analytics runs (src/lib/web-vitals.ts);
  * - Sentry user (id only) and PostHog identify on login, cleared/reset on logout.
  */
 export function ObservabilitySync() {
@@ -37,6 +39,7 @@ export function ObservabilitySync() {
 				if (cancelled || !client) return;
 				setRunning(true);
 				track("$pageview", { $current_url: window.location.href });
+				startWebVitals();
 			});
 		} else {
 			stopAnalytics();

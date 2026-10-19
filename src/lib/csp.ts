@@ -6,8 +6,18 @@
  * <script> tags can't run. Network: same origin plus the configured Sentry,
  * PostHog and Cloudinary upload hosts. Images: same origin plus Cloudinary delivery. Frames: none, or
  * Cloudflare Turnstile's challenge when a captcha is configured. Styles allow inline style attributes (Radix positions popovers
- * with them); stylesheets themselves are same-origin.
+ * with them); stylesheets themselves are same-origin. Violations are reported to
+ * CSP_REPORT_PATH when a report URL is given (production, decision 0139).
  */
+
+/** The endpoint browsers send violation reports to (src/routes/api/csp-report.ts). */
+export const CSP_REPORT_PATH = "/api/csp-report";
+/** Reporting API endpoint name, declared in the Reporting-Endpoints header. */
+export const CSP_REPORT_GROUP = "csp";
+
+/** Reporting-Endpoints header value naming the report URL (absolute, as the Reporting API expects). */
+export const reportingEndpoints = (reportUrl: string) => `${CSP_REPORT_GROUP}="${reportUrl}"`;
+
 export type CspOptions = {
 	nonce: string;
 	/** Extra origins the browser may send data to (Sentry ingest, PostHog, Cloudinary uploads). */
@@ -18,6 +28,11 @@ export type CspOptions = {
 	frameOrigins?: ReadonlyArray<string>;
 	/** Adds upgrade-insecure-requests (production only; it would break http://localhost). */
 	upgradeInsecureRequests?: boolean;
+	/**
+	 * Where violations are reported: report-to (Reporting API, with the
+	 * Reporting-Endpoints header) and report-uri for browsers without it.
+	 */
+	reportUrl?: string;
 };
 
 export const originOf = (url: string | undefined): string | null => {
@@ -35,6 +50,7 @@ export function buildCsp({
 	imgOrigins = [],
 	frameOrigins = [],
 	upgradeInsecureRequests = false,
+	reportUrl,
 }: CspOptions): string {
 	const directives: Record<string, ReadonlyArray<string>> = {
 		"default-src": ["'self'"],
@@ -52,6 +68,8 @@ export function buildCsp({
 	};
 	const policy = Object.entries(directives).map(([name, values]) => `${name} ${values.join(" ")}`);
 	if (upgradeInsecureRequests) policy.push("upgrade-insecure-requests");
+	// Browsers that know report-to ignore report-uri when both are present.
+	if (reportUrl) policy.push(`report-uri ${reportUrl}`, `report-to ${CSP_REPORT_GROUP}`);
 	return policy.join("; ");
 }
 

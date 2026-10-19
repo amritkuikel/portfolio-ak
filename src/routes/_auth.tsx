@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { redirectSearchSchema } from "@/lib/redirect";
 import { NOINDEX } from "@/lib/seo";
 import { localizeHref } from "@/paraglide/runtime";
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
 	return (
-		<main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
+		<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
 			<Outlet />
 		</main>
 	);

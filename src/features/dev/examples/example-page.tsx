@@ -53,7 +53,7 @@ export function Facts({ rows }: { rows: ReadonlyArray<{ label: string; value: Re
 			{rows.map((row) => (
 				<div key={row.label} className="contents">
 					<dt className="text-muted-foreground">{row.label}</dt>
-					<dd data-testid={row.testId} className="mb-2 min-w-0 break-words sm:mb-0">
+					<dd data-testid={row.testId} className="mb-2 min-w-0 wrap-break-word sm:mb-0">
 						{row.value}
 					</dd>
 				</div>

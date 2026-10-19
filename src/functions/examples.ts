@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import {
 	type ExampleTaskPage,
+	exampleContactSchema,
 	exampleErrorSchema,
+	exampleJobSchema,
 	exampleMessageSchema,
 	exampleSignupSchema,
 	exampleTaskIdSchema,
@@ -13,8 +16,14 @@ import { zodInput } from "@/lib/fn-input";
 import { bulkIdsSchema } from "@/lib/list";
 import { devOnlyMiddleware } from "@/middleware/dev";
 import { m } from "@/paraglide/messages";
+import { trustedClientIp } from "@/server/auth/client-ip";
+import { db } from "@/server/db/client";
+import { serverEnv } from "@/server/env";
+import { submitContact } from "@/server/examples/contact";
 import { listMessages, resetMessages, sendMessage } from "@/server/examples/idempotency";
+import { runExampleJob } from "@/server/examples/jobs";
 import { deleteTasks, getTask, listTasks, nextSnapshot, resetTasks, setTasksDone } from "@/server/examples/tasks";
+import { verifyTurnstile } from "@/server/http/turnstile";
 
 /**
  * Server functions behind the /dev/examples pages. Every one runs
@@ -115,3 +124,22 @@ export const resetExampleMessages = createServerFn({ method: "POST" })
 		resetMessages();
 		return { ok: true };
 	});
+
+/** Contact form recipe: honeypot, Turnstile when configured, a database-backed rate limit per IP. */
+export const submitExampleContact = createServerFn({ method: "POST" })
+	.middleware([devOnlyMiddleware])
+	.validator(zodInput(exampleContactSchema))
+	.handler(({ data }) => {
+		const ip = trustedClientIp(getRequest());
+		const secret = serverEnv.TURNSTILE_SECRET_KEY;
+		return submitContact(db, data, {
+			ip,
+			verifyCaptcha: secret ? (token) => verifyTurnstile(secret, token, ip) : null,
+		});
+	});
+
+/** Background jobs recipe: runs the example job in process, the second step failing `failures` times. */
+export const runExampleJobFn = createServerFn({ method: "POST" })
+	.middleware([devOnlyMiddleware])
+	.validator(zodInput(exampleJobSchema))
+	.handler(({ data }) => runExampleJob(data.failures));

@@ -17,6 +17,7 @@ All optional except the logs. Without their variables, Sentry and PostHog are of
 - **Privacy:** only the user id is attached; the IP address is stripped.
 - **Source maps** upload during `pnpm build` when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are all set.
 - **CSP:** the ingest host is added to `connect-src` only when a DSN is configured.
+- **CSP violations** reported by browsers arrive as warnings titled `CSP violation: <directive> blocked <resource>`, one issue per directive and resource, with the page path in the extras (0139). The log line is `csp violation`.
 
 ## PostHog (`VITE_POSTHOG_KEY`, optional `VITE_POSTHOG_HOST`)
 
@@ -24,6 +25,7 @@ All optional except the logs. Without their variables, Sentry and PostHog are of
 - **Before consent:** `posthog-js` isn't downloaded, `track()` is a no-op, and the server sends no events.
 - **After consent:** pageviews on navigation, `identify` on login and `reset` on logout, plus feature events: `test_crud_created`, `test_crud_updated` and `test_crud_deleted` (server) and `test_crud_viewed` (browser).
 - **In features:** call `track("event", props)` freely; it does nothing without consent.
+- **Web Vitals (0138):** after consent, `src/lib/web-vitals.ts` sends a `web_vital` event per CLS, LCP and INP measurement (`metric`, `value`, `rating`, `navigation_type`, `path`). Watch the production CLS rule with a trend insight on `web_vital` filtered to `metric = CLS`, aggregated as the 75th percentile of `value`, broken down by `path`: it should stay at or below 0.01 (and LCP under 2,500 ms, INP under 200 ms). Values cover a whole document visit, client-side navigations included.
 
 ## Feature flags
 

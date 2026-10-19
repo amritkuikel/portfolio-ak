@@ -1,13 +1,13 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { portfolioSource } from "@/features/portfolio/sources";
-import { STACK_PAGE_SIZE } from "@/features/stack/schema";
+import { portfolioSource } from "@/features/portfolio/sources"; // @demo
+import { STACK_PAGE_SIZE } from "@/features/stack/schema"; // @demo
 import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/schema";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 import * as schema from "@/server/db/schema";
 import { webManifest } from "@/server/seo/manifest";
 import { robotsTxt } from "@/server/seo/robots";
 import { sitemapEntries, sitemapXml } from "@/server/seo/sitemap";
-import { STACK } from "@/server/stack/data";
+import { STACK } from "@/server/stack/data"; // @demo
 import { createTestDb } from "../utils/test-db";
 
 let testDb: Awaited<ReturnType<typeof createTestDb>>;
@@ -44,15 +44,20 @@ describe("sitemap", () => {
 				item("secret-draft", "draft", "2026-10-05T00:00:00Z"),
 			]);
 		const entries = await sitemapEntries(testDb.db);
+		// demo:start
 		const portfolio = await portfolioSource.listSlugs();
 		const stackPages = Math.ceil(STACK.length / STACK_PAGE_SIZE);
+		// demo:end
 		expect(entries.map((entry) => entry.path)).toEqual([
 			"/",
+			// demo:start
 			"/stack",
 			...Array.from({ length: stackPages - 1 }, (_, index) => `/stack?page=${index + 2}`),
+			// demo:end
 			"/test-crud",
 			"/test-crud/newer",
 			"/test-crud/older",
+			// demo:start
 			"/portfolio",
 			"/portfolio/work",
 			...portfolio.projects.map((slug) => `/portfolio/work/${slug}`),
@@ -60,9 +65,12 @@ describe("sitemap", () => {
 			"/portfolio/journal",
 			...portfolio.posts.map((slug) => `/portfolio/journal/${slug}`),
 			"/portfolio/contact",
+			// demo:end
 		]);
+		// demo:start
 		expect(portfolio.projects).toHaveLength(7);
 		expect(portfolio.posts).toHaveLength(6);
+		// demo:end
 		expect(entries.find((entry) => entry.path === "/test-crud")?.lastmod?.toISOString()).toBe(
 			"2026-10-01T00:00:00.000Z",
 		);

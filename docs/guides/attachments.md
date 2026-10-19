@@ -65,3 +65,9 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
 ## Live example
 
 - **Upload in a form:** `/dev/examples/attachments` (`src/routes/_public/dev/examples/attachments.tsx`), with `pnpm dev`.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Images are Cloudinary attachments** (0098): upload straight from the browser with a server signature, verify on the server, link in the item's save. Render with `CloudImage` (server-built URLs). Never stream files through a server function.

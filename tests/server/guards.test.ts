@@ -144,12 +144,18 @@ describe("security headers middleware", () => {
 			securityHeadersMiddleware,
 			"server",
 		)({
+			request: new Request("https://app.example/admin?tab=1"),
 			next: async (options: { context: { nonce: string } }) => {
 				nonce = options.context.nonce;
 				return { response: new Response("<html></html>", { headers: { "content-type": contentType } }) };
 			},
 		})) as { response: Response };
-		return { nonce, csp: result.response.headers.get("content-security-policy") };
+		const headers = result.response.headers;
+		return {
+			nonce,
+			csp: headers.get("content-security-policy"),
+			reportingEndpoints: headers.get("reporting-endpoints"),
+		};
 	};
 
 	it("gives every request a fresh 128-bit nonce for the router", async () => {
@@ -166,5 +172,13 @@ describe("security headers middleware", () => {
 		expect(html.csp).toContain(`'nonce-${html.nonce}'`);
 		expect(html.csp).toContain("frame-ancestors 'none'");
 		expect((await run("application/json")).csp).toBeNull();
+	});
+
+	it("reports violations to this origin's /api/csp-report (production only)", async () => {
+		expect((await run("text/html")).reportingEndpoints).toBeNull();
+		vi.stubEnv("PROD", true);
+		const html = await run("text/html");
+		expect(html.reportingEndpoints).toBe('csp="https://app.example/api/csp-report"');
+		expect(html.csp).toContain("report-uri https://app.example/api/csp-report; report-to csp");
 	});
 });

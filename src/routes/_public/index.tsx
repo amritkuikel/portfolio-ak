@@ -1,10 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRightIcon } from "lucide-react";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { homeFlagsQueryOptions } from "@/features/flags/queries";
-import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl";
+import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl"; // @demo
 import { ensureQuery } from "@/lib/query";
 import { seo } from "@/lib/seo";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
@@ -23,21 +24,25 @@ export const Route = createFileRoute("/_public/")({
 	component: Home,
 });
 
+// demo:start
 // Fixed sample values: identical on server and client, so formatting can't cause hydration mismatches.
 const SAMPLE_DATE = "2026-01-15T10:30:00Z";
 const SAMPLE_NOW = "2026-01-18T10:30:00Z";
+// demo:end
 
 function Home() {
 	const { data: flags } = useSuspenseQuery(homeFlagsQueryOptions());
+	// demo:start
 	const rows = [
 		{ label: m.intl_date(), value: formatDate(SAMPLE_DATE, { dateStyle: "full" }) },
 		{ label: m.intl_number(), value: formatNumber(1234567.89) },
 		{ label: m.intl_currency(), value: formatCurrency(1234567.5) },
 		{ label: m.intl_relative_time(), value: formatRelativeTimeFrom(SAMPLE_DATE, SAMPLE_NOW) },
 	];
+	// demo:end
 
 	return (
-		<main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-16">
+		<main {...MAIN_CONTENT} className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-16">
 			<div className="flex flex-col gap-2">
 				<h1 className="font-semibold text-4xl tracking-tight">{m.home_title()}</h1>
 				<p className="text-lg text-muted-foreground">{m.home_intro()}</p>
@@ -58,6 +63,7 @@ function Home() {
 					</CardContent>
 				</Card>
 			) : null}
+			{/* demo:start */}
 			<Card>
 				<CardHeader>
 					<CardTitle>{m.intl_preview_title()}</CardTitle>
@@ -74,6 +80,7 @@ function Home() {
 					</dl>
 				</CardContent>
 			</Card>
+			{/* demo:end */}
 		</main>
 	);
 }

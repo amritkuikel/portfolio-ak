@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { getDbHealth } from "@/functions/health";
 import { formatDateTime, formatNumber } from "@/lib/intl";
 import { privateHead } from "@/lib/seo";
@@ -17,7 +18,7 @@ function HealthPage() {
 	const health = Route.useLoaderData();
 	const ok = health.status === "ok";
 	return (
-		<main className="mx-auto max-w-3xl px-4 py-16">
+		<main {...MAIN_CONTENT} className="mx-auto max-w-3xl px-4 py-16">
 			<h1 className="font-semibold text-2xl tracking-tight">{m.health_title()}</h1>
 			<dl className="mt-6 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2">
 				<dt className="text-muted-foreground">{m.health_database()}</dt>

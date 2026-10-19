@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (135 entries)</summary>
+<summary>Index (150 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -141,6 +141,21 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0133](#0133-inviting-a-user-creates-the-account-and-emails-a-long-lived-reset-token): Inviting a user creates the account and emails a long-lived reset token
 - [0134](#0134-impersonation-is-admin-only-audited-and-cant-change-the-account): Impersonation is admin-only, audited, and can't change the account
 - [0135](#0135-better-auths-role--admin-stays-the-superuser-flag): Better Auth's `role = "admin"` stays the superuser flag
+- [0136](#0136-the-react-compiler-runs-on-client-builds-through-babel): The React Compiler runs on client builds, through Babel
+- [0137](#0137-a-skip-link-on-every-page-reduced-motion-finishes-animations-at-once): A skip link on every page; reduced motion finishes animations at once
+- [0138](#0138-real-user-web-vitals-go-to-posthog-after-consent): Real-user Web Vitals go to PostHog, after consent
+- [0139](#0139-csp-violations-are-reported-to-apicsp-report-and-forwarded-to-sentry): CSP violations are reported to /api/csp-report and forwarded to Sentry
+- [0140](#0140-the-admin-command-palette-and-view-transitions-are-a-recipe): The admin command palette and view transitions are a recipe
+- [0141](#0141-pnpm-newfeature-generates-an-admin-crud-section-from-templates-and-marker-lines): `pnpm new:feature` generates an admin CRUD section from templates and marker lines
+- [0142](#0142-pnpm-strip-demo-removes-the-demo-by-file-list-markers-and-unused-messages): `pnpm strip-demo` removes the demo by file list, markers and unused messages
+- [0143](#0143-routes-stay-thin-claudemd-keeps-only-the-pitfalls-that-apply-everywhere): Routes stay thin; CLAUDE.md keeps only the pitfalls that apply everywhere
+- [0144](#0144-two-part-3-bugs-found-by-the-e2e-suite): Two Part 3 bugs found by the e2e suite
+- [0145](#0145-background-jobs-and-cursor-pagination-are-recipes): Background jobs and cursor pagination are recipes
+- [0146](#0146-server-function-rate-limits-are-stored-in-better-auths-rate_limit-table): Server-function rate limits are stored in Better Auth's `rate_limit` table
+- [0147](#0147-public-page-caching-is-a-header-helper-not-a-default): Public-page caching is a header helper, not a default
+- [0148](#0148-contact-form-avatar-upload-and-list-extras-are-examples-to-copy): Contact form, avatar upload and list extras are examples to copy
+- [0149](#0149-pnpm-devoffline-runs-on-in-memory-pglite-with-every-outside-service-off): `pnpm dev:offline` runs on in-memory PGlite with every outside service off
+- [0150](#0150-preview-branches-changelog-checks-organizations-and-billing-are-documented-not-wired): Preview branches, changelog checks, organizations and billing are documented, not wired
 </details>
 
 ---
@@ -1673,7 +1688,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0134: Impersonation is admin-only, audited, and can't change the account
 
-- **What:** "View as this user" on `/admin/users` calls `impersonateUser`, which runs Better Auth's server-side `impersonateUser` (its HTTP endpoint stays disabled, 0112) inside the transaction that writes the `user.impersonate` audit row. The session is the user's, with `impersonatedBy` set, for at most an hour. Every page then shows a banner (`ImpersonationBanner`, rendered in `__root.tsx` from the session, so no layout shift) with "Back to my account", which calls `stopImpersonating` (`src/functions/auth.ts`): Better Auth restores the admin's session from its signed `admin_session` cookie, and a `user.impersonate-stop` row names the admin. Rows written while impersonating carry the admin as `impersonator_id`.
+- **What:** "View as this user" on `/admin/users` calls `impersonateUser`, which runs Better Auth's server-side `impersonateUser` (its HTTP endpoint stays disabled, 0112) after writing the `user.impersonate` audit row, which is deleted again if the call fails. (Not one transaction: Better Auth writes the session through its own pooled connection, which waits for an open transaction; on the e2e harness, one PGlite backend, it waited forever. Stopping works the same way.) The session is the user's, with `impersonatedBy` set, for at most an hour. Every page then shows a banner (`ImpersonationBanner`, rendered in `__root.tsx` from the session, so no layout shift) with "Back to my account", which calls `stopImpersonating` (`src/functions/auth.ts`): Better Auth restores the admin's session from its signed `admin_session` cookie, and a `user.impersonate-stop` row names the admin. Rows written while impersonating carry the admin as `impersonator_id`.
 - **Choices:**
   - **Admins only (the superuser flag), not a permission:** the session acts with all of the target's permissions, so a custom role holding "impersonate" could reach anything any user can. The function is guarded with `users:update` (every protected function names a permission) and the service refuses non-admins; Better Auth's own check agrees. Never another admin, never a banned user, never from an impersonated session.
   - **The account stays the owner's:** an impersonated session can't change the password, email, two-factor, linked accounts, other sessions or delete the account. Better Auth's endpoints are refused by a `before` hook (`refuseOwnerOnlyWhileImpersonating`, `OWNER_ONLY_PATHS` in `src/server/auth/policy.ts`); the app's own (`setMyPassword`, `revokeMySession`) use `requireAccountOwnerMiddleware`. Reading (including the data export) is allowed: it's what the admin came to see.
@@ -1686,3 +1701,107 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `user.role === "admin"` (Better Auth's admin plugin field) means "every permission, and the rules only an admin may break" (making admins, acting on admins, impersonating). Everything else lives in the RBAC tables: the `user` baseline role, custom roles and their permissions. The `admin` row in `role` exists for display and holds no permission rows. `docs/guides/rbac.md` states the model.
 - **Why:** the flag is read on every request by Better Auth itself (sign-in checks, impersonation, `adminRoles`), so moving it into `user_role` would mean keeping two sources in sync. A single boolean is also what the lockout rules (always one active admin) lock on.
 - **Alternatives considered:** an `admin` assignment in `user_role` with Better Auth's `role` derived from it (two writes per change, and a window where they disagree); dropping the admin plugin (it also provides bans and the impersonation sessions used by 0134).
+
+## 0136: The React Compiler runs on client builds, through Babel
+
+- **What:** `babel({ presets: [reactCompilerPreset()] })` (`@rolldown/plugin-babel` + `babel-plugin-react-compiler`, as `@vitejs/plugin-react` 6 documents) in `vite.config.ts` and `.storybook/vite.config.ts`. The preset applies to the client environment only, so SSR output is unchanged. `babel-plugin-react-compiler` is pinned exactly (0119: its output is what ships, and React's docs advise pinning it). The `useCallback`s in `FilterBar`, `useBotCheck` and `useCloseOverlay` were removed (the compiler memoizes them; no caller uses them as an effect dependency). The `useMemo`s that create a resource (TanStack DB collections in the admin Test CRUD list and the optimistic example) stay: the compiler's memoization is a performance hint, not a guarantee of identity. shadcn's own `useMemo`s in `ui/` stay as generated.
+- **Numbers** (`pnpm build`, same machine, before → after; client assets):
+
+  | | Before | After | Change |
+  | --- | --- | --- | --- |
+  | Build time | 10–14 s | 19–20 s | about +7 s |
+  | Client JS, raw | 2,815 kB | 2,963 kB | +5.2% |
+  | Client JS, gzip -9 | 919 kB | 980 kB | +6.7% |
+  | Entry chunk, gzip | 133.4 kB | 137.9 kB | +4.6 kB |
+  | Forms chunk, gzip | 64.0 kB | 72.1 kB | +8.1 kB |
+
+  Over `src/` (server code excluded) the compiler compiled 348 components and hooks and skipped 21, which stay as written. Most skips are "Cannot access refs during render" in form field components and Babel constructs it doesn't lower yet (`try`/`finally`, tagged templates in `ui/calendar.tsx`). The compiler's `logger` option lists them again when those files change.
+- **Why:** lists, filters and forms re-render on every keystroke and URL change; the compiler removes that work without hand-written memoization, and the template stops teaching `useCallback` where it isn't needed. The cost is about 61 kB gzip, mostly in the lazy forms and editor chunks, and ~7 s of build time.
+- **Alternatives considered:** the Rust compiler (`react({ compiler: true })` with `oxc-transform-react`): faster builds, but the plugin marks it experimental; revisit when it's stable. `compilationMode: "annotation"` (only `"use memo"` files): smaller bundle, but every new component has to opt in. No compiler: smallest bundle, and memoization stays a code-review topic.
+
+## 0137: A skip link on every page; reduced motion finishes animations at once
+
+- **What:** `SkipLink` (`src/components/layout/skip-link.tsx`) is the root layout's first element and jumps to `#main-content`; every page's `<main>` spreads `MAIN_CONTENT` (`id` + `tabIndex={-1}`; the shared `Page` does it). Sections with their own chrome (`chrome: "bare"`, the portfolio) bring their own link, and the root one is hidden there. The browser review checks on every page that the first tab stop is a skip link whose target is a `<main>`; `e2e/flows/frontend.spec.ts` follows it with the keyboard (in the admin area it also skips the sidebar). Under `prefers-reduced-motion: reduce`, `app.css` sets every animation and transition to 0.01 ms and removes view-transition animations. The text is the shared `skip_to_content` message (the portfolio's own key was merged into it).
+- **Why:** WCAG 2.4.1 (bypass blocks) and 2.3.3 (animation from interactions). Shortening instead of `animation: none` keeps `animationend`/`transitionend` firing, which Radix Presence and sonner wait for before unmounting. `!important` is needed to beat component and inline styles, so the block carries a Biome suppression with that reason.
+- **Alternatives considered:** a skip link per layout (four copies, each needing its own target); targeting the root's content wrapper (no per-page change, but in the admin area focus lands on the sidebar); `motion-reduce:` variants on each animated element (opt-in per component, easy to forget, and third-party CSS isn't covered).
+
+## 0138: Real-user Web Vitals go to PostHog, after consent
+
+- **What:** `src/lib/web-vitals.ts` loads `web-vitals` once analytics runs (consent granted) and sends CLS, LCP and INP as a `web_vital` PostHog event with `metric`, `value` (CLS to 4 decimals, the others in ms), `rating`, `navigation_type` and `path` (no query or hash). Events go out with `send_instantly`, so the CLS/INP report made as the page is hidden uses `sendBeacon`. Without consent or a PostHog key, the library isn't downloaded.
+- **Why:** the CLS ≤ 0.01 rule was only checked on a lab build (the e2e review). Visitors have slower devices, other fonts and real data; the 75th percentile of `web_vital` where `metric = CLS`, per `path`, is the production check (`docs/guides/observability.md`). PostHog is already the consented analytics tool, so vitals need no new processor or banner text.
+- **Alternatives considered:** PostHog's built-in capture (`capture_performance`): loads its extension from PostHog's asset host at runtime, changing the network behaviour verified for 0074/0119. Sentry's browser tracing: records vitals too, but only for sampled page loads (10%) and adds the tracing bundle to every page. Sending without consent: vitals alone aren't personal data, but the PostHog request carries its device id.
+
+## 0139: CSP violations are reported to /api/csp-report and forwarded to Sentry
+
+- **What:** in production the CSP ends with `report-uri <origin>/api/csp-report; report-to csp`, and HTML responses carry `Reporting-Endpoints: csp="<origin>/api/csp-report"`. The endpoint (`src/routes/api/csp-report.ts`, logic in `src/server/http/csp-report.ts`) accepts both formats (Reporting API batches and the older `application/csp-report`), keeps only the origin and path of URLs, drops reports caused by browser extensions, and takes 10 reports a minute per client IP and 100 in total per server instance (429 beyond). Each report becomes a `warn` log line and a Sentry warning fingerprinted by directive and blocked resource, so a recurring violation is one issue with a count.
+- **Why:** a CSP block in production is otherwise invisible: the page just misses a script or an image. The limits stop a misbehaving client or a flood from spending the Sentry quota. The limiter lives in memory because it guards a quota, not the app; exact limits across instances aren't needed.
+- **Checking it:** `e2e/flows/frontend.spec.ts` checks the headers and the endpoint, `tests/server/csp-report.test.ts` the parsing, the limits and the Sentry call. Browsers deliver Reporting API reports out of band (Playwright can't see them), so watching one arrive in Sentry is a manual step on a preview deploy (`docs/guides/deployment.md`).
+- **Alternatives considered:** `report-uri` straight to Sentry's security endpoint (no filtering or limits, and the DSN key in every page's header); `Content-Security-Policy-Report-Only` first (the policy has been enforced since 0081, so there is nothing to trial); a database-backed limiter (the Task 33 recipe; more than a quota guard needs).
+
+## 0140: The admin command palette and view transitions are a recipe
+
+- **What:** `/dev/examples/command-palette` shows a `cmdk` palette (`ui/command.tsx`) opened with Ctrl/⌘ K. It lists the admin sections the user holds the permission for (the sidebar's filter) and navigates with `viewTransition: true`. `docs/guides/conventions.md` explains mounting it in `AdminLayout` and the router's `defaultViewTransition`. Reduced motion turns the transition's animation off (0137).
+- **Why:** both are product choices (a shortcut can clash with an app's own; a cross-fade on every admin navigation is a matter of taste), so the base stays plain and the recipe is ready to copy.
+- **Alternatives considered:** shipping both in the admin layout (every project would carry the shortcut and the transition, wanted or not).
+
+## 0141: `pnpm new:feature` generates an admin CRUD section from templates and marker lines
+
+- **What:** `scripts/new-feature.mjs <name> [--title] [--title-ne] [--no-build]` copies `scripts/templates/feature/` (paths and contents use `__name__`, `__snake__`, `__camel__`, `__Pascal__`, `__UPPER__`, `__Title__`; `.tpl` files, so Biome, TypeScript and knip ignore them) and inserts entries above `// @new-feature:<slot>` lines in the shared lists: the schema index, the permission catalog and its labels, audit actions, targets and labels, `ADMIN_SECTIONS`, the guarded-functions test and the e2e page lists. It appends messages to both locales, runs `drizzle-kit generate --name <snake>`, Biome on what it touched (and `drizzle/`), the Paraglide compiler and a build (which regenerates the route tree). The generated feature is the admin half of Test CRUD: title and notes, search, sort, pagination, create, edit with the version check (0122), delete and bulk delete with an audit row each (0132), thin routes, a PGlite service test and stories with their server-function mocks. `AdminSection["to"]` is now derived from the route tree (every `/admin/…` path without a param), so a new section needs no type edit.
+- **Checked:** on a copy of the repo, `pnpm strip-demo` then `pnpm new:feature projects --title-ne "परियोजनाहरू"`, then typecheck, check, knip, test (564 tests), test:storybook, build-storybook and test:e2e, with no edits in between.
+- **Why:** adding a feature touched about 25 files in a fixed order; most mistakes were a missing list entry (guard test, labels, e2e pages), which the gates catch only after the fact. Templates are plain files, so changing a convention is a reviewable diff of them. Marker lines are explicit and survive formatting, unlike anchoring on surrounding code.
+- **Limits:** the edit page (`/admin/<name>/$id`) goes in `NOT_REVIEWED` until a seeded row exists (the review needs a real id). Without `--title-ne`, the Nepali name is the English one plus "(अनुवाद गर्नुहोस्)", which passes the parity test but is visibly untranslated. Public pages, filters beyond search, optimistic collections and attachments are left to copy from Test CRUD.
+- **Alternatives considered:** a generator framework (Plop, Hygen): another dependency and template language for one command. Codemods over the TypeScript AST: robust to formatting but much more code than markers. Generating the whole Test CRUD feature: most projects would delete half of it.
+
+## 0142: `pnpm strip-demo` removes the demo by file list, markers and unused messages
+
+- **What:** `scripts/strip-demo.mjs` deletes the portfolio, `/stack` and their tests and guide (a file list), removes the lines between `demo:start` and `demo:end` comments and every line ending in `// @demo` (or holding `<!-- @demo -->` in Markdown) in tracked files, replaces the site description and home intro with neutral copy, drops every message no longer used in `src/` or `.storybook/` (the message-usage test's rule), removes the demo fonts (`pnpm remove`), its own `package.json` script and itself, then formats, compiles messages and builds. The home page keeps the feature-flag call to action (it links to Test CRUD) and loses the Intl card; Test CRUD and `/dev/examples` stay. `docs/guides/new-project.md` is the checklist around it.
+- **Why:** a new project shouldn't start by hunting down a design system, two fonts and a dozen tests by hand. Trailing `// @demo` markers exist because Biome's import sorting moves a comment line onto the next import but keeps a trailing comment on its own line.
+- **Alternatives considered:** a separate "bare" branch (drifts from `main`, and fixes need porting); keeping the demo in a package (the portfolio uses app internals throughout); deleting by regex on content (fragile across edits).
+
+## 0143: Routes stay thin; CLAUDE.md keeps only the pitfalls that apply everywhere
+
+- **What:** `_authed/account.tsx` and `_admin/admin/test-crud/index.tsx` now hold only loader, search, head and a component that renders `AccountPage` (`features/auth/components/account-page.tsx`) or `TestCrudAdminList` (`features/test-crud/components/admin-list.tsx`), with what came from the URL as props. CLAUDE.md's pitfalls are split into "Always relevant" (kept) and "Per area": 23 moved to a "Pitfalls already solved" section at the end of their guide, with a one-line index per guide in CLAUDE.md. Grouping `src/lib` by area is a recipe in `conventions.md`, not done here.
+- **Why:** the reference feature taught "UI in `features/<name>/components`" while its own biggest routes broke the rule. CLAUDE.md is read at the start of every session; per-area details there cost every reader for the benefit of a few. Moving `src/lib` would change ~150 imports and many doc paths for a modest gain, so it waits for a project that needs it.
+- **Alternatives considered:** a component per account section in its own file (more files, no clearer); keeping all pitfalls in CLAUDE.md (it was past 150 lines and growing with every task).
+
+## 0144: Two Part 3 bugs found by the e2e suite
+
+- **What:** (1) `/reset-password` declared `invite: z.literal("1")`, but the router parses `invite=1` as the number 1, so invitations showed the plain reset page; it now uses `z.literal(1)` like `/account`'s `emailChanged`. (2) Starting and stopping impersonation called Better Auth inside the audit row's transaction. Better Auth writes through its own pooled connection, which waits for that transaction; the e2e harness's PGlite (one backend) then waited forever and every later test timed out. The row is now written first and deleted if the call fails (`withAuditRow` in `src/server/rbac/service.ts`), keeping 0134's guarantee; `recordAudit` returns the row ids for that.
+- **Why:** both made `pnpm test:e2e` fail; (2) would also hold two connections per impersonation on Neon and could deadlock under row locks.
+- **Alternatives considered:** for (2), running Better Auth's adapter on the transaction (it has no per-call connection option).
+
+## 0145: Background jobs and cursor pagination are recipes
+
+- **What:** `docs/guides/recipes.md` recommends Workflow DevKit for Vercel-only apps and Inngest or Trigger.dev otherwise; all three run named steps with retries, persisted between runs. `/dev/examples/background-jobs` shows that model in process (`runSteps()` in `src/server/examples/jobs.ts`: per-step retries with exponential backoff, giving up after the last one), with the rules for steps and for moving bulk email off the request. `cursorPaginate()`, `cursorOrder()`, `encodeCursor()` and `decodeCursor()` sit next to `paginate()` in `src/server/db/list.ts`, tested on PGlite with tied timestamps.
+- **Why:** no job service fits every deployment, and each brings an account, a webhook route and a secret, so none is in the base. Cursor pagination is generic code, so it ships as a tested helper; admin lists keep offsets because they show totals and page numbers.
+- **Alternatives considered:** a Postgres-backed queue (pg-boss): needs a long-running worker, which Vercel doesn't have. Cursor pagination by default: loses "page N of M", which admin tables use.
+
+## 0146: Server-function rate limits are stored in Better Auth's `rate_limit` table
+
+- **What:** `consumeRateLimit` / `enforceRateLimit` (`src/server/http/rate-limit.ts`) count fixed windows with one upsert into `rate_limit`, keys prefixed `fn:`. The contact example uses it; nothing in the base does.
+- **Why:** the table already exists for Better Auth's database storage, so no migration, and all instances share it. Prefixed keys can't clash with Better Auth's (paths).
+- **Alternatives considered:** a table of its own (a migration for the same three columns); Redis or Upstash (another service); in memory (per instance, so ineffective on serverless).
+
+## 0147: Public-page caching is a header helper, not a default
+
+- **What:** `publicCache({ sMaxAge, staleWhileRevalidate })` (`src/lib/cache.ts`) builds the Cache-Control value for a route's `headers`; `/dev/examples/caching` sets and reads it back. The guide lists which pages qualify and why.
+- **Why:** every page today depends on the session or preference cookies through the root layout, and a wrongly cached page leaks one visitor's view to others. Caching has to be chosen per page, after checking the HTML is the same for everyone.
+- **Alternatives considered:** caching `/portfolio` in the base (it is demo content that strip-demo removes); prerendering by default (content changes need a deploy).
+
+## 0148: Contact form, avatar upload and list extras are examples to copy
+
+- **What:** `/dev/examples/contact` (honeypot, Turnstile via `verifyTurnstile`, the rate limit), `/dev/examples/list-extras` (CSV export with `src/lib/csv.ts`, delete with an undo toast, saved views in `localStorage`), and the avatar steps in the guide on top of the attachments example.
+- **Why:** each is a small product decision (where contact mail goes, whether undo is client-side or a soft delete, where views are stored), so the template shows a working version and the trade-offs instead of picking for every project. CSV escaping and formula-injection are easy to get wrong, so that part is a tested helper.
+- **Alternatives considered:** soft delete in Test CRUD (every list and the sitemap would need the filter); saved views in a table (a migration for a feature most projects won't use).
+
+## 0149: `pnpm dev:offline` runs on in-memory PGlite with every outside service off
+
+- **What:** `scripts/dev-offline.ts` serves an in-memory PGlite over TCP (the e2e harness's server and seed), starts `vite dev` with it, the console email provider, and Sentry, PostHog, Cloudinary, Turnstile, Google and Resend keys set but empty.
+- **Why:** each service was already optional, but the database wasn't, so a first run needed a Neon project. Reusing the harness keeps one PGlite server and one seed.
+- **Alternatives considered:** mock HTTP servers for each service (more code than the "off" paths that already exist); a persistent PGlite directory (the seed isn't idempotent, and a real Neon branch suits data you keep).
+
+## 0150: Preview branches, changelog checks, organizations and billing are documented, not wired
+
+- **What:** `docs/recipes/preview-neon.yml` (a Neon branch per PR, migrated before a Vercel preview, deleted on close), `scripts/check-commit-msg.mjs` (Conventional Commits, tested, an opt-in `commit-msg` hook), and a guide section for Better Auth's `organization()` and `@better-auth/stripe` plugins.
+- **Why:** the workflow needs project secrets, a commit convention is a team choice, and multi-tenancy changes every table, so none can be on by default. Organizations and billing stay guide-only: a working example would mean the plugins' tables, Stripe keys and per-tenant filters in every project, which is what "non-goal of the base" rules out.
+- **Alternatives considered:** Changesets instead of a commit check (the guide describes both); enabling the hook (it would reject this repo's existing style of commit messages).

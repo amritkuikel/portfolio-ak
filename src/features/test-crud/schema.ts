@@ -142,6 +142,7 @@ export const TEST_CRUD_FILTER_KEYS = ["q", "status", "tags", "priceMin", "priceM
 export const testCrudAdminRouteSearchSchema = testCrudSearchSchema.extend({
 	edit: z.uuid().optional().catch(undefined),
 });
+export type TestCrudAdminRouteSearch = z.output<typeof testCrudAdminRouteSearchSchema>;
 
 /** What the list server function receives: the search with a resolved page size. */
 export const testCrudListInputSchema = testCrudSearchSchema.extend({ pageSize: resolvedPageSize() });

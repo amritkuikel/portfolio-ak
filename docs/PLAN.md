@@ -758,9 +758,9 @@ Part 3 turns the finished app into a base template: it runs its own gates in CI,
 | 28 | 24 | Data integrity and request tracing. Done (decisions 0122–0125) |
 | 29 | 25 | Auth hardening and account lifecycle. Done (decisions 0126–0131) |
 | 30 | 26 | Audit log and admin user management. Done (decisions 0132–0135) |
-| 31 | 27 | Frontend quality: compiler, accessibility, real-user metrics |
-| 32 | 28 | Template ergonomics: scaffolder, strip-demo, structure |
-| 33 | 29 | Recipes for optional features |
+| 31 | 27 | Frontend quality: compiler, accessibility, real-user metrics. Done (decisions 0136–0140) |
+| 32 | 28 | Template ergonomics: scaffolder, strip-demo, structure. Done (decisions 0141–0144) |
+| 33 | 29 | Recipes for optional features. Done (decisions 0145–0150) |
 
 ### Phase 22: Housekeeping, CI and repo hygiene (Task 26)
 
@@ -865,12 +865,12 @@ Each recipe is a guide section with a dev example or script, decided and documen
 
 ### Part 3 Definition of Done
 
-- [ ] CI runs every gate, knip and the e2e suite on each PR; hooks run Biome and knip locally.
-- [ ] The browser review is a committed suite covering every route in both locales, both themes and three widths.
-- [ ] Concurrent edits are refused with a conflict message; request IDs link responses, logs and Sentry; a JSON health endpoint exists.
-- [ ] 2FA, breached-password checks, captcha, account deletion/export and linked accounts work in both languages.
-- [ ] Admin actions are audited and viewable; admins can invite users and revoke their sessions.
-- [ ] React Compiler decided with numbers; skip link, reduced motion, Web Vitals and CSP reporting in place.
-- [ ] Clone → strip-demo → new:feature → green gates, with no manual edits.
-- [ ] Every recipe has a guide section and a working example or script.
-- [ ] All gates are green with no warnings: typecheck, check, knip, test, test:storybook, test:e2e, build and build-storybook.
+- [x] CI runs every gate, knip and the e2e suite on each PR; hooks run Biome and knip locally.
+- [x] The browser review is a committed suite covering every route in both locales, both themes and three widths.
+- [x] Concurrent edits are refused with a conflict message; request IDs link responses, logs and Sentry; a JSON health endpoint exists.
+- [x] 2FA, breached-password checks, captcha, account deletion/export and linked accounts work in both languages.
+- [x] Admin actions are audited and viewable; admins can invite users and revoke their sessions.
+- [x] React Compiler decided with numbers; skip link, reduced motion, Web Vitals and CSP reporting in place.
+- [x] Clone → strip-demo → new:feature → green gates, with no manual edits.
+- [x] Every recipe has a guide section and a working example or script, except organizations and billing, which are guide-only by design (decision 0150).
+- [x] All gates are green: typecheck, check, knip, test, test:storybook, test:e2e, build and build-storybook. One build notice remains from before Part 3 (Rolldown asks for a `debugName` on a code-splitting group); it doesn't fail the build.

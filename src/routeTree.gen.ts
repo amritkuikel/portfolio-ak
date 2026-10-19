@@ -29,6 +29,7 @@ import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-
 import { Route as PublicStackRouteImport } from './routes/_public/stack'
 import { Route as PublicTestCrudRouteRouteImport } from './routes/_public/test-crud/route'
 import { Route as PublicVerifyEmailRouteImport } from './routes/_public/verify-email'
+import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as PortfolioIndexRouteImport } from './routes/portfolio/index'
 import { Route as PortfolioAboutRouteImport } from './routes/portfolio/about'
@@ -59,12 +60,17 @@ import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/
 import { Route as PublicDevExamplesIndexRouteImport } from './routes/_public/dev/examples/index'
 import { Route as PublicDevExamplesAnalyticsRouteImport } from './routes/_public/dev/examples/analytics'
 import { Route as PublicDevExamplesAttachmentsRouteImport } from './routes/_public/dev/examples/attachments'
+import { Route as PublicDevExamplesBackgroundJobsRouteImport } from './routes/_public/dev/examples/background-jobs'
+import { Route as PublicDevExamplesCachingRouteImport } from './routes/_public/dev/examples/caching'
+import { Route as PublicDevExamplesCommandPaletteRouteImport } from './routes/_public/dev/examples/command-palette'
+import { Route as PublicDevExamplesContactRouteImport } from './routes/_public/dev/examples/contact'
 import { Route as PublicDevExamplesDataTableRouteImport } from './routes/_public/dev/examples/data-table'
 import { Route as PublicDevExamplesErrorsRouteImport } from './routes/_public/dev/examples/errors'
 import { Route as PublicDevExamplesFiltersRouteImport } from './routes/_public/dev/examples/filters'
 import { Route as PublicDevExamplesFormsRouteImport } from './routes/_public/dev/examples/forms'
 import { Route as PublicDevExamplesI18nRouteImport } from './routes/_public/dev/examples/i18n'
 import { Route as PublicDevExamplesIdempotencyRouteImport } from './routes/_public/dev/examples/idempotency'
+import { Route as PublicDevExamplesListExtrasRouteImport } from './routes/_public/dev/examples/list-extras'
 import { Route as PublicDevExamplesLoaderQueryRouteImport } from './routes/_public/dev/examples/loader-query'
 import { Route as PublicDevExamplesMaskingRouteRouteImport } from './routes/_public/dev/examples/masking/route'
 import { Route as PublicDevExamplesOptimisticRouteImport } from './routes/_public/dev/examples/optimistic'
@@ -170,6 +176,11 @@ const PublicVerifyEmailRoute = PublicVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
   getParentRoute: () => PublicRoute,
+} as any)
+const ApiCspReportRoute = ApiCspReportRouteImport.update({
+  id: '/api/csp-report',
+  path: '/api/csp-report',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
@@ -324,6 +335,30 @@ const PublicDevExamplesAttachmentsRoute =
     path: '/attachments',
     getParentRoute: () => PublicDevExamplesRouteRoute,
   } as any)
+const PublicDevExamplesBackgroundJobsRoute =
+  PublicDevExamplesBackgroundJobsRouteImport.update({
+    id: '/background-jobs',
+    path: '/background-jobs',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesCachingRoute =
+  PublicDevExamplesCachingRouteImport.update({
+    id: '/caching',
+    path: '/caching',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesCommandPaletteRoute =
+  PublicDevExamplesCommandPaletteRouteImport.update({
+    id: '/command-palette',
+    path: '/command-palette',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesContactRoute =
+  PublicDevExamplesContactRouteImport.update({
+    id: '/contact',
+    path: '/contact',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
 const PublicDevExamplesDataTableRoute =
   PublicDevExamplesDataTableRouteImport.update({
     id: '/data-table',
@@ -355,6 +390,12 @@ const PublicDevExamplesIdempotencyRoute =
   PublicDevExamplesIdempotencyRouteImport.update({
     id: '/idempotency',
     path: '/idempotency',
+    getParentRoute: () => PublicDevExamplesRouteRoute,
+  } as any)
+const PublicDevExamplesListExtrasRoute =
+  PublicDevExamplesListExtrasRouteImport.update({
+    id: '/list-extras',
+    path: '/list-extras',
     getParentRoute: () => PublicDevExamplesRouteRoute,
   } as any)
 const PublicDevExamplesLoaderQueryRoute =
@@ -428,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
@@ -454,12 +496,17 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
   '/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/dev/examples/background-jobs': typeof PublicDevExamplesBackgroundJobsRoute
+  '/dev/examples/caching': typeof PublicDevExamplesCachingRoute
+  '/dev/examples/command-palette': typeof PublicDevExamplesCommandPaletteRoute
+  '/dev/examples/contact': typeof PublicDevExamplesContactRoute
   '/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
   '/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
   '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
   '/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
+  '/dev/examples/list-extras': typeof PublicDevExamplesListExtrasRoute
   '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -488,6 +535,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof PublicResetPasswordRoute
   '/stack': typeof PublicStackRoute
   '/verify-email': typeof PublicVerifyEmailRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
@@ -508,12 +556,17 @@ export interface FileRoutesByTo {
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
   '/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/dev/examples/background-jobs': typeof PublicDevExamplesBackgroundJobsRoute
+  '/dev/examples/caching': typeof PublicDevExamplesCachingRoute
+  '/dev/examples/command-palette': typeof PublicDevExamplesCommandPaletteRoute
+  '/dev/examples/contact': typeof PublicDevExamplesContactRoute
   '/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
   '/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
   '/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
   '/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
+  '/dev/examples/list-extras': typeof PublicDevExamplesListExtrasRoute
   '/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -549,6 +602,7 @@ export interface FileRoutesById {
   '/_public/reset-password': typeof PublicResetPasswordRoute
   '/_public/stack': typeof PublicStackRoute
   '/_public/verify-email': typeof PublicVerifyEmailRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/portfolio/about': typeof PortfolioAboutRoute
   '/portfolio/contact': typeof PortfolioContactRoute
@@ -576,12 +630,17 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/_public/dev/examples/analytics': typeof PublicDevExamplesAnalyticsRoute
   '/_public/dev/examples/attachments': typeof PublicDevExamplesAttachmentsRoute
+  '/_public/dev/examples/background-jobs': typeof PublicDevExamplesBackgroundJobsRoute
+  '/_public/dev/examples/caching': typeof PublicDevExamplesCachingRoute
+  '/_public/dev/examples/command-palette': typeof PublicDevExamplesCommandPaletteRoute
+  '/_public/dev/examples/contact': typeof PublicDevExamplesContactRoute
   '/_public/dev/examples/data-table': typeof PublicDevExamplesDataTableRoute
   '/_public/dev/examples/errors': typeof PublicDevExamplesErrorsRoute
   '/_public/dev/examples/filters': typeof PublicDevExamplesFiltersRoute
   '/_public/dev/examples/forms': typeof PublicDevExamplesFormsRoute
   '/_public/dev/examples/i18n': typeof PublicDevExamplesI18nRoute
   '/_public/dev/examples/idempotency': typeof PublicDevExamplesIdempotencyRoute
+  '/_public/dev/examples/list-extras': typeof PublicDevExamplesListExtrasRoute
   '/_public/dev/examples/loader-query': typeof PublicDevExamplesLoaderQueryRoute
   '/_public/dev/examples/optimistic': typeof PublicDevExamplesOptimisticRoute
   '/_public/dev/examples/permissions': typeof PublicDevExamplesPermissionsRoute
@@ -615,6 +674,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/api/csp-report'
     | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
@@ -641,12 +701,17 @@ export interface FileRouteTypes {
     | '/admin/test-crud/new'
     | '/dev/examples/analytics'
     | '/dev/examples/attachments'
+    | '/dev/examples/background-jobs'
+    | '/dev/examples/caching'
+    | '/dev/examples/command-palette'
+    | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
     | '/dev/examples/idempotency'
+    | '/dev/examples/list-extras'
     | '/dev/examples/loader-query'
     | '/dev/examples/optimistic'
     | '/dev/examples/permissions'
@@ -675,6 +740,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/stack'
     | '/verify-email'
+    | '/api/csp-report'
     | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
@@ -695,12 +761,17 @@ export interface FileRouteTypes {
     | '/admin/test-crud/new'
     | '/dev/examples/analytics'
     | '/dev/examples/attachments'
+    | '/dev/examples/background-jobs'
+    | '/dev/examples/caching'
+    | '/dev/examples/command-palette'
+    | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
     | '/dev/examples/idempotency'
+    | '/dev/examples/list-extras'
     | '/dev/examples/loader-query'
     | '/dev/examples/optimistic'
     | '/dev/examples/permissions'
@@ -735,6 +806,7 @@ export interface FileRouteTypes {
     | '/_public/reset-password'
     | '/_public/stack'
     | '/_public/verify-email'
+    | '/api/csp-report'
     | '/api/health'
     | '/portfolio/about'
     | '/portfolio/contact'
@@ -762,12 +834,17 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud/new'
     | '/_public/dev/examples/analytics'
     | '/_public/dev/examples/attachments'
+    | '/_public/dev/examples/background-jobs'
+    | '/_public/dev/examples/caching'
+    | '/_public/dev/examples/command-palette'
+    | '/_public/dev/examples/contact'
     | '/_public/dev/examples/data-table'
     | '/_public/dev/examples/errors'
     | '/_public/dev/examples/filters'
     | '/_public/dev/examples/forms'
     | '/_public/dev/examples/i18n'
     | '/_public/dev/examples/idempotency'
+    | '/_public/dev/examples/list-extras'
     | '/_public/dev/examples/loader-query'
     | '/_public/dev/examples/optimistic'
     | '/_public/dev/examples/permissions'
@@ -791,6 +868,7 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiAccountExportRoute: typeof ApiAccountExportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -937,6 +1015,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verify-email'
       preLoaderRoute: typeof PublicVerifyEmailRouteImport
       parentRoute: typeof PublicRoute
+    }
+    '/api/csp-report': {
+      id: '/api/csp-report'
+      path: '/api/csp-report'
+      fullPath: '/api/csp-report'
+      preLoaderRoute: typeof ApiCspReportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/health': {
       id: '/api/health'
@@ -1148,6 +1233,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicDevExamplesAttachmentsRouteImport
       parentRoute: typeof PublicDevExamplesRouteRoute
     }
+    '/_public/dev/examples/background-jobs': {
+      id: '/_public/dev/examples/background-jobs'
+      path: '/background-jobs'
+      fullPath: '/dev/examples/background-jobs'
+      preLoaderRoute: typeof PublicDevExamplesBackgroundJobsRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/caching': {
+      id: '/_public/dev/examples/caching'
+      path: '/caching'
+      fullPath: '/dev/examples/caching'
+      preLoaderRoute: typeof PublicDevExamplesCachingRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/command-palette': {
+      id: '/_public/dev/examples/command-palette'
+      path: '/command-palette'
+      fullPath: '/dev/examples/command-palette'
+      preLoaderRoute: typeof PublicDevExamplesCommandPaletteRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/contact': {
+      id: '/_public/dev/examples/contact'
+      path: '/contact'
+      fullPath: '/dev/examples/contact'
+      preLoaderRoute: typeof PublicDevExamplesContactRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
     '/_public/dev/examples/data-table': {
       id: '/_public/dev/examples/data-table'
       path: '/data-table'
@@ -1188,6 +1301,13 @@ declare module '@tanstack/react-router' {
       path: '/idempotency'
       fullPath: '/dev/examples/idempotency'
       preLoaderRoute: typeof PublicDevExamplesIdempotencyRouteImport
+      parentRoute: typeof PublicDevExamplesRouteRoute
+    }
+    '/_public/dev/examples/list-extras': {
+      id: '/_public/dev/examples/list-extras'
+      path: '/list-extras'
+      fullPath: '/dev/examples/list-extras'
+      preLoaderRoute: typeof PublicDevExamplesListExtrasRouteImport
       parentRoute: typeof PublicDevExamplesRouteRoute
     }
     '/_public/dev/examples/loader-query': {
@@ -1412,12 +1532,17 @@ interface PublicDevExamplesRouteRouteChildren {
   PublicDevExamplesMaskingRouteRoute: typeof PublicDevExamplesMaskingRouteRouteWithChildren
   PublicDevExamplesAnalyticsRoute: typeof PublicDevExamplesAnalyticsRoute
   PublicDevExamplesAttachmentsRoute: typeof PublicDevExamplesAttachmentsRoute
+  PublicDevExamplesBackgroundJobsRoute: typeof PublicDevExamplesBackgroundJobsRoute
+  PublicDevExamplesCachingRoute: typeof PublicDevExamplesCachingRoute
+  PublicDevExamplesCommandPaletteRoute: typeof PublicDevExamplesCommandPaletteRoute
+  PublicDevExamplesContactRoute: typeof PublicDevExamplesContactRoute
   PublicDevExamplesDataTableRoute: typeof PublicDevExamplesDataTableRoute
   PublicDevExamplesErrorsRoute: typeof PublicDevExamplesErrorsRoute
   PublicDevExamplesFiltersRoute: typeof PublicDevExamplesFiltersRoute
   PublicDevExamplesFormsRoute: typeof PublicDevExamplesFormsRoute
   PublicDevExamplesI18nRoute: typeof PublicDevExamplesI18nRoute
   PublicDevExamplesIdempotencyRoute: typeof PublicDevExamplesIdempotencyRoute
+  PublicDevExamplesListExtrasRoute: typeof PublicDevExamplesListExtrasRoute
   PublicDevExamplesLoaderQueryRoute: typeof PublicDevExamplesLoaderQueryRoute
   PublicDevExamplesOptimisticRoute: typeof PublicDevExamplesOptimisticRoute
   PublicDevExamplesPermissionsRoute: typeof PublicDevExamplesPermissionsRoute
@@ -1433,12 +1558,17 @@ const PublicDevExamplesRouteRouteChildren: PublicDevExamplesRouteRouteChildren =
       PublicDevExamplesMaskingRouteRouteWithChildren,
     PublicDevExamplesAnalyticsRoute: PublicDevExamplesAnalyticsRoute,
     PublicDevExamplesAttachmentsRoute: PublicDevExamplesAttachmentsRoute,
+    PublicDevExamplesBackgroundJobsRoute: PublicDevExamplesBackgroundJobsRoute,
+    PublicDevExamplesCachingRoute: PublicDevExamplesCachingRoute,
+    PublicDevExamplesCommandPaletteRoute: PublicDevExamplesCommandPaletteRoute,
+    PublicDevExamplesContactRoute: PublicDevExamplesContactRoute,
     PublicDevExamplesDataTableRoute: PublicDevExamplesDataTableRoute,
     PublicDevExamplesErrorsRoute: PublicDevExamplesErrorsRoute,
     PublicDevExamplesFiltersRoute: PublicDevExamplesFiltersRoute,
     PublicDevExamplesFormsRoute: PublicDevExamplesFormsRoute,
     PublicDevExamplesI18nRoute: PublicDevExamplesI18nRoute,
     PublicDevExamplesIdempotencyRoute: PublicDevExamplesIdempotencyRoute,
+    PublicDevExamplesListExtrasRoute: PublicDevExamplesListExtrasRoute,
     PublicDevExamplesLoaderQueryRoute: PublicDevExamplesLoaderQueryRoute,
     PublicDevExamplesOptimisticRoute: PublicDevExamplesOptimisticRoute,
     PublicDevExamplesPermissionsRoute: PublicDevExamplesPermissionsRoute,
@@ -1511,6 +1641,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiAccountExportRoute: ApiAccountExportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -139,3 +139,12 @@ export async function archiveProject(db: Db, actor: AuditActor, id: string) {
 ## Live example
 
 - **useCan, <Can> and guarded server functions:** `/dev/examples/permissions` (`src/routes/_public/dev/examples/permissions.tsx`), with `pnpm dev`.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Admin guard:** `_admin` checks the server on entering the area and on SSR (any permission opens it); inner navigations reuse the session (0090). Never rely on it for data safety: every server function has its own `requirePermission`.
+- **Better Auth's `/api/auth/admin/*` endpoints are disabled** (0112). Manage users, roles and bans through `src/functions/rbac.ts`, never `authClient.admin.*`; a Better Auth upgrade that adds an admin endpoint fails `auth-disabled-paths.test.ts` until it's listed.
+- **Admin actions are audited in their transaction** (0132): a service that changes roles, users or publishes/deletes takes an `AuditActor` (built by `auditActorFrom(context)` in the server function) and calls `recordAudit(tx, actor, …)` with the same `tx` as the change. Writing it after the transaction, or with `db` instead of `tx`, can leave a change without its row. A new action goes in `AUDIT_ACTIONS` and its label. Never await a Better Auth call (or anything using the shared `db`) inside a transaction: it runs on another connection and waits for the transaction; write the row first and delete it if the call fails (`withAuditRow`, 0134).
+- **Impersonated sessions** (0134) carry `impersonatedBy`. Account changes are refused for them: a new Better Auth account endpoint goes in `OWNER_ONLY_PATHS`, a new app function that changes the account uses `requireAccountOwnerMiddleware`. Impersonation is checked on `user.role === "admin"` (the superuser flag, 0135), not a permission.

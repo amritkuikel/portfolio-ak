@@ -143,3 +143,9 @@ params: { parse: (raw) => parseParams(z.object({ id: z.uuid() }), raw) },
 
 - **Search params + filters:** `/dev/examples/filters` (`src/routes/_public/dev/examples/filters.tsx`), with `pnpm dev`.
 - **Route masking:** `/dev/examples/masking` (`src/routes/_public/dev/examples/masking/index.tsx`), with `pnpm dev`.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Masked routes need `unmaskOnReload: true`.** Without it a reload keeps the mask from history state, so the client renders something the server didn't (a hydration error).

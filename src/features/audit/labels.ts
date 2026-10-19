@@ -17,12 +17,14 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"test-crud.publish": m.audit_action_test_crud_publish,
 	"test-crud.unpublish": m.audit_action_test_crud_unpublish,
 	"test-crud.delete": m.audit_action_test_crud_delete,
+	// @new-feature:audit-action-labels
 };
 
 export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	role: m.audit_target_role,
 	user: m.audit_target_user,
 	"test-crud": m.audit_target_test_crud,
+	// @new-feature:audit-target-labels
 };
 
 /** The summarized fields' names (before/after keys the services write). Unknown keys show as-is. */

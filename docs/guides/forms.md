@@ -70,3 +70,10 @@ function ThingForm() {
 ## Adding a field type
 
 Put it in `src/components/forms/fields/`, render it inside `FieldShell` (label, description, errors, ids), register it in `src/components/forms/index.ts`, add a story wrapped in `FieldStory` with a `play` function, and add a jsdom test next to the others in `tests/components/forms/`.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Form arrays updated from async callbacks:** use the field's atomic helpers (`field.pushValue`), not a value read earlier; concurrent uploads lost images that way (0099).
+- **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. Forms catch the stale `CONFLICT` with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert` (0122).

@@ -1,6 +1,10 @@
 import { DatabaseIcon, KeyRoundIcon, type LucideIcon, ScrollTextIcon, ShieldCheckIcon, UsersIcon } from "lucide-react";
 import type { Permission } from "@/features/rbac/permissions";
 import { m } from "@/paraglide/messages";
+import type { FileRouteTypes } from "@/routeTree.gen";
+
+/** Every admin page without a path param: what a section can link to. */
+type AdminPath = Exclude<Extract<FileRouteTypes["to"], `/admin/${string}`>, `${string}$${string}`>;
 
 /**
  * The admin area's sections, in sidebar order. The sidebar and the dashboard
@@ -8,7 +12,7 @@ import { m } from "@/paraglide/messages";
  * in `beforeLoad`, and each server function checks its own.
  */
 export type AdminSection = {
-	to: "/admin/test-crud" | "/admin/users" | "/admin/roles" | "/admin/roles/permissions" | "/admin/audit";
+	to: AdminPath;
 	label: () => string;
 	description: () => string;
 	icon: LucideIcon;
@@ -54,4 +58,5 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		icon: ScrollTextIcon,
 		permission: "audit:read",
 	},
+	// @new-feature:admin-sections
 ];

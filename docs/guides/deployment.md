@@ -20,6 +20,7 @@
 
 - **Gates:** CI runs `typecheck`, `check`, `knip`, `test`, `test:storybook`, `build` and `build-storybook` on every PR and on `main`. Deploy only a green commit.
 - **Schema changes:** run `pnpm db:generate`, commit the SQL in `drizzle/` (CI fails if the schema and migrations disagree), and run `pnpm db:migrate` before (or with) the deploy. Keep a migration compatible with the version still running (add columns and tables first; drop them in a later release).
+- **CSP reporting check (once per project, and after changing the CSP):** on a preview deploy with a Sentry DSN, open the browser console on any page and run `document.body.append(Object.assign(new Image(), { src: "https://csp-check.invalid/x.png" }))`. Within a minute or two Sentry shows a warning `CSP violation: img-src blocked https://csp-check.invalid/x.png`, and the function logs have a `csp violation` line (0139).
 - **One-off scripts:** `pnpm attachments:import-legacy` moved Part 1 images from Postgres to Cloudinary. Once it has run everywhere, a migration can drop the legacy `test_crud.image` column and `test_crud_image` table.
 
 ## Running a production build locally
@@ -38,3 +39,10 @@ Nitro can target other presets (Node, Netlify, Cloudflare). Three things change:
 - **Client IP:** set your proxy's trusted client-IP header in `src/server/auth/client-ip.ts` (rate limits depend on it).
 - **Cron:** replace the Vercel Cron schedule.
 - **Neon driver:** check that the host's runtime supports it.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Running production locally** needs `EMAIL_PROVIDER=resend` and a `RESEND_API_KEY` (any `re_…` placeholder works when emails aren't sent). Production refuses the console email provider.
+- **Raw SQL inserts into Better Auth tables** (seeds, scripts) must set `updated_at` on `account` and `session`: those columns have no database default.

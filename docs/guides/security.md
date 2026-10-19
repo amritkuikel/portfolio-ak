@@ -15,7 +15,9 @@ What protects the app, and the rules that keep it that way. Most of it is enforc
   - scripts only with the nonce, plus `'strict-dynamic'` for their own chunks;
   - no `eval`;
   - `connect-src` and `img-src` limited to the same origin plus Sentry, PostHog and Cloudinary when they're configured;
-  - `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`.
+  - `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`;
+  - `report-uri` and `report-to` pointing at `/api/csp-report` (with a `Reporting-Endpoints` header).
+- **Violation reports (0139):** `/api/csp-report` takes both report formats, strips query strings, drops extension noise, allows 10 reports a minute per IP and 100 per server instance, and turns each one into a `warn` log line and a Sentry warning grouped by directive and blocked resource. A new third-party origin that shows up there needs adding to `buildCsp`'s options, not a looser policy.
 - **Dev has no CSP,** because Vite and the devtools inject inline scripts. Check CSP on a production build.
 - **Zod** probes `eval` when a schema is created, so the app imports `"zod"`, which resolves to `src/lib/zod.ts` (jitless). Never import `zod/v4` in app code (0086).
 
@@ -102,3 +104,12 @@ Then `pnpm auth:schema` + `pnpm db:generate` (a `passkey` table), messages in bo
 - **Where:** `.env` holds real secrets and is gitignored. `.env.example` lists names only.
 - **Validation:** the server validates its environment at boot and refuses to start with anything missing or malformed. Production also refuses the console email provider.
 - **Cron endpoints** need `Authorization: Bearer $CRON_SECRET` (constant-time compare); without the variable they answer 404.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **Expired sessions are handled once, globally:** `src/middleware/session-expiry.ts` sends any UNAUTHORIZED server-function answer in the browser to `/login?redirect=…` (0113). Don't add per-call login redirects; FORBIDDEN stays the caller's to show (toast, or the forbidden page via `assertRoutePermission`).
+- **Session tokens never go to the browser** (0114): revoke another device with `revokeMySession({ id })`.
+- **Auth hardening (0126–0130):** with `AUTH_REQUIRE_ADMIN_2FA=true` an admin without two-factor gets a session with **no permissions** (`twoFactorRequired`), so don't read an empty `permissions` as "not an admin" in that case. Email-code sign-in is refused for two-factor accounts by an `after` hook (`src/server/auth/hooks.ts`); keep it when touching auth hooks. Better Auth's `setPassword` has no path, so the breached-password plugin skips it: `setOwnPassword` checks itself. New auth endpoints get a rate limit in `customRules`. Account deletion goes through `/account/delete?token=…`, never Better Auth's GET callback.
+- **CSP reports** go to `/api/csp-report` (0139). A violation in Sentry means a missing origin in `buildCsp`'s options or a real injection; never loosen `script-src` to silence it.

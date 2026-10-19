@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { z } from "zod";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { CheckEmail } from "@/features/auth/components/check-email";
@@ -36,14 +37,18 @@ function VerifyEmailPage() {
 
 	if (resendTo) {
 		return (
-			<main className="mx-auto w-full max-w-sm px-4 py-16">
+			<main {...MAIN_CONTENT} className="mx-auto w-full max-w-sm px-4 py-16">
 				<CheckEmail email={resendTo} />
 			</main>
 		);
 	}
 
 	return (
-		<main className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16" data-testid="verify-email-page">
+		<main
+			{...MAIN_CONTENT}
+			className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16"
+			data-testid="verify-email-page"
+		>
 			<h1 className="font-semibold text-2xl tracking-tight">{m.auth_verify_title()}</h1>
 			{error || !session ? (
 				<>

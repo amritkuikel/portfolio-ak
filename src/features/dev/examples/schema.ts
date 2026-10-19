@@ -49,6 +49,19 @@ export const exampleTasksDoneSchema = bulkIdsSchema().extend({
 /** The forms example's server-validated sign-up. */
 export const exampleSignupSchema = z.object({ username: required({ max: 32 }), email: email() });
 
+/** The contact form recipe. `website` is the honeypot; `captcha` the Turnstile token when configured. */
+export const exampleContactSchema = z.object({
+	name: required({ max: 80 }),
+	email: email(),
+	message: required({ max: 2000 }),
+	website: z.string().max(200).optional(),
+	captcha: z.string().max(2048).optional(),
+});
+export type ExampleContactInput = z.output<typeof exampleContactSchema>;
+
+/** The background-jobs recipe: how often its flaky step fails before succeeding (4 is past the 3 retries). */
+export const exampleJobSchema = z.object({ failures: z.number().int().min(0).max(4) });
+
 /** Error cases the errors example can trigger on the server. */
 export const EXAMPLE_ERROR_CASES = ["forbidden", "not-found", "crash"] as const;
 export type ExampleErrorCase = (typeof EXAMPLE_ERROR_CASES)[number];

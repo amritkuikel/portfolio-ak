@@ -16,6 +16,7 @@ export const PERMISSION_CATALOG = {
 	attachments: ["upload"],
 	/** The audit log of admin actions (/admin/audit). */
 	audit: ["read"],
+	// @new-feature:permissions
 } as const;
 
 type Catalog = typeof PERMISSION_CATALOG;

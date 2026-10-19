@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { z } from "zod";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { authErrorMessage } from "@/features/auth/errors";
@@ -20,7 +21,8 @@ export const Route = createFileRoute("/_public/reset-password")({
 	validateSearch: z.object({
 		token: z.string().max(512).optional().catch(undefined),
 		error: z.string().max(64).optional().catch(undefined),
-		invite: z.literal("1").optional().catch(undefined),
+		// The router parses `invite=1` as the number 1 (like ?emailChanged=1 on /account).
+		invite: z.literal(1).optional().catch(undefined),
 	}),
 	head: ({ match }) => privateHead(match.search.invite ? m.auth_invite_title() : m.auth_reset_title()),
 	component: ResetPasswordPage,
@@ -57,7 +59,11 @@ function ResetPasswordPage() {
 	};
 
 	return (
-		<main className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16" data-testid="reset-password-page">
+		<main
+			{...MAIN_CONTENT}
+			className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 py-16"
+			data-testid="reset-password-page"
+		>
 			<div className="flex flex-col gap-2">
 				<h1 className="font-semibold text-2xl tracking-tight">
 					{invite ? m.auth_invite_title() : m.auth_reset_title()}

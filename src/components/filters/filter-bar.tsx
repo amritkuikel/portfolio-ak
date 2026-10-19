@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { formSearchPatch } from "@/lib/search";
 import { cn } from "@/lib/utils";
@@ -63,19 +63,16 @@ export function FilterBar({
 	const formRef = useRef<HTMLFormElement>(null);
 	const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-	const apply = useCallback(
-		(replace: boolean) => {
-			const form = formRef.current;
-			if (!form) return;
-			const patch = formSearchPatch(form, { exclude: preserve });
-			void navigate({
-				to: ".",
-				search: (prev: SearchValues) => ({ ...prev, ...patch, page: undefined }),
-				replace,
-			});
-		},
-		[navigate, preserve],
-	);
+	const apply = (replace: boolean) => {
+		const form = formRef.current;
+		if (!form) return;
+		const patch = formSearchPatch(form, { exclude: preserve });
+		void navigate({
+			to: ".",
+			search: (prev: SearchValues) => ({ ...prev, ...patch, page: undefined }),
+			replace,
+		});
+	};
 
 	useEffect(() => {
 		if (formRef.current) syncControls(formRef.current, values);

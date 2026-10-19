@@ -2,7 +2,7 @@
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"entry": [
 		"tests/**/*.{ts,tsx}",
-		"scripts/**/*.{mjs,mts}",
+		"scripts/**/*.{mjs,mts,ts}",
 		"project.inlang/paraglide.config.ts",
 		"src/server/plugins/*.ts",
 		"src/server/routes/*.ts",
@@ -13,7 +13,7 @@
 	"project": [
 		"src/**/*.{ts,tsx,css}",
 		"tests/**/*.{ts,tsx}",
-		"scripts/**/*.{mjs,mts}",
+		"scripts/**/*.{mjs,mts,ts}",
 		"e2e/**/*.ts",
 		".storybook/**/*.{ts,tsx}",
 		"vite/**/*.ts"

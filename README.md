@@ -103,6 +103,7 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | Script | What it does |
 | --- | --- |
 | `pnpm dev` | Start the Vite dev server with SSR. |
+| `pnpm dev:offline` | The dev server with no outside services: in-memory PGlite (migrated and seeded), console email, Sentry/PostHog/Cloudinary/Turnstile/Google off ([recipes](docs/guides/recipes.md#offline-development)). |
 | `pnpm build` | Production build (client, SSR and Nitro server output in `.output/`). |
 | `pnpm start` | Run the production build with Node, loading `.env` if present. |
 | `pnpm typecheck` | TypeScript in strict mode, no emit. |
@@ -120,6 +121,8 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
+| `pnpm new:feature <name>` | Generate an admin CRUD feature in the Test CRUD shape (table, migration, permissions, functions, routes, messages, tests, stories); see [docs/guides/new-project.md](docs/guides/new-project.md). |
+| `pnpm strip-demo` | Remove the portfolio, `/stack` and the home page's Intl showcase; run once on a fresh clone (it deletes itself). <!-- @demo --> |
 | `pnpm attachments:import-legacy` | Move Part 1 images from Postgres to Cloudinary (`--dry-run` to preview). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
@@ -154,7 +157,7 @@ Query for server data you read, a TanStack DB collection for server data you edi
 
 ## Test CRUD: the template for new features
 
-`/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. To add a feature, say "projects":
+`/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. `pnpm new:feature projects` generates steps 1–8 below for an admin section (title and notes columns, search, sort, pagination, create, edit with the version check, delete with an audit row), passing every gate as generated; start there and add what your feature needs. Starting a whole new project (strip the demo first): [docs/guides/new-project.md](docs/guides/new-project.md). By hand, say "projects":
 
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
 2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).

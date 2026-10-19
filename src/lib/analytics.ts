@@ -65,11 +65,21 @@ export function stopAnalytics() {
 	}
 }
 
+type TrackOptions = {
+	/** Skip PostHog's batch queue; on a page being hidden or unloaded it uses sendBeacon. */
+	sendInstantly?: boolean;
+};
+
 /** Sends an event if analytics is running (consented); otherwise does nothing. */
-export function track(event: string, properties?: Record<string, string | number | boolean | null>) {
-	if (client) client.capture(event, properties);
+export function track(
+	event: string,
+	properties?: Record<string, string | number | boolean | null>,
+	{ sendInstantly = false }: TrackOptions = {},
+) {
+	const options = sendInstantly ? { send_instantly: true } : undefined;
+	if (client) client.capture(event, properties, options);
 	// Consented but still downloading (first page load): send once it's ready.
-	else void loading?.then((ready) => ready?.capture(event, properties));
+	else void loading?.then((ready) => ready?.capture(event, properties, options));
 }
 
 export function identifyUser(userId: string) {

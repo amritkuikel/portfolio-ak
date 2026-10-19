@@ -3,6 +3,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/features/auth/components/auth-field";
 import { authErrorMessage } from "@/features/auth/errors";
@@ -46,7 +47,11 @@ function DeleteAccountPage() {
 	};
 
 	return (
-		<main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-12" data-testid="delete-account-page">
+		<main
+			{...MAIN_CONTENT}
+			className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-12"
+			data-testid="delete-account-page"
+		>
 			<h1 className="font-semibold text-2xl tracking-tight">{m.account_delete_page_title()}</h1>
 			{token ? (
 				<>

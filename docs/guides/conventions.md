@@ -135,6 +135,9 @@ loader: async (…) => { const item = await ensureQuery(queryClient, …); retur
 - **Import Zod as `zod`.** It resolves to `src/lib/zod.ts` (jitless, CSP-safe). Never import `zod/v4` directly in app code.
 - **Every string goes through Paraglide** in en and ne. Delete keys when their UI goes away; `tests/i18n/message-usage.test.ts` enforces it.
 - **No layout shift:** fixed image aspect boxes, skeletons with the page's footprint, and preferences read from cookies on the server.
+- **Every page has one `<main>` that is the skip link's target.** Use `Page` (it spreads `MAIN_CONTENT`), or spread `MAIN_CONTENT` from `components/layout/skip-link.tsx` on a hand-written `<main>`. The browser review fails a page whose first tab stop isn't a skip link to a `<main>` (0137).
+- **Motion respects the user.** `app.css` finishes every animation and transition at once under `prefers-reduced-motion: reduce`; don't add motion that only works with `!important` of its own (0137).
+- **Let the React Compiler memoize** (0136). Don't add `useMemo`/`useCallback`/`memo` for performance; keep `useMemo` only where identity is the point (creating a collection, a resource). A component the compiler skips (see the decision for how to list them) is still correct, just not memoized.
 
 ## Live examples
 
@@ -150,7 +153,31 @@ Run `pnpm dev` and open `/dev/examples` (or `/ne/dev/examples`): one small, real
 | Store preferences (cookies, SSR) | `/dev/examples/preferences` | `src/routes/_public/dev/examples/preferences.tsx` |
 | i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/_public/dev/examples/i18n.tsx` |
 | Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/_public/dev/examples/errors.tsx` |
+| Recipe: admin command palette with view transitions | `/dev/examples/command-palette` | `src/routes/_public/dev/examples/command-palette.tsx` |
 
 The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags ([observability.md](observability.md)). Tables and filters in depth: [tables-filters.md](tables-filters.md); forms: [forms.md](forms.md); state: [state.md](state.md); i18n: [i18n.md](i18n.md).
 
+## Generating a feature
+
+`pnpm new:feature <name>` (decision 0141) writes the admin half of the Test CRUD shape from `scripts/templates/feature/` and adds the entries shared lists need at their `// @new-feature:<slot>` lines. The generated routes are thin (`index.tsx` loads the list and renders `<Name>AdminList` from `features/<name>/components/admin-list.tsx`), like Test CRUD's own (`TestCrudAdminList`, `AccountPage`). Change the templates when a convention changes, so new features follow it. Full checklist: [new-project.md](new-project.md).
+
+## Recipe: grouping `src/lib` by area
+
+`src/lib` is flat (about 30 files). When it grows, group by area with an index per folder, e.g. `src/lib/list/` (`list.ts`, `search.ts`, `use-list-page.ts`, `use-list-query.ts`, `query.ts`'s `loadList`), `src/lib/seo/` (`seo.ts`, `structured-data.ts`, `breadcrumbs.ts`) and `src/lib/env/` (`client-env.ts`, `client-env.schema.ts`, `env.shared.ts`). Move one area per commit, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file. The template stays flat so its docs' paths stay valid (0143).
+
+## Recipe: command palette and view transitions
+
+`/dev/examples/command-palette` (decision 0140) is a `cmdk` palette (`components/ui/command.tsx`) opened with Ctrl/⌘ K:
+
+- **Permission-filtered:** it lists `ADMIN_SECTIONS` the user holds the permission for, like the sidebar. It only hides; routes and server functions check on their own.
+- **To ship it:** move `AdminCommandPalette` into `src/components/layout/` and render it in `AdminLayout` with its own `open` state. Add other commands as more `CommandGroup`s (each item's `onSelect` navigates or calls a mutation).
+- **View transitions:** `navigate({ to, viewTransition: true })` (or `<Link viewTransition>`) cross-fades the old and new page where the browser supports it. For every navigation, set `defaultViewTransition: true` in `src/router.tsx`. Name elements with `view-transition-name` to animate them between pages (the portfolio does, 0109). Reduced motion removes the animation (`app.css`).
+
 **Adding an example:** a route under `src/routes/_public/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.
+
+## Pitfalls already solved
+
+Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
+
+- **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
+- **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.

@@ -9,8 +9,10 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
+/* demo:start */
 /* Scoped tokens and utilities of the /portfolio site (pf-*, under .portfolio). */
 @import "./portfolio.css";
+/* demo:end */
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -170,7 +172,39 @@
 	body {
 		@apply min-h-dvh bg-background font-sans text-foreground antialiased;
 	}
+
+	/* The skip link's target takes focus only to move the starting point; no ring around the page. */
+	#main-content:focus {
+		outline: none;
+	}
 }
+
+/*
+ * Reduced motion (WCAG 2.3.3): animations and transitions finish at once instead
+ * of being removed, so code waiting for animationend/transitionend (Radix
+ * Presence, sonner) still runs. Sections that animate only under
+ * `no-preference` (the portfolio) are covered by it too (decision 0137).
+ */
+/* biome-ignore-start lint/complexity/noImportantStyles: the preference must beat component styles, inline ones included. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		animation-delay: 0ms !important;
+		transition-duration: 0.01ms !important;
+		transition-delay: 0ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: end of the reduced-motion overrides. */
 
 /* System Devanagari stack for isolated Devanagari words on non-Nepali pages
    (e.g. the language switcher), so those pages never fetch the web font. */

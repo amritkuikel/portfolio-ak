@@ -1,9 +1,10 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import babel from "@rolldown/plugin-babel";
 import { sentryTanstackStart } from "@sentry/tanstackstart-react/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import viteReact from "@vitejs/plugin-react";
+import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
 import { STATIC_SECURITY_HEADERS } from "./src/lib/csp.ts";
@@ -116,6 +117,8 @@ export default defineConfig(async ({ command, mode }) => {
 				},
 			}),
 			viteReact(),
+			// React Compiler: memoizes components and hooks at build time (decision 0136).
+			babel({ presets: [reactCompilerPreset()] }),
 			// Source map upload to Sentry (must be last). Only when all three build
 			// variables are set, so builds without Sentry stay silent and offline.
 			...(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT

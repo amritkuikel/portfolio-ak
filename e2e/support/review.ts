@@ -1,6 +1,7 @@
 /**
  * The browser review of one page load (docs/guides/testing.md): status, horizontal
- * overflow, layout shift, axe; console and CSP problems are failed by the guard fixture.
+ * overflow, layout shift, axe, a skip link to <main>; console and CSP problems are
+ * failed by the guard fixture.
  */
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
@@ -49,4 +50,17 @@ export async function reviewPage(page: Page, url: string, { status = 200 }: { st
 				.join(", ")}`,
 	);
 	expect.soft(violations, "axe violations").toEqual([]);
+
+	// Keyboard: the first tab stop is a skip link whose target is the page's <main>.
+	// After axe, so the focused (now visible) link can't affect the checks above.
+	await page.keyboard.press("Tab");
+	const skipLink = await page.evaluate(() => {
+		const link = document.activeElement;
+		if (!(link instanceof HTMLAnchorElement) || !link.hash) return `first tab stop is <${link?.tagName.toLowerCase()}>`;
+		const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+		return target?.tagName === "MAIN"
+			? null
+			: `${link.hash} is ${target ? `<${target.tagName.toLowerCase()}>` : "missing"}`;
+	});
+	expect.soft(skipLink, "skip link to the page's <main>").toBeNull();
 }

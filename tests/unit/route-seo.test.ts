@@ -34,6 +34,7 @@ const sampleItem = {
 	images: ["https://res.cloudinary.com/demo/image/upload/og.jpg"],
 };
 
+// demo:start
 /** Loader data the portfolio pages' heads read (src/routes/portfolio). */
 const samplePerson = {
 	name: "Aarav Shrestha",
@@ -56,10 +57,12 @@ const samplePost = {
 	publishedAt: "2026-09-02",
 	tags: ["React", "SSR"],
 };
+// demo:end
 
 /** Every indexable page: route id, the context its head() gets, and its expected canonical path. */
 const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<HeadContext>; path: string }> = [
 	{ id: "/_public/", label: "home", context: {}, path: "/" },
+	// demo:start
 	{ id: "/_public/stack", label: "stack", context: { match: { search: { q: "", page: 1 } } }, path: "/stack" },
 	{
 		id: "/_public/stack",
@@ -67,6 +70,7 @@ const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<Hea
 		context: { match: { search: { q: "", page: 2 } } },
 		path: "/stack?page=2",
 	},
+	// demo:end
 	{ id: "/_public/test-crud/", label: "items", context: { match: { search: { q: "", page: 1 } } }, path: "/test-crud" },
 	{
 		id: "/_public/test-crud/",
@@ -80,6 +84,7 @@ const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<Hea
 		context: { params: { slug: "momo-kitchen" }, loaderData: sampleItem },
 		path: "/test-crud/momo-kitchen",
 	},
+	// demo:start
 	{ id: "/portfolio/", label: "portfolio", context: { loaderData: samplePerson }, path: "/portfolio" },
 	{ id: "/portfolio/work/", label: "work", context: { match: { search: {} } }, path: "/portfolio/work" },
 	{
@@ -97,6 +102,7 @@ const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<Hea
 		path: "/portfolio/journal/server-render-everything",
 	},
 	{ id: "/portfolio/contact", label: "contact", context: {}, path: "/portfolio/contact" },
+	// demo:end
 ];
 
 /** Pages titled by their content (loader data), not by a message: the samples aren't translated. */
@@ -216,7 +222,10 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 
 	it("searches are noindex but still canonical to the list", () => {
 		withLocale(() => {
-			for (const id of ["/_public/stack", "/_public/test-crud/"]) {
+			for (const id of [
+				"/_public/stack", // @demo
+				"/_public/test-crud/",
+			]) {
 				const route = byId.get(id);
 				if (!route) throw new Error(id);
 				const head = headFor(route, { match: { search: { q: "momo", page: 1 } } });
@@ -284,6 +293,7 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 		});
 	});
 
+	// demo:start
 	it("the portfolio describes its owner, case studies and articles (Person, CreativeWork, BlogPosting)", () => {
 		withLocale(() => {
 			const jsonLdOf = (id: string, context: Partial<HeadContext>) => {
@@ -332,6 +342,7 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 			expect(head.links.find((link) => link.rel === "canonical")?.href).toBe(localized("/portfolio/work", locale));
 		});
 	});
+	// demo:end
 });
 
 it("English and Nepali pages have different titles (except pages titled by their content)", () => {
