@@ -29,7 +29,7 @@ import { m } from "@/paraglide/messages";
 
 // Everything below is built inside functions, never at module level: the module
 // then has no side effects, so the production bundler drops it entirely when the
-// route renders `() => null` (see src/routes/_public/dev/forms.tsx).
+// route renders `() => null` (see src/routes/dev/forms.tsx).
 
 const MB = 1024 * 1024;
 

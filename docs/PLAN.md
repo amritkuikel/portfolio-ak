@@ -926,7 +926,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | Task | Name | Effort | Status |
 | --- | --- | --- | --- |
 | 34 | Foundation: performance, dev speed, i18n tooling, structure, DX | high | Done (decisions 0151–0160) |
-| 35 | Route restructure: portfolio at `/`, demo at `/dev`, a header per section, strip-demo layers | high | |
+| 35 | Route restructure: portfolio at `/`, demo at `/dev`, a header per section, strip-demo layers | high | Done (decisions 0161–0163) |
 | 36 | "Graphite" design system, admin shell, auth shell, dashboard | high | |
 | 37 | Admin component kit | high | |
 | 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | |
@@ -1078,109 +1078,51 @@ The owner runs one task per session and clears the context between tasks. A sess
   - The Neon database is missing migrations `0008` (audit log) and `0009` (drops the Part 1 image table): run `pnpm db:migrate` with `.env` pointing at it.
   - pnpm 10.33 prints "Ignored build scripts: core-js, lefthook" on every install, whatever the config says; it is harmless.
 
-### Task 35: Route restructure (portfolio at `/`, demo at `/dev`)
+### Task 35: Route restructure (done)
 
-**Goal:** the URL layout of the finished product, with today's pages. The old "Dhaka" portfolio moves to `/` (Task 40 replaces its design), the demo site moves under `/dev` (dev builds only), and the root layout stops rendering a header for everyone.
-
-**Today:**
-- **The root renders `SiteHeader` for every page** (`src/routes/__root.tsx`). A section opts out with `staticData: { chrome: "bare" }` (`src/lib/chrome.ts`, decision 0105); only `/portfolio` does.
-- **The root `beforeLoad` resolves the session for every page** (`context.queryClient.query(sessionQueryOptions())`). It is memoized per request since 0153.
-- **`/dev` is dev-only** through `if (!import.meta.env.DEV) throw notFound()` in `src/routes/_public/dev/route.tsx`. The other dev checks are:
-  - `src/middleware/dev.ts` (`devOnlyMiddleware`);
-  - `src/functions/dev.ts:14` (its own inline check; it should use the middleware);
-  - `src/functions/stack.ts:15`;
-  - `src/routes/_public/dev/forms.tsx:15` (`component: import.meta.env.DEV ? FormsShowcase : () => null`).
-
-  Leave `src/lib/fonts.ts` and `src/features/portfolio/lib/fonts.ts` alone: they skip preloads in dev, which is unrelated.
-- **The e2e review skips `/dev`.** `e2e/support/pages.ts` has `isDevOnlyRoute`, and `NOT_REVIEWED["/dev"]` says "dev-only". The harness (`e2e/harness/server.ts`) strips every inherited `VITE_*` variable (the `APP_ENV` regex) and sets `publicEnv` itself.
-- **34 files mention `"/portfolio`**: the portfolio feature, routes, tests, the sitemap and strip-demo.
-- **Today's routes** (`find src/routes -type f`):
-  - `_public`: `index.tsx`, `stack.tsx`, `test-crud/{route,index,$slug}.tsx`, `health.tsx`, `verify-email.tsx`, `reset-password.tsx`, `dev/route.tsx`, `dev/forms.tsx`, and `dev/examples/**` (20 pages plus `masking/$id`).
-  - `portfolio/`: `route.tsx`, `index.tsx`, `about.tsx`, `contact.tsx`, `work/{index,$slug}.tsx`, `journal/{index,$slug}.tsx`.
-
-**Route map (old file → new file; URL in brackets):**
-
-| Old | New |
-| --- | --- |
-| `routes/portfolio/route.tsx` | `routes/_site.tsx` (pathless layout; drop `chrome: "bare"`, keep `PortfolioShell` and its `notFoundComponent`, add `staticData.session: "skip"`) |
-| `routes/portfolio/index.tsx` [/portfolio] | `routes/_site/index.tsx` [/] |
-| `portfolio/about.tsx`, `contact.tsx` | `_site/about.tsx` [/about], `_site/contact.tsx` [/contact] |
-| `portfolio/work/index.tsx`, `$slug.tsx` | `_site/work/…` [/work, /work/$slug] |
-| `portfolio/journal/index.tsx`, `$slug.tsx` | `_site/journal/…` [/journal, /journal/$slug] |
-| `_public/index.tsx` [/] | `routes/dev/index.tsx` [/dev] (the old demo home) |
-| `_public/stack.tsx` | `routes/dev/stack.tsx` [/dev/stack] |
-| `_public/test-crud/{route,index,$slug}.tsx` | `routes/dev/test-crud/…` [/dev/test-crud, /dev/test-crud/$slug] |
-| `_public/dev/route.tsx` | `routes/dev/route.tsx`: the `DEV_ROUTES` gate, `NOINDEX`, and the demo header and footer (what `_public.tsx` gave these pages) |
-| `_public/dev/forms.tsx`, `_public/dev/examples/**` | `routes/dev/forms.tsx`, `routes/dev/examples/**` |
-| `_public.tsx` | stays, for `health`, `verify-email` and `reset-password` (0046: these must not sit under `_auth`, which redirects signed-in users, and `autoSignInAfterVerification` arrives signed in). It gets the app header (below). `--public` scaffolds go here later. |
-
-Route ids change (`/_public/` → `/dev/`, `/portfolio/` → `/_site/`, `/_public/dev/examples/x` → `/dev/examples/x`): every test that builds a router and looks up ids must follow.
-
-**Steps:**
-1. **Move the files** with `git mv` (keep history), then fix each file's `createFileRoute("…")` id and the links. `pnpm dev` or a build regenerates `src/routeTree.gen.ts` (committed; 0009).
-2. **Headers per section** (Task 36 replaces most of them with shells):
-   - `SiteHeader` (`components/layout/site-header.tsx`) takes a `links` prop and loses its `useMatches(isBareChrome)`.
-   - `dev/route.tsx` renders it with the demo links (`/dev`, `/dev/stack`, `/dev/test-crud`, `/dev/examples`) plus `SiteFooter`.
-   - `_public`, `_auth`, `_authed` and `_admin` render it with no section links: brand → `/`, Admin when permitted, account or sign-in, language, theme.
-   - The root renders no header.
-   - Delete `src/lib/chrome.ts` and its `StaticDataRouteOption` declaration.
-3. **Session opt-out:** declare `session?: "skip"` on `StaticDataRouteOption` (with the breadcrumb declarations), and in the root `beforeLoad` return `{ session: null }` when any match has it.
-   - Verify the root `beforeLoad` receives `matches` in this router version (router-core `ContextOptions`); if not, use `location` and a path check.
-   - `ImpersonationBanner` and `ObservabilitySync` (root-mounted, `useQuery(sessionQueryOptions())`) must pass `enabled: false` when a match skips. Otherwise the browser fetches the session after hydration on every portfolio page, which moves the lookup instead of removing it.
-   - Check navigation from `/` to `/admin` and back: the root `beforeLoad` runs again and must fetch the session for `/admin`.
-4. **`DEV_ROUTES`:** `src/lib/dev-routes.ts` exports `DEV_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DEV_ROUTES === "true"`. Read `import.meta.env` directly so Vite inlines it and a plain build folds it to `false`; `clientEnv` wouldn't fold.
-   - Use it at every dev check listed above. `functions/dev.ts` uses `devOnlyMiddleware` instead of its inline check.
-   - Add `VITE_DEV_ROUTES: z.enum(["true","false"]).optional()` to `clientEnvSchema`, with a comment in `.env.example` ("for the e2e harness only; never in production").
-   - `vite.config.ts` `validateEnv` throws when it is `"true"` and `process.env.VERCEL_ENV === "production"`; `src/server/plugins/validate-env.ts` throws at boot in the same case.
-   - The e2e harness sets `VITE_DEV_ROUTES: "true"` in `publicEnv`.
-5. **Public Test CRUD becomes a dev reference:**
-   - `dev/test-crud/*` heads use `privateHead()`, not `listSeo()`/`seo()`.
-   - `src/functions/test-crud-public.ts` gets `devOnlyMiddleware`; update its entry in `tests/server/guarded-functions.test.ts` (`UNGUARDED_FILES`, with the reason).
-   - Links: `features/test-crud/components/{public-card,quick-view,masked-links}.tsx` and the admin list's "view" links go to `/dev/test-crud/…`.
-6. **Sitemap** (`src/server/seo/sitemap.ts`, test `tests/server/sitemap.test.ts`):
-   - Only the portfolio: `/`, `/work`, `/work/<slug>`, `/about`, `/journal`, `/journal/<slug>`, `/contact`.
-   - Remove `/stack` and the `/test-crud` entries and their published-items query; keep the hreflang alternates. `robots.txt` needs no change (`/dev` is a 404 in production).
-7. **SEO and structured data:**
-   - Fix every path in `seo()` calls and `features/portfolio/lib/structured-data.ts` (the `Person` `@id` becomes `${SITE}/#person`).
-   - The old home's WebSite and Organization JSON-LD goes away with it (now private). Add `websiteJsonLd` to the portfolio home if useful.
-   - The error and 404 "home" links keep going to `/`.
-8. **Every `"/portfolio` mention** (`grep -rln '"/portfolio' src tests e2e .storybook`): the portfolio nav items (`features/portfolio/components/chrome/nav-items.ts`), components, routes, stories, tests.
-9. **Tests to update:**
-   - `tests/unit/route-seo.test.ts`: `INDEXABLE` becomes the portfolio pages with their new ids and paths. Remove the home, `/stack` and `/test-crud` entries; dev pages are private through the layout.
-   - `tests/unit/seo.test.ts`, `tests/unit/breadcrumbs.test.ts`, `tests/unit/dev-examples.test.ts` (route ids), `tests/server/sitemap.test.ts`, `tests/server/csp-report.test.ts` (paths), `tests/unit/portfolio-*.test.ts`, `tests/components/portfolio/portfolio-ui.test.tsx`.
-   - Replace `tests/components/layout/site-chrome.test.tsx` with a test that the root renders no header, each layout renders its own, and `_site` skips the session.
-10. **e2e:**
-    - `e2e/support/pages.ts`: remove `isDevOnlyRoute` and `NOT_REVIEWED["/dev"]`. Add every `/dev` page: `/dev`, `/dev/stack`, `/dev/test-crud`, `/dev/test-crud/$slug`, `/dev/forms`, `/dev/examples` and each example, including `masking/$id`.
-    - Add a `params: { from: "seeded-slug" }` source using `SEEDED_ITEM_SLUG` (the sitemap no longer lists Test CRUD), and teach `e2e/review.spec.ts` to resolve it.
-    - Portfolio routes move to `/`, `/work`, etc.; `/work/$slug` and `/journal/$slug` still come from the sitemap.
-    - Flows: `e2e/flows/no-js.spec.ts` and any flow using `/test-crud` → `/dev/test-crud`.
-    - This adds about 25 pages × 12 combinations. Raise CI shards from 3 to 5 (`.github/workflows/ci.yml`, `--shard=${{ matrix.shard }}/5`) to keep wall time near 6 minutes.
-11. **strip-demo rewritten as `scripts/strip-demo.ts`**, with layers:
-    - **Layers:**
-      - `core` is never removed: auth, admin, RBAC, audit, attachments, i18n, SEO, Test CRUD and all of `/dev`. `/dev/stack` and the Intl showcase now stay, as dev-only references.
-      - `portfolio` is `routes/_site.tsx` and `_site/`, `features/portfolio`, `styles/portfolio.css`, the portfolio tests and `docs/guides/portfolio.md`. Tasks 39–40 append their paths: `server/portfolio`, `functions/portfolio*`, `server/db/schema/portfolio.ts`, the admin portfolio routes, the seed script, `himal.css`.
-      - `apps` (Task 41 fills it).
-    - **Markers:** `portfolio:start`/`portfolio:end` and `// @portfolio`, and `apps:start`/`apps:end` and `// @apps` (also `<!-- @portfolio -->` in Markdown). Convert today's `demo:*`/`@demo` markers: the ones around portfolio code become `portfolio`; the ones around `/stack` and the Intl showcase are removed (kept as core).
-    - **Flags:** `--keep-portfolio`, `--keep-apps`, `--no-build`. Paths per layer are data at the top of the script, so later tasks append to it.
-    - **When the portfolio layer goes:** write a neutral landing `src/routes/_public/index.tsx` from `scripts/templates/landing/index.tsx.tpl`, and add its messages (`landing_*`, en and ne, held in the script) to the message files at that moment, because unused keys fail the message-usage test while the portfolio exists.
-    - **Schema:** remove the layer's schema files and their lines in `src/server/db/schema/index.ts` (marked), then run `drizzle-kit generate --name strip_<layers>` so the drop is a migration. CI's "migrations match the schema" check would fail otherwise.
-    - **Files that can't hold markers:** `package.json` scripts (e.g. `db:seed-portfolio`), `vercel.json` crons and `knip.json` entries are edited in code. Unused dependencies are found with `knip --fix --fix-type dependencies` (it edits `package.json`), then `pnpm install`.
-    - **As before:** drop messages nothing uses (the message-usage test's rule), format what changed, compile messages, optionally build, then delete itself.
-    - **Marker test:** `tests/unit/strip-markers.test.ts` checks every tracked text file for balanced markers per layer.
-    - **CI:** the `template` job becomes a matrix of (all layers stripped), (`--keep-apps`), (`--keep-portfolio`), each followed by `new:feature`, typecheck, check, knip and test.
-12. **Docs:**
-    - CLAUDE.md: the "Dev-only pages" pitfall now points at `src/routes/dev/`; update the layout block and the pitfalls (one header per layout, `staticData.session`).
-    - Guides: `routing-data.md` (the route list), `portfolio.md` (paths), `seo.md` (sitemap), `testing.md` (dev pages are reviewed), `new-project.md` (strip-demo layers), `architecture.md`.
-    - Decisions: supersede 0105 (chrome opt-out → a header per layout) and 0061/0103 (an env flag for dev routes, with its guards); restate 0046; update 0101 (sitemap contents) and 0142 (strip-demo).
-
-**Pitfalls:**
-- **Root not-found pages** (`/no-such-page`) now render without a header. Make sure `NotFoundPage` still has a `<main>` skip target and a link home.
-- **One skip link per page:** the root `SkipLink` plus `PortfolioShell`'s own link would make two on `/`. Keep one; the browser review checks `<main>`.
-- **`useRouteContext().session` readers** (`verify-email.tsx`, `account.tsx`, `account_.delete.tsx`) still get it: only `_site` skips.
-- **`_admin`'s `cause === "stay"` reuse** of the session must still work.
-- **Route options stay inline** (0151); don't wrap them in helpers.
-
-**Acceptance:** `/` (en) and `/ne` show the old portfolio. `/dev/*` works under `pnpm dev` and `pnpm dev:local`, and is a 404 in a plain `pnpm build && pnpm start`. The e2e suite reviews every `/dev` page in a build with `VITE_DEV_ROUTES=true`. The CI template matrix passes locally: run it in a scratch worktree (`git worktree add C:\tw HEAD`; short path, 0029). All gates are green.
+- **Routes (0161):**
+  - The portfolio is the pathless `_site` layout: `/`, `/work`, `/work/$slug`, `/about`, `/journal`, `/journal/$slug`, `/contact`.
+  - The old demo home, `/stack` and the public Test CRUD pages moved under `src/routes/dev/`, with `/dev/forms` and `/dev/examples`; `_public` keeps health, verify-email and reset-password (0046 restated). Every file moved with `git mv`.
+- **Headers:**
+  - The root renders none. `SiteHeader({ links })` is rendered by `_public`, `_auth`, `_authed` and `_admin` (no section links) and by `dev` (four links plus the footer); the portfolio keeps its own.
+  - `src/lib/chrome.ts` is gone (supersedes 0105). One skip link per page: the root's; the portfolio's `<main>` spreads `MAIN_CONTENT`.
+- **Session opt-out:** `staticData: { session: "skip" }` (`src/lib/session-scope.ts`). The root `beforeLoad` reads `matches` (router-core 1.171 passes them) and returns `{ session: null }`. `ImpersonationBanner` and `ObservabilitySync` pass `enabled: !useSessionSkipped()`. The root `beforeLoad`'s return type is written out: reading `matches` made the route types circular.
+- **`DEV_ROUTES` (0162):**
+  - `src/lib/dev-routes.ts` is used by the `/dev` layout, `devOnlyMiddleware`, `/dev/forms` and `functions/dev.ts` (now on the middleware). A plain build folds it to `false`: the layout's `beforeLoad` compiles to `throw notFound()`.
+  - `VITE_DEV_ROUTES` is in the client schema and `.env.example`; `vite.config.ts` and the boot plugin refuse it when `VERCEL_ENV=production`.
+  - The e2e harness builds with it. `test-crud-public.ts` and `stack.ts` run `devOnlyMiddleware`, and every `/dev` head is private.
+- **SEO:**
+  - The sitemap lists only `/` and the portfolio's pages (36 URLs); its Test CRUD query is gone.
+  - Portfolio paths and the `Person` `@id` (`/#person`) are fixed; the portfolio home adds `WebSite` JSON-LD with the owner as publisher.
+  - `organizationJsonLd` and `productJsonLd` are removed (their pages are private now). `listSeo()` is kept for the next public list (`@public` for knip).
+- **Tests:**
+  - `route-seo` keys indexable pages by path, so the home entry survives a strip.
+  - `sitemap` no longer needs a database. `dev-examples` reloads the guards per env.
+  - `site-chrome.test.tsx` is replaced by `section-headers.test.tsx`: the root renders no header, each layout renders one, a root 404 keeps its `<main>` and home link, and `_site` skips the lookup.
+  - New: `strip-markers.test.ts`.
+- **e2e:**
+  - `isDevOnlyRoute` and `NOT_REVIEWED["/dev"]` are gone, and all 27 `/dev` pages are reviewed (23 of them new to the review). New `params: { from: "seeded-slug" }` (a published seeded item, `SEEDED_PUBLISHED_SLUG`: `SEEDED_ITEM_SLUG` is a draft); `masking/$id` uses a fixed `path`.
+  - The flows use `/dev/test-crud`, and CI runs 5 shards.
+  - Locally: 676 checks pass in 8.3 min (Task 34: 400 in 5.7 min).
+- **strip-demo (0163):**
+  - `scripts/strip-demo.ts` with the `portfolio` and `apps` layers (data lists at the top for Tasks 39–41), `--keep-portfolio`, `--keep-apps` and `--no-build`. Markers are in `scripts/lib/strip-markers.ts`; the old `demo` markers became `portfolio` markers or core.
+  - When the portfolio goes, it writes the landing page (`scripts/templates/landing/index.tsx.tpl`), its messages and the route-test entry.
+  - After that it runs knip's dependency fix and `pnpm install`, formats, compiles messages, writes a migration when tables go, and builds.
+  - Once nothing is left, it deletes itself and CI's template job. CI's template job is a matrix: all, `--keep-apps`, `--keep-portfolio`.
+- **Numbers:**
+  - Entry JS 234.8 kB gzip (was 235.5).
+  - `pnpm test`: 80 files, 632 tests. Storybook: 250.
+  - The template matrix passes locally in a scratch worktree, all three variants: strip, `new:feature`, typecheck, check, knip, test, migrations.
+- **Deviations and fixes found on the way:**
+  - **Fixed while running the template matrix** (all predate this task and would have failed CI's template job):
+    - `scripts/templates/feature` still imported the `src/lib` paths from before 0158.
+    - knip's vite plugin loads `vite.config.ts` in serve mode, which validates the server env, so knip exited 2 without a `.env`. It now has `"vite": false`, with `vite.config.ts` as an entry.
+    - `tests/setup/env.ts` only defaulted its values, so CI's `VITE_APP_TITLE` broke the manifest and SEO tests.
+  - **Impersonation lands on `/account`, not `/`:** the portfolio never reads the session, so it shows no banner (0161).
+  - **Kept dev-only:** `/dev/stack` and its functions are dev-only now too (their page is), not just the Test CRUD reads.
+  - **Kept the script:** strip-demo keeps itself while a layer is kept (`--keep-…`), so the rest can be removed later; the plan said it always deletes itself.
+  - **The scratch worktree** is at `C:\tw2`: `C:\tw` couldn't be deleted from the session (a protected path). Remove both.
+  - **One Storybook flake:** Test CRUD's Quick View was not yet visible in one ne/dark pass. It passed on every rerun (3 of 3, and the full suite).
 
 ### Task 36: "Graphite" design system and shells
 

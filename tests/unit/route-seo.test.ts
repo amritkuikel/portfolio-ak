@@ -24,18 +24,8 @@ type HeadContext = { match: { search: Record<string, unknown> }; params: Record<
 
 const SITE = "http://localhost:3000";
 
-const sampleItem = {
-	title: "Momo Kitchen",
-	summary: "Steamed dumplings, made fresh.",
-	publishedAt: "2026-09-01T08:00:00.000Z",
-	price: 450,
-	tags: ["food", "nepal"],
-	ogImage: { url: "https://res.cloudinary.com/demo/image/upload/og.jpg", width: 1200, height: 630, alt: "A plate" },
-	images: ["https://res.cloudinary.com/demo/image/upload/og.jpg"],
-};
-
-// demo:start
-/** Loader data the portfolio pages' heads read (src/routes/portfolio). */
+// portfolio:start
+/** Loader data the portfolio pages' heads read (src/routes/_site). */
 const samplePerson = {
 	name: "Aarav Shrestha",
 	role: "Full-stack developer",
@@ -57,58 +47,39 @@ const samplePost = {
 	publishedAt: "2026-09-02",
 	tags: ["React", "SSR"],
 };
-// demo:end
+// portfolio:end
 
-/** Every indexable page: route id, the context its head() gets, and its expected canonical path. */
-const INDEXABLE: ReadonlyArray<{ id: string; label: string; context: Partial<HeadContext>; path: string }> = [
-	{ id: "/_public/", label: "home", context: {}, path: "/" },
-	// demo:start
-	{ id: "/_public/stack", label: "stack", context: { match: { search: { q: "", page: 1 } } }, path: "/stack" },
+/**
+ * Every indexable page: its path (as in FileRoutesByTo, so the home is "/" whichever
+ * layout serves it), the context its head() gets, and its expected canonical path.
+ */
+const INDEXABLE: ReadonlyArray<{ to: string; label: string; context: Partial<HeadContext>; path: string }> = [
+	// portfolio:start
+	{ to: "/", label: "home", context: { loaderData: samplePerson }, path: "/" },
+	{ to: "/work", label: "work", context: { match: { search: {} } }, path: "/work" },
 	{
-		id: "/_public/stack",
-		label: "stack p2",
-		context: { match: { search: { q: "", page: 2 } } },
-		path: "/stack?page=2",
-	},
-	// demo:end
-	{ id: "/_public/test-crud/", label: "items", context: { match: { search: { q: "", page: 1 } } }, path: "/test-crud" },
-	{
-		id: "/_public/test-crud/",
-		label: "items p2",
-		context: { match: { search: { q: "", page: 2 } } },
-		path: "/test-crud?page=2",
-	},
-	{
-		id: "/_public/test-crud/$slug",
-		label: "item",
-		context: { params: { slug: "momo-kitchen" }, loaderData: sampleItem },
-		path: "/test-crud/momo-kitchen",
-	},
-	// demo:start
-	{ id: "/portfolio/", label: "portfolio", context: { loaderData: samplePerson }, path: "/portfolio" },
-	{ id: "/portfolio/work/", label: "work", context: { match: { search: {} } }, path: "/portfolio/work" },
-	{
-		id: "/portfolio/work/$slug",
+		to: "/work/$slug",
 		label: "case study",
 		context: { params: { slug: "ledgerline" }, loaderData: sampleProject },
-		path: "/portfolio/work/ledgerline",
+		path: "/work/ledgerline",
 	},
-	{ id: "/portfolio/about", label: "about", context: { loaderData: samplePerson }, path: "/portfolio/about" },
-	{ id: "/portfolio/journal/", label: "journal", context: {}, path: "/portfolio/journal" },
+	{ to: "/about", label: "about", context: { loaderData: samplePerson }, path: "/about" },
+	{ to: "/journal", label: "journal", context: {}, path: "/journal" },
 	{
-		id: "/portfolio/journal/$slug",
+		to: "/journal/$slug",
 		label: "article",
 		context: { params: { slug: samplePost.slug }, loaderData: samplePost },
-		path: "/portfolio/journal/server-render-everything",
+		path: "/journal/server-render-everything",
 	},
-	{ id: "/portfolio/contact", label: "contact", context: {}, path: "/portfolio/contact" },
-	// demo:end
+	{ to: "/contact", label: "contact", context: {}, path: "/contact" },
+	// portfolio:end
+	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 ];
 
 /** Pages titled by their content (loader data), not by a message: the samples aren't translated. */
-const CONTENT_TITLED = new Set(["home", "item", "portfolio", "case study", "article"]);
+const CONTENT_TITLED = new Set(["home", "case study", "article"]);
 
-// Building a router resolves every route's full id ("/_public/test-crud/$slug").
+// Building a router resolves every route's full id ("/_site/work/$slug") and path.
 // Nothing loads, so the context is never read.
 const router = createRouter({ routeTree, context: {} as RouterContext });
 const children = (route: AnyRoute): AnyRoute[] => Object.values(route.children ?? {}) as AnyRoute[];
@@ -116,7 +87,7 @@ const children = (route: AnyRoute): AnyRoute[] => Object.values(route.children ?
 const pages = (Object.values(router.routesById) as AnyRoute[]).filter(
 	(route) => children(route).length === 0 && !(route.options.server && !route.options.component),
 );
-const byId = new Map(pages.map((route) => [route.id as string, route]));
+const byTo = new Map(pages.map((route) => [route.to as string, route]));
 
 const ancestry = (route: AnyRoute): AnyRoute[] =>
 	route.parentRoute ? [...ancestry(route.parentRoute), route] : [route];
@@ -160,8 +131,8 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 	it("every indexable page has a title, description, canonical, hreflang, Open Graph and Twitter tags", () => {
 		withLocale(() => {
 			for (const page of INDEXABLE) {
-				const route = byId.get(page.id);
-				expect(route, page.id).toBeDefined();
+				const route = byTo.get(page.to);
+				expect(route, page.to).toBeDefined();
 				if (!route) continue;
 				const head = headFor(route, page.context);
 				const where = `${page.label} (${locale})`;
@@ -196,7 +167,7 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 	it("indexable pages have unique titles and descriptions", () => {
 		withLocale(() => {
 			const heads = INDEXABLE.flatMap((page) => {
-				const route = byId.get(page.id);
+				const route = byTo.get(page.to);
 				return route ? [headFor(route, page.context)] : [];
 			});
 			const titles = heads.map((head) => head.title);
@@ -208,8 +179,8 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 
 	it("every other page is noindex", () => {
 		withLocale(() => {
-			const indexable = new Set(INDEXABLE.map((page) => page.id));
-			const others = pages.filter((route) => !indexable.has(route.id));
+			const indexable = new Set(INDEXABLE.map((page) => page.to));
+			const others = pages.filter((route) => !indexable.has(route.to));
 			expect(others.length).toBeGreaterThan(15);
 			for (const route of others) {
 				// Detail-style heads may need params; private ones never read them.
@@ -220,96 +191,40 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 		});
 	});
 
-	it("searches are noindex but still canonical to the list", () => {
+	it("home describes the site (WebSite)", () => {
 		withLocale(() => {
-			for (const id of [
-				"/_public/stack", // @demo
-				"/_public/test-crud/",
-			]) {
-				const route = byId.get(id);
-				if (!route) throw new Error(id);
-				const head = headFor(route, { match: { search: { q: "momo", page: 1 } } });
-				expect(head.meta.get("robots"), id).toBe("noindex, follow");
-				expect(head.title, id).toContain("momo");
-			}
-		});
-	});
-
-	it("home describes the site and its owner (WebSite + Organization)", () => {
-		withLocale(() => {
-			const route = byId.get("/_public/");
+			const route = byTo.get("/");
 			if (!route) throw new Error("home");
-			const { jsonLd } = headFor(route);
-			const website = jsonLd.find((data) => data["@type"] === "WebSite");
-			const organization = jsonLd.find((data) => data["@type"] === "Organization");
+			const home = INDEXABLE.find((page) => page.to === "/");
+			const website = headFor(route, home?.context).jsonLd.find((data) => data["@type"] === "WebSite");
 			expect(website).toMatchObject({
 				"@context": "https://schema.org",
+				"@id": `${localized("/", locale)}#website`,
 				name: "Portfolio",
 				url: localized("/", locale),
 				inLanguage: locale,
-				publisher: { "@id": `${SITE}/#organization` },
-			});
-			expect(organization).toMatchObject({
-				"@id": `${SITE}/#organization`,
-				name: "Portfolio",
-				url: `${SITE}/`,
-				logo: `${SITE}/icon-512.png`,
 			});
 		});
 	});
 
-	it("an item is a Product with an Offer and its own Open Graph image", () => {
-		withLocale(() => {
-			const route = byId.get("/_public/test-crud/$slug");
-			if (!route) throw new Error("item");
-			const head = headFor(route, { params: { slug: "momo-kitchen" }, loaderData: sampleItem });
-			const url = localized("/test-crud/momo-kitchen", locale);
-			expect(head.jsonLd).toEqual([
-				{
-					"@context": "https://schema.org",
-					"@type": "Product",
-					"@id": `${url}#product`,
-					name: "Momo Kitchen",
-					description: "Steamed dumplings, made fresh.",
-					url,
-					image: sampleItem.images,
-					keywords: "food, nepal",
-					releaseDate: sampleItem.publishedAt,
-					brand: { "@id": `${SITE}/#organization` },
-					offers: {
-						"@type": "Offer",
-						url,
-						price: "450.00",
-						priceCurrency: "NPR",
-						availability: "https://schema.org/InStock",
-						seller: { "@id": `${SITE}/#organization` },
-					},
-				},
-			]);
-			expect(head.meta.get("og:type")).toBe("article");
-			expect(head.meta.get("og:image")).toBe(sampleItem.ogImage.url);
-			expect(head.meta.get("og:image:alt")).toBe("A plate");
-			expect(head.meta.get("article:published_time")).toBe(sampleItem.publishedAt);
-		});
-	});
-
-	// demo:start
+	// portfolio:start
 	it("the portfolio describes its owner, case studies and articles (Person, CreativeWork, BlogPosting)", () => {
 		withLocale(() => {
-			const jsonLdOf = (id: string, context: Partial<HeadContext>) => {
-				const route = byId.get(id);
-				if (!route) throw new Error(id);
+			const jsonLdOf = (to: string, context: Partial<HeadContext>) => {
+				const route = byTo.get(to);
+				if (!route) throw new Error(to);
 				return headFor(route, context).jsonLd;
 			};
-			const person = { "@id": `${SITE}/portfolio#person` };
-			expect(jsonLdOf("/portfolio/", { loaderData: samplePerson })).toEqual([
+			const person = { "@id": `${SITE}/#person` };
+			expect(jsonLdOf("/", { loaderData: samplePerson })).toEqual([
+				expect.objectContaining({ "@type": "WebSite", publisher: person }),
 				expect.objectContaining({ "@type": "Person", ...person, name: "Aarav Shrestha", sameAs: samplePerson.socials }),
 			]);
-			expect(jsonLdOf("/portfolio/about", { loaderData: samplePerson })).toEqual([
+			expect(jsonLdOf("/about", { loaderData: samplePerson })).toEqual([
 				expect.objectContaining({ "@type": "ProfilePage", mainEntity: expect.objectContaining(person) }),
 			]);
-			const caseUrl = localized("/portfolio/work/ledgerline", locale);
-			expect(jsonLdOf("/portfolio/work/$slug", { params: { slug: "ledgerline" }, loaderData: sampleProject })).toEqual([
+			const caseUrl = localized("/work/ledgerline", locale);
+			expect(jsonLdOf("/work/$slug", { params: { slug: "ledgerline" }, loaderData: sampleProject })).toEqual([
 				expect.objectContaining({
 					"@type": "CreativeWork",
 					"@id": `${caseUrl}#work`,
@@ -318,10 +233,8 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 					inLanguage: locale,
 				}),
 			]);
-			const articleUrl = localized("/portfolio/journal/server-render-everything", locale);
-			expect(
-				jsonLdOf("/portfolio/journal/$slug", { params: { slug: samplePost.slug }, loaderData: samplePost }),
-			).toEqual([
+			const articleUrl = localized("/journal/server-render-everything", locale);
+			expect(jsonLdOf("/journal/$slug", { params: { slug: samplePost.slug }, loaderData: samplePost })).toEqual([
 				expect.objectContaining({
 					"@type": "BlogPosting",
 					"@id": `${articleUrl}#article`,
@@ -335,21 +248,21 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 
 	it("a filtered work index is noindex, still canonical to the full list", () => {
 		withLocale(() => {
-			const route = byId.get("/portfolio/work/");
+			const route = byTo.get("/work");
 			if (!route) throw new Error("work");
 			const head = headFor(route, { match: { search: { discipline: "ai" } } });
 			expect(head.meta.get("robots")).toBe("noindex, follow");
-			expect(head.links.find((link) => link.rel === "canonical")?.href).toBe(localized("/portfolio/work", locale));
+			expect(head.links.find((link) => link.rel === "canonical")?.href).toBe(localized("/work", locale));
 		});
 	});
-	// demo:end
+	// portfolio:end
 });
 
 it("English and Nepali pages have different titles (except pages titled by their content)", () => {
 	const titles = (locale: Locale) => {
 		overwriteGetLocale(() => locale);
 		return INDEXABLE.filter((page) => !CONTENT_TITLED.has(page.label)).map((page) => {
-			const route = byId.get(page.id);
+			const route = byTo.get(page.to);
 			return route ? headFor(route, page.context).title : undefined;
 		});
 	};

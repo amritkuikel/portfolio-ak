@@ -11,7 +11,7 @@ import { PortfolioNotFound } from "./portfolio-not-found";
 const meta = {
 	title: "Portfolio/Chrome",
 	decorators: [withPortfolioCanvas],
-	parameters: { layout: "fullscreen", app: { route: "/portfolio/work" } },
+	parameters: { layout: "fullscreen", app: { route: "/work" } },
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;

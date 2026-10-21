@@ -25,7 +25,7 @@ export const stackSearchSchema = z.object({
 	q: searchParam(),
 	sort: enumParam(STACK_SORTS, STACK_SEARCH_DEFAULTS.sort),
 	page: pageParam(1000),
-	/** Dev-only: `?simulate=error` makes the server function throw, to exercise error handling. */
+	/** `?simulate=error` makes the server function throw, to exercise error handling. */
 	simulate: z.enum(["error"]).optional().catch(undefined),
 });
 

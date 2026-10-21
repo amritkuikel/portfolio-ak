@@ -3,7 +3,7 @@
 How list pages keep their state in the URL, how to add filters, and how to open
 a record in a dialog without leaving the list. Reference implementation:
 `src/routes/_admin/admin/test-crud/index.tsx` (all filter types plus the edit
-dialog) and `src/routes/_public/test-crud/index.tsx` (search plus quick view).
+dialog) and `src/routes/dev/test-crud/index.tsx` (search plus quick view).
 Decisions 0084 and 0088–0093 explain the choices.
 
 ## The URL is the state
@@ -141,8 +141,8 @@ params: { parse: (raw) => parseParams(z.object({ id: z.uuid() }), raw) },
 
 ## Live example
 
-- **Search params + filters:** `/dev/examples/filters` (`src/routes/_public/dev/examples/filters.tsx`), with `pnpm dev`.
-- **Route masking:** `/dev/examples/masking` (`src/routes/_public/dev/examples/masking/index.tsx`), with `pnpm dev`.
+- **Search params + filters:** `/dev/examples/filters` (`src/routes/dev/examples/filters.tsx`), with `pnpm dev`.
+- **Route masking:** `/dev/examples/masking` (`src/routes/dev/examples/masking/index.tsx`), with `pnpm dev`.
 
 ## Pitfalls already solved
 

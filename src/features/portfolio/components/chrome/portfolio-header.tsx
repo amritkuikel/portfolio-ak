@@ -21,7 +21,7 @@ export function PortfolioHeader({ profile }: { profile: Pick<Profile, "name" | "
 		<header className="sticky top-0 z-40 border-pf-line border-b bg-pf-paper">
 			<div className="pf-container flex h-(--pf-header-h) items-center gap-6">
 				{/* The link's name is the visible name (WCAG 2.5.3); on phones it is visually hidden, not removed. */}
-				<Link to="/portfolio" className="pf-focus group/brand flex min-w-0 items-center gap-3">
+				<Link to="/" className="pf-focus group/brand flex min-w-0 items-center gap-3">
 					<span
 						aria-hidden
 						className="pf-display flex size-10 shrink-0 items-center justify-center bg-pf-ink pt-0.5 text-xl text-pf-paper shadow-[inset_0_-4px_0_var(--pf-crimson)] transition-colors duration-(--pf-dur-2) group-hover/brand:bg-pf-crimson group-hover/brand:text-pf-light-paper"

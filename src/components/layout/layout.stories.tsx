@@ -19,9 +19,17 @@ export const HeaderAnonymous: Story = {};
 
 export const HeaderSignedIn: Story = { parameters: { app: { session: sampleUser } } };
 
-/** Admins also get the Admin link. */
+/** A section's links (here /dev's, as its layout passes them); admins also get the Admin link. */
 export const HeaderAdmin: Story = {
-	parameters: { app: { session: sampleAdmin, route: "/test-crud" } },
+	args: {
+		links: [
+			{ to: "/dev", label: m.nav_dev, exact: true },
+			{ to: "/dev/stack", label: m.nav_stack },
+			{ to: "/dev/test-crud", label: m.nav_test_crud },
+			{ to: "/dev/examples", label: m.nav_examples },
+		],
+	},
+	parameters: { app: { session: sampleAdmin, route: "/dev/test-crud" } },
 	play: async ({ canvas }) => {
 		await expect(canvas.getByRole("link", { name: m.nav_admin() })).toBeVisible();
 		await expect(canvas.getByRole("link", { name: m.nav_test_crud() })).toHaveAttribute("data-status", "active");
@@ -41,9 +49,9 @@ export const ImpersonatingBanner: Story = {
 	},
 };
 
-/** Keeps the current path when switching (/test-crud <-> /ne/test-crud). */
+/** Keeps the current path when switching (/dev/test-crud <-> /ne/dev/test-crud). */
 export const LanguageSwitch: Story = {
-	parameters: { app: { route: "/test-crud" } },
+	parameters: { app: { route: "/dev/test-crud" } },
 	render: () => <LanguageSwitcher />,
 };
 

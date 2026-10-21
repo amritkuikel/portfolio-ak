@@ -26,7 +26,7 @@ How the app is put together and how a request flows through it. The file-by-file
 
 1. **Server entry** (`src/server.ts`): Sentry starts, Paraglide resolves the locale from the URL (or from a header, for server-function calls), and AppError statuses become HTTP statuses.
 2. **Request middleware** (`src/start.ts`): Sentry, security headers with a per-request CSP nonce, CSRF (server functions only).
-3. **Router**: `/ne/…` is mapped onto the same routes. The root `beforeLoad` loads the session into the Query cache. Layout guards run next: `_authed` needs a session; `_admin` asks the server on entry; section routes run `assertRoutePermission`.
+3. **Router**: `/ne/…` is mapped onto the same routes. The root `beforeLoad` loads the session into the Query cache (unless the section skips it: the portfolio at `/`). Layout guards run next: `_authed` needs a session; `_admin` asks the server on entry; `/dev` is a 404 outside development; section routes run `assertRoutePermission`. Each layout renders its own header.
 4. **Loader**: `ensureQuery(queryClient, options)`, or `loadList(...)` for search-driven lists. The query function calls a **server function**.
 5. **Server function**: function middleware (locale header, the request's id and logging, error normalisation, then `requirePermission(…)`), the Zod validator, then the handler. The handler calls a service or repository, which talks to Postgres through Drizzle.
 6. **Response**: the page streams as HTML with the Query cache dehydrated into it, and hydrates without refetching (`staleTime` 60 s). Errors arrive as `AppError` with a code; the page shows a localized message, and SSR responses carry the matching status.
@@ -49,4 +49,4 @@ How the app is put together and how a request flows through it. The file-by-file
 | Headers, CSP, CSRF, sanitizing | [security.md](security.md) |
 | Shipping | [deployment.md](deployment.md) |
 
-Every module has a working page at `/dev/examples` (`pnpm dev`).
+Every module has a working page at `/dev/examples` (`pnpm dev`). The site's sections: the portfolio at `/` (`src/routes/_site`), the demo and references under `/dev` (dev builds only), sign-in, account and admin; see [routing-data.md](routing-data.md).

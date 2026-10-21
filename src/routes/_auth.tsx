@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { SiteHeader } from "@/components/layout/site-header";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { fontPreloads } from "@/lib/fonts";
 import { redirectSearchSchema } from "@/lib/http/redirect";
@@ -23,8 +24,11 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
 	return (
-		<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
-			<Outlet />
-		</main>
+		<>
+			<SiteHeader />
+			<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
+				<Outlet />
+			</main>
+		</>
 	);
 }

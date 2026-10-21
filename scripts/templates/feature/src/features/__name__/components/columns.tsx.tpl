@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { DataTableColumn } from "@/components/data-table";
 import { useCan } from "@/features/rbac/can";
-import { formatDateTime } from "@/lib/intl";
+import { formatDateTime } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { __Pascal__ListItem } from "../schema";
 

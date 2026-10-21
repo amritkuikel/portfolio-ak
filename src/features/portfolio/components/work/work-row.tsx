@@ -14,7 +14,7 @@ export function WorkRow({ project }: { project: ProjectSummary }) {
 	return (
 		<li className="border-pf-line border-t last:border-b">
 			<Link
-				to="/portfolio/work/$slug"
+				to="/work/$slug"
 				params={{ slug: project.slug }}
 				viewTransition
 				className="pf-focus group/row grid grid-cols-4 items-center gap-x-(--pf-gutter) gap-y-5 py-8 md:grid-cols-12 md:py-10"

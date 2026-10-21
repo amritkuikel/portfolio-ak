@@ -12,7 +12,7 @@ export function JournalTeaserSection({ posts }: { posts: ReadonlyArray<PostSumma
 			index={7}
 			label={m.portfolio_nav_journal()}
 			title={m.portfolio_journal_heading()}
-			aside={<ArrowLink to="/portfolio/journal">{m.portfolio_journal_all()}</ArrowLink>}
+			aside={<ArrowLink to="/journal">{m.portfolio_journal_all()}</ArrowLink>}
 		>
 			<ul>
 				{posts.map((post) => (

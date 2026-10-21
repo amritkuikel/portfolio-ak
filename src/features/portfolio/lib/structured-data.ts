@@ -10,25 +10,26 @@ import { getLocale, localizeHref } from "@/paraglide/runtime";
 /** What every person-related object needs; loaders return exactly this. */
 export type PersonInput = { name: string; role: string; description: string; socials: ReadonlyArray<string> };
 
-const PERSON_ID = () => absoluteUrl("/portfolio#person");
+/** The owner's stable @id, which every page (and the WebSite) points to. */
+export const personId = () => absoluteUrl("/#person");
 const pageUrl = (path: string) => absoluteUrl(localizeHref(path));
-const personRef = () => ({ "@id": PERSON_ID() });
+const personRef = () => ({ "@id": personId() });
 
 /** The portfolio's owner (home page). */
 export const personJsonLd = (person: PersonInput): Exclude<Person, string> => ({
 	"@type": "Person",
-	"@id": PERSON_ID(),
+	"@id": personId(),
 	name: person.name,
 	jobTitle: person.role,
 	description: person.description,
-	url: pageUrl("/portfolio"),
+	url: pageUrl("/"),
 	...(person.socials.length > 0 ? { sameAs: [...person.socials] } : {}),
 });
 
 /** The about page: a profile page whose main entity is the owner. */
 export const profilePageJsonLd = (person: PersonInput): Exclude<ProfilePage, string> => ({
 	"@type": "ProfilePage",
-	url: pageUrl("/portfolio/about"),
+	url: pageUrl("/about"),
 	inLanguage: getLocale(),
 	mainEntity: personJsonLd(person),
 });
@@ -49,7 +50,7 @@ export const blogJsonLd = (input: { name: string; description: string }): Exclud
 	"@type": "Blog",
 	name: input.name,
 	description: input.description,
-	url: pageUrl("/portfolio/journal"),
+	url: pageUrl("/journal"),
 	inLanguage: getLocale(),
 	author: personRef(),
 });
@@ -65,7 +66,7 @@ export type CaseStudyJsonLdInput = {
 
 /** A case study: the project as a CreativeWork by the owner, made for the client. */
 export const caseStudyJsonLd = (project: CaseStudyJsonLdInput): Exclude<CreativeWork, string> => {
-	const url = pageUrl(`/portfolio/work/${project.slug}`);
+	const url = pageUrl(`/work/${project.slug}`);
 	return {
 		"@type": "CreativeWork",
 		"@id": `${url}#work`,
@@ -90,7 +91,7 @@ export type ArticleJsonLdInput = {
 
 /** A journal article. */
 export const articleJsonLd = (post: ArticleJsonLdInput): Exclude<BlogPosting, string> => {
-	const url = pageUrl(`/portfolio/journal/${post.slug}`);
+	const url = pageUrl(`/journal/${post.slug}`);
 	return {
 		"@type": "BlogPosting",
 		"@id": `${url}#article`,

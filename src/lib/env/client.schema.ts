@@ -39,7 +39,18 @@ export const clientEnvSchema = {
 	VITE_SENTRY_DEV_TRACING: z.enum(["true", "false"], "Must be true or false.").optional(),
 	VITE_POSTHOG_KEY: z.string().trim().startsWith("phc_", "PostHog project API keys start with 'phc_'.").optional(),
 	VITE_POSTHOG_HOST: z.url("Must be your PostHog ingest host, e.g. https://eu.i.posthog.com.").optional(),
+
+	// For the e2e harness only: keep the /dev pages in a build (src/lib/dev-routes.ts). Never in production:
+	// the build and the server refuse it when VERCEL_ENV is "production" (devRoutesInProduction).
+	VITE_DEV_ROUTES: z.enum(["true", "false"], "Must be true or false.").optional(),
 };
+
+/** True when a production deploy would ship the /dev pages; vite.config.ts and the server boot refuse it. */
+export const devRoutesInProduction = (env: Record<string, string | boolean | number | undefined>) =>
+	env.VITE_DEV_ROUTES === "true" && env.VERCEL_ENV === "production";
+
+export const DEV_ROUTES_IN_PRODUCTION =
+	"VITE_DEV_ROUTES=true is for the e2e harness only: it would publish the /dev pages in production. Unset it.";
 
 export const createClientEnv = (runtimeEnv: Record<string, string | boolean | number | undefined>) =>
 	createEnv({

@@ -28,7 +28,7 @@ export function ProjectCard({ project, index, flip = false }: ProjectCardProps) 
 		<article aria-labelledby={titleId} className="pf-grid items-end gap-y-8">
 			<Reveal className={cn("col-span-4 md:col-span-7", flip && "md:order-2 md:col-start-6")}>
 				<Link
-					to="/portfolio/work/$slug"
+					to="/work/$slug"
 					params={{ slug: project.slug }}
 					viewTransition
 					tabIndex={-1}
@@ -50,7 +50,7 @@ export function ProjectCard({ project, index, flip = false }: ProjectCardProps) 
 					{project.client}, {formatNumber(project.year, { useGrouping: false })}
 				</p>
 				<h3 id={titleId} className="pf-display text-pf-h2">
-					<Link to="/portfolio/work/$slug" params={{ slug: project.slug }} viewTransition className="pf-focus pf-link">
+					<Link to="/work/$slug" params={{ slug: project.slug }} viewTransition className="pf-focus pf-link">
 						{project.title}
 					</Link>
 				</h3>
@@ -58,7 +58,7 @@ export function ProjectCard({ project, index, flip = false }: ProjectCardProps) 
 				<p className="pf-label mt-6 text-pf-stone">
 					{project.disciplines.map((discipline) => DISCIPLINE_LABELS[discipline]()).join(" / ")}
 				</p>
-				<ArrowLink to="/portfolio/work/$slug" params={{ slug: project.slug }} viewTransition className="mt-8">
+				<ArrowLink to="/work/$slug" params={{ slug: project.slug }} viewTransition className="mt-8">
 					{m.portfolio_case_read_short()}
 					<span className="sr-only">: {project.title}</span>
 				</ArrowLink>

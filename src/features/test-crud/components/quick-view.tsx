@@ -60,7 +60,7 @@ export function TestCrudQuickView({ slug }: { slug: string }) {
 							) : null}
 						</div>
 						<Button asChild className="self-start">
-							<Link to="/test-crud/$slug" params={{ slug }}>
+							<Link to="/dev/test-crud/$slug" params={{ slug }}>
 								{m.test_crud_open_full_page()}
 							</Link>
 						</Button>

@@ -24,6 +24,8 @@
 	"skip_to_content": "Skip to content",
 	"nav_home": "Home",
 	"nav_stack": "Stack",
+	"nav_dev": "Demo",
+	"nav_examples": "Examples",
 	"nav_login": "Log in",
 	"footer_built_with": "Built with TanStack Start, in English and Nepali.",
 	"pending_loading": "Loading…",

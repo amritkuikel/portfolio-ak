@@ -27,7 +27,7 @@ export function SelectedWorkSection({ projects, total }: SelectedWorkSectionProp
 				))}
 			</div>
 			<div className="mt-[clamp(5rem,10vw,9rem)] flex justify-center border-pf-line border-t pt-10">
-				<ArrowLink to="/portfolio/work" size="large">
+				<ArrowLink to="/work" size="large">
 					{m.portfolio_work_all({ count: formatNumber(total) })}
 				</ArrowLink>
 			</div>

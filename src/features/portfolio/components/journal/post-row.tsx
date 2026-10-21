@@ -11,7 +11,7 @@ export function PostRow({ post, headingLevel = "h3" }: { post: PostSummary; head
 	return (
 		<li className="border-pf-line border-t last:border-b">
 			<Link
-				to="/portfolio/journal/$slug"
+				to="/journal/$slug"
 				params={{ slug: post.slug }}
 				className="pf-focus group/row grid grid-cols-4 gap-x-(--pf-gutter) gap-y-3 py-8 transition-colors duration-(--pf-dur-2) hover:bg-pf-paper-2 md:grid-cols-12 md:py-10"
 			>

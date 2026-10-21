@@ -34,7 +34,7 @@
 		"test:e2e:ui": "playwright test --ui",
 		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.ts",
 		"new:feature": "node scripts/new-feature.mjs",
-		"strip-demo": "node scripts/strip-demo.mjs",
+		"strip-demo": "node scripts/strip-demo.ts",
 		"prepare": "node scripts/install-hooks.mjs"
 	},
 	"dependencies": {

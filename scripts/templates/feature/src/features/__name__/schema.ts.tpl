@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { versionSchema } from "@/lib/concurrency";
-import {
-	bulkIdsSchema,
-	enumParam,
-	type Paged,
-	pageParam,
-	pageSizeParam,
-	resolvedPageSize,
-	searchParam,
-} from "@/lib/list";
+import { bulkIdsSchema, type Paged } from "@/lib/list/paging";
+import { enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
 import { optionalText, required } from "@/lib/validation";
 
 /** preferences table id (page size, hidden columns) of the admin list. */

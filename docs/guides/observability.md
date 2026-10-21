@@ -34,7 +34,7 @@ All optional except the logs. Without their variables, Sentry and PostHog are of
 - **Evaluated on the server** in a loader (`src/functions/feature-flags.ts`) and SSR'd through the Query cache, so the server and browser render the same thing and the browser makes no flag request.
 - **Never slow (0154):** with `POSTHOG_SECRET_KEY` (a Project Secret or Personal API key) flags are evaluated in memory from definitions polled every 30 s. Without it a flag request gives up after 300 ms (the flag is off) and answers are cached for 30 s per flag and visitor.
 - **Unknown or unconfigured flags are off.** Before consent, flags are evaluated with a shared anonymous id and never record `$feature_flag_called`.
-- **Example:** create a boolean flag `home-items-cta` in PostHog to show a call to action on the home page.
+- **Example:** create a boolean flag `home-items-cta` in PostHog to show a call to action on the demo home (`/dev`).
 
 ## Health
 

@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (160 entries)</summary>
+<summary>Index (163 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -166,6 +166,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0158](#0158-srclib-is-grouped-by-area-and-biome-enforces-the-import-boundaries): `src/lib` is grouped by area, and Biome enforces the import boundaries
 - [0159](#0159-tests-start-from-one-migrated-pglite-database-per-run): Tests start from one migrated PGlite database per run
 - [0160](#0160-postgres-image-storage-from-part-1-is-dropped): Postgres image storage from Part 1 is dropped
+- [0161](#0161-the-portfolio-is-the-site-at--each-layout-renders-its-own-header-sections-can-skip-the-session): The portfolio is the site at `/`; each layout renders its own header; sections can skip the session
+- [0162](#0162-dev-pages-exist-in-dev-and-in-e2e-builds-dev_routes-a-production-deploy-refuses-the-flag): `/dev` pages exist in dev and in e2e builds (`DEV_ROUTES`); a production deploy refuses the flag
+- [0163](#0163-pnpm-strip-demo-removes-layers-portfolio-apps-by-data-lists-and-markers-the-core-stays): `pnpm strip-demo` removes layers (portfolio, apps) by data lists and markers; the core stays
 </details>
 
 ---
@@ -644,6 +647,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - "Forgot password" and "send code" show the same confirmation whether or not the account exists; only rate limits are surfaced.
 - **Why:** This avoids account enumeration, keeps pages working in both languages, and avoids building the Phase 7 form library early.
 
+*Restated in 0161 (Task 35): `_public` keeps verify-email and reset-password; the site's other pages moved to `_site` (the portfolio at `/`) and `/dev`.*
+
 ## 0047: The admin seed wraps Better Auth's `create-admin`
 
 - **What:** `pnpm db:seed-admin` (`scripts/seed-admin.mjs`) validates `--email`, `--password` (12+ characters) and `--name`, falling back to `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_NAME`. It then runs the official `auth create-admin` with the app's auth config, spawned with Node directly, without a shell.
@@ -797,6 +802,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives:**
   - Storybook (Task 14): it doesn't exercise SSR or the router.
   - A Vite `apply: "serve"` plugin, as for `/dev/emails`: it can't render inside the app shell.
+
+*Superseded by 0162: the guard is `DEV_ROUTES` (`src/lib/dev-routes.ts`), and the route is `src/routes/dev/forms.tsx`.*
 
 ## 0062: File fields use the native input plus drag-and-drop, and validate in the schema
 
@@ -1332,6 +1339,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Server routes over Nitro routes:** they get the locale middleware and the app's server-only import protection. Nitro routes stay for endpoints outside Start, such as the cron job.
 - **Static files:** the icons and `og-default.png` are generated from the logo mark and live in `public/`. They are replaced at the same sizes to rebrand (see docs/guides/seo.md).
 
+*Updated by 0162: the sitemap lists only the home page and the portfolio's pages.*
+
 ## 0102: JSON-LD is typed with schema-dts and emitted through route heads; items are Products
 
 - **What:**
@@ -1349,6 +1358,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Alternatives considered:**
   - Rendering JSON-LD `<script>` tags in page components: they stay in the body, and data needed by the head would be duplicated in components.
   - A `@graph` per page: one more nesting level for no gain at this size.
+
+*Updated by 0161: Test CRUD's pages are private dev references now, so the `Product` and `Organization` builders were removed.*
 
 ## 0103: Module examples are dev-only routes over in-memory data, guarded by one layout
 
@@ -1379,6 +1390,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - Examples on the database (a seeded table): a migration and cleanup for development-only data.
   - An env flag to enable the pages in production: the brief says unreachable in production, and `import.meta.env.DEV` is a build-time constant.
 
+*Superseded in part by 0162: the guard is `DEV_ROUTES`, the pages are under `src/routes/dev/`, and the e2e suite reviews them.*
+
 ## 0104: Forms handled in JavaScript use method="post"
 
 - **What:** the shared `Form` (useAppForm) and every hand-written form (sign-in, register, sign-in code, forgot and reset password, verify email, account) set `method="post"`. FilterBar keeps `method="get"`, because its values belong in the URL. `tests/unit/form-method.test.ts` checks every `<form>` in `src`.
@@ -1401,6 +1414,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - A pathless layout outside the root layout: impossible, since every route is under `__root`.
   - Hiding the header with CSS from the section: it would still be in the HTML and the accessibility tree.
   - A path check (`pathname.startsWith("/portfolio")`) in the header: it breaks with the `/ne` prefix and spreads knowledge of one section into shared code.
+
+*Superseded by 0161: the root renders no header; each layout renders its own.*
 
 ## 0106: Portfolio content sits behind a PortfolioSource port; the demo adapter lazy-loads fixtures
 
@@ -1768,6 +1783,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Why:** a new project shouldn't start by hunting down a design system, two fonts and a dozen tests by hand. Trailing `// @demo` markers exist because Biome's import sorting moves a comment line onto the next import but keeps a trailing comment on its own line.
 - **Alternatives considered:** a separate "bare" branch (drifts from `main`, and fixes need porting); keeping the demo in a package (the portfolio uses app internals throughout); deleting by regex on content (fragile across edits).
 
+*Superseded by 0163: layers, data lists and stricter markers.*
+
 ## 0143: Routes stay thin; CLAUDE.md keeps only the pitfalls that apply everywhere
 
 - **What:** `_authed/account.tsx` and `_admin/admin/test-crud/index.tsx` now hold only loader, search, head and a component that renders `AccountPage` (`features/auth/components/account-page.tsx`) or `TestCrudAdminList` (`features/test-crud/components/admin-list.tsx`), with what came from the URL as props. CLAUDE.md's pitfalls are split into "Always relevant" (kept) and "Per area": 23 moved to a "Pitfalls already solved" section at the end of their guide, with a one-line index per guide in CLAUDE.md. Grouping `src/lib` by area is a recipe in `conventions.md`, not done here.
@@ -1890,3 +1907,61 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Why:** nothing in the app has read them since attachments moved to Cloudinary (0098), and every new project inherited a `bytea` table it would never use.
 - **Before migrating a database that may still hold Part 1 images:** run `attachments:import-legacy` from the commit before this one first.
 - **Alternatives considered:** keeping them until each project drops them (every project would have to know to).
+
+## 0161: The portfolio is the site at `/`; each layout renders its own header; sections can skip the session
+
+- **What:**
+  - **Routes:** the portfolio moved from `/portfolio` to a pathless `_site` layout (`/`, `/work`, `/about`, `/journal`, `/contact`). The old demo home, `/stack`, the public Test CRUD pages, `/dev/forms` and `/dev/examples` moved under `src/routes/dev/` (0162). `_public` keeps health, verify-email and reset-password, and is where new public pages go.
+  - **Headers:** the root renders no header, only the skip link, the impersonation banner, the consent banner and toasts. `SiteHeader` takes `links`. `_public`, `_auth`, `_authed` and `_admin` render it with none (the brand to `/`, Admin when permitted, account or sign-in, language, theme); `dev` passes the demo's four links and adds `SiteFooter`; the portfolio renders its own. `src/lib/chrome.ts` (`chrome: "bare"`) is gone. Supersedes 0105.
+  - **One skip link:** the root's `SkipLink` is the only one. The portfolio's `<main>` spreads `MAIN_CONTENT` instead of having its own link to `#pf-main`.
+  - **Session opt-out:** `staticData: { session: "skip" }` (`src/lib/session-scope.ts`). The root `beforeLoad` returns `{ session: null }` without a lookup when any match sets it (router-core 1.171 passes `matches` to `beforeLoad`). `ImpersonationBanner` and `ObservabilitySync` read the session with `enabled: !useSessionSkipped()`; otherwise the browser would fetch it after hydration. Only `_site` sets it; navigating to any other section runs the root `beforeLoad` again and looks it up.
+  - **Impersonation (0134):** the portfolio shows no impersonation banner (it never knows the session), so "View as this user" now lands on `/account` instead of `/`. Every other section still shows the banner.
+  - **Types:** reading `matches` in the root `beforeLoad` made the route tree's types circular (`match.routeId` became `unknown` in `session-expiry.ts`). An explicit return type, `Promise<{ session: Session | null }>`, breaks the cycle.
+  - **JSON-LD:** the portfolio home emits `WebSite` (its publisher is the owner's `Person`, whose `@id` is now `/#person`) with the `Person`. The old home's `Organization` and Test CRUD's `Product` (0102) went private with their pages, so `organizationJsonLd` and `productJsonLd` were removed; `websiteJsonLd` takes an optional publisher.
+- **Why:**
+  - It is the finished product's URL layout: the owner's portfolio is the site, and the demo is a developer reference.
+  - Once most sections have their own frame (Task 36 turns these headers into shells), a header per layout is simpler than a global header with opt-outs.
+  - The portfolio reads no user state. A session lookup on each of its pages was a database round trip (about 300 ms against Neon from Kathmandu, section 10.4) for nothing, and fetching it in the browser instead would only move the cost.
+- **0046 restated:** `verify-email` and `reset-password` stay under `_public`, not `_auth`: `_auth` sends signed-in users away, and `autoSignInAfterVerification` arrives signed in.
+- **Alternatives considered:** keeping 0105's opt-out with the portfolio at `/` (every new section would have to opt out); a path check for the session (breaks with the `/ne` prefix and spreads section knowledge into the root; `matches` exists, so it isn't needed); fetching the session lazily in the browser on the portfolio (moves the cost, doesn't remove it).
+
+## 0162: `/dev` pages exist in dev and in e2e builds (`DEV_ROUTES`); a production deploy refuses the flag
+
+- **What:**
+  - **The flag:** `src/lib/dev-routes.ts` exports `DEV_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DEV_ROUTES === "true"`. It reads `import.meta.env` directly, so Vite inlines both values and a plain build folds it to `false` (checked: the `/dev` layout's `beforeLoad` compiles to an unconditional `throw notFound()`).
+  - **Every dev check uses it:** the `/dev` layout, `devOnlyMiddleware` and `assertDev`, `/dev/forms`'s component, and `functions/dev.ts` (which now uses the middleware instead of its own check). Supersedes the `import.meta.env.DEV` guard of 0061 and 0103.
+  - **Env and guards:** `VITE_DEV_ROUTES` (`"true" | "false"`, optional) is in the client env schema. `vite.config.ts` throws at build, and `src/server/plugins/validate-env.ts` at boot, when it is `"true"` and `VERCEL_ENV` is `"production"` (Nitro inlines the flag in the plugin too).
+  - **Reviewed:** the e2e harness builds with it, so the browser review covers every `/dev` page (`/dev/forms`, `/dev/examples` and its 21 pages are new to it, 12 combinations each). CI's e2e job runs on 5 shards instead of 3.
+  - **Public Test CRUD is a dev reference:** `/dev/test-crud` and its detail pages use `privateHead()`, and `test-crud-public.ts` and `stack.ts` run `devOnlyMiddleware`. The old home (`/dev`) and `/dev/stack` are private too.
+  - **Sitemap (updates 0101):** only the home page and the portfolio's pages. The `/stack` and `/test-crud` entries and their published-items query are gone. `robots.txt` is unchanged, since `/dev` is a 404 in production.
+  - **`listSeo()`** has no caller now. It stays as the list-page recipe's head, tagged `@public` so knip keeps it.
+- **Why:** the dev pages are references that should be checked like any other page, but must never ship. A build flag lets the review use a real production build. The double guard (build and boot) makes a mis-set flag on Vercel fail loudly instead of publishing them.
+- **Alternatives considered:**
+  - Reviewing `/dev` against `vite dev`: not a production build (different chunks, no font preloads, layout-shift numbers meaningless).
+  - `clientEnv.VITE_DEV_ROUTES`: not folded, so dev-only code would stay in every bundle.
+  - A runtime server variable: the client code would still ship.
+
+## 0163: `pnpm strip-demo` removes layers (portfolio, apps) by data lists and markers; the core stays
+
+- **What:**
+  - **Script:** `scripts/strip-demo.ts` replaces `strip-demo.mjs`, with flags `--keep-portfolio`, `--keep-apps` and `--no-build`. The layers are `portfolio` and `apps` (empty until Task 41). Each layer's files, package scripts, `vercel.json` crons, `knip.json` entries and schema files are lists at the top of the script, so later tasks append to them.
+  - **Core, never removed:** auth, admin, RBAC, audit, attachments, i18n, SEO, Test CRUD and all of `/dev`. `/dev/stack` and the Intl showcase now stay (dev-only references), so their old `demo` markers are gone.
+  - **Markers** (`scripts/lib/strip-markers.ts`):
+    - Blocks: `<layer>:start` / `<layer>:end` comment lines (`//`, `/*`, `{/*`, `<!--`, `#`).
+    - Lines: a line ending in `// @<layer>`, or holding an HTML comment `@<layer>` outside backticks.
+    - Never touched: mentions in prose, and the records (PLAN.md, decisions.md, docs/history). 0142 matched `demo:start` anywhere, so it would have cut lines from those.
+    - `tests/unit/strip-markers.test.ts` checks every tracked text file for balanced blocks and for leftover `demo` markers.
+  - **When the portfolio goes**, the script writes:
+    - a neutral landing page, `src/routes/_public/index.tsx`, from `scripts/templates/landing/index.tsx.tpl` (`seo()` with `WebSite` JSON-LD);
+    - its `landing_*` messages, which the script holds: unused keys would fail the message-usage test while the portfolio exists;
+    - the route test's indexable home entry, at a `// @strip-demo:indexable` line;
+    - a neutral `site_description` and `home_intro`.
+  - **Then:** it drops messages nothing uses, runs `knip --fix --fix-type dependencies` and `pnpm install` (removing the portfolio's three fonts), formats, compiles the messages, runs `drizzle-kit generate --name strip_<layers>` when a layer had tables, and builds.
+  - **Once no layer is left,** it deletes itself, its marker library, its landing template, its test, and CI's template job (a `# strip-demo:start` block). With a layer kept, it stays, so the rest can go later.
+  - **CI:** the template job is a matrix: all layers stripped, `--keep-apps`, and `--keep-portfolio`. Each runs `new:feature`, typecheck, check, knip, test and the migration check.
+- **Found while running that matrix locally (fixed here):**
+  - The scaffolder's templates still imported the `src/lib` paths from before 0158, so `pnpm new:feature` failed to build.
+  - knip's vite plugin loads `vite.config.ts` in serve mode, which validates the server env, so `pnpm knip` exited 2 without a `.env` (as in CI). knip now has `"vite": false`, with `vite.config.ts` as a plain entry.
+  - `tests/setup/env.ts` only defaulted its values, so CI's `VITE_APP_TITLE` changed what the tests expected. It now sets them.
+- **Why:** later tasks add the database-driven portfolio and six apps, which a new project may or may not want, so one all-or-nothing demo no longer fits.
+- **Alternatives considered:** one script per layer (the shared steps would be duplicated); an AST-based remover (markers are simpler, and they work in CSS, Markdown and YAML); deleting by directory only (shared files like the sitemap and the route test need edits). Supersedes 0142.

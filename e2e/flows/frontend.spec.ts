@@ -7,7 +7,7 @@
 import { expect, signedIn, test } from "../support/fixtures.ts";
 
 test.describe("skip link", () => {
-	for (const path of ["/", "/ne/test-crud", "/login"]) {
+	for (const path of ["/", "/ne/dev/test-crud", "/login"]) {
 		test(`moves keyboard focus past the header on ${path}`, async ({ page }) => {
 			await page.goto(path, { waitUntil: "load" });
 			await page.keyboard.press("Tab");

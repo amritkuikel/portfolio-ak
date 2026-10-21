@@ -4,7 +4,14 @@
  */
 import { E2E } from "./harness/config.ts";
 import { type Harness, RESOURCE_STATUS, signedIn, test } from "./support/fixtures.ts";
-import { localizedPath, REVIEWED_PAGES, type ReviewedPage, routePattern, SEEDED_ITEM_SLUG } from "./support/pages.ts";
+import {
+	localizedPath,
+	REVIEWED_PAGES,
+	type ReviewedPage,
+	routePattern,
+	SEEDED_ITEM_SLUG,
+	SEEDED_PUBLISHED_SLUG,
+} from "./support/pages.ts";
 import { reviewPage } from "./support/review.ts";
 
 const THEMES = ["light", "dark"] as const;
@@ -30,6 +37,7 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "test-crud-id") {
 		return page.route.replace("$id", await harness.testCrudId(SEEDED_ITEM_SLUG));
 	}
+	if (page.params.from === "seeded-slug") return page.route.replace("$slug", SEEDED_PUBLISHED_SLUG);
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

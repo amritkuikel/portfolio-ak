@@ -151,15 +151,15 @@ Run `pnpm dev` and open `/dev/examples` (or `/ne/dev/examples`): one small, real
 
 | Pattern | Page | Source |
 | --- | --- | --- |
-| Loader + Query (SSR, no refetch while hydrating) | `/dev/examples/loader-query` | `src/routes/_public/dev/examples/loader-query.tsx` |
-| Streaming a slow part with `Await` | `/dev/examples/streaming` | `src/routes/_public/dev/examples/streaming.tsx` |
-| Forms: client validation; server field errors | `/dev/examples/forms` | `src/routes/_public/dev/examples/forms.tsx` |
-| DataTable with columns, sorting, bulk and row actions | `/dev/examples/data-table` | `src/routes/_public/dev/examples/data-table.tsx` |
-| TanStack DB optimistic update and rollback | `/dev/examples/optimistic` | `src/routes/_public/dev/examples/optimistic.tsx` |
-| Store preferences (cookies, SSR) | `/dev/examples/preferences` | `src/routes/_public/dev/examples/preferences.tsx` |
-| i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/_public/dev/examples/i18n.tsx` |
-| Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/_public/dev/examples/errors.tsx` |
-| Recipe: admin command palette with view transitions | `/dev/examples/command-palette` | `src/routes/_public/dev/examples/command-palette.tsx` |
+| Loader + Query (SSR, no refetch while hydrating) | `/dev/examples/loader-query` | `src/routes/dev/examples/loader-query.tsx` |
+| Streaming a slow part with `Await` | `/dev/examples/streaming` | `src/routes/dev/examples/streaming.tsx` |
+| Forms: client validation; server field errors | `/dev/examples/forms` | `src/routes/dev/examples/forms.tsx` |
+| DataTable with columns, sorting, bulk and row actions | `/dev/examples/data-table` | `src/routes/dev/examples/data-table.tsx` |
+| TanStack DB optimistic update and rollback | `/dev/examples/optimistic` | `src/routes/dev/examples/optimistic.tsx` |
+| Store preferences (cookies, SSR) | `/dev/examples/preferences` | `src/routes/dev/examples/preferences.tsx` |
+| i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/dev/examples/i18n.tsx` |
+| Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/dev/examples/errors.tsx` |
+| Recipe: admin command palette with view transitions | `/dev/examples/command-palette` | `src/routes/dev/examples/command-palette.tsx` |
 
 The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags ([observability.md](observability.md)). Tables and filters in depth: [tables-filters.md](tables-filters.md); forms: [forms.md](forms.md); state: [state.md](state.md); i18n: [i18n.md](i18n.md).
 
@@ -184,11 +184,11 @@ When moving files, update imports with your editor's "move file" refactor (TypeS
 - **To ship it:** move `AdminCommandPalette` into `src/components/layout/` and render it in `AdminLayout` with its own `open` state. Add other commands as more `CommandGroup`s (each item's `onSelect` navigates or calls a mutation).
 - **View transitions:** `navigate({ to, viewTransition: true })` (or `<Link viewTransition>`) cross-fades the old and new page where the browser supports it. For every navigation, set `defaultViewTransition: true` in `src/router.tsx`. Name elements with `view-transition-name` to animate them between pages (the portfolio does, 0109). Reduced motion removes the animation (`app.css`).
 
-**Adding an example:** a route under `src/routes/_public/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.
+**Adding an example:** a route under `src/routes/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.
 
 ## Pitfalls already solved
 
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
 - **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
-- **The app header is opt-out per section:** `staticData: { chrome: "bare" }` on a layout hides `SiteHeader` for its subtree (0105). Don't hide it with CSS or path checks.
+- **One header per section:** the root renders no header; each layout renders its own (`<SiteHeader links={…} />`, or the portfolio's), so a new layout must too (0161, which replaced 0105's `chrome: "bare"` opt-out). Don't hide headers with CSS or path checks.

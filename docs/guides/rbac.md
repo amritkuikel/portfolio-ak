@@ -138,7 +138,7 @@ export async function archiveProject(db: Db, actor: AuditActor, id: string) {
 
 ## Live example
 
-- **useCan, <Can> and guarded server functions:** `/dev/examples/permissions` (`src/routes/_public/dev/examples/permissions.tsx`), with `pnpm dev`.
+- **useCan, <Can> and guarded server functions:** `/dev/examples/permissions` (`src/routes/dev/examples/permissions.tsx`), with `pnpm dev`.
 
 ## Pitfalls already solved
 

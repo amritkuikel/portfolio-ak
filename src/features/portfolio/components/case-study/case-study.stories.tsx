@@ -11,7 +11,7 @@ import { NextProject } from "./next-project";
 const meta = {
 	title: "Portfolio/Case study",
 	decorators: [withPortfolioCanvas],
-	parameters: { layout: "fullscreen", app: { route: "/portfolio/work/ledgerline" } },
+	parameters: { layout: "fullscreen", app: { route: "/work/ledgerline" } },
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;

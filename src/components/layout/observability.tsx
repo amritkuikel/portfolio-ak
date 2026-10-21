@@ -13,6 +13,7 @@ import {
 	track,
 } from "@/lib/observability/analytics";
 import { setSentryUser } from "@/lib/observability/sentry-client";
+import { useSessionSkipped } from "@/lib/session-scope";
 import { usePreferences, usePreferencesStore } from "@/lib/stores/hooks";
 import { m } from "@/paraglide/messages";
 
@@ -27,7 +28,8 @@ import { m } from "@/paraglide/messages";
 export function ObservabilitySync() {
 	const router = useRouter();
 	const consent = usePreferences((preferences) => preferences.analyticsConsent);
-	const { data: session } = useQuery(sessionQueryOptions());
+	// Not on pages that skip the session (the portfolio): it would be fetched after hydration.
+	const { data: session } = useQuery({ ...sessionQueryOptions(), enabled: !useSessionSkipped() });
 	const userId = session?.user.id ?? null;
 	const [running, setRunning] = useState(false);
 

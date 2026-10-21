@@ -5,7 +5,6 @@ import { isLocalized, resolveLocalized } from "@/features/portfolio/lib/localize
 import { readingMinutes } from "@/features/portfolio/lib/reading-time";
 import { hashString, round, seededRandom } from "@/features/portfolio/lib/seeded-random";
 import { weave } from "@/features/portfolio/lib/weave";
-import { isBareChrome } from "@/lib/chrome";
 
 describe("resolveLocalized", () => {
 	it("resolves { en, ne } pairs deeply, through arrays and objects", () => {
@@ -135,13 +134,5 @@ describe("portfolio cn", () => {
 		expect(cn("text-pf-h2", "text-pf-accent")).toBe("text-pf-h2 text-pf-accent");
 		expect(cn("text-pf-h2", "text-pf-h3")).toBe("text-pf-h3");
 		expect(cn("text-pf-stone", "text-current")).toBe("text-current");
-	});
-});
-
-describe("isBareChrome", () => {
-	it("is true only when a matched route asks for no app chrome", () => {
-		expect(isBareChrome([{ staticData: {} }, { staticData: {} }])).toBe(false);
-		expect(isBareChrome([{ staticData: {} }, { staticData: { chrome: "bare" } }, { staticData: {} }])).toBe(true);
-		expect(isBareChrome([])).toBe(false);
 	});
 });

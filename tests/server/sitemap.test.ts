@@ -1,96 +1,39 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { portfolioSource } from "@/features/portfolio/sources"; // @demo
-import { STACK_PAGE_SIZE } from "@/features/stack/schema"; // @demo
-import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/search";
+import { afterEach, describe, expect, it } from "vitest";
+import { portfolioSource } from "@/features/portfolio/sources"; // @portfolio
 import { overwriteGetLocale } from "@/paraglide/runtime";
-import * as schema from "@/server/db/schema";
 import { webManifest } from "@/server/seo/manifest";
 import { robotsTxt } from "@/server/seo/robots";
 import { sitemapEntries, sitemapXml } from "@/server/seo/sitemap";
-import { STACK } from "@/server/stack/data"; // @demo
-import { createTestDb } from "../utils/test-db";
 
-let testDb: Awaited<ReturnType<typeof createTestDb>>;
-
-beforeAll(async () => {
-	testDb = await createTestDb();
-}, 60_000);
-afterAll(() => testDb.close());
-beforeEach(() => testDb.reset());
 afterEach(() => {
 	overwriteGetLocale(() => "en");
 });
 
-const item = (slug: string, status: "draft" | "published", updatedAt: string) => ({
-	title: slug,
-	slug,
-	summary: "",
-	body: "",
-	status,
-	price: 100,
-	tags: [],
-	createdBy: testDb.adminId,
-	publishedAt: status === "published" ? new Date(updatedAt) : null,
-	updatedAt: new Date(updatedAt),
-});
-
 describe("sitemap", () => {
-	it("lists the public pages and published items only, newest item first", async () => {
-		await testDb.db
-			.insert(schema.testCrud)
-			.values([
-				item("older", "published", "2026-09-01T00:00:00Z"),
-				item("newer", "published", "2026-10-01T00:00:00Z"),
-				item("secret-draft", "draft", "2026-10-05T00:00:00Z"),
-			]);
-		const entries = await sitemapEntries(testDb.db);
-		// demo:start
+	it("lists the home page and the portfolio's pages", async () => {
+		const entries = await sitemapEntries();
+		// portfolio:start
 		const portfolio = await portfolioSource.listSlugs();
-		const stackPages = Math.ceil(STACK.length / STACK_PAGE_SIZE);
-		// demo:end
+		// portfolio:end
 		expect(entries.map((entry) => entry.path)).toEqual([
 			"/",
-			// demo:start
-			"/stack",
-			...Array.from({ length: stackPages - 1 }, (_, index) => `/stack?page=${index + 2}`),
-			// demo:end
-			"/test-crud",
-			"/test-crud/newer",
-			"/test-crud/older",
-			// demo:start
-			"/portfolio",
-			"/portfolio/work",
-			...portfolio.projects.map((slug) => `/portfolio/work/${slug}`),
-			"/portfolio/about",
-			"/portfolio/journal",
-			...portfolio.posts.map((slug) => `/portfolio/journal/${slug}`),
-			"/portfolio/contact",
-			// demo:end
+			// portfolio:start
+			"/work",
+			...portfolio.projects.map((slug) => `/work/${slug}`),
+			"/about",
+			"/journal",
+			...portfolio.posts.map((slug) => `/journal/${slug}`),
+			"/contact",
+			// portfolio:end
 		]);
-		// demo:start
+		// portfolio:start
 		expect(portfolio.projects).toHaveLength(7);
 		expect(portfolio.posts).toHaveLength(6);
-		// demo:end
-		expect(entries.find((entry) => entry.path === "/test-crud")?.lastmod?.toISOString()).toBe(
-			"2026-10-01T00:00:00.000Z",
-		);
-		expect(entries.find((entry) => entry.path === "/test-crud/older")?.lastmod?.toISOString()).toBe(
-			"2026-09-01T00:00:00.000Z",
-		);
-	});
-
-	it("adds the list's later pages once items fill more than one", async () => {
-		const many = Array.from({ length: TEST_CRUD_PUBLIC_PAGE_SIZE + 1 }, (_, index) =>
-			item(`item-${index}`, "published", "2026-09-01T00:00:00Z"),
-		);
-		await testDb.db.insert(schema.testCrud).values(many);
-		const paths = (await sitemapEntries(testDb.db)).map((entry) => entry.path);
-		expect(paths).toContain("/test-crud?page=2");
-		expect(paths).not.toContain("/test-crud?page=3");
+		// portfolio:end
 	});
 
 	it("never lists private pages", async () => {
-		const paths = (await sitemapEntries(testDb.db)).map((entry) => entry.path);
+		const paths = (await sitemapEntries()).map((entry) => entry.path);
 		for (const path of paths) {
 			expect(path).not.toMatch(
 				/^\/(admin|login|register|sign-in-code|forgot-password|account|health|dev|reset-password|verify-email|api)/,
@@ -101,8 +44,8 @@ describe("sitemap", () => {
 	it("writes one <url> per page and language, each with every hreflang alternate", () => {
 		const xml = sitemapXml([
 			{ path: "/" },
-			{ path: "/test-crud?page=2&x=<1>" },
-			{ path: "/test-crud/momo", lastmod: new Date("2026-10-01T00:00:00Z") },
+			{ path: "/work?page=2&x=<1>" },
+			{ path: "/work/momo", lastmod: new Date("2026-10-01T00:00:00Z") },
 		]);
 		expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset')).toBe(true);
 		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
@@ -110,13 +53,13 @@ describe("sitemap", () => {
 		expect(xml).toContain("<loc>http://localhost:3000/</loc>");
 		expect(xml).toContain("<loc>http://localhost:3000/ne/</loc>");
 		expect(xml).toContain(
-			"<url><loc>http://localhost:3000/ne/test-crud/momo</loc><lastmod>2026-10-01T00:00:00.000Z</lastmod>" +
-				'<xhtml:link rel="alternate" hreflang="en" href="http://localhost:3000/test-crud/momo"/>' +
-				'<xhtml:link rel="alternate" hreflang="ne" href="http://localhost:3000/ne/test-crud/momo"/>' +
-				'<xhtml:link rel="alternate" hreflang="x-default" href="http://localhost:3000/test-crud/momo"/></url>',
+			"<url><loc>http://localhost:3000/ne/work/momo</loc><lastmod>2026-10-01T00:00:00.000Z</lastmod>" +
+				'<xhtml:link rel="alternate" hreflang="en" href="http://localhost:3000/work/momo"/>' +
+				'<xhtml:link rel="alternate" hreflang="ne" href="http://localhost:3000/ne/work/momo"/>' +
+				'<xhtml:link rel="alternate" hreflang="x-default" href="http://localhost:3000/work/momo"/></url>',
 		);
 		// Query strings are XML-escaped.
-		expect(xml).toContain("/test-crud?page=2&amp;x=%3C1%3E</loc>");
+		expect(xml).toContain("/work?page=2&amp;x=%3C1%3E</loc>");
 		expect(xml).not.toMatch(/&(?!amp;|lt;|gt;|quot;|apos;)/);
 	});
 });

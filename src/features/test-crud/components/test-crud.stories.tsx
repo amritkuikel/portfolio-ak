@@ -35,7 +35,7 @@ export const Card: Story = {
 
 /** With the "Quick view" button (a masked link: its href is the item's own page). */
 export const CardWithQuickView: Story = {
-	parameters: { app: { route: "/test-crud" } },
+	parameters: { app: { route: "/dev/test-crud" } },
 	render: () => (
 		<div className="max-w-sm">
 			<PublicCard item={samplePublicCard} quickView />
@@ -43,13 +43,13 @@ export const CardWithQuickView: Story = {
 	),
 	play: async ({ canvas }) => {
 		const link = canvas.getByRole("link", { name: m.test_crud_quick_view_of({ title: samplePublicCard.title }) });
-		await expect(link.getAttribute("href")?.endsWith(`/test-crud/${samplePublicCard.slug}`)).toBe(true);
+		await expect(link.getAttribute("href")?.endsWith(`/dev/test-crud/${samplePublicCard.slug}`)).toBe(true);
 	},
 };
 
 /** The quick-view dialog over the grid (?view=<slug>). */
 export const QuickView: Story = {
-	parameters: { app: { route: `/test-crud?view=${samplePublicCard.slug}` } },
+	parameters: { app: { route: `/dev/test-crud?view=${samplePublicCard.slug}` } },
 	render: () => <TestCrudQuickView slug={samplePublicCard.slug} />,
 	play: async ({ canvasElement }) => {
 		const dialog = within(canvasElement.ownerDocument.body);

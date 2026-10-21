@@ -59,7 +59,7 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 
 ```
 src/
-  routes/        file routes: _public (site + /dev examples), _auth (sign-in pages), _authed (account), _admin (admin area)
+  routes/        file routes: _site (the portfolio at /), dev (demo and references, dev builds only), _public, _auth (sign-in), _authed (account), _admin
   features/      feature code shared by client and server: schemas, queries, collections, components
   functions/     server functions: permission middleware + Zod validator + one call into src/server
   server/        SERVER-ONLY: env, db (Drizzle), auth, email, rbac, attachments, seo, repositories/services, Nitro routes
@@ -122,7 +122,7 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
 | `pnpm new:feature <name>` | Generate an admin CRUD feature in the Test CRUD shape (table, migration, permissions, functions, routes, messages, tests, stories); see [docs/guides/new-project.md](docs/guides/new-project.md). |
-| `pnpm strip-demo` | Remove the portfolio, `/stack` and the home page's Intl showcase; run once on a fresh clone (it deletes itself). <!-- @demo --> |
+| `pnpm strip-demo` | Remove the portfolio (and later the apps) for a neutral landing page; `--keep-portfolio`, `--keep-apps`; it deletes itself once nothing is left. <!-- @portfolio --> |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
 
@@ -163,7 +163,7 @@ Query for server data you read, a TanStack DB collection for server data you edi
 3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Updates take the version the edit started from (`updatedAt`) and refuse a stale one (`sameVersion`, `staleError()`; see [docs/guides/forms.md](docs/guides/forms.md)). Test both with `createTestDb()` (PGlite), including a stale save.
 4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
-6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
+6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`, and add them to the sitemap). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `ConfirmDialog` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add a link to `admin-sidebar.tsx` and a card on the admin dashboard.
 7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
 8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`. List any new route in `e2e/support/pages.ts` and run `pnpm test:e2e`.
 
@@ -177,7 +177,7 @@ The Test CRUD files for each layer:
 | Server functions | `src/functions/test-crud.ts` | `requirePermission("test-crud:<action>")` on every function, `.validator(zodInput(schema))` input, and images as attachment ids (JSON) |
 | Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQuery` for SSR, and a TanStack DB collection for optimistic changes with rollback |
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
-| Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
+| Public pages (a dev reference) | `src/routes/dev/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs. They live under `/dev` (dev builds only), so their heads are private; a real public page uses `seo()`/`listSeo()` instead |
 
 Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098).
 

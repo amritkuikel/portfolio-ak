@@ -22,7 +22,7 @@ export function CaseStudyHero({ project, index, total }: CaseStudyHeroProps) {
 		<header className="pt-[clamp(2.5rem,6vw,5rem)]">
 			<div className="pf-container pf-grid gap-y-8">
 				<div className="col-span-4 flex flex-wrap items-center justify-between gap-4 md:col-span-12">
-					<ArrowLink to="/portfolio/work" direction="left" className="pf-label font-normal text-pf-ink-2">
+					<ArrowLink to="/work" direction="left" className="pf-label font-normal text-pf-ink-2">
 						{m.portfolio_case_back()}
 					</ArrowLink>
 					<p className="pf-label text-pf-stone">

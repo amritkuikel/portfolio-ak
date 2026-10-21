@@ -2,10 +2,7 @@ import { existsSync } from "node:fs";
 import { type AnyRoute, createRouter, isNotFound } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vitest";
 import { EXAMPLES } from "@/features/dev/examples/registry";
-import { isAppError } from "@/lib/errors";
-import { assertDev } from "@/middleware/dev";
 import type { RouterContext } from "@/router";
-import { Route as DevLayout } from "@/routes/_public/dev/route";
 import { routeTree } from "@/routeTree.gen";
 
 const router = createRouter({ routeTree, context: {} as RouterContext });
@@ -32,32 +29,42 @@ describe("/dev/examples", () => {
 		}
 	});
 
-	it("every /dev page is a 404 outside development", () => {
-		vi.stubEnv("DEV", false);
-		const beforeLoad = DevLayout.options.beforeLoad as () => void;
-		let thrown: unknown;
+	// DEV_ROUTES is read once, when src/lib/dev-routes.ts loads (Vite inlines it in builds):
+	// each case loads the guards again under its own env.
+	const load = async (env: { DEV: boolean; VITE_DEV_ROUTES?: string }) => {
+		vi.resetModules();
+		vi.stubEnv("DEV", env.DEV);
+		vi.stubEnv("VITE_DEV_ROUTES", env.VITE_DEV_ROUTES ?? "");
+		const [{ Route }, { assertDev }, { isAppError }] = await Promise.all([
+			import("@/routes/dev/route"),
+			import("@/middleware/dev"),
+			import("@/lib/errors"),
+		]);
+		return { beforeLoad: Route.options.beforeLoad as () => void, assertDev, isAppError };
+	};
+	const thrownBy = (fn: () => void) => {
 		try {
-			beforeLoad();
+			fn();
 		} catch (error) {
-			thrown = error;
+			return error;
 		}
-		expect(isNotFound(thrown)).toBe(true);
+		return undefined;
+	};
+
+	it("every /dev page is a 404 in a plain build", async () => {
+		const { beforeLoad } = await load({ DEV: false });
+		expect(isNotFound(thrownBy(beforeLoad))).toBe(true);
 	});
 
-	it("is open in development", () => {
-		const beforeLoad = DevLayout.options.beforeLoad as () => void;
-		expect(() => beforeLoad()).not.toThrow();
+	it("is open in development, and in a build made with VITE_DEV_ROUTES=true (the e2e harness)", async () => {
+		expect(thrownBy((await load({ DEV: true })).beforeLoad)).toBeUndefined();
+		expect(thrownBy((await load({ DEV: false, VITE_DEV_ROUTES: "true" })).beforeLoad)).toBeUndefined();
 	});
 
-	it("dev-only server functions refuse with NOT_FOUND outside development", () => {
-		expect(() => assertDev()).not.toThrow();
-		vi.stubEnv("DEV", false);
-		let thrown: unknown;
-		try {
-			assertDev();
-		} catch (error) {
-			thrown = error;
-		}
+	it("dev-only server functions refuse with NOT_FOUND in a plain build", async () => {
+		expect(thrownBy((await load({ DEV: true })).assertDev)).toBeUndefined();
+		const { assertDev, isAppError } = await load({ DEV: false, VITE_DEV_ROUTES: "false" });
+		const thrown = thrownBy(assertDev);
 		expect(isAppError(thrown) && thrown.code).toBe("NOT_FOUND");
 	});
 });

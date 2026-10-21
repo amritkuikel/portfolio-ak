@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { SiteHeader } from "@/components/layout/site-header";
 import { fontPreloads } from "@/lib/fonts";
 import { NOINDEX } from "@/lib/seo";
 import { getLocale } from "@/paraglide/runtime";
@@ -17,5 +18,14 @@ export const Route = createFileRoute("/_authed")({
 		return { session: context.session };
 	},
 	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
-	component: Outlet,
+	component: AuthedLayout,
 });
+
+function AuthedLayout() {
+	return (
+		<>
+			<SiteHeader />
+			<Outlet />
+		</>
+	);
+}

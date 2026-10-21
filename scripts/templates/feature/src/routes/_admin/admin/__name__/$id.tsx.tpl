@@ -7,9 +7,9 @@ import { __camel__DetailQueryOptions } from "@/features/__name__/queries";
 import { assertRoutePermission } from "@/features/rbac/route-guard";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
-import { setErrorStatus } from "@/lib/http-status";
+import { setErrorStatus } from "@/lib/start/http-status";
 import { ensureQuery } from "@/lib/query";
-import { parseParams } from "@/lib/search";
+import { parseParams } from "@/lib/list/params";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

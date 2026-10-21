@@ -40,7 +40,7 @@ Order with `cursorOrder(column, id, direction)` and return the sort value with `
 
 ## Caching public pages
 
-Pages that look the same to every visitor (marketing pages, `/portfolio` before strip-demo, a public item page) can be served by Vercel's CDN without running the function:
+Pages that look the same to every visitor (marketing pages, the portfolio at `/`, a public item page) can be served by Vercel's CDN without running the function:
 
 ```ts
 export const Route = createFileRoute("/_public/about")({
@@ -77,7 +77,7 @@ Better Auth limits its own endpoints (0128). For your public server functions (c
 2. `CONTACT_TO` in `src/server/env.ts` (validated as an email);
 3. `sendEmail({ to: serverEnv.CONTACT_TO, template: "contact", data: input, locale })` where the example logs (`src/server/email/send.ts`; add a `replyTo` to the provider call if replies should reach the sender), behind the idempotency-key recipe (0125) so a double submit sends once.
 
-For `/portfolio/contact` the page already exists; add the form below its email link.
+For the portfolio's `/contact` the page already exists; add the form below its email link.
 
 ## Avatar upload
 

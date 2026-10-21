@@ -8,7 +8,7 @@ import {
 	__camel__ListInputSchema,
 	__camel__UpdateSchema,
 } from "@/features/__name__/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import { requirePermission } from "@/middleware/auth";
 import { auditActorFrom } from "@/server/audit/actor";
 import { db } from "@/server/db/client";

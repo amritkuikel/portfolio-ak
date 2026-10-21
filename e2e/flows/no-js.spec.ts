@@ -4,7 +4,7 @@ import { expect, signedIn, test } from "../support/fixtures.ts";
 test.use({ javaScriptEnabled: false });
 
 test("public list: search and page through without JavaScript", async ({ page }) => {
-	await page.goto("/test-crud");
+	await page.goto("/dev/test-crud");
 	await expect(page.getByText(/^Page 1 of \d+$/)).toBeVisible();
 
 	await page.getByRole("link", { name: "Next" }).click();

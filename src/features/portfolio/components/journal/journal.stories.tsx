@@ -9,7 +9,7 @@ import { PostRow } from "./post-row";
 const meta = {
 	title: "Portfolio/Lists and articles",
 	decorators: [withPortfolioCanvas],
-	parameters: { layout: "fullscreen", app: { route: "/portfolio/journal" } },
+	parameters: { layout: "fullscreen", app: { route: "/journal" } },
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -40,7 +40,7 @@ export const Article: Story = {
 };
 
 export const WorkIndex: Story = {
-	parameters: { app: { route: "/portfolio/work" } },
+	parameters: { app: { route: "/work" } },
 	render: () => (
 		<ul className="pf-container py-12">
 			{demo().summaries.map((project) => (

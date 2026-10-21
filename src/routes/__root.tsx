@@ -8,11 +8,12 @@ import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { ConsentBanner, ObservabilitySync } from "@/components/layout/observability";
-import { SiteHeader } from "@/components/layout/site-header";
 import { SkipLink } from "@/components/layout/skip-link";
 import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { pageTitle } from "@/lib/seo";
+import type { Session } from "@/lib/session";
+import { skipsSession } from "@/lib/session-scope";
 import { usePreferences } from "@/lib/stores/hooks";
 import type { ThemePreference } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
@@ -25,8 +26,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	// lookup. In the browser it comes from the Query cache while it's fresh (its
 	// staleTime), then is fetched again, so route guards never trust a session
 	// that expired long ago. Server functions check the session themselves either way.
-	beforeLoad: async ({ context }) => ({
-		session: await context.queryClient.query(sessionQueryOptions()),
+	// Sections that never read it (staticData.session = "skip": the portfolio) get
+	// null without a lookup; navigating on to any other page looks it up again.
+	beforeLoad: async ({ context, matches }): Promise<{ session: Session | null }> => ({
+		session: skipsSession(matches) ? null : await context.queryClient.query(sessionQueryOptions()),
 	}),
 	head: () => ({
 		meta: [
@@ -83,7 +86,6 @@ function RootDocument({ children }: { children: ReactNode }) {
 			<body className="flex min-h-dvh flex-col">
 				<SkipLink />
 				<ImpersonationBanner />
-				<SiteHeader />
 				<div className="flex flex-1 flex-col">{children}</div>
 				<ThemeSync />
 				<ObservabilitySync />

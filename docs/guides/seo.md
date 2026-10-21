@@ -8,8 +8,8 @@ Every page is one of two kinds, and `tests/unit/route-seo.test.ts` checks every 
 
 | Kind | Head | In the sitemap |
 | --- | --- | --- |
-| **Indexable** (public content: home, `/stack`, `/test-crud`, items) | `seo()` or `listSeo()` | yes |
-| **Private** (admin, sign-in pages, account, health, dev pages, token links) | `privateHead()` or a private layout | no |
+| **Indexable** (public content: the home page and the portfolio's pages; any public page or list you add) | `seo()` or `listSeo()` | yes |
+| **Private** (admin, sign-in pages, account, health, everything under `/dev`, token links) | `privateHead()` or a private layout | no |
 
 A new page that is neither fails the test with "needs privateHead() or seo()".
 
@@ -56,7 +56,7 @@ Return the few fields the head needs from the loader (not the whole item; see go
 ogImage: image ? { url: image.og, width: 1200, height: 630, alt: image.alt || title } : null,
 ```
 
-Test CRUD's detail page (`src/routes/_public/test-crud/$slug.tsx`) is the example.
+The portfolio's case studies (`src/routes/_site/work/$slug.tsx`) are the example. Test CRUD's public pages under `/dev/test-crud` show the loader and the image, but are private like all of `/dev` (0162).
 
 ## JSON-LD
 
@@ -64,28 +64,28 @@ Builders live in `src/lib/structured-data.ts`, typed with `schema-dts` (a misspe
 
 | Where | Types |
 | --- | --- |
-| Home | `WebSite` (in the page's language) + `Organization` (`@id` `/#organization`, logo `/icon-512.png`) |
+| Home | `WebSite` (in the page's language, `websiteJsonLd(description, publisher?)`); on the portfolio its publisher is the owner's `Person` (`@id` `/#person`) |
 | Pages with breadcrumbs | `BreadcrumbList`, from `<Breadcrumbs jsonLd>` / `<PageHeader breadcrumbsJsonLd>` |
-| Test CRUD item | `Product` with an `Offer` (price in NPR, in stock), brand and seller pointing at the Organization |
+| Portfolio pages | `Person`, `ProfilePage`, `CollectionPage`, `Blog`, `CreativeWork` (case studies), `BlogPosting` (`src/features/portfolio/lib/structured-data.ts`) <!-- @portfolio --> |
 
 Add a builder there for a new type, and assert its output in the route test.
 
 ## Private pages
 
-- **Layouts:** `_admin`, `_auth` and `_authed` add `NOINDEX` (`noindex, nofollow`) in their `head`; their pages only set a title.
-- **Single pages** under `_public` (health, reset-password, verify-email, dev pages): `head: () => privateHead(m.title())`.
+- **Layouts:** `_admin`, `_auth`, `_authed` and `dev` add `NOINDEX` (`noindex, nofollow`) in their `head`; their pages only set a title (`privateHead()`). Don't use `seo()`/`listSeo()` under them: the deepest route's `robots` wins, so the page would say `index`.
+- **Single pages** under `_public` (health, reset-password, verify-email): `head: () => privateHead(m.title())`.
 
 ## Crawler files
 
 | URL | Source | Notes |
 | --- | --- | --- |
-| `/sitemap.xml` | `src/routes/sitemap[.]xml.ts` → `src/server/seo/sitemap.ts` | Static pages, list pages 2+, published items with `lastmod`, and the `/portfolio` pages (slugs from its `PortfolioSource`, guides/portfolio.md); one `<url>` per language, each listing every `hreflang` alternate. |
+| `/sitemap.xml` | `src/routes/sitemap[.]xml.ts` → `src/server/seo/sitemap.ts` | The home page and the portfolio's pages (`/work`, each case study, `/about`, `/journal`, each article, `/contact`; slugs from its `PortfolioSource`, guides/portfolio.md); one `<url>` per language, each listing every `hreflang` alternate. Nothing under `/dev` (0101, 0162). |
 | `/robots.txt` | `src/server/seo/robots.ts` | Disallows `/admin`, `/ne/admin`, `/api/`, `/_serverFn/`; points to the sitemap. Other private pages stay crawlable so crawlers can read their `noindex`. |
 | `/manifest.webmanifest` | `src/server/routes/manifest.ts` (Nitro) → `src/server/seo/manifest.ts` | Localized (`/ne/manifest.webmanifest`); the root head links the current language's. |
 
 The sitemap and robots are Start server routes (`.ts` files with only `server.handlers`); `/ne/sitemap.xml` and `/ne/robots.txt` are 404s. The manifest is a Nitro route (one entry per locale in `vite.config.ts`): browsers fetch it with `Sec-Fetch-Dest: manifest`, which Nitro's dev server otherwise hands to Vite (0067). Responses are cached at the edge for an hour.
 
-**Adding pages to the sitemap:** add them to `sitemapEntries()` (published rows only) and to `INDEXABLE` in the route test.
+**Adding pages to the sitemap:** add them to `sitemapEntries()` (published rows only; a list's later pages as `?page=N`, as `listSeo()` makes them) and to `INDEXABLE` in the route test.
 
 ## Icons and images (`public/`)
 
@@ -106,7 +106,7 @@ To rebrand, replace these files at the same sizes. `theme-color` follows the the
 
 ## Live example
 
-- **seo() output and JSON-LD:** `/dev/examples/seo` (`src/routes/_public/dev/examples/seo.tsx`), with `pnpm dev`.
+- **seo() output and JSON-LD:** `/dev/examples/seo` (`src/routes/dev/examples/seo.tsx`), with `pnpm dev`.
 
 ## Pitfalls already solved
 

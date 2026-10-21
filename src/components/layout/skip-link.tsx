@@ -1,5 +1,3 @@
-import { useMatches } from "@tanstack/react-router";
-import { isBareChrome } from "@/lib/chrome";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -9,13 +7,11 @@ import { m } from "@/paraglide/messages";
 export const MAIN_CONTENT = { id: "main-content", tabIndex: -1 } as const;
 
 /**
- * The first tab stop of every page: jumps past the header (and the admin
- * sidebar) to the page's <main>. Hidden until focused. Sections with their own
- * chrome (staticData.chrome = "bare") bring their own skip link.
+ * The first tab stop of every page, rendered by the root: jumps past the
+ * section's header (and the admin sidebar) to the page's <main>. Hidden until
+ * focused. Every section, the portfolio included, targets MAIN_CONTENT.
  */
 export function SkipLink() {
-	const bare = useMatches({ select: isBareChrome });
-	if (bare) return null;
 	return (
 		<a
 			href={`#${MAIN_CONTENT.id}`}

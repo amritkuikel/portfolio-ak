@@ -24,13 +24,13 @@ import type { RouterContext } from "@/router";
 async function renderInRouter(ui: ReactNode) {
 	const rootRoute = createRootRouteWithContext<Pick<RouterContext, "preferences">>()({ component: () => <>{ui}</> });
 	const routeTree = rootRoute.addChildren(
-		["/portfolio", "/portfolio/work", "/portfolio/about", "/portfolio/journal", "/portfolio/contact"].map((path) =>
+		["/", "/work", "/about", "/journal", "/contact"].map((path) =>
 			createRoute({ getParentRoute: () => rootRoute, path, component: () => null }),
 		),
 	);
 	const router = createRouter({
 		routeTree,
-		history: createMemoryHistory({ initialEntries: ["/portfolio"] }),
+		history: createMemoryHistory({ initialEntries: ["/"] }),
 		context: { preferences: createPreferencesStore(DEFAULT_PREFERENCES) },
 	});
 	await act(() => router.load());
@@ -58,7 +58,7 @@ describe("PortfolioMenu", () => {
 		const nav = screen.getByRole("navigation", { name: m.portfolio_nav_label() });
 		await user.click(within(nav).getByRole("link", { name: new RegExp(m.portfolio_nav_journal()) }));
 		expect(details.open).toBe(false);
-		expect(router.state.location.pathname).toBe("/portfolio/journal");
+		expect(router.state.location.pathname).toBe("/journal");
 	});
 });
 

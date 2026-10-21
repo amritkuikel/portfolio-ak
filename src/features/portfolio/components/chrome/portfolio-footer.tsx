@@ -35,7 +35,7 @@ export function PortfolioFooter({ profile }: { profile: FooterProfile }) {
 						<h2 className="pf-label mb-5 text-pf-stone">{m.portfolio_footer_navigate()}</h2>
 						<ul className="flex flex-col gap-3">
 							<li>
-								<Link to="/portfolio" className="pf-focus pf-link" activeOptions={{ exact: true }}>
+								<Link to="/" className="pf-focus pf-link" activeOptions={{ exact: true }}>
 									{m.portfolio_nav_home()}
 								</Link>
 							</li>

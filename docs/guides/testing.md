@@ -52,7 +52,7 @@ Vitest for logic, server code and components; Storybook for every component in a
 ## E2E and the browser review (`pnpm test:e2e`)
 
 One command, locally and in CI. Playwright runs `node e2e/harness/server.ts` (its `webServer`), which:
-1. **builds** the app (`vite build`) with fixed public settings and Sentry/PostHog off, whatever `.env` says;
+1. **builds** the app (`vite build`) with fixed public settings, Sentry/PostHog off and `VITE_DEV_ROUTES=true` (so the `/dev` pages exist and are reviewed; a production deploy refuses the flag, 0162), whatever `.env` says;
 2. **starts a database:** in-memory PGlite served over TCP (`e2e/harness/pglite-server.ts`), or the Postgres in `E2E_DATABASE_URL` (CI; its name must contain `e2e` or `test`, because it's emptied first);
 3. **migrates and seeds** it: an admin and the `db:seed-demo` data, every user with the password in `e2e/harness/config.ts`;
 4. **starts the harness** on port 3101: a fake Resend API that keeps every email, plus test controls (read emails, reset rate limits, look up seeded rows);
@@ -78,7 +78,7 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 
 ### The browser review (`e2e/review.spec.ts`)
 
-- **Pages:** `REVIEWED_PAGES` in `e2e/support/pages.ts`, each with who visits it (`as`), how a `$param` gets a value (from `/sitemap.xml`, or a seeded row), and an expected status (the 403 and 404 pages). `tests/unit/e2e-pages.test.ts` compares the list with `src/routeTree.gen.ts`, so **a new route fails `pnpm test` until it's reviewed** or listed in `NOT_REVIEWED` with a reason. `/dev/*` is skipped (404 in builds).
+- **Pages:** `REVIEWED_PAGES` in `e2e/support/pages.ts`, each with who visits it (`as`), how a `$param` gets a value (from `/sitemap.xml`, a seeded row's id or slug, or a fixed `path`), and an expected status (the 403 and 404 pages). `tests/unit/e2e-pages.test.ts` compares the list with `src/routeTree.gen.ts`, so **a new route fails `pnpm test` until it's reviewed** or listed in `NOT_REVIEWED` with a reason. The `/dev` pages are reviewed like the others: the harness's build keeps them.
 - **Matrix:** en/ne × light/dark × 390/768/1280, one test each.
 - **Checks** (`e2e/support/review.ts`):
   - the HTTP status;
@@ -94,7 +94,7 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 
 - **Auth:** sign up → verify → log in; refused log-in while unverified; log-in code; password reset. Links and codes come from the captured emails (`harness.nextEmail(to, template)`).
 - **Account:** turn on two-factor (the code comes from `support/totp.ts`, a tiny authenticator), then log in with an app code and with a backup code, and an emailed sign-in code is refused; download the data export; delete the account through the emailed link, after which logging in fails. The harness turns off the breached-password check (no outside calls); `tests/server/auth-hardening.test.ts` covers it against a real Better Auth instance with a stubbed range API.
-- **Test CRUD:** create, edit, publish (the public page appears) and delete (it 404s), as admin.
+- **Test CRUD:** create, edit, publish (its `/dev/test-crud` page appears) and delete (it 404s), as admin.
 - **Conflicts:** two tabs edit the same item; the second save is refused with the "changed by someone else" notice, its response carries an `x-request-id` that matches the error, and reloading then saving keeps both changes.
 - **Permissions:** a 403 page for a missing permission; actions a role lacks aren't offered; granting and revoking in the matrix takes effect on the next request.
 - **User management and the audit log:** an invitation from the email to the first sign-in; sign out everywhere (the user's session stops working); view as a user with the banner and back. Each is found in `/admin/audit` by its request id. An editor gets a 403 on the audit page, and the admin's captured call replayed with the editor's session answers FORBIDDEN.

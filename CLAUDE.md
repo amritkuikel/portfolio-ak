@@ -6,9 +6,9 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Task 34 is done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34 and 35 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
-- **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
+- **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
 ## Guides ([docs/guides/](docs/guides/))
 
@@ -30,8 +30,8 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [security.md](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing, secrets |
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
-| [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo`, renaming, first admin, `pnpm new:feature` |
-| [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Dhaka" design system, motion <!-- @demo --> |
+| [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo` (layers), renaming, first admin, `pnpm new:feature` |
+| [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content source, demo data, "Dhaka" design system, motion <!-- @portfolio --> |
 
 ## Stack
 
@@ -71,8 +71,8 @@ A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `tes
 ## Where everything lives
 
 ```
-src/routes/            file routes: _public (site, /dev examples), _auth (sign-in), _authed (account), _admin (admin area),
-                       portfolio (editorial site, own chrome), server routes (sitemap, robots, /api/auth)
+src/routes/            file routes: _site (the portfolio at /), dev (demo and references, dev builds only), _public (health,
+                       verify email, reset password), _auth (sign-in), _authed (account), _admin (admin area), server routes
 src/features/<name>/   one feature, shared by client and server: schema.ts, queries.ts, collection.ts, labels, components/
 src/functions/         server functions: middleware + validator + one call into src/server
 src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL), auth, email, rbac, attachments, seo,
@@ -127,14 +127,15 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 - **Forms handled in JavaScript set `method="post"`** (the shared `Form` does): without it a submit before hydration puts the fields, passwords included, in the URL. A test checks every `<form>` (0104).
 - **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
-- **Dev-only pages** live under `src/routes/_public/dev/` (the layout 404s in builds); their server functions use `devOnlyMiddleware`.
+- **Dev-only pages** live under `src/routes/dev/`: the layout 404s unless `DEV_ROUTES` (`src/lib/dev-routes.ts`: `vite dev`, or a build with `VITE_DEV_ROUTES=true`, which the e2e harness uses and production refuses; 0162). Their server functions use `devOnlyMiddleware`. Gate dev-only code on `DEV_ROUTES`, not `import.meta.env.DEV`, or the e2e build breaks it.
+- **One header per section** (0161): the root renders none. Each layout renders its own (`SiteHeader` with its `links`, or the portfolio's), so a new layout must too. A section that never reads the session sets `staticData: { session: "skip" }` (`src/lib/session-scope.ts`); root-mounted session readers pass `enabled: !useSessionSkipped()`.
 - **Slow `pnpm dev`?** Run `pnpm diagnose`: a remote database costs a few hundred ms per query from far away; `pnpm dev:local` uses a local one (0155).
 - **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
 - **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
 - **Schema changes need a migration:** CI fails when `drizzle-kit generate` would produce one. There is no `db:push` (0118).
 - **E2E against a stale build:** locally, `pnpm test:e2e` reuses a server already on port 3100 (`node e2e/harness/server.ts`). Restart it after changing app code, or the suite tests the old build. Auth endpoints are rate limited per IP: tests that sign in call `harness.resetRateLimits()` first.
 - **Server logs go through `log()`** (`src/server/log.ts`), not `console.*`, so each line carries the request id; the id comes from AsyncLocalStorage set by `src/server.ts` (0123). Uptime monitors use `GET /api/health`, not the `/health` page (0124).
-- **Shared lists carry `// @new-feature:<slot>` markers** (permissions, labels, audit actions, admin sections, schema index, guard test, e2e pages): keep them when editing those lists, or `pnpm new:feature` can't insert there. Demo-only code in shared files sits between `demo:start`/`demo:end` or on a line ending in `// @demo`, for `pnpm strip-demo` (0141, 0142).
+- **Shared lists carry `// @new-feature:<slot>` markers** (permissions, labels, audit actions, admin sections, schema index, guard test, e2e pages): keep them when editing those lists, or `pnpm new:feature` can't insert there. Code of a removable layer in shared files sits between `portfolio:start`/`portfolio:end` (or `apps:…`) comment lines or on a line ending in `// @portfolio` (`<!-- @portfolio -->` in Markdown), for `pnpm strip-demo` (0141, 0163); `tests/unit/strip-markers.test.ts` checks they balance.
 - **Routes stay thin:** loader, search, head and a component that renders one from `src/features/<name>/components` (0143).
 - **Every `<main>` is the skip link's target** (0137): use `Page`, or spread `MAIN_CONTENT` (`components/layout/skip-link.tsx`) on a hand-written `<main>`. The browser review fails a page without it.
 - **The React Compiler memoizes client code** (0136): don't add `useMemo`/`useCallback` for speed. Keep `useMemo` where identity matters (creating a TanStack DB collection). It runs in Storybook too, not in SSR.
@@ -147,7 +148,7 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 
 Each guide ends with its own "Pitfalls already solved" list. Read it before you change that area:
 
-- [routing-data.md](docs/guides/routing-data.md): Nitro routes.
+- [routing-data.md](docs/guides/routing-data.md): The root `beforeLoad` and `matches`; Nitro routes.
 - [attachments.md](docs/guides/attachments.md): Images are Cloudinary attachments.
 - [forms.md](docs/guides/forms.md): Form arrays updated from async callbacks; Edits without a version.
 - [search-filters-masking.md](docs/guides/search-filters-masking.md): Masked routes need `unmaskOnReload: true`.
@@ -155,7 +156,7 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
 - [testing.md](docs/guides/testing.md): Radix menus in tests.
 - [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
-- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width. <!-- @demo -->
+- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width. <!-- @portfolio -->
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
-- [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; The app header is opt-out per section.
+- [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.

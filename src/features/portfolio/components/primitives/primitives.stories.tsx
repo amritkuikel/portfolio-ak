@@ -46,11 +46,11 @@ export const Typography: Story = {
 export const Links: Story = {
 	render: () => (
 		<div className="pf-container flex flex-wrap items-center gap-10 py-12">
-			<ArrowLink to="/portfolio/work">{m.portfolio_hero_cta_work()}</ArrowLink>
-			<ArrowLink to="/portfolio/work" direction="left">
+			<ArrowLink to="/work">{m.portfolio_hero_cta_work()}</ArrowLink>
+			<ArrowLink to="/work" direction="left">
 				{m.portfolio_case_back()}
 			</ArrowLink>
-			<ArrowLink to="/portfolio/contact" size="large">
+			<ArrowLink to="/contact" size="large">
 				{m.portfolio_finale_cta()}
 			</ArrowLink>
 			<ArrowAnchor href="https://example.com" direction="external">

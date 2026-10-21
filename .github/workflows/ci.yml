@@ -73,12 +73,12 @@ jobs:
       - run: pnpm build-storybook
 
   e2e:
-    name: E2E and browser review (${{ matrix.shard }}/3)
+    name: E2E and browser review (${{ matrix.shard }}/5)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5]
     # A real Postgres here; locally the harness uses in-memory PGlite (decision 0121).
     services:
       postgres:
@@ -102,7 +102,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Builds, migrates, seeds and starts the production server itself (e2e/harness/server.ts).
       # Uses the runner's installed Chrome, like the story tests.
-      - run: pnpm test:e2e --shard=${{ matrix.shard }}/3
+      - run: pnpm test:e2e --shard=${{ matrix.shard }}/5
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -110,11 +110,17 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # strip-demo:start (the template's own check: a new project loses it with the script)
   template:
-    name: Template (strip-demo, new:feature, gates)
+    name: Template (strip-demo ${{ matrix.keep || 'all layers' }}, new:feature, gates)
     runs-on: ubuntu-latest
-    # The promise of decision 0141: a fresh clone, stripped of the demo, plus a scaffolded
-    # feature, passes every gate with no manual edits. Runs the scripts the way a new project would.
+    # The promise of decisions 0141 and 0163: a fresh clone, stripped of any of its layers,
+    # plus a scaffolded feature, passes every gate with no manual edits. Runs the scripts
+    # the way a new project would.
+    strategy:
+      fail-fast: false
+      matrix:
+        keep: ["", "--keep-apps", "--keep-portfolio"]
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -123,7 +129,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm strip-demo --no-build
+      - run: pnpm strip-demo --no-build ${{ matrix.keep }}
       - run: pnpm new:feature ci-sample --title "Samples" --title-ne "नमूनाहरू"
       - run: pnpm typecheck
       - run: pnpm check
@@ -134,6 +140,7 @@ jobs:
           pnpm exec drizzle-kit generate | tee drizzle-generate.log
           grep -q "No schema changes" drizzle-generate.log
           pnpm db:check
+  # strip-demo:end
 
   build:
     name: Production build

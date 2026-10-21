@@ -68,13 +68,16 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 		],
 	},
 	"test-crud-public.ts": {
-		why: "public reads; the repository only returns published rows",
+		why: "dev-only /dev/test-crud reads (devOnlyMiddleware); the repository only returns published rows",
 		functions: ["listPublicTestCrud", "getPublicTestCrud"],
 	},
-	"stack.ts": { why: "public /stack page data (static)", functions: ["listStack", "getStackStats"] }, // @demo
+	"stack.ts": {
+		why: "dev-only /dev/stack data (static, devOnlyMiddleware)",
+		functions: ["listStack", "getStackStats"],
+	},
 	"health.ts": { why: "public health check", functions: ["getDbHealth"] },
 	"feature-flags.ts": { why: "public feature flags for the current visitor", functions: ["getHomeFlags"] },
-	"dev.ts": { why: "dev-only, refuses in production", functions: ["previewRichText"] },
+	"dev.ts": { why: "dev-only /dev/forms preview (devOnlyMiddleware)", functions: ["previewRichText"] },
 	"examples.ts": {
 		why: "dev-only /dev/examples, devOnlyMiddleware on each",
 		functions: [

@@ -16,7 +16,7 @@ import { VoicesSection } from "./voices-section";
 const meta = {
 	title: "Portfolio/Sections",
 	decorators: [withPortfolioCanvas],
-	parameters: { layout: "fullscreen", app: { route: "/portfolio" } },
+	parameters: { layout: "fullscreen", app: { route: "/" } },
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;

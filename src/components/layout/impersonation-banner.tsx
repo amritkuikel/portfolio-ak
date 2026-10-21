@@ -4,6 +4,7 @@ import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { stopImpersonating } from "@/functions/auth";
+import { useSessionSkipped } from "@/lib/session-scope";
 import { m } from "@/paraglide/messages";
 import { localizeHref } from "@/paraglide/runtime";
 
@@ -14,7 +15,8 @@ import { localizeHref } from "@/paraglide/runtime";
  */
 export function ImpersonationBanner() {
 	const labelId = useId();
-	const { data: session } = useQuery(sessionQueryOptions());
+	// Not on pages that skip the session (the portfolio): it would be fetched after hydration.
+	const { data: session } = useQuery({ ...sessionQueryOptions(), enabled: !useSessionSkipped() });
 	const stop = useMutation({
 		mutationFn: () => stopImpersonating(),
 		// The admin's own session again: reload the app from the server, back on the users page.

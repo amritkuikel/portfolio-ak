@@ -29,10 +29,12 @@ const SEPARATE_CHUNKS: ReadonlyArray<{ name: string; test: RegExp; budgetKb: num
  * matches a preloaded font fails the check, so the exemption is removed with the font.
  */
 const FONT_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
+	// portfolio:start
 	[
 		"@fontsource-variable/anek-devanagari/files/anek-devanagari-devanagari-wdth-normal.woff2",
-		"the old /portfolio's face, removed by the portfolio redesign (docs/PLAN.md Task 40)",
+		"the old portfolio's face, removed by the portfolio redesign (docs/PLAN.md Task 40)",
 	],
+	// portfolio:end
 ]);
 
 const ROOT = resolve(import.meta.dirname, "..");

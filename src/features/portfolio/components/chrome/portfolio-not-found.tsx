@@ -14,8 +14,8 @@ export function PortfolioNotFound() {
 				</Display>
 				<p className="col-span-4 text-pf-lead text-pf-ink-2 md:col-span-6">{m.portfolio_not_found_body()}</p>
 				<div className="col-span-4 flex flex-wrap gap-x-10 gap-y-4 md:col-span-12">
-					<ArrowLink to="/portfolio/work">{m.portfolio_nav_work()}</ArrowLink>
-					<ArrowLink to="/portfolio">{m.portfolio_not_found_cta()}</ArrowLink>
+					<ArrowLink to="/work">{m.portfolio_nav_work()}</ArrowLink>
+					<ArrowLink to="/">{m.portfolio_not_found_cta()}</ArrowLink>
 				</div>
 			</div>
 		</section>

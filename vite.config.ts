@@ -34,8 +34,11 @@ const validateEnv = async (command: "serve" | "build", mode: string) => {
 	// Real environment variables win over .env files, matching Vite's own precedence.
 	for (const [key, value] of Object.entries(fileEnv)) process.env[key] ??= value;
 
-	const { createClientEnv } = await import("./src/lib/env/client.schema.ts");
+	const { createClientEnv, devRoutesInProduction, DEV_ROUTES_IN_PRODUCTION } = await import(
+		"./src/lib/env/client.schema.ts"
+	);
 	createClientEnv({ ...process.env });
+	if (devRoutesInProduction(process.env)) throw new Error(DEV_ROUTES_IN_PRODUCTION);
 
 	if (command === "serve") {
 		const { createServerEnv } = await import("./src/server/env.ts");

@@ -94,8 +94,9 @@ function UsersPage() {
 		},
 		onSuccess: (_, request) => {
 			const name = request.user.name;
-			// A new session (as the user): load the app again from the server, starting at home.
-			if (request.kind === "impersonate") window.location.assign(localizeHref("/"));
+			// A new session (as the user): load the app again from the server, on their account page
+			// (the home page is the portfolio, which doesn't read the session, so it shows no banner).
+			if (request.kind === "impersonate") window.location.assign(localizeHref("/account"));
 			else if (request.kind === "revoke") toast.success(m.users_toast_revoked({ name }));
 			else toast.success(request.banned ? m.users_toast_banned({ name }) : m.users_toast_unbanned({ name }));
 		},

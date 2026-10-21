@@ -40,8 +40,8 @@ export function HeroSection({ profile }: { profile: HeroProfile }) {
 					<div className="col-span-4 md:col-span-7 lg:col-span-5">
 						<p className="text-pf-lead text-pf-ink-2">{profile.intro}</p>
 						<div className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
-							<ArrowLink to="/portfolio/work">{m.portfolio_hero_cta_work()}</ArrowLink>
-							<ArrowLink to="/portfolio/contact">{m.portfolio_hero_cta_contact()}</ArrowLink>
+							<ArrowLink to="/work">{m.portfolio_hero_cta_work()}</ArrowLink>
+							<ArrowLink to="/contact">{m.portfolio_hero_cta_contact()}</ArrowLink>
 						</div>
 					</div>
 

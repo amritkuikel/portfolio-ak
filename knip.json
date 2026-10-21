@@ -8,6 +8,7 @@
 		"src/server/routes/*.ts",
 		"src/server/email/preview.ts",
 		"src/lib/zod.ts",
+		"vite.config.ts",
 		".storybook/mocks/**/*.ts"
 	],
 	"project": [
@@ -19,6 +20,7 @@
 		"vite/**/*.ts"
 	],
 	"ignore": ["src/components/ui/**"],
+	"vite": false,
 	"ignoreExportsUsedInFile": true,
 	"ignoreDependencies": ["@inlang/plugin-m-function-matcher", "@inlang/plugin-message-format"]
 }

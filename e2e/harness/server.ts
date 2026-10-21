@@ -36,6 +36,8 @@ const publicEnv = {
 	VITE_SENTRY_DSN: "",
 	VITE_POSTHOG_KEY: "",
 	VITE_POSTHOG_HOST: "",
+	// The browser review covers the /dev pages too (src/lib/dev-routes.ts).
+	VITE_DEV_ROUTES: "true",
 	SENTRY_AUTH_TOKEN: "",
 };
 

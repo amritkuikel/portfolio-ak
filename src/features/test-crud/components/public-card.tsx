@@ -50,7 +50,7 @@ export function PublicCard({
 				    where text wraps, so the web-font swap can't shift the grid. */}
 				<Heading className="line-clamp-2 min-h-[2lh] font-semibold text-lg leading-snug tracking-tight">
 					<Link
-						to="/test-crud/$slug"
+						to="/dev/test-crud/$slug"
 						params={{ slug: item.slug }}
 						className="outline-none after:absolute after:inset-0 group-hover:underline group-hover:underline-offset-4"
 					>

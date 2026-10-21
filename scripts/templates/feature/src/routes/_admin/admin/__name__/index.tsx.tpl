@@ -4,7 +4,7 @@ import { __camel__ListQueryOptions } from "@/features/__name__/queries";
 import { __UPPER___SEARCH_DEFAULTS, __UPPER___TABLE_ID, __camel__SearchSchema } from "@/features/__name__/schema";
 import { loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
-import { tableListInput } from "@/lib/use-list-page";
+import { tableListInput } from "@/hooks/use-list-page";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/__name__/")({

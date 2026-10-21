@@ -59,4 +59,4 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 
 ## Public lists
 
-Use the same pieces with `PageHeader size="display"`, a card grid and `Pagination layout="center"`, plus `listSeo()` in `head` ([seo.md](seo.md)). `/test-crud` and `/stack` are the examples.
+Use the same pieces with `PageHeader size="display"`, a card grid and `Pagination layout="center"`, plus `listSeo()` in `head` ([seo.md](seo.md)). `/dev/test-crud` and `/dev/stack` are the examples (dev-only, so their heads are private; a public list uses `listSeo()` and goes in the sitemap).

@@ -28,7 +28,7 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 	await expect(page).toHaveURL(/\/admin\/test-crud$/);
 
 	// A draft isn't public.
-	expect((await page.request.get(`/test-crud/${slug}`)).status()).toBe(404);
+	expect((await page.request.get(`/dev/test-crud/${slug}`)).status()).toBe(404);
 
 	await rowAction(page, title, "Edit");
 	await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
@@ -38,7 +38,7 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 
 	await rowAction(page, edited, "Publish");
 	await expect(page.getByText("Item published.")).toBeVisible();
-	await open(page, `/test-crud/${slug}`);
+	await open(page, `/dev/test-crud/${slug}`);
 	await expect(page.getByRole("heading", { level: 1, name: edited })).toBeVisible();
 
 	await rowAction(page, edited, "Delete");
@@ -46,6 +46,6 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 	await expect(dialog).toContainText(edited);
 	await dialog.getByRole("button", { name: "Delete" }).click();
 	await expect(page.getByText("Item deleted.")).toBeVisible();
-	const gone = await page.goto(`/test-crud/${slug}`);
+	const gone = await page.goto(`/dev/test-crud/${slug}`);
 	expect(gone?.status()).toBe(404);
 });

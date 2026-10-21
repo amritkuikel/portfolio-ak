@@ -24,6 +24,8 @@
 	"skip_to_content": "सामग्रीमा जानुहोस्",
 	"nav_home": "गृहपृष्ठ",
 	"nav_stack": "प्रविधि",
+	"nav_dev": "डेमो",
+	"nav_examples": "उदाहरणहरू",
 	"nav_login": "लग इन",
 	"footer_built_with": "TanStack Start प्रयोग गरी अङ्ग्रेजी र नेपालीमा बनाइएको।",
 	"pending_loading": "लोड हुँदैछ…",

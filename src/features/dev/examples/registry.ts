@@ -15,7 +15,7 @@ export type Example = {
 	guide: string;
 };
 
-const route = (file: string) => `src/routes/_public/dev/examples/${file}`;
+const route = (file: string) => `src/routes/dev/examples/${file}`;
 
 export const EXAMPLES = [
 	{

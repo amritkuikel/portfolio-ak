@@ -31,14 +31,14 @@ export function EditItemLink({ id, ...props }: { id: string } & AnchorProps) {
 	);
 }
 
-/** Public: quick view over /test-crud, shown as the canonical /test-crud/<slug>. */
+/** Dev reference: quick view over /dev/test-crud, shown as the canonical /dev/test-crud/<slug>. */
 export function QuickViewLink({ slug, ...props }: { slug: string } & AnchorProps) {
 	return (
 		<Link
-			from="/test-crud/"
+			from="/dev/test-crud/"
 			to="."
 			search={(prev) => ({ ...prev, view: slug })}
-			mask={{ to: "/test-crud/$slug", params: { slug }, unmaskOnReload: true }}
+			mask={{ to: "/dev/test-crud/$slug", params: { slug }, unmaskOnReload: true }}
 			{...props}
 		/>
 	);

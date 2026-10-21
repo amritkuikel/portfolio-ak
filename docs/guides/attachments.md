@@ -64,7 +64,7 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
 
 ## Live example
 
-- **Upload in a form:** `/dev/examples/attachments` (`src/routes/_public/dev/examples/attachments.tsx`), with `pnpm dev`.
+- **Upload in a form:** `/dev/examples/attachments` (`src/routes/dev/examples/attachments.tsx`), with `pnpm dev`.
 
 ## Pitfalls already solved
 

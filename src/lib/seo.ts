@@ -126,6 +126,12 @@ export type ListSeoInput = Omit<SeoInput, "path" | "noindex"> & {
  * A public list page. Page 1 is canonical at the bare path; later pages are
  * their own URLs with their own title and description; searches are noindex.
  * Other params (sort) don't change the canonical.
+ *
+ * No page uses it today (the Test CRUD list moved to the private /dev), but it is
+ * the list-page recipe's head (docs/guides/conventions.md) for the next public list,
+ * so knip is told it's kept on purpose.
+ *
+ * @public
  */
 export function listSeo({ title = clientEnv.VITE_APP_TITLE, description, path, q, page, ...rest }: ListSeoInput) {
 	const paged = page > 1 && !q;

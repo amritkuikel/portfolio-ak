@@ -11,7 +11,7 @@ export function NextProject({ next }: { next: ProjectDetail["next"] }) {
 	return (
 		<nav aria-label={m.portfolio_case_next()} className="pf-inverse">
 			<Link
-				to="/portfolio/work/$slug"
+				to="/work/$slug"
 				params={{ slug: next.slug }}
 				viewTransition
 				className="pf-focus group/next block py-[clamp(5rem,10vw,9rem)]"

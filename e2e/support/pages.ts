@@ -12,9 +12,9 @@ export type ReviewedPage = {
 	route: string;
 	/** Who visits it; anonymous when unset. */
 	as?: E2EUser;
-	/** How a `$param` route gets a concrete URL. */
-	params?: { from: "sitemap" } | { from: "test-crud-id" };
-	/** A path that isn't a route (the not-found page). Defaults to `route`. */
+	/** How a `$param` route gets a concrete URL (or give its `path`). */
+	params?: { from: "sitemap" } | { from: "test-crud-id" } | { from: "seeded-slug" };
+	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
 	status?: 403 | 404;
@@ -22,27 +22,55 @@ export type ReviewedPage = {
 	label?: string;
 };
 
-/** A seeded Test CRUD item (scripts/lib/demo-data.ts) for admin detail pages. */
+/** A seeded Test CRUD item (scripts/lib/demo-data.ts) for admin detail pages (a draft: every third item is). */
 export const SEEDED_ITEM_SLUG = "momo-masterclass-1";
+/** A seeded, published one, for the public detail page. */
+export const SEEDED_PUBLISHED_SLUG = "thangka-painting-1";
 
 export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
-	// Public site
+	// The home page: the portfolio (a neutral landing page once it is stripped)
 	{ route: "/" },
-	{ route: "/stack" }, // @demo
+	// portfolio:start
+	{ route: "/about" },
+	{ route: "/contact" },
+	{ route: "/work" },
+	{ route: "/work/$slug", params: { from: "sitemap" } },
+	{ route: "/journal" },
+	{ route: "/journal/$slug", params: { from: "sitemap" } },
+	// portfolio:end
+	// Public pages outside any section
 	{ route: "/health" },
-	{ route: "/test-crud" },
-	{ route: "/test-crud/$slug", params: { from: "sitemap" } },
 	{ route: "/verify-email" },
 	{ route: "/reset-password" },
-	// demo:start
-	{ route: "/portfolio" },
-	{ route: "/portfolio/about" },
-	{ route: "/portfolio/contact" },
-	{ route: "/portfolio/work" },
-	{ route: "/portfolio/work/$slug", params: { from: "sitemap" } },
-	{ route: "/portfolio/journal" },
-	{ route: "/portfolio/journal/$slug", params: { from: "sitemap" } },
-	// demo:end
+	// The demo and references under /dev (the harness builds with VITE_DEV_ROUTES=true)
+	{ route: "/dev" },
+	{ route: "/dev/stack" },
+	{ route: "/dev/test-crud" },
+	{ route: "/dev/test-crud/$slug", params: { from: "seeded-slug" } },
+	{ route: "/dev/forms" },
+	{ route: "/dev/examples" },
+	{ route: "/dev/examples/loader-query" },
+	{ route: "/dev/examples/streaming" },
+	{ route: "/dev/examples/filters" },
+	{ route: "/dev/examples/masking" },
+	{ route: "/dev/examples/forms" },
+	{ route: "/dev/examples/data-table" },
+	{ route: "/dev/examples/optimistic" },
+	{ route: "/dev/examples/preferences" },
+	{ route: "/dev/examples/permissions" },
+	{ route: "/dev/examples/attachments" },
+	{ route: "/dev/examples/seo" },
+	{ route: "/dev/examples/i18n" },
+	{ route: "/dev/examples/idempotency" },
+	{ route: "/dev/examples/errors" },
+	{ route: "/dev/examples/analytics" },
+	{ route: "/dev/examples/command-palette" },
+	{ route: "/dev/examples/list-extras" },
+	{ route: "/dev/examples/caching" },
+	{ route: "/dev/examples/background-jobs" },
+	{ route: "/dev/examples/contact" },
+	// A fixed in-memory task (src/server/examples/tasks.ts).
+	{ route: "/dev/examples/masking/$id", path: "/dev/examples/masking/00000000-0000-4000-8000-000000000001" },
 	// Signing in
 	{ route: "/login" },
 	{ route: "/register" },
@@ -76,12 +104,8 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/health": "JSON for uptime monitors (checked by e2e/flows/health.spec.ts)",
 	"/api/account/export": "a JSON download (checked by e2e/flows/account.spec.ts)",
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
-	"/dev": "dev-only: 404 in production builds",
 	// @new-feature:not-reviewed
 };
-
-/** Dev-only routes (the /dev layout 404s in builds) need no entry of their own. */
-export const isDevOnlyRoute = (route: string) => route === "/dev" || route.startsWith("/dev/");
 
 /** `/ne` prefix for Nepali (English is unprefixed). */
 export const localizedPath = (path: string, locale: "en" | "ne") =>

@@ -15,7 +15,7 @@ export function FinaleSection({ profile }: { profile: Pick<Profile, "email" | "a
 				</Display>
 				<p className="col-span-4 text-pf-lead md:col-span-5">{profile.availability.note}</p>
 				<div className="col-span-4 flex flex-col items-start gap-5 md:col-span-5 md:col-start-8 md:items-end md:self-end">
-					<ArrowLink to="/portfolio/contact" size="large" className="text-current [&_svg]:text-current">
+					<ArrowLink to="/contact" size="large" className="text-current [&_svg]:text-current">
 						{m.portfolio_finale_cta()}
 					</ArrowLink>
 					<ArrowAnchor

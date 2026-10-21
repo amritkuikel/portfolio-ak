@@ -1,15 +1,15 @@
-# Portfolio (the editorial site at /portfolio)
+# Portfolio (the site at /)
 
-A story-driven, design-studio-style portfolio for a full-stack developer, in both languages, running on typed demo data. It lives entirely under `/portfolio` and leaves every other page as it was. Decisions 0105–0109 explain the choices.
+A story-driven, design-studio-style portfolio for a full-stack developer, in both languages, running on typed demo data. It is the site's home: a pathless layout (`_site`) serves it at `/`, beside the admin, account and `/dev` sections (Task 35 moved it there from `/portfolio`; Task 40 replaces its design). Decisions 0106–0109 and 0161 explain the choices. `pnpm strip-demo` removes it as the `portfolio` layer (0163).
 
-- **Pages:** `/portfolio` (the story), `/portfolio/work` (index, `?discipline=` filter), `/portfolio/work/$slug` (case study), `/portfolio/about`, `/portfolio/journal`, `/portfolio/journal/$slug`, `/portfolio/contact`, plus a 404 in the section's own chrome. Nepali under `/ne/portfolio/…`.
-- **Code:** `src/routes/portfolio/` (routes) and `src/features/portfolio/` (everything else). The design system is `src/styles/portfolio.css`.
+- **Pages:** `/` (the story), `/work` (index, `?discipline=` filter), `/work/$slug` (case study), `/about`, `/journal`, `/journal/$slug`, `/contact`, plus a 404 in the section's own chrome. Nepali under `/ne/…`.
+- **Code:** `src/routes/_site/` (routes) and `src/features/portfolio/` (everything else). The design system is `src/styles/portfolio.css`.
 
 ## Architecture
 
 ```
-routes/portfolio/route.tsx        layout: staticData.chrome = "bare", PortfolioShell (header, main, footer), font preloads
-routes/portfolio/*.tsx            loader → ensureQueryData(...QueryOptions) · component → useSuspenseQuery · head → seo()
+routes/_site.tsx                  layout: staticData.session = "skip", PortfolioShell (header, main, footer), font preloads
+routes/_site/*.tsx                loader → ensureQueryData(...QueryOptions) · component → useSuspenseQuery · head → seo()
 
 features/portfolio/
   schema.ts                       Zod records (what a backend returns): Localized fields, typed content blocks, URL params
@@ -106,20 +106,21 @@ All of it is progressive enhancement. Content is visible by default, and animati
 
 ## Chrome
 
-- **Header:** the layout sets `staticData: { chrome: "bare" }` and the root's `SiteHeader` renders nothing under it (`src/lib/chrome.ts`). The portfolio brings its own header and reuses the app's `LanguageSwitcher` and `ThemeToggle`.
+- **Header:** the root renders no header (each section brings its own, 0161). The portfolio's reuses the app's `LanguageSwitcher` and `ThemeToggle`, and its `<main>` is the root skip link's target (`MAIN_CONTENT`).
+- **No session:** no portfolio page reads the session, so the layout sets `staticData: { session: "skip" }` and nothing looks it up, on the server or after hydration (0161).
 - **Phone menu:** a native `<details>`, so it works before hydration. Escape and choosing a link close it.
 - **404:** a layout's `notFoundComponent` replaces the layout itself, so it renders `PortfolioShell` around `PortfolioNotFound`. The layout's head carries `noindex` as a fallback that every page's `seo()` overrides.
 
 ## SEO
 
 - **Indexable pages:** every page uses `seo()`, and all are in `INDEXABLE` (`tests/unit/route-seo.test.ts`).
-- **JSON-LD:** `Person` (home), `ProfilePage` (about), `CollectionPage` (work), `Blog` (journal), `CreativeWork` (case study), `BlogPosting` (article). All of them point to one `Person` `@id`.
+- **JSON-LD:** `WebSite` and `Person` (home), `ProfilePage` (about), `CollectionPage` (work), `Blog` (journal), `CreativeWork` (case study), `BlogPosting` (article). All of them point to one `Person` `@id`.
 - **Filtered views:** a filtered work index is `noindex`, with its canonical on the full list.
 
 ## Tests and stories
 
-- **Unit:** `portfolio-data` (fixtures), `portfolio-source` (the adapter), `portfolio-lib` (localize, metrics, seeds, reading time, `cn`, chrome).
-- **Components:** `tests/components/portfolio` (menu, marquee, copy email, split words) and `tests/components/layout/site-chrome.test.tsx` (existing pages keep the header).
+- **Unit:** `portfolio-data` (fixtures), `portfolio-source` (the adapter), `portfolio-lib` (localize, metrics, seeds, reading time, `cn`).
+- **Components:** `tests/components/portfolio` (menu, marquee, copy email, split words) and `tests/components/layout/section-headers.test.tsx` (each section's header; the layout skips the session).
 - **Stories:** `Portfolio/*`: primitives, every home section, chrome, case study and lists. They render the fixtures directly through `components/story-helpers.tsx`.
 - **Browser review:** the standard one (testing guide) on a production build: all seven pages plus a filtered index and the 404, en/ne × light/dark × 390/768/1280.
 
@@ -127,6 +128,6 @@ All of it is progressive enhancement. Content is visible by default, and animati
 
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
-- **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown below `/portfolio` renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/portfolio/route.tsx`).
+- **A layout's `notFoundComponent` replaces the layout:** a `notFound()` thrown inside the section renders without the layout's wrapper, so it must render the shell itself (`PortfolioShell` in `routes/_site.tsx`).
 - **Custom `text-*` sizes and tailwind-merge:** `cn("text-pf-h2", "text-pf-accent")` drops the size with the app's `cn` (both look like colours). Portfolio components import `cn` from `features/portfolio/lib/cn.ts`, which registers the scale.
 - **Variable fonts with a width axis need one fallback per width:** Anek's `wdth` changes its advance widths and Arial has no such axis, so the portfolio has a fallback face per width it uses (100% body, 75% bold display). A new width or weight for large type needs its own measured `size-adjust` (0110).

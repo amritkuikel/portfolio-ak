@@ -4,11 +4,15 @@ The SSR pattern every page follows, how server functions are written, and how er
 
 ## Routes
 
-- **Layouts by audience** (`src/routes/`):
-  - `_public`: the site.
+- **Layouts by section** (`src/routes/`), each rendering its own header (the root renders none, 0161):
+  - `_site`: the portfolio at `/` (`/work`, `/about`, `/journal`, `/contact`), with its own header and footer. It skips the session lookup (`staticData.session: "skip"`). <!-- @portfolio -->
+  - `dev`: `/dev`, the demo home, `/dev/stack`, the public Test CRUD pages (`/dev/test-crud`), `/dev/forms` and `/dev/examples`. A 404 unless `DEV_ROUTES` (`vite dev`, or a build with `VITE_DEV_ROUTES=true`, which only the e2e harness makes; 0162). Never indexed.
+  - `_public`: pages anyone may open that belong to no section (health, verify email, reset password; 0046). Public pages you add go here.
   - `_auth`: sign-in pages; signed-in users are sent on.
   - `_authed`: needs a session.
   - `_admin`: the admin area; the server is asked on entry, and any permission opens it.
+- **A new layout renders its header:** `<SiteHeader links={…} />` (`components/layout/site-header.tsx`: the brand, its section links, Admin when permitted, account or sign-in, language and theme), or its own. The root only renders the skip link, banners and toasts, so a page under a layout without one has no header.
+- **Skipping the session:** the root `beforeLoad` looks the session up for every navigation (memoized per request, 0153). A section that never reads it sets `staticData: { session: "skip" }` on its layout (`src/lib/session-scope.ts`): `context.session` is then `null`, and root-mounted readers of the session query pass `enabled: !useSessionSkipped()`, or the browser fetches it after hydration. Navigating on to another section looks it up again.
 - **Locales:** routes are defined once. The router rewrites `/ne/…` onto them and back (`src/router.tsx`, Paraglide's URL strategy).
 - **A section's `route.tsx`** names its breadcrumb (`staticData: { breadcrumb: staticCrumb(m.x) }`). Detail routes use `loaderTitleCrumb`, with the loader returning `{ title }`.
 - **Path params** are validated by the route (`params: { parse: (raw) => parseParams(schema, raw) }`). An invalid one doesn't match, so the localized 404 renders without a request (0092).
@@ -110,4 +114,5 @@ Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/star
 
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
+- **The root `beforeLoad` and `matches`:** reading `matches` there makes the route tree's types circular (`match.routeId` turns `unknown` everywhere). Its return type is written out (`Promise<{ session: Session | null }>`) to break the cycle (0161).
 - **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job and the web manifest. Nitro's dev server hands requests whose `Sec-Fetch-Dest` isn't a document (`image`, `manifest`…) to Vite unless a Nitro route matches, so a Start server route fetched that way is a 404 in dev only (0067, 0103).

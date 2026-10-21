@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/layout/admin-sidebar";
+import { SiteHeader } from "@/components/layout/site-header";
 import { canEnterAdmin } from "@/features/rbac/permissions";
 import { ensureAdminAccess } from "@/functions/auth";
 import { isAppError } from "@/lib/errors";
@@ -46,8 +47,11 @@ export const Route = createFileRoute("/_admin")({
 
 function AdminShell() {
 	return (
-		<AdminLayout>
-			<Outlet />
-		</AdminLayout>
+		<>
+			<SiteHeader />
+			<AdminLayout>
+				<Outlet />
+			</AdminLayout>
+		</>
 	);
 }
