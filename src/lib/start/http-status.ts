@@ -1,5 +1,5 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
-import { isAppError } from "./errors";
+import { isAppError } from "../errors";
 
 /**
  * During SSR, makes the HTTP response carry the AppError's status (403, 401, …)

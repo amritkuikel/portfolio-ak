@@ -43,7 +43,7 @@ export const thingsCollection = (input) => collectionOptions(id, (client) =>
   - `tx.isPersisted.promise` resolves or rejects, so show a toast either way.
 - **Until the collection is ready** (SSR, first paint), render the Query rows so hydration matches. See `src/routes/_admin/admin/test-crud/index.tsx` and `src/features/test-crud/collection.ts`.
 - **Per-call data** (like the example's "make the server refuse") travels as `collection.update(id, { metadata }, …)`.
-- **Per request:** one DbClient per router (`src/lib/db.ts`), so server requests never share rows.
+- **Per request:** one DbClient per router (`src/lib/tanstack-db.ts`), so server requests never share rows.
 
 ## Store (preferences)
 

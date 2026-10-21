@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCan } from "@/features/rbac/can";
 import { discardImageUpload, getUploadSettings } from "@/functions/attachments";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { IMAGE_MAX_BYTES, IMAGE_MIME_TYPES, type UploadScope } from "../constants";

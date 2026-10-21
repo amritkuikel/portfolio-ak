@@ -2,10 +2,10 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { collectionOptions } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { createDbClient, queryClientOf } from "@/lib/db";
+import { createDbClient, queryClientOf } from "@/lib/tanstack-db";
 
 /**
- * The TanStack DB query-collection pattern from src/lib/db.ts, exercised with a
+ * The TanStack DB query-collection pattern from src/lib/tanstack-db.ts, exercised with a
  * fake "server" in place of server functions: SSR-safe per-client
  * materialization, Query-backed loading, optimistic updates and rollback.
  */

@@ -8,7 +8,7 @@ import {
 	formatNumber,
 	formatRelativeTime,
 	formatRelativeTimeFrom,
-} from "@/lib/intl";
+} from "@/lib/i18n/intl";
 
 // Node ships full ICU with CLDR `ne`, so it serves as the reference ("oracle")
 // for our portable Nepali implementation, which must match it exactly.

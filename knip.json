@@ -19,5 +19,6 @@
 		"vite/**/*.ts"
 	],
 	"ignore": ["src/components/ui/**"],
-	"ignoreExportsUsedInFile": true
+	"ignoreExportsUsedInFile": true,
+	"ignoreDependencies": ["@inlang/plugin-m-function-matcher", "@inlang/plugin-message-format"]
 }

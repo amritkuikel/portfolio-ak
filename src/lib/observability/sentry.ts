@@ -1,9 +1,9 @@
 import type { ErrorEvent, EventHint } from "@sentry/tanstackstart-react";
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import { isAppError } from "@/lib/errors";
 
 /**
- * Shared Sentry options for the browser (src/instrument.client.ts) and the
+ * Shared Sentry options for the browser (sentry-client.ts) and the
  * server (src/instrument.server.ts). With no VITE_SENTRY_DSN Sentry is never
  * initialised, so nothing is captured or sent.
  */
@@ -31,8 +31,9 @@ export const tagRequestId = (event: ErrorEvent, requestId: string | undefined): 
 export const sentryOptions = (dsn: string) => ({
 	dsn,
 	environment: import.meta.env.MODE,
-	// Every trace in development; 10% in production (adjust to your traffic and quota).
-	tracesSampleRate: import.meta.env.PROD ? 0.1 : 1,
+	// 10% of traces in production (adjust to your traffic and quota). None in development unless
+	// VITE_SENTRY_DEV_TRACING=true: tracing every dev request and navigation slows `pnpm dev` down.
+	tracesSampleRate: import.meta.env.PROD ? 0.1 : clientEnv.VITE_SENTRY_DEV_TRACING === "true" ? 1 : 0,
 	// No IP addresses, cookies or request bodies. The user id is set explicitly (ObservabilitySync).
 	sendDefaultPii: false,
 	beforeSend: dropExpectedErrors,

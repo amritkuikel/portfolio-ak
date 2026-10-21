@@ -7,7 +7,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
-import { STATIC_SECURITY_HEADERS } from "./src/lib/csp.ts";
+import { STATIC_SECURITY_HEADERS } from "./src/lib/http/csp.ts";
 import { emailPreviewPlugin } from "./vite/email-preview-plugin.ts";
 import { zodAlias } from "./vite/zod-alias.ts";
 
@@ -34,7 +34,7 @@ const validateEnv = async (command: "serve" | "build", mode: string) => {
 	// Real environment variables win over .env files, matching Vite's own precedence.
 	for (const [key, value] of Object.entries(fileEnv)) process.env[key] ??= value;
 
-	const { createClientEnv } = await import("./src/lib/client-env.schema.ts");
+	const { createClientEnv } = await import("./src/lib/env/client.schema.ts");
 	createClientEnv({ ...process.env });
 
 	if (command === "serve") {
@@ -49,6 +49,14 @@ export default defineConfig(async ({ command, mode }) => {
 
 	return {
 		resolve: { tsconfigPaths: true, alias: [zodAlias] },
+		server: {
+			// Transform the entry and the layouts while the dev server starts, so the
+			// first page doesn't wait for them (decision 0155).
+			warmup: {
+				clientFiles: ["./src/client.tsx", "./src/router.tsx", "./src/routes/__root.tsx", "./src/routes/_*.tsx"],
+				ssrFiles: ["./src/server.ts", "./src/router.tsx"],
+			},
+		},
 		build: {
 			// Fonts are never inlined as data: URLs, whatever their size: the CSP allows fonts
 			// from 'self' only. Small unicode-range subsets (under Vite's 4 kB limit) would
@@ -81,8 +89,13 @@ export default defineConfig(async ({ command, mode }) => {
 			},
 		},
 		plugins: [
-			// Options live in project.inlang/paraglide.config.ts (shared with the compile CLI).
-			paraglideVitePlugin({ project: "./project.inlang" }),
+			// Options live in project.inlang/paraglide.config.ts (shared with the compile CLI), except
+			// the output structure of production builds: one module per message, so each page ships
+			// only the messages it uses. Dev keeps one module per locale (decision 0155).
+			paraglideVitePlugin({
+				project: "./project.inlang",
+				...(command === "build" ? { outputStructure: "message-modules" as const } : {}),
+			}),
 			// Dev server only (apply: "serve"): /dev/emails. Never part of a build.
 			emailPreviewPlugin(),
 			devtools(),
@@ -109,6 +122,15 @@ export default defineConfig(async ({ command, mode }) => {
 			}),
 			tailwindcss(),
 			tanstackStart({
+				router: {
+					// The router plugin's default splits component, errorComponent and notFoundComponent
+					// only, so a route's pendingComponent (and everything it imports) landed in the entry
+					// chunk of every page. Each one is its own chunk now (decision 0151). Route options
+					// must stay inline object properties: the splitter skips spreads and helper returns.
+					codeSplittingOptions: {
+						defaultBehavior: [["component"], ["pendingComponent"], ["errorComponent"], ["notFoundComponent"]],
+					},
+				},
 				importProtection: {
 					client: {
 						// `files` replaces the defaults, so the default *.server.* rule is repeated.
@@ -117,8 +139,15 @@ export default defineConfig(async ({ command, mode }) => {
 				},
 			}),
 			viteReact(),
-			// React Compiler: memoizes components and hooks at build time (decision 0136).
-			babel({ presets: [reactCompilerPreset()] }),
+			// React Compiler: memoizes components and hooks at build time (decision 0136). Only our
+			// own source: the compiled Paraglide messages (a thousand modules) and dependencies
+			// have no components, and running Babel over them made `pnpm dev` slow (decision 0155).
+			// `exclude` replaces the plugin's default list, so node_modules is listed again.
+			babel({
+				include: [/[\\/]src[\\/].+\.[jt]sx?$/],
+				exclude: [/[\\/]node_modules[\\/]/, /[\\/]src[\\/]paraglide[\\/]/],
+				presets: [reactCompilerPreset()],
+			}),
 			// Source map upload to Sentry (must be last). Only when all three build
 			// variables are set, so builds without Sentry stay silent and offline.
 			...(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT

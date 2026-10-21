@@ -6,14 +6,14 @@ Things many projects need but the base doesn't ship in every app (Part 3 rule: w
 | --- | --- |
 | [Background jobs](#background-jobs) | `/dev/examples/background-jobs`, `src/server/examples/jobs.ts` |
 | [Cursor pagination](#cursor-pagination) | `cursorPaginate()` in `src/server/db/list.ts`, `tests/server/recipes.test.ts` |
-| [Caching public pages](#caching-public-pages) | `/dev/examples/caching`, `publicCache()` in `src/lib/cache.ts` |
+| [Caching public pages](#caching-public-pages) | `/dev/examples/caching`, `publicCache()` in `src/lib/http/cache-control.ts` |
 | [Rate limiting server functions](#rate-limiting-server-functions) | `src/server/http/rate-limit.ts`, `tests/server/recipes.test.ts` |
 | [Contact form](#contact-form) | `/dev/examples/contact` |
 | [Avatar upload](#avatar-upload) | `/dev/examples/attachments` (the same flow) |
 | [CSV export, undo, saved views](#csv-export-delete-with-undo-saved-views) | `/dev/examples/list-extras`, `src/lib/csv.ts` |
 | [Offline development](#offline-development) | `pnpm dev:offline` (`scripts/dev-offline.ts`) |
 | [Preview deploys with a Neon branch](#preview-deploys-with-a-neon-branch-per-pr) | `docs/recipes/preview-neon.yml` |
-| [Changelog](#changelog) | `scripts/check-commit-msg.mjs` |
+| [Changelog](#changelog) | `scripts/check-commit-msg.ts` |
 | [Organizations and billing](#organizations-and-billing) | Guide only (0150) |
 
 Also recipes, documented with their area: idempotency keys ([routing-data.md](routing-data.md), 0125), last login method and passkeys ([security.md](security.md), 0131), impersonation ([rbac.md](rbac.md), 0134), the admin command palette and view transitions ([conventions.md](conventions.md), 0140).
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_public/about")({
 });
 ```
 
-- `publicCache()` (`src/lib/cache.ts`) sets `max-age=0` for browsers and `s-maxage` / `stale-while-revalidate` for the CDN. `/dev/examples/caching` sets it and reads it back.
+- `publicCache()` (`src/lib/http/cache-control.ts`) sets `max-age=0` for browsers and `s-maxage` / `stale-while-revalidate` for the CDN. `/dev/examples/caching` sets it and reads it back.
 - **Never** on a page that reads the session, a preference cookie (theme, sidebar, consent banner) or anything per request. The root layout renders the header from the session, so only pages under a layout that doesn't (or whose header is client-only) qualify; check the HTML is identical signed in and out first.
 - The CSP nonce is per response, so a cached page reuses one nonce for everyone until it expires. That keeps working (the nonce matches its own HTML) but is one more reason to cache only public pages.
 - Prerendering (TanStack Start's `prerender` option) fits content that changes only on deploy; it builds the HTML once, at build time.
@@ -107,7 +107,7 @@ Use the attachments flow (decision 0098, [attachments.md](attachments.md)); `/de
 
 Pick one (0150):
 
-- **Conventional Commits** (`feat:`, `fix:`, …): `scripts/check-commit-msg.mjs` checks a message; enable it as a `commit-msg` hook in `lefthook.yml` (the snippet is at the top of the script) and generate the changelog from history at release time (e.g. `git-cliff`). Squash-merge PRs so the PR title is the commit, and check the title in CI with the same function.
+- **Conventional Commits** (`feat:`, `fix:`, …): `scripts/check-commit-msg.ts` checks a message; enable it as a `commit-msg` hook in `lefthook.yml` (the snippet is at the top of the script) and generate the changelog from history at release time (e.g. `git-cliff`). Squash-merge PRs so the PR title is the commit, and check the title in CI with the same function.
 - **Changesets** (`@changesets/cli`): each PR adds a short `.changeset/*.md`; good when the release notes should be written for users rather than derived from commits.
 
 ## Organizations and billing

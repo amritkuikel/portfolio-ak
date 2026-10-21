@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CloudImage } from "@/features/attachments/components/cloud-image";
-import { formatCurrency, formatDate } from "@/lib/intl";
+import { formatCurrency, formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { publicTestCrudDetailQueryOptions } from "../queries";
 

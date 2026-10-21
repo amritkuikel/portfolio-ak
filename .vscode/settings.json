@@ -1,13 +1,21 @@
 {
 	"files.watcherExclude": {
-		"**/routeTree.gen.ts": true
+		"**/routeTree.gen.ts": true,
+		"**/src/paraglide/**": true,
+		"**/.data/**": true
 	},
 	"search.exclude": {
-		"**/routeTree.gen.ts": true
+		"**/routeTree.gen.ts": true,
+		"**/src/paraglide/**": true,
+		"**/.data/**": true
 	},
 	"files.readonlyInclude": {
-		"**/routeTree.gen.ts": true
+		"**/routeTree.gen.ts": true,
+		"**/src/paraglide/**": true
 	},
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"editor.defaultFormatter": "biomejs.biome",
+	"editor.formatOnSave": true,
 	"[javascript]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
@@ -30,6 +38,10 @@
 		"editor.defaultFormatter": "biomejs.biome"
 	},
 	"editor.codeActionsOnSave": {
-		"source.organizeImports.biome": "explicit"
-	}
+		"source.organizeImports.biome": "explicit",
+		"source.fixAll.biome": "explicit"
+	},
+	"css.lint.unknownAtRules": "ignore",
+	"tailwindCSS.experimental.classRegex": [["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]],
+	"tailwindCSS.experimental.configFile": "src/styles/app.css"
 }

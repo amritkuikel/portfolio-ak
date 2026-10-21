@@ -25,7 +25,7 @@ export default defineConfig({
 	resolve: { tsconfigPaths: true, alias: [zodAlias] },
 	test: {
 		// `pnpm test:coverage`: v8 coverage of the app code, then a per-area table
-		// (scripts/coverage-report.mjs). Generated code and stories are not measured.
+		// (scripts/coverage-report.ts). Generated code and stories are not measured.
 		coverage: {
 			provider: "v8",
 			include: ["src/**/*.{ts,tsx}"],
@@ -48,6 +48,8 @@ export default defineConfig({
 					include: ["tests/**/*.test.{ts,tsx}"],
 					environment: "node",
 					setupFiles: ["tests/setup/env.ts", "tests/setup/dom.ts"],
+					// One migrated PGlite database per run, loaded by createTestDb (tests/utils/test-db.ts).
+					globalSetup: ["tests/setup/pglite.ts"],
 					restoreMocks: true,
 					unstubEnvs: true,
 					// jsdom interaction tests (calendar and country pickers via userEvent) can take

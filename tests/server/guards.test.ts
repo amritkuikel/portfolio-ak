@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import { LOCALE_HEADER } from "@/lib/i18n/locale-header";
-import { localeFunctionMiddleware } from "@/lib/i18n/locale-middleware";
 import { csrfMiddleware } from "@/middleware/csrf";
 import { errorNormalizationMiddleware } from "@/middleware/errors";
+import { localeFunctionMiddleware } from "@/middleware/locale";
 import { logServerFn, requestLoggingMiddleware } from "@/middleware/logging";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 

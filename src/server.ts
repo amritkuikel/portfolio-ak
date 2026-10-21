@@ -12,7 +12,7 @@ import { LOCALE_HEADER } from "./lib/i18n/locale-header";
 import { defineCustomServerStrategy, toLocale } from "./paraglide/runtime.js";
 import { paraglideMiddleware } from "./paraglide/server.js";
 import { runWithErrorStatus } from "./server/http/error-status";
-import { runWithRequestId } from "./server/http/request-id";
+import { runInRequestScope } from "./server/http/request-scope";
 
 // Used for /_serverFn/* and /api/auth/* (routeStrategies in project.inlang/paraglide.config.ts).
 // toLocale() rejects anything that isn't a configured locale.
@@ -26,7 +26,7 @@ export default createServerEntry(
 		fetch(request: Request) {
 			// One id per request, returned as x-request-id and attached to logs, errors and Sentry events.
 			// Pages that fail with an AppError (e.g. FORBIDDEN) get its status instead of 500.
-			return runWithRequestId(() =>
+			return runInRequestScope(() =>
 				runWithErrorStatus(() => paraglideMiddleware(request, () => handler.fetch(request))),
 			);
 		},

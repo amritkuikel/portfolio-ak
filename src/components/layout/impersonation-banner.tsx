@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EyeIcon } from "lucide-react";
 import { useId } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { stopImpersonating } from "@/functions/auth";
@@ -20,7 +19,8 @@ export function ImpersonationBanner() {
 		mutationFn: () => stopImpersonating(),
 		// The admin's own session again: reload the app from the server, back on the users page.
 		onSuccess: () => window.location.assign(localizeHref("/admin/users")),
-		onError: () => toast.error(m.impersonation_stop_failed()),
+		// sonner is imported on demand: this banner is part of every page's entry chunk.
+		onError: () => void import("sonner").then(({ toast }) => toast.error(m.impersonation_stop_failed())),
 	});
 	if (!session?.impersonatedBy) return null;
 	return (

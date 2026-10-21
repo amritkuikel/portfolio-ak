@@ -37,6 +37,16 @@ function ThingPage() {
 - **Lists:** `loadList(queryClient, options, cause)` in the loader and `useListQuery(options)` in the component. A new search on the same page keeps the old rows on screen, marked busy, instead of showing a pending screen (0089).
 - **Streaming:** return a promise without awaiting it (`return { stats: getStats() }`) and render it with `<Await promise fallback>`. Reserve the result's height in the fallback.
 - **No first-paint fetching in effects.** If the page needs it, the loader loads it.
+- **The session is looked up once per request** (0153): the root `beforeLoad`, the admin gate and every server function called while rendering share one result (`requestMemo` in `src/server/http/request-scope.ts`). Calling `getSession` or `requirePermission` again in the same request costs nothing.
+
+## What lands in every page's JavaScript
+
+The router splits `component`, `pendingComponent`, `errorComponent` and `notFoundComponent` into their own chunks (0151). Everything else in a route's options (`validateSearch`, `params`, `loader`, `beforeLoad`, `head`, `staticData`) and everything those import is part of the entry chunk, for every page. So:
+
+- **Route files import a feature's URL contract from `search.ts`**, never `schema.ts`: form schemas pull in rich-text and phone validation (Test CRUD's `search.ts` is the example).
+- **Keep route options inline** in `createFileRoute("…")({ … })`. The splitter only moves inline properties: a component or skeleton returned by a helper or spread in stays in the entry chunk.
+- **Load rarely used libraries on demand** (`await import("…")`), as the sign-out button does with the auth client.
+- `node scripts/check-bundle.ts` (after `pnpm build`, and in CI) prints what every page loads and fails over budget.
 
 ## Server functions
 
@@ -94,7 +104,7 @@ The server function takes the key in its input (`key: z.uuid()`), the scope is `
 
 `src/server/**` and `*.server.*` never reach the client: TanStack Start's import protection fails the build, and `tests/server/env-boundary.test.ts` scans imports. Allowed importers are `src/server`, `src/functions`, `src/middleware` (dynamic import inside `.server()` only), and server routes (`.ts` route files with only `server.handlers`, like `/sitemap.xml`).
 
-Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/http-status.ts`) are for routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story.
+Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/start/http-status.ts`) are for routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story.
 
 ## Pitfalls already solved
 

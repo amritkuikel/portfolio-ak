@@ -1,26 +1,9 @@
 import { sql } from "drizzle-orm";
-import { customType, index, integer, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { TEST_CRUD_STATUSES } from "../../../features/test-crud/constants";
 import { user } from "./auth";
 
-/** Postgres bytea <-> Uint8Array (node-postgres returns Buffer, which is a Uint8Array). */
-const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => "bytea" });
-
 export const testCrudStatus = pgEnum("test_crud_status", TEST_CRUD_STATUSES);
-
-/**
- * LEGACY (Part 1): images stored in Postgres. Images are Cloudinary attachments
- * now (attachments.ts); nothing in the app reads this table any more. Kept only so
- * `pnpm attachments:import-legacy` can move existing images; drop it (and
- * test_crud.image) in a migration once that has run (docs/decisions.md 0098).
- */
-export const testCrudImage = pgTable("test_crud_image", {
-	id: uuid().primaryKey().defaultRandom(),
-	mimeType: text().notNull(),
-	byteSize: integer().notNull(),
-	data: bytea().notNull(),
-	createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
-});
 
 /** The reference feature's table. Columns are listed in docs/PLAN.md (Phase 9a). */
 export const testCrud = pgTable(
@@ -38,8 +21,6 @@ export const testCrud = pgTable(
 		/** E.164 or null. */
 		phone: text(),
 		tags: text().array().notNull().default(sql`'{}'::text[]`),
-		/** LEGACY: see testCrudImage. Unused by the app. */
-		image: uuid().references(() => testCrudImage.id, { onDelete: "set null" }),
 		publishedAt: timestamp({ withTimezone: true }),
 		createdBy: text().references(() => user.id, { onDelete: "set null" }),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),

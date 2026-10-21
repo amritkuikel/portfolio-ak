@@ -1,5 +1,6 @@
 import { m } from "@/paraglide/messages";
-import type { TestCrudStatus, TestCrudStatusFilter } from "./schema";
+import type { TestCrudStatus } from "./schema";
+import type { TestCrudStatusFilter } from "./search";
 
 /** Localized names of enum values, shared by the table, filters and form. Called at render time. */
 export const STATUS_LABELS: Record<TestCrudStatus, () => string> = {

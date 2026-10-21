@@ -98,6 +98,18 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 
 const DIR = "src/functions";
 
+/**
+ * Every server-function file under src/functions, as a path relative to it (e.g. "rbac.ts",
+ * "apps/kanban.ts"). Subfolders count too, so a file can't escape this test by living in
+ * one; `_lib/` holds helpers for these files, not server functions.
+ */
+const functionFiles = (dir = DIR, prefix = ""): string[] =>
+	readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		if (entry.isDirectory())
+			return entry.name === "_lib" ? [] : functionFiles(`${dir}/${entry.name}`, `${prefix}${entry.name}/`);
+		return entry.name.endsWith(".ts") ? [`${prefix}${entry.name}`] : [];
+	});
+
 /** The exported server functions of a file, in order, with their source. */
 const serverFunctions = (file: string) =>
 	readFileSync(`${DIR}/${file}`, "utf8")
@@ -108,7 +120,7 @@ const serverFunctions = (file: string) =>
 
 describe("guarded server functions", () => {
 	it("every file in src/functions is declared as guarded or deliberately unguarded", () => {
-		const files = readdirSync(DIR).filter((file) => file.endsWith(".ts"));
+		const files = functionFiles();
 		const declared = [...Object.keys(GUARDED_FUNCTIONS), ...Object.keys(UNGUARDED_FILES)];
 		expect(files.filter((file) => !declared.includes(file))).toEqual([]);
 		expect(declared.filter((file) => !files.includes(file))).toEqual([]);

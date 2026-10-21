@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CloudImage } from "@/features/attachments/components/cloud-image";
-import { formatCurrency, formatDate } from "@/lib/intl";
+import { formatCurrency, formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { PublicTestCrudCard } from "../schema";
 import { QuickViewButton } from "./masked-links";

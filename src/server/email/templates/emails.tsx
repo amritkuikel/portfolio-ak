@@ -1,5 +1,5 @@
 import { Heading, Text } from "react-email";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { ActionButton, type EmailBaseProps, EmailLayout, Greeting, styles } from "./layout";
 

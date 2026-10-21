@@ -5,7 +5,7 @@ import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { homeFlagsQueryOptions } from "@/features/flags/queries";
-import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/intl"; // @demo
+import { formatCurrency, formatDate, formatNumber, formatRelativeTimeFrom } from "@/lib/i18n/intl"; // @demo
 import { ensureQuery } from "@/lib/query";
 import { seo } from "@/lib/seo";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";

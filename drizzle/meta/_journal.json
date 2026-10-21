@@ -64,6 +64,13 @@
 			"when": 1792354862110,
 			"tag": "0008_audit_log",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1792571666556,
+			"tag": "0009_drop_legacy_test_crud_image",
+			"breakpoints": true
 		}
 	]
 }

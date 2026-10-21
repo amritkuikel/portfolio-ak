@@ -29,7 +29,7 @@ Sign in at `/login` with the admin account, then open `/admin/test-crud`.
 
 ## Environment variables
 
-Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib/client-env.schema.ts`). Only `VITE_` variables reach the browser.
+Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib/env/client.schema.ts`). Only `VITE_` variables reach the browser.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -123,7 +123,6 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
 | `pnpm new:feature <name>` | Generate an admin CRUD feature in the Test CRUD shape (table, migration, permissions, functions, routes, messages, tests, stories); see [docs/guides/new-project.md](docs/guides/new-project.md). |
 | `pnpm strip-demo` | Remove the portfolio, `/stack` and the home page's Intl showcase; run once on a fresh clone (it deletes itself). <!-- @demo --> |
-| `pnpm attachments:import-legacy` | Move Part 1 images from Postgres to Cloudinary (`--dry-run` to preview). |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
 
@@ -141,7 +140,7 @@ Stories sit next to their components (`*.stories.tsx`) and run in the app's prov
 
 ## Internationalisation (English + Nepali)
 
-English lives at `/`, Nepali under `/ne/`; every string is a message in `messages/en.json` and `messages/ne.json` (tests check parity and unused keys), and values are formatted with `src/lib/intl.ts`. See [docs/guides/i18n.md](docs/guides/i18n.md).
+English lives at `/`, Nepali under `/ne/`; every string is a message in `messages/en.json` and `messages/ne.json` (tests check parity and unused keys), and values are formatted with `src/lib/i18n/intl.ts`. See [docs/guides/i18n.md](docs/guides/i18n.md).
 
 ## Routing, data and server functions
 
@@ -160,7 +159,7 @@ Query for server data you read, a TanStack DB collection for server data you edi
 `/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. `pnpm new:feature projects` generates steps 1–8 below for an admin section (title and notes columns, search, sort, pagination, create, edit with the version check, delete with an audit row), passing every gate as generated; start there and add what your feature needs. Starting a whole new project (strip the demo first): [docs/guides/new-project.md](docs/guides/new-project.md). By hand, say "projects":
 
 1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
-2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params built from `src/lib/list.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
+2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params (in `search.ts`, the URL contract route files import) built from `src/lib/list/params.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
 3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Updates take the version the edit started from (`updatedAt`) and refuse a stale one (`sameVersion`, `staleError()`; see [docs/guides/forms.md](docs/guides/forms.md)). Test both with `createTestDb()` (PGlite), including a stale save.
 4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
 5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
@@ -180,7 +179,7 @@ The Test CRUD files for each layer:
 | UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `ConfirmDialog`, forms built from the reusable fields, toasts and the unsaved-changes guard |
 | Public pages | `src/routes/_public/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs, and `seo()` head tags |
 
-Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098). Part 1 images stored in Postgres move with `pnpm attachments:import-legacy`.
+Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098).
 
 For a public page's head, use `seo({ title, description, path, image, jsonLd })` from `src/lib/seo.ts` (lists: `listSeo()`). It returns the title, description, robots, canonical URL, `hreflang` alternates for every locale plus `x-default`, Open Graph and Twitter tags, and JSON-LD. Private pages use `privateHead()`. The sitemap, robots.txt and the web manifest are server routes. See [docs/guides/seo.md](docs/guides/seo.md).
 

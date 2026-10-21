@@ -1,6 +1,6 @@
 import { AppError } from "@/lib/errors";
-import { setErrorStatus } from "@/lib/http-status";
 import type { Session } from "@/lib/session";
+import { setErrorStatus } from "@/lib/start/http-status";
 import { hasAll, type Permission } from "./permissions";
 
 /**

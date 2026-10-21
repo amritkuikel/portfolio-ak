@@ -4,8 +4,10 @@ From a fresh clone to your own app with its first feature, every gate green. Dec
 
 ## 1. Clone and install
 
-- [ ] Clone to a short path (Windows: about 90 characters at most, 0029), then `pnpm install` (Node ≥ 22; `.nvmrc` says 24).
-- [ ] `cp .env.example .env` and fill in at least `VITE_APP_TITLE`, `VITE_SITE_URL`, `DATABASE_URL` (a Neon branch, or any Postgres) and `BETTER_AUTH_SECRET` (README, "Environment variables"). Leave Sentry, PostHog, Cloudinary, Turnstile and Google empty until you need them.
+- [ ] Clone to a short path (Windows: about 90 characters at most, 0029), then `pnpm install` (Node ≥ 22.18; `.nvmrc` says 24).
+- [ ] `pnpm setup:local` (0156): creates `.env` from `.env.example` with a generated `BETTER_AUTH_SECRET`, compiles the messages and creates a local database in `.data/pglite` with an admin and demo data. Then `pnpm dev:local` runs the app on it, with no Neon project needed yet.
+- [ ] In `.env`, set `VITE_APP_TITLE` and `VITE_SITE_URL`, and `DATABASE_URL` once you have a Neon branch (or any Postgres) for `pnpm dev` and deploys (README, "Environment variables"). Leave Sentry, PostHog, Cloudinary, Turnstile and Google empty until you need them.
+- [ ] `pnpm diagnose` whenever something doesn't start: it checks Node, `.env`, the database and its migrations, and ports, and prints the fix.
 
 ## 2. Remove the demo
 

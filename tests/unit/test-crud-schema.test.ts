@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-	slugify,
-	TEST_CRUD_SEARCH_DEFAULTS,
-	testCrudFormSchema,
-	testCrudInputSchema,
-	testCrudListInputSchema,
-	testCrudSearchSchema,
-	toTestCrudInput,
-} from "@/features/test-crud/schema";
+import { slugify, testCrudFormSchema, testCrudInputSchema, toTestCrudInput } from "@/features/test-crud/schema";
+import { TEST_CRUD_SEARCH_DEFAULTS, testCrudListInputSchema, testCrudSearchSchema } from "@/features/test-crud/search";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 
 afterEach(() => {

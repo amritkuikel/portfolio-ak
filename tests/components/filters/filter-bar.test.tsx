@@ -16,8 +16,8 @@ import { z } from "zod";
 import { ActiveFilters } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
 import { BooleanFilter, MultiSelectFilter, SearchFilter, SelectFilter } from "@/components/filters/filters";
-import { enumParam, pageParam, searchParam } from "@/lib/list";
-import { arrayParam, booleanParam, parseSearch, stringifySearch } from "@/lib/search";
+import { arrayParam, booleanParam, enumParam, pageParam, searchParam } from "@/lib/list/params";
+import { parseSearch, stringifySearch } from "@/lib/list/url";
 
 const schema = z.object({
 	q: searchParam(),

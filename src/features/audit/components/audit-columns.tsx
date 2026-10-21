@@ -1,6 +1,6 @@
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/intl";
+import { formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { AUDIT_ACTION_LABELS, AUDIT_FIELD_LABELS, AUDIT_TARGET_LABELS } from "../labels";
 import type { AuditEventItem, AuditValue, AuditValues } from "../schema";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
-import { currencySymbol, DEFAULT_CURRENCY, formatNumber, parseLocaleNumber } from "@/lib/intl";
+import { currencySymbol, DEFAULT_CURRENCY, formatNumber, parseLocaleNumber } from "@/lib/i18n/intl";
 import { useFieldContext } from "../contexts";
 import { type FieldBaseProps, FieldShell } from "../field-shell";
 

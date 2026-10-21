@@ -11,7 +11,7 @@ Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` (a
 
 Without the Cloudinary variables, uploads are refused with a clear message and items show placeholders. The CSP allows Cloudinary's hosts only when it's configured.
 
-Moving Part 1 images (stored in Postgres): `pnpm attachments:import-legacy --dry-run`, then without `--dry-run`.
+Part 1 stored images in Postgres; that table and its import script are gone (0160). A database that may still hold such images needs `attachments:import-legacy` from the commit before 0160 first.
 
 ## The flow
 

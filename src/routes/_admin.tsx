@@ -3,8 +3,10 @@ import { AdminLayout } from "@/components/layout/admin-sidebar";
 import { canEnterAdmin } from "@/features/rbac/permissions";
 import { ensureAdminAccess } from "@/functions/auth";
 import { isAppError } from "@/lib/errors";
-import { setErrorStatus } from "@/lib/http-status";
+import { fontPreloads } from "@/lib/fonts";
 import { NOINDEX } from "@/lib/seo";
+import { setErrorStatus } from "@/lib/start/http-status";
+import { getLocale } from "@/paraglide/runtime";
 
 /**
  * Admin area. Entering it (and every SSR request) checks the role ON THE SERVER
@@ -38,7 +40,7 @@ export const Route = createFileRoute("/_admin")({
 		}
 	},
 	// Private: every admin page inherits this (child heads set only the title).
-	head: () => ({ meta: [NOINDEX] }),
+	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
 	component: AdminShell,
 });
 

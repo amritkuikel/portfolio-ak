@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
 import { localizeHref } from "@/paraglide/runtime";
 import { refreshAuth } from "./queries";
 
@@ -25,6 +24,9 @@ export function useAuthNavigation() {
 			await router.navigate({ href: localizeHref(to), replace: true });
 		},
 		signOut: async () => {
+			// Loaded on demand: this hook is used by headers on every page, and the auth
+			// client (about 11 kB gzip) is only needed once someone signs out.
+			const { authClient } = await import("@/lib/auth-client");
 			await authClient.signOut();
 			await refreshAuth(queryClient);
 			await router.navigate({ href: localizeHref("/"), replace: true });

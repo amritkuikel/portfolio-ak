@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { publicCache } from "@/lib/cache";
+import { publicCache } from "@/lib/http/cache-control";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

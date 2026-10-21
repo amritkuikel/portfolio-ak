@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { getLocale, type Locale } from "@/paraglide/runtime";
 import type { MetricRecord } from "../schema";
 
@@ -6,7 +6,7 @@ type MetricValue = Pick<MetricRecord, "value" | "format">;
 
 /**
  * A metric's number as localized text: "63%", "1.2M", "3×", "48 ms", "10+".
- * Digits follow the locale (Devanagari in Nepali) through src/lib/intl.ts.
+ * Digits follow the locale (Devanagari in Nepali) through src/lib/i18n/intl.ts.
  */
 export function formatMetric({ value, format }: MetricValue, locale: Locale = getLocale()): string {
 	switch (format) {

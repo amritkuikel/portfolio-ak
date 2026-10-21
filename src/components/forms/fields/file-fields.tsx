@@ -2,7 +2,7 @@ import { FileIcon, UploadIcon, XIcon } from "lucide-react";
 import { type DragEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { formatBytes } from "@/lib/intl";
+import { formatBytes } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import type { FileRules } from "@/lib/validation";
 import { m } from "@/paraglide/messages";

@@ -44,7 +44,7 @@ export const Route = createFileRoute("/p")({ server: { handlers: {} }, component
 				`import { db } from "@/server/db/client";
 export const Route = createFileRoute("/sitemap.xml")({ server: { handlers: { GET } } });`,
 			],
-			["src/lib/client-only.ts", `import { clientEnv } from "@/lib/client-env";`],
+			["src/lib/client-only.ts", `import { clientEnv } from "@/lib/env/client";`],
 		]);
 		expect(findServerImportViolations(fixture)).toEqual([]);
 	});

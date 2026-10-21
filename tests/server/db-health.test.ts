@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkDatabaseHealth, healthResponse } from "@/server/db/health";
-import { runWithRequestId } from "@/server/http/request-id";
+import { runInRequestScope } from "@/server/http/request-scope";
 
 const clock = (...times: number[]) => {
 	const queue = [...times];
@@ -22,7 +22,7 @@ describe("checkDatabaseHealth", () => {
 		const ping = vi.fn().mockRejectedValue(new Error("Failed query: select 1", { cause: driverError }));
 
 		let result: Awaited<ReturnType<typeof checkDatabaseHealth>> | undefined;
-		await runWithRequestId(
+		await runInRequestScope(
 			async () => {
 				result = await checkDatabaseHealth(ping, clock(0, 5));
 				return new Response();

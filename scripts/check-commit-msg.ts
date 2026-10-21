@@ -6,9 +6,9 @@
  *   commit-msg:
  *     commands:
  *       conventional:
- *         run: node scripts/check-commit-msg.mjs {1}
+ *         run: node scripts/check-commit-msg.ts {1}
  *
- *   node scripts/check-commit-msg.mjs .git/COMMIT_EDITMSG
+ *   node scripts/check-commit-msg.ts .git/COMMIT_EDITMSG
  */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -32,7 +32,7 @@ const HEADER = new RegExp(`^(?:${COMMIT_TYPES.join("|")})(?:\\([a-z0-9-]+\\))?!?
 const GENERATED = /^(?:Merge |Revert "|fixup! |squash! )/;
 
 /** null when the message is fine, otherwise why it isn't. */
-export function checkCommitMessage(message) {
+export function checkCommitMessage(message: string): string | null {
 	const header = message.split("\n").find((line) => line.trim() !== "" && !line.startsWith("#")) ?? "";
 	if (GENERATED.test(header)) return null;
 	if (HEADER.test(header)) return null;
@@ -42,7 +42,7 @@ export function checkCommitMessage(message) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 	const file = process.argv[2];
 	if (!file) {
-		console.error("usage: node scripts/check-commit-msg.mjs <message file>");
+		console.error("usage: node scripts/check-commit-msg.ts <message file>");
 		process.exit(2);
 	}
 	const problem = checkCommitMessage(readFileSync(file, "utf8"));

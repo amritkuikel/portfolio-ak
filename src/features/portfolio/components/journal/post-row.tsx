@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRightIcon } from "lucide-react";
-import { isoDateInstant } from "@/lib/date-only";
-import { formatDate, formatNumber } from "@/lib/intl";
+import { isoDateInstant } from "@/lib/i18n/date-only";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { PostSummary } from "../../types";
 

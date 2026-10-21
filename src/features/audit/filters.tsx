@@ -1,7 +1,7 @@
 import { ActiveFilters, chipLabel, type FilterChip, rangeValue } from "@/components/filters/active-filters";
 import { DateRangeFilter, SearchFilter, SelectFilter } from "@/components/filters/filters";
-import { isoDateInstant } from "@/lib/date-only";
-import { formatDate } from "@/lib/intl";
+import { isoDateInstant } from "@/lib/i18n/date-only";
+import { formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { AUDIT_ACTION_LABELS, AUDIT_TARGET_LABELS } from "./labels";
 import { AUDIT_ACTIONS, AUDIT_FILTER_KEYS, AUDIT_TARGETS, type AuditSearch } from "./schema";

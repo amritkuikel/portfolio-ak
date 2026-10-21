@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-// @ts-expect-error: a plain .mjs script without type declarations (scripts/ is untyped Node code).
-import { checkCommitMessage } from "../../scripts/check-commit-msg.mjs";
+import { checkCommitMessage } from "../../scripts/check-commit-msg.ts";
 
-const check = checkCommitMessage as (message: string) => string | null;
+const check = checkCommitMessage;
 
 describe("conventional commit check (recipe)", () => {
 	it("accepts type, optional scope and breaking marker", () => {

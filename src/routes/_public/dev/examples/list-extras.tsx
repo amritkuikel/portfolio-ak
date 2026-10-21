@@ -14,11 +14,11 @@ import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleKeys, exampleTasksQueryOptions } from "@/features/dev/examples/queries";
 import { EXAMPLE_SEARCH_DEFAULTS, type ExampleTask, exampleTaskSearchSchema } from "@/features/dev/examples/schema";
 import { deleteExampleTasks } from "@/functions/examples";
+import { useListQuery } from "@/hooks/use-list-query";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { loadList } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
-import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
 
 /**

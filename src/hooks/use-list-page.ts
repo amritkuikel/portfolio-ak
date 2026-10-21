@@ -2,9 +2,9 @@ import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { PaginationProps } from "@/components/navigation/pagination";
 import type { SearchPatch } from "@/components/navigation/search-link";
-import type { Paged } from "./list";
-import { usePreferences, usePreferencesStore } from "./stores/hooks";
-import { PAGE_SIZES, type Preferences } from "./stores/preferences";
+import type { Paged } from "../lib/list/paging";
+import { usePreferences, usePreferencesStore } from "../lib/stores/hooks";
+import { PAGE_SIZES, type Preferences } from "../lib/stores/preferences";
 import { useListQuery } from "./use-list-query";
 
 /**

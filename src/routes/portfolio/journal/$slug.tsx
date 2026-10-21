@@ -9,9 +9,9 @@ import { articleJsonLd } from "@/features/portfolio/lib/structured-data";
 import { postQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema } from "@/features/portfolio/schema";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
-import { isoDateInstant } from "@/lib/date-only";
-import { formatDate, formatNumber } from "@/lib/intl";
-import { parseParams } from "@/lib/search";
+import { isoDateInstant } from "@/lib/i18n/date-only";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
+import { parseParams } from "@/lib/list/params";
 import { seo } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

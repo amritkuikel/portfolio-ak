@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useCan, usePermissions } from "@/features/rbac/can";
 import type { Permission } from "@/features/rbac/permissions";
-import { formatNumber } from "@/lib/intl";
-import { useListPage } from "@/lib/use-list-page";
-import { useListQuery } from "@/lib/use-list-query";
+import { useListPage } from "@/hooks/use-list-page";
+import { useListQuery } from "@/hooks/use-list-query";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { testCrudPageCollection } from "../collection";
 import {
@@ -27,12 +27,8 @@ import {
 	testCrudFilterChips,
 } from "../filters";
 import { testCrudListQueryOptions, testCrudTagsQueryOptions } from "../queries";
-import {
-	TEST_CRUD_TABLE_ID,
-	type TestCrudAdminRouteSearch,
-	type TestCrudListItem,
-	type TestCrudStatus,
-} from "../schema";
+import { TEST_CRUD_TABLE_ID, type TestCrudListItem, type TestCrudStatus } from "../schema";
+import type { TestCrudAdminRouteSearch } from "../search";
 import { testCrudColumns } from "./admin-columns";
 import { TestCrudEditDialog } from "./edit-dialog";
 import { EditItemLink } from "./masked-links";

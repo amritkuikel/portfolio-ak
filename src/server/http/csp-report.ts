@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/tanstackstart-react";
 import { log } from "@/server/log";
 
 /**
- * CSP violation reports (decision 0139). Browsers POST them to CSP_REPORT_PATH (src/lib/csp.ts):
+ * CSP violation reports (decision 0139). Browsers POST them to CSP_REPORT_PATH (src/lib/http/csp.ts):
  * the Reporting API's `application/reports+json` (an array, sent for
  * `report-to`) or the older `application/csp-report` (one object, for
  * `report-uri`, which Firefox and Safari still use). Both are reduced to a

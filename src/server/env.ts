@@ -10,7 +10,7 @@
 import "@tanstack/react-start/server-only";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
-import { postgresUrl, throwEnvError } from "../lib/env.shared.ts";
+import { postgresUrl, throwEnvError } from "../lib/env/shared.ts";
 
 if (typeof window !== "undefined") {
 	throw new Error("src/server/env.ts is server-only and was loaded in a browser. Call a server function instead.");
@@ -75,6 +75,14 @@ export const serverEnvSchema = {
 	ADMIN_NAME: z.string().trim().min(1).optional(),
 	// Optional default password for `pnpm db:seed-demo`'s users (development data).
 	DEMO_PASSWORD: z.string().min(12, "Use at least 12 characters for the demo password.").optional(),
+	// PostHog feature flags evaluated on this server instead of one request per page render
+	// (decision 0154): a Project Secret API Key (phs_...) or Personal API Key (phx_...).
+	// Unset: flags are fetched with a 300 ms timeout and cached for 30 s.
+	POSTHOG_SECRET_KEY: z
+		.string()
+		.trim()
+		.regex(/^ph[sx]_/, "Use a PostHog Project Secret API Key (phs_...) or Personal API Key (phx_...).")
+		.optional(),
 	// Sentry source map upload during `pnpm build` (all three or none). Never needed at runtime.
 	SENTRY_AUTH_TOKEN: z.string().trim().min(1).optional(),
 	SENTRY_ORG: z.string().trim().min(1).optional(),

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { zodInput } from "@/functions/_lib/validator";
 import { AppError } from "@/lib/errors";
-import { zodInput } from "@/lib/fn-input";
 import { sanitizeRichText } from "@/server/rich-text/sanitize";
 
 /**

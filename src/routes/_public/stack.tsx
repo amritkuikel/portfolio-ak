@@ -16,11 +16,11 @@ import {
 	stackSearchSchema,
 } from "@/features/stack/schema";
 import { getStackStats } from "@/functions/stack";
+import { useListQuery } from "@/hooks/use-list-query";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { loadList } from "@/lib/query";
 import { listSeo } from "@/lib/seo";
-import { useListQuery } from "@/lib/use-list-query";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 

@@ -4,13 +4,13 @@ import { Page, PageHeader } from "@/components/page/page";
 import { assertRoutePermission } from "@/features/rbac/route-guard";
 import { TestCrudForm, testCrudFormKey } from "@/features/test-crud/components/test-crud-form";
 import { testCrudDetailQueryOptions } from "@/features/test-crud/queries";
-import { testCrudIdParamSchema } from "@/features/test-crud/schema";
+import { testCrudIdParamSchema } from "@/features/test-crud/search";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
-import { setErrorStatus } from "@/lib/http-status";
+import { parseParams } from "@/lib/list/params";
 import { ensureQuery } from "@/lib/query";
-import { parseParams } from "@/lib/search";
 import { pageTitle } from "@/lib/seo";
+import { setErrorStatus } from "@/lib/start/http-status";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/test-crud/$id")({

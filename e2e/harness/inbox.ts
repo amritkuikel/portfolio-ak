@@ -8,7 +8,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { DemoQuery } from "../../scripts/lib/demo-data.mjs";
+import type { DemoQuery } from "../../scripts/lib/demo-data.ts";
 
 export type CapturedEmail = { id: string; to: string; subject: string; text: string; html: string; tag?: string };
 

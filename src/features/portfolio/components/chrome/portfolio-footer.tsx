@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Profile } from "../../types";
 import { ArrowAnchor } from "../primitives/arrow-link";

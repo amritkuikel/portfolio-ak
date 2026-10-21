@@ -16,11 +16,11 @@ import { PRIORITY_LABELS } from "@/features/dev/examples/labels";
 import { exampleKeys, exampleTasksQueryOptions } from "@/features/dev/examples/queries";
 import { EXAMPLE_SEARCH_DEFAULTS, type ExampleTask, exampleTaskSearchSchema } from "@/features/dev/examples/schema";
 import { deleteExampleTasks, resetExampleTasks, setExampleTasksDone } from "@/functions/examples";
+import { useListQuery } from "@/hooks/use-list-query";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatDate, formatNumber } from "@/lib/intl";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { loadList } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
-import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
 
 /**

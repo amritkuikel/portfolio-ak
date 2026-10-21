@@ -3,7 +3,7 @@ import { type ComponentProps, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { type PasswordStrength, passwordStrength } from "@/lib/validation";
 import { m } from "@/paraglide/messages";

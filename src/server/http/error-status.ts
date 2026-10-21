@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * TanStack Router fixes the SSR status of any errored match at 500, and headers
  * set during rendering don't reach the final Response. So the server entry opens
  * a record per request (runWithErrorStatus), routes write to it
- * (recordErrorStatus, via src/lib/http-status.ts), and the entry applies it.
+ * (recordErrorStatus, via src/lib/start/http-status.ts), and the entry applies it.
  */
 type Record = { status: number | undefined };
 

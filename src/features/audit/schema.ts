@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { enumParam, type Paged, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list";
-import { dateParam } from "@/lib/search";
+import type { Paged } from "@/lib/list/paging";
+import { dateParam, enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
 
 /**
  * The audit log (docs/decisions.md 0132): what is recorded, and the list

@@ -7,11 +7,11 @@ import {
 	SearchFilter,
 	SelectFilter,
 } from "@/components/filters/filters";
-import { isoDateInstant } from "@/lib/date-only";
-import { formatCurrency, formatDate } from "@/lib/intl";
+import { isoDateInstant } from "@/lib/i18n/date-only";
+import { formatCurrency, formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { STATUS_FILTER_LABELS } from "./labels";
-import { TEST_CRUD_FILTER_KEYS, TEST_CRUD_STATUS_FILTERS, type TestCrudSearch } from "./schema";
+import { TEST_CRUD_FILTER_KEYS, TEST_CRUD_STATUS_FILTERS, type TestCrudSearch } from "./search";
 
 /**
  * The admin list's filters: the controls (inside <FilterBar>) and the chips

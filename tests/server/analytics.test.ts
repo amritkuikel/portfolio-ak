@@ -82,24 +82,41 @@ describe("with VITE_POSTHOG_KEY", () => {
 		await analytics.isFlagEnabled("home-items-cta");
 		expect(posthog.getFeatureFlag).toHaveBeenLastCalledWith("home-items-cta", "visitor-42", expect.anything());
 
-		// A tampered PostHog cookie falls back to the anonymous id.
+		// A tampered PostHog cookie falls back to the anonymous id (another flag: answers are cached).
 		cookies.set("ph_phc_test_posthog", "{not json");
-		await analytics.isFlagEnabled("home-items-cta");
-		expect(posthog.getFeatureFlag).toHaveBeenLastCalledWith("home-items-cta", "anonymous", expect.anything());
+		await analytics.isFlagEnabled("other-flag");
+		expect(posthog.getFeatureFlag).toHaveBeenLastCalledWith("other-flag", "anonymous", expect.anything());
 	});
 
 	it("treats off, missing, 'control' and failures as off", async () => {
 		const analytics = await load("phc_test");
+		// One flag key per case: answers are cached per flag and visitor.
 		posthog.getFeatureFlag.mockResolvedValueOnce(false);
-		expect(await analytics.isFlagEnabled("f")).toBe(false);
+		expect(await analytics.isFlagEnabled("f1")).toBe(false);
 		posthog.getFeatureFlag.mockResolvedValueOnce(undefined);
-		expect(await analytics.isFlagEnabled("f")).toBe(false);
+		expect(await analytics.isFlagEnabled("f2")).toBe(false);
 		posthog.getFeatureFlag.mockResolvedValueOnce("control");
-		expect(await analytics.isFlagEnabled("f")).toBe(false);
+		expect(await analytics.isFlagEnabled("f3")).toBe(false);
 		posthog.getFeatureFlag.mockResolvedValueOnce("variant-b");
-		expect(await analytics.isFlagEnabled("f")).toBe(true);
+		expect(await analytics.isFlagEnabled("f4")).toBe(true);
 		posthog.getFeatureFlag.mockRejectedValueOnce(new Error("timeout"));
-		expect(await analytics.isFlagEnabled("f")).toBe(false);
+		expect(await analytics.isFlagEnabled("f5")).toBe(false);
+	});
+
+	it("caches a remote answer for 30 seconds per flag and visitor", async () => {
+		vi.useFakeTimers();
+		try {
+			const analytics = await load("phc_test");
+			posthog.getFeatureFlag.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+			expect(await analytics.isFlagEnabled("cached")).toBe(true);
+			expect(await analytics.isFlagEnabled("cached")).toBe(true);
+			expect(posthog.getFeatureFlag).toHaveBeenCalledTimes(1);
+			vi.advanceTimersByTime(30_001);
+			expect(await analytics.isFlagEnabled("cached")).toBe(false);
+			expect(posthog.getFeatureFlag).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("never throws when sending fails", async () => {

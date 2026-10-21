@@ -1,9 +1,7 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import { isNotFound, isRedirect } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
 import { z } from "zod";
-import { AppError } from "@/lib/errors";
-import { zodFieldErrors } from "@/lib/fn-input";
+import { AppError, zodFieldErrors } from "@/lib/errors";
 import { logServerFn, requestLoggingMiddleware } from "./logging";
 
 /**
@@ -26,7 +24,9 @@ export const normalizeServerError = (error: unknown, requestId: string): unknown
 
 	// The only place unexpected server-function errors reach Sentry: here the original
 	// error (and stack) still exists. The request id matches what the user is shown.
-	Sentry.captureException(error, { tags: { requestId } });
+	// Imported here, not at the top: start.ts brings this module into the browser too, where
+	// a static import kept the whole SDK in every page's entry chunk (decision 0152).
+	void import("@sentry/tanstackstart-react").then((Sentry) => Sentry.captureException(error, { tags: { requestId } }));
 	logServerFn("error", {
 		requestId,
 		error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error),

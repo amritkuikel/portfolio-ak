@@ -1,17 +1,23 @@
 /**
  * The e2e database: the committed migrations, an admin and the demo data
- * (`scripts/lib/demo-data.mjs`, the same rows `pnpm db:seed-demo` writes).
+ * (`scripts/lib/demo-data.ts`, the same rows `pnpm db:seed-demo` writes).
  */
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
-import { type DemoQuery, seedDemo } from "../../scripts/lib/demo-data.mjs";
+import { type DemoQuery, seedDemo } from "../../scripts/lib/demo-data.ts";
 import { E2E } from "./config.ts";
 
-/** Connects, empties the database (a real Postgres may hold an earlier run), migrates and seeds. */
-export async function prepareDatabase(connectionString: string, { reset }: { reset: boolean }) {
+/**
+ * Connects, empties the database (a real Postgres may hold an earlier run), migrates and seeds.
+ * `seed: false` only migrates (pnpm dev:local on a database it already seeded).
+ */
+export async function prepareDatabase(
+	connectionString: string,
+	{ reset, seed = true }: { reset: boolean; seed?: boolean },
+) {
 	const client = new pg.Client({ connectionString });
 	await client.connect();
 	if (reset) {
@@ -22,6 +28,7 @@ export async function prepareDatabase(connectionString: string, { reset }: { res
 	await migrate(drizzle({ client }), { migrationsFolder: "./drizzle" });
 
 	const query: DemoQuery = (sql, params) => client.query(sql, params);
+	if (!seed) return { query, close: () => client.end() };
 	const passwordHash = await hashPassword(E2E.password);
 	await query("begin");
 	const adminId = randomUUID();

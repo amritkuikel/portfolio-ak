@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { otp, phone } from "@/lib/validation";
+import { phone } from "@/lib/phone";
+import { otp } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { FieldStory } from "../story-harness";
 import { OtpField, PhoneField } from "./phone-otp-fields";

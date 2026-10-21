@@ -17,7 +17,7 @@ import { ALL_PERMISSIONS } from "@/features/rbac/permissions";
 import { refreshRbac, rolesQueryOptions } from "@/features/rbac/queries";
 import type { RoleSummary } from "@/features/rbac/schema";
 import { deleteRole } from "@/functions/rbac";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";

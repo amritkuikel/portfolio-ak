@@ -1,5 +1,5 @@
 /**
- * Nepali locale data for src/lib/intl.ts, transcribed from CLDR 47 `ne`.
+ * Nepali locale data for src/lib/i18n/intl.ts, transcribed from CLDR 47 `ne`.
  *
  * Why this exists: desktop Chrome ships reduced ICU data without Nepali, so
  * `Intl.*("ne")` silently falls back to English in the browser while Node (full

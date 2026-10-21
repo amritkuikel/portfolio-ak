@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { STACK_PAGE_SIZE, type StackItem, type StackPage, type StackSearch } from "@/features/stack/schema";
-import { paginateArray } from "@/lib/list";
+import { paginateArray } from "@/lib/list/paging";
 import type { Locale } from "@/paraglide/runtime";
 import { CATEGORY_LABELS, STACK } from "./data";
 

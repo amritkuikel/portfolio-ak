@@ -11,7 +11,7 @@ describe("server env in a browser environment", () => {
 		vi.resetModules();
 		vi.stubEnv("VITE_APP_TITLE", "Portfolio");
 		vi.stubEnv("VITE_SITE_URL", "http://localhost:3000");
-		const { clientEnv } = await import("@/lib/client-env");
+		const { clientEnv } = await import("@/lib/env/client");
 		expect(clientEnv.VITE_APP_TITLE).toBe("Portfolio");
 	});
 });

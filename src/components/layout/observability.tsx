@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -12,9 +11,9 @@ import {
 	startAnalytics,
 	stopAnalytics,
 	track,
-} from "@/lib/analytics";
+} from "@/lib/observability/analytics";
+import { setSentryUser } from "@/lib/observability/sentry-client";
 import { usePreferences, usePreferencesStore } from "@/lib/stores/hooks";
-import { startWebVitals } from "@/lib/web-vitals";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -22,7 +21,7 @@ import { m } from "@/paraglide/messages";
  * - consent "granted" starts PostHog; anything else stops it (and before
  *   consent posthog-js isn't even downloaded);
  * - a pageview per resolved navigation while analytics runs;
- * - real-user Web Vitals (CLS, LCP, INP) once analytics runs (src/lib/web-vitals.ts);
+ * - real-user Web Vitals (CLS, LCP, INP) once analytics runs (src/lib/observability/web-vitals.ts);
  * - Sentry user (id only) and PostHog identify on login, cleared/reset on logout.
  */
 export function ObservabilitySync() {
@@ -39,7 +38,8 @@ export function ObservabilitySync() {
 				if (cancelled || !client) return;
 				setRunning(true);
 				track("$pageview", { $current_url: window.location.href });
-				startWebVitals();
+				// Loaded only once analytics runs: web-vitals isn't needed before that.
+				void import("@/lib/observability/web-vitals").then(({ startWebVitals }) => startWebVitals());
 			});
 		} else {
 			stopAnalytics();
@@ -60,7 +60,7 @@ export function ObservabilitySync() {
 	const previousUser = useRef<string | null>(null);
 	useEffect(() => {
 		// Sentry: the user id helps group errors; no email or name is sent.
-		Sentry.setUser(userId ? { id: userId } : null);
+		setSentryUser(userId);
 		if (running) {
 			if (userId) identifyUser(userId);
 			else if (previousUser.current) resetIdentity();

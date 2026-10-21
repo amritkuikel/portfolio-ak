@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StackPage, type StackStats, stackSearchSchema } from "@/features/stack/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import { getLocale } from "@/paraglide/runtime";
 import { STACK } from "@/server/stack/data";
 import { queryStack } from "@/server/stack/query";

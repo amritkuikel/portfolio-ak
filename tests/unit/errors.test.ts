@@ -1,9 +1,9 @@
 import { notFound, redirect } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { zodInput } from "@/functions/_lib/validator";
 import { isStaleError } from "@/lib/concurrency";
 import { APP_ERROR_CODES, AppError, appErrorSerializationAdapter, HTTP_STATUS, isAppError } from "@/lib/errors";
-import { zodInput } from "@/lib/fn-input";
 import { normalizeServerError } from "@/middleware/errors";
 
 describe("AppError", () => {

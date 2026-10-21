@@ -1,6 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
-import { throwEnvError } from "./env.shared.ts";
+import { throwEnvError } from "./shared.ts";
 
 /**
  * Client (public) environment schema. Every key must start with VITE_,
@@ -35,6 +35,8 @@ export const clientEnvSchema = {
 	// Observability (all optional). Unset = that service is off and makes no network calls.
 	// Sentry DSNs and PostHog project keys are public by design (they only allow sending data).
 	VITE_SENTRY_DSN: z.url("Must be the DSN URL from Sentry project settings.").optional(),
+	// Development only: trace every request and navigation (off by default, it slows `pnpm dev`).
+	VITE_SENTRY_DEV_TRACING: z.enum(["true", "false"], "Must be true or false.").optional(),
 	VITE_POSTHOG_KEY: z.string().trim().startsWith("phc_", "PostHog project API keys start with 'phc_'.").optional(),
 	VITE_POSTHOG_HOST: z.url("Must be your PostHog ingest host, e.g. https://eu.i.posthog.com.").optional(),
 };

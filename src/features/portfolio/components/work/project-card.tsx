@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { cn } from "../../lib/cn";
 import { DISCIPLINE_LABELS } from "../../lib/labels";

@@ -3,20 +3,26 @@
 // area of the codebase, plus the overall total.
 //
 //   pnpm test:coverage          (runs the tests, then this script)
-//   node scripts/coverage-report.mjs [coverage/coverage-summary.json]
+//   node scripts/coverage-report.ts [coverage/coverage-summary.json]
 import { readFileSync } from "node:fs";
 import path from "node:path";
+
+type Counts = { covered: number; total: number };
+type FileSummary = { lines: Counts; branches: Counts; functions: Counts };
+type Pair = [covered: number, total: number];
+type Totals = { lines: Pair; branches: Pair; functions: Pair };
 
 const summaryPath = process.argv[2] ?? "coverage/coverage-summary.json";
 
 /** Areas in the order of the plan. A file counts toward every area whose pattern it matches. */
-const AREAS = [
+const AREAS: ReadonlyArray<{ name: string; patterns: RegExp[] }> = [
 	{
 		name: "Schemas & validation",
 		patterns: [
-			/^src\/lib\/validation\.ts$/,
-			/^src\/features\/[^/]+\/(schema|constants|validation)\.ts$/,
-			/^src\/lib\/(date-only|fn-input|redirect)\.ts$/,
+			/^src\/lib\/(validation|phone)\.ts$/,
+			/^src\/features\/[^/]+\/(schema|search|constants|validation)\.ts$/,
+			/^src\/lib\/(i18n\/date-only|http\/redirect)\.ts$/,
+			/^src\/functions\/_lib\//,
 		],
 	},
 	{ name: "Form fields", patterns: [/^src\/components\/forms\//] },
@@ -29,15 +35,20 @@ const AREAS = [
 			/^src\/server\/analytics\//,
 		],
 	},
-	{ name: "Guards", patterns: [/^src\/middleware\//, /^src\/lib\/(errors|http-status)\.ts$/, /^src\/server\/http\//] },
+	{
+		name: "Guards",
+		patterns: [/^src\/middleware\//, /^src\/lib\/(errors|start\/http-status)\.ts$/, /^src\/server\/http\//],
+	},
 	{ name: "Email", patterns: [/^src\/server\/email\//] },
-	{ name: "i18n", patterns: [/^src\/lib\/i18n\//, /^src\/lib\/intl(-ne)?\.ts$/, /^src\/lib\/seo\.ts$/] },
-	{ name: "Env", patterns: [/^src\/server\/env\.ts$/, /^src\/lib\/(client-env|client-env\.schema|env\.shared)\.ts$/] },
+	{ name: "i18n", patterns: [/^src\/lib\/i18n\//, /^src\/lib\/seo\.ts$/] },
+	{ name: "Env", patterns: [/^src\/server\/env\.ts$/, /^src\/lib\/env\//] },
 	// Part 2 areas (docs/PLAN.md section 7).
 	{
 		name: "Lists & filters",
 		patterns: [
-			/^src\/lib\/(list|search|query|use-list-query|breadcrumbs)\.ts$/,
+			/^src\/lib\/list\//,
+			/^src\/lib\/(query|breadcrumbs)\.ts$/,
+			/^src\/hooks\/use-list-/,
 			/^src\/server\/db\/list\.ts$/,
 			/^src\/components\/(filters|data-table|navigation|page)\//,
 		],
@@ -47,22 +58,23 @@ const AREAS = [
 	{ name: "SEO", patterns: [/^src\/lib\/(seo|structured-data)\.ts$/, /^src\/server\/seo\//] },
 ];
 
-const raw = JSON.parse(readFileSync(summaryPath, "utf8"));
+const raw = JSON.parse(readFileSync(summaryPath, "utf8")) as Record<string, FileSummary>;
 const root = process.cwd();
 const files = Object.entries(raw)
 	.filter(([file]) => file !== "total")
-	.map(([file, data]) => [path.relative(root, file).split(path.sep).join("/"), data]);
+	.map(([file, data]): [string, FileSummary] => [path.relative(root, file).split(path.sep).join("/"), data]);
 
-const emptyTotals = () => ({ lines: [0, 0], branches: [0, 0], functions: [0, 0] });
-const add = (totals, data) => {
-	for (const key of Object.keys(totals)) {
+const KEYS = ["lines", "branches", "functions"] as const;
+const emptyTotals = (): Totals => ({ lines: [0, 0], branches: [0, 0], functions: [0, 0] });
+const add = (totals: Totals, data: FileSummary) => {
+	for (const key of KEYS) {
 		totals[key][0] += data[key].covered;
 		totals[key][1] += data[key].total;
 	}
 };
-const pct = ([covered, total]) => (total === 0 ? "–" : `${((covered / total) * 100).toFixed(1)}%`);
+const pct = ([covered, total]: Pair) => (total === 0 ? "–" : `${((covered / total) * 100).toFixed(1)}%`);
 
-const rows = AREAS.map((area) => {
+const rows: Array<[string, number, Totals]> = AREAS.map((area) => {
 	const totals = emptyTotals();
 	let count = 0;
 	for (const [file, data] of files) {
@@ -82,11 +94,11 @@ const table = [
 	header,
 	...rows.map(([name, count, t]) => [name, String(count), pct(t.lines), pct(t.branches), pct(t.functions)]),
 ];
-const widths = header.map((_, column) => Math.max(...table.map((row) => row[column].length)));
-const line = (row) =>
-	`| ${row.map((cell, column) => (column === 0 ? cell.padEnd(widths[column]) : cell.padStart(widths[column]))).join(" | ")} |`;
+const widths = header.map((_, column) => Math.max(...table.map((row) => row[column]?.length ?? 0)));
+const line = (row: string[]) =>
+	`| ${row.map((cell, column) => (column === 0 ? cell.padEnd(widths[column] ?? 0) : cell.padStart(widths[column] ?? 0))).join(" | ")} |`;
 console.log("\nCoverage by area\n");
-console.log(line(table[0]));
+console.log(line(header));
 console.log(
 	`|${widths.map((width, column) => (column === 0 ? `:${"-".repeat(width + 1)}` : `${"-".repeat(width + 1)}:`)).join("|")}|`,
 );

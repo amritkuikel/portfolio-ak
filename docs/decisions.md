@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (150 entries)</summary>
+<summary>Index (160 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -106,7 +106,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0098](#0098-attachments-signed-direct-uploads-to-cloudinary-verified-on-the-server): Attachments: signed direct uploads to Cloudinary, verified on the server
 - [0099](#0099-the-image-editor-is-a-feature-field-concurrent-uploads-append-atomically): The image editor is a feature field; concurrent uploads append atomically
 - [0100](#0100-every-page-is-indexable-through-seo-or-private-through-noindex-a-test-checks-every-route): Every page is indexable through seo() or private through noindex; a test checks every route
-- [0101](#0101-the-sitemap-robotstxt-and-manifest-are-start-server-routes-built-from-the-same-data-as-the-pages): The sitemap, robots.txt and manifest are Start server routes built from the same data as the pages
+- [0101](#0101-the-sitemap-robotstxt-and-manifest-are-built-from-the-same-data-as-the-pages-the-manifest-is-a-nitro-route): The sitemap, robots.txt and manifest are built from the same data as the pages; the manifest is a Nitro route
 - [0102](#0102-json-ld-is-typed-with-schema-dts-and-emitted-through-route-heads-items-are-products): JSON-LD is typed with schema-dts and emitted through route heads; items are Products
 - [0103](#0103-module-examples-are-dev-only-routes-over-in-memory-data-guarded-by-one-layout): Module examples are dev-only routes over in-memory data, guarded by one layout
 - [0104](#0104-forms-handled-in-javascript-use-methodpost): Forms handled in JavaScript use `method="post"`
@@ -156,6 +156,16 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0148](#0148-contact-form-avatar-upload-and-list-extras-are-examples-to-copy): Contact form, avatar upload and list extras are examples to copy
 - [0149](#0149-pnpm-devoffline-runs-on-in-memory-pglite-with-every-outside-service-off): `pnpm dev:offline` runs on in-memory PGlite with every outside service off
 - [0150](#0150-preview-branches-changelog-checks-organizations-and-billing-are-documented-not-wired): Preview branches, changelog checks, organizations and billing are documented, not wired
+- [0151](#0151-every-pages-javascript-has-a-budget-and-route-options-stay-light): Every page's JavaScript has a budget, and route options stay light
+- [0152](#0152-browser-sentry-loads-after-the-entry-chunk): Browser Sentry loads after the entry chunk
+- [0153](#0153-the-session-is-resolved-once-per-request): The session is resolved once per request
+- [0154](#0154-feature-flags-never-wait-more-than-300-ms): Feature flags never wait more than 300 ms
+- [0155](#0155-dev-speed-one-message-module-per-locale-babel-only-on-our-code-a-local-database): Dev speed: one message module per locale, Babel only on our code, a local database
+- [0156](#0156-pnpm-setuplocal-and-pnpm-diagnose): `pnpm setup:local` and `pnpm diagnose`
+- [0157](#0157-inlang-cli-for-machine-translation-and-checks-plugins-load-from-node_modules): inlang CLI for machine translation and checks; plugins load from node_modules
+- [0158](#0158-srclib-is-grouped-by-area-and-biome-enforces-the-import-boundaries): `src/lib` is grouped by area, and Biome enforces the import boundaries
+- [0159](#0159-tests-start-from-one-migrated-pglite-database-per-run): Tests start from one migrated PGlite database per run
+- [0160](#0160-postgres-image-storage-from-part-1-is-dropped): Postgres image storage from Part 1 is dropped
 </details>
 
 ---
@@ -239,8 +249,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0012: Client schema lives in its own file; client env files avoid the `*.client.*` name
 
 - **What:**
-  - `src/lib/client-env.schema.ts` holds the schema and a `createClientEnv` factory.
-  - `src/lib/client-env.ts` holds the instance built from `import.meta.env`.
+  - `src/lib/env/client.schema.ts` holds the schema and a `createClientEnv` factory.
+  - `src/lib/env/client.ts` holds the instance built from `import.meta.env`.
   - The server env is a single file, `src/server/env.ts`.
 - **Why:**
   - `import.meta.env` doesn't exist while Vite loads its config, so the config imports the schema file, not the instance.
@@ -363,7 +373,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0022: Server functions receive the page locale in a header
 
 - **What:**
-  - A global function middleware (`src/start.ts`, `src/lib/i18n/locale-middleware.ts`) adds an `x-paraglide-locale` header with the page's locale to every server function call.
+  - A global function middleware (`src/start.ts`, `src/middleware/locale.ts`) adds an `x-paraglide-locale` header with the page's locale to every server function call.
   - A Paraglide custom strategy, `custom-header`, is defined in `src/server.ts` and applied only to `/_serverFn/*` through `routeStrategies`. `toLocale()` rejects unknown values.
 - **Why:**
   - Server function RPCs go to `/_serverFn/...` with no locale prefix. An experiment showed a call from `/ne/...` resolving to `en` on the server.
@@ -386,8 +396,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0024: Nepali formatting never uses ICU `ne` data
 
 - **What:**
-  - `src/lib/intl.ts` formats English with `Intl` directly.
-  - For Nepali it uses only data every runtime has: `en-IN-u-nu-deva` for lakh grouping and Devanagari digits, locale-neutral date fields, and CLDR 47 `ne` month, weekday, currency and relative-time data transcribed into `src/lib/intl-ne.ts`.
+  - `src/lib/i18n/intl.ts` formats English with `Intl` directly.
+  - For Nepali it uses only data every runtime has: `en-IN-u-nu-deva` for lakh grouping and Devanagari digits, locale-neutral date fields, and CLDR 47 `ne` month, weekday, currency and relative-time data transcribed into `src/lib/i18n/intl-ne.ts`.
   - The API exposes a portable subset: `dateStyle` / `timeStyle`, and decimal, percent and currency styles.
 - **Why:**
   - Desktop Chrome's reduced ICU data has no Nepali: `Intl.DateTimeFormat.supportedLocalesOf("ne")` returns `[]`, so the browser silently formats English.
@@ -733,9 +743,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0058: Date fields store calendar dates as strings
 
 - **What:**
-  - `DateField` stores `"YYYY-MM-DD"` and `DateRangeField` stores `{ from, to }` in that format. `src/lib/date-only.ts` converts them.
+  - `DateField` stores `"YYYY-MM-DD"` and `DateRangeField` stores `{ from, to }` in that format. `src/lib/i18n/date-only.ts` converts them.
   - Dates are displayed via `isoDateInstant` (noon UTC) and `formatDate` in Asia/Kathmandu.
-  - The picker is react-day-picker 10 (shadcn Calendar) wrapped as `LocalizedCalendar`. Captions, weekdays, digits and day labels come from `src/lib/intl.ts`.
+  - The picker is react-day-picker 10 (shadcn Calendar) wrapped as `LocalizedCalendar`. Captions, weekdays, digits and day labels come from `src/lib/i18n/intl.ts`.
   - `TimeField` is a text input normalised to `"HH:mm"`, with Devanagari digits in Nepali.
 - **Why:**
   - A birthday or deadline is a calendar day, not an instant. Storing `Date` objects shifts the day across time zones and serialization.
@@ -851,7 +861,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0066: TanStack DB uses the official router integration and has its own chunk
 
 - **What:**
-  - `getRouter()` creates a `DbClient` with the request's `QueryClient` as a dependency (`src/lib/db.ts`, `queryClientOf`). It wraps the router with `routerWithDbClient` from `@tanstack/react-router-with-db` 0.1.0, after `setupRouterSsrQueryIntegration`, because it chains the existing `dehydrate`, `hydrate` and `Wrap`.
+  - `getRouter()` creates a `DbClient` with the request's `QueryClient` as a dependency (`src/lib/tanstack-db.ts`, `queryClientOf`). It wraps the router with `routerWithDbClient` from `@tanstack/react-router-with-db` 0.1.0, after `setupRouterSsrQueryIntegration`, because it chains the existing `dehydrate`, `hydrate` and `Wrap`.
   - Feature collections are module-level descriptors (`collectionOptions(id, factory)`) that each DbClient materializes separately, so SSR requests never share rows. Tests cover this.
   - A `tanstack-db` client chunk group (alongside `react-vendor`) keeps the entry chunk under Vite's 500 kB warning: entry 299 kB, DB 284 kB, 84 kB gzipped.
 - **Why:**
@@ -1158,7 +1168,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0089: Search-driven lists keep showing results while new ones load
 
-- **What:** List loaders call `loadList(queryClient, options, cause)` (`src/lib/query.ts`). On SSR and when entering the route, it awaits the data as before. When only the search changes on the same route (`cause: "stay"`), it prefetches without awaiting, so the navigation commits immediately. Pages read the data with `useListQuery` (`src/lib/use-list-query.ts`): `useQuery` with `placeholderData: keepPreviousData`. Its `busy` flag also covers the router's own pending state. The table and grids dim (`aria-busy`) while busy. Parameters that only open a dialog (`edit`, `view`) are left out of `loaderDeps`.
+- **What:** List loaders call `loadList(queryClient, options, cause)` (`src/lib/query.ts`). On SSR and when entering the route, it awaits the data as before. When only the search changes on the same route (`cause: "stay"`), it prefetches without awaiting, so the navigation commits immediately. Pages read the data with `useListQuery` (`src/hooks/use-list-query.ts`): `useQuery` with `placeholderData: keepPreviousData`. Its `busy` flag also covers the router's own pending state. The table and grids dim (`aria-busy`) while busy. Parameters that only open a dialog (`edit`, `view`) are left out of `loaderDeps`.
 - **Why:** A loaderDeps change creates a new match. If loading takes longer than `pendingMs`, the router swaps in the pending component, which unmounted the filter being typed in and moved the page. Measured with 2.5 s of latency: before, a skeleton flash and lost focus; after, focus and text are kept and the old rows dim until the new ones arrive.
 - **Alternatives considered:** Raising `pendingMs`, which only delays the flash. Disabling the pending component, which would also remove it when entering a route.
 
@@ -1189,7 +1199,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0093: Date filters are calendar days in the app time zone, compared as instants
 
-- **What:** `?from=`/`?to=` are `YYYY-MM-DD`. `dayRangeInZone` (`src/lib/date-only.ts`) turns them into `[start of from, start of the day after to)` in `APP_TIME_ZONE` (Asia/Kathmandu), using Intl offsets (correct across DST, tested with New York). `dateRange(column, from, to)` (`src/server/db/list.ts`) compares the timestamp column with those instants. Also added: `numberRange`, `overlapsAny` (array `&&`) and a GIN index on `test_crud.tags` plus a B-tree index on `price` (migration 0003).
+- **What:** `?from=`/`?to=` are `YYYY-MM-DD`. `dayRangeInZone` (`src/lib/i18n/date-only.ts`) turns them into `[start of from, start of the day after to)` in `APP_TIME_ZONE` (Asia/Kathmandu), using Intl offsets (correct across DST, tested with New York). `dateRange(column, from, to)` (`src/server/db/list.ts`) compares the timestamp column with those instants. Also added: `numberRange`, `overlapsAny` (array `&&`) and a GIN index on `test_crud.tags` plus a B-tree index on `price` (migration 0003).
 - **Why:** Dates are displayed in Nepal time (0025), so "published on 2 Sep" must mean the Nepal day, not the UTC day: 18:20 UTC on 1 Sep is already 2 Sep in Nepal, and the tests cover that edge. Comparing instants keeps indexes usable, which `AT TIME ZONE` on the column would not.
 
 ## 0094: Roles and permissions live in app tables; Better Auth keeps identity, sessions and the admin flag
@@ -1306,7 +1316,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - `noindex` via an `X-Robots-Tag` header in middleware: invisible in the page, and it duplicates route knowledge in a path list.
   - Disallowing every private path in robots.txt: crawlers then never see the `noindex`, and a linked URL can still be indexed without content.
 
-## 0101: The sitemap, robots.txt and manifest are Start server routes built from the same data as the pages
+## 0101: The sitemap, robots.txt and manifest are built from the same data as the pages; the manifest is a Nitro route
 
 - **What:**
   - **`/sitemap.xml`:**
@@ -1511,13 +1521,13 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0116: List pages share useListPage() and tableListInput()
 
-- **What:** `src/lib/use-list-page.ts`. `tableListInput(search, preferences, tableId)` resolves the page size (URL, then the table's saved preference, then 20) and is called by the loader. `useListPage({ tableId, search, query })` uses the same resolution, reads the list with `useListQuery`, rethrows a first-load error to the route's error page, and returns `pagination` props for `<Pagination>` whose rows-per-page picker saves the preference and updates the URL. `<ClearFiltersButton>` is the filtered empty state's action.
+- **What:** `src/hooks/use-list-page.ts`. `tableListInput(search, preferences, tableId)` resolves the page size (URL, then the table's saved preference, then 20) and is called by the loader. `useListPage({ tableId, search, query })` uses the same resolution, reads the list with `useListQuery`, rethrows a first-load error to the route's error page, and returns `pagination` props for `<Pagination>` whose rows-per-page picker saves the preference and updates the URL. `<ClearFiltersButton>` is the filtered empty state's action.
 - **Why:** the Test CRUD and users pages repeated the same ~60 lines (page-size fallback, saved preference, pagination wiring, the empty state's clear link), and every new CRUD would have copied them again (golden rule 2). Loader and component sharing one resolution keep SSR and hydration on the same page size.
 - **Alternatives considered:** a `<ListPage>` component taking columns, filters and actions (hides too much: pages differ in dialogs, bulk actions and data sources such as the TanStack DB collection); leaving it as documented copy-paste.
 
 ## 0117: Every server function file is declared in the guard test; demo data is a seeded script
 
-- **What:** `tests/server/guarded-functions.test.ts` reads `src/functions/` and fails for any file that isn't listed, either with each function's permission or as deliberately unguarded with a reason and its function names. `pnpm db:seed-demo` (`scripts/seed-demo.mjs`, data in `scripts/lib/demo-data.mjs`, tested on PGlite) adds an editor and a viewer role, three users (one without a role, to see the forbidden page) and 30 Test CRUD items.
+- **What:** `tests/server/guarded-functions.test.ts` reads `src/functions/` and fails for any file that isn't listed, either with each function's permission or as deliberately unguarded with a reason and its function names. `pnpm db:seed-demo` (`scripts/seed-demo.mjs`, data in `scripts/lib/demo-data.ts`, tested on PGlite) adds an editor and a viewer role, three users (one without a role, to see the forbidden page) and 30 Test CRUD items.
 - **Why:** the old test only checked the files it already listed, so a new `src/functions/<feature>.ts` without `requirePermission` passed. The demo seed makes the permission flows (forbidden page, read-only admin, pagination) testable by hand on a fresh database. It is plain SQL with Better Auth's own password hash, so it runs with `node` alone; the app's TypeScript modules use path aliases Node can't resolve.
 - **Alternatives considered:** a lint rule for `requirePermission` (can't express "public on purpose"); seeding through the app's repositories with a TypeScript runner (a new dev dependency for one script).
 
@@ -1561,7 +1571,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Playwright test runner** (`@playwright/test`, pinned to the same exact version as `playwright`, which the Vitest browser tests already pin) with `@axe-core/playwright`. It uses the installed Chrome (`channel: "chrome"`) like the story tests, so neither CI nor a fresh clone downloads a browser.
   - **Emails through the real provider:** the server runs with `EMAIL_PROVIDER=resend` and `RESEND_BASE_URL` (read by the Resend SDK) pointing at the harness, which stores each message. The app carries no test-only code, and a production build still refuses the console provider.
   - **Database:** locally, in-memory PGlite served over TCP by `e2e/harness/pglite-server.ts` (nothing to install); in CI, a real Postgres (`E2E_DATABASE_URL`). That database is emptied first, so its name must contain `e2e` or `test`. `@electric-sql/pglite-socket` was tried and dropped: its queue takes single protocol messages from all connections in arrival order, so two pooled connections can interleave Parse/Bind/Execute and run each other's unnamed statements. The harness's server takes turns per whole request (up to Sync, or a simple query) and keeps a connection's turn for the length of a transaction. 300 concurrent pooled queries and transactions ran without a wrong result.
-  - **Seeding** reuses `scripts/lib/demo-data.mjs` plus an admin row written the same way, instead of `db:seed-admin` (which loads the app's auth config through Better Auth's CLI).
+  - **Seeding** reuses `scripts/lib/demo-data.ts` plus an admin row written the same way, instead of `db:seed-admin` (which loads the app's auth config through Better Auth's CLI).
   - **Rate limits** stay on (they're part of what's tested). Every test comes from 127.0.0.1, so the harness clears the `rate_limit` table before tests that sign in. Seeded users sign in through the API the first time a test needs them, and the saved state is reused for the rest of that harness run (it's keyed on a per-run id, because each run has a new database). An earlier version used a setup project; Playwright's UI mode doesn't run a setup project unless it's ticked, so tests there started from sessions of an older database and failed.
   - **Every route is reviewed or excused:** `REVIEWED_PAGES` names each route with its user, how `$param` values are found (from `/sitemap.xml`, or a seeded row through the harness) and any expected 403/404. `tests/unit/e2e-pages.test.ts` reads `FileRoutesByTo` from `src/routeTree.gen.ts` (importing the tree would load every route) and fails on a route that's in neither list. It's a unit test so it fails fast in `pnpm test` and the pre-push hooks.
   - **Console, page errors and CSP** are checked by an automatic fixture in every test, flows included. Each test can allow the lines it expects (a 403/404 document).
@@ -1727,7 +1737,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0138: Real-user Web Vitals go to PostHog, after consent
 
-- **What:** `src/lib/web-vitals.ts` loads `web-vitals` once analytics runs (consent granted) and sends CLS, LCP and INP as a `web_vital` PostHog event with `metric`, `value` (CLS to 4 decimals, the others in ms), `rating`, `navigation_type` and `path` (no query or hash). Events go out with `send_instantly`, so the CLS/INP report made as the page is hidden uses `sendBeacon`. Without consent or a PostHog key, the library isn't downloaded.
+- **What:** `src/lib/observability/web-vitals.ts` loads `web-vitals` once analytics runs (consent granted) and sends CLS, LCP and INP as a `web_vital` PostHog event with `metric`, `value` (CLS to 4 decimals, the others in ms), `rating`, `navigation_type` and `path` (no query or hash). Events go out with `send_instantly`, so the CLS/INP report made as the page is hidden uses `sendBeacon`. Without consent or a PostHog key, the library isn't downloaded.
 - **Why:** the CLS ≤ 0.01 rule was only checked on a lab build (the e2e review). Visitors have slower devices, other fonts and real data; the 75th percentile of `web_vital` where `metric = CLS`, per `path`, is the production check (`docs/guides/observability.md`). PostHog is already the consented analytics tool, so vitals need no new processor or banner text.
 - **Alternatives considered:** PostHog's built-in capture (`capture_performance`): loads its extension from PostHog's asset host at runtime, changing the network behaviour verified for 0074/0119. Sentry's browser tracing: records vitals too, but only for sampled page loads (10%) and adds the tracing bundle to every page. Sending without consent: vitals alone aren't personal data, but the PostHog request carries its device id.
 
@@ -1784,7 +1794,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0147: Public-page caching is a header helper, not a default
 
-- **What:** `publicCache({ sMaxAge, staleWhileRevalidate })` (`src/lib/cache.ts`) builds the Cache-Control value for a route's `headers`; `/dev/examples/caching` sets and reads it back. The guide lists which pages qualify and why.
+- **What:** `publicCache({ sMaxAge, staleWhileRevalidate })` (`src/lib/http/cache-control.ts`) builds the Cache-Control value for a route's `headers`; `/dev/examples/caching` sets and reads it back. The guide lists which pages qualify and why.
 - **Why:** every page today depends on the session or preference cookies through the root layout, and a wrongly cached page leaks one visitor's view to others. Caching has to be chosen per page, after checking the HTML is the same for everyone.
 - **Alternatives considered:** caching `/portfolio` in the base (it is demo content that strip-demo removes); prerendering by default (content changes need a deploy).
 
@@ -1805,3 +1815,78 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `docs/recipes/preview-neon.yml` (a Neon branch per PR, migrated before a Vercel preview, deleted on close), `scripts/check-commit-msg.mjs` (Conventional Commits, tested, an opt-in `commit-msg` hook), and a guide section for Better Auth's `organization()` and `@better-auth/stripe` plugins.
 - **Why:** the workflow needs project secrets, a commit convention is a team choice, and multi-tenancy changes every table, so none can be on by default. Organizations and billing stay guide-only: a working example would mean the plugins' tables, Stripe keys and per-tenant filters in every project, which is what "non-goal of the base" rules out.
 - **Alternatives considered:** Changesets instead of a commit check (the guide describes both); enabling the hook (it would reject this repo's existing style of commit messages).
+
+## 0151: Every page's JavaScript has a budget, and route options stay light
+
+- **What:**
+  - **Budget:** `scripts/check-bundle.ts` runs in CI after `pnpm build`. It sums the gzip size of the root route's preloads (the JavaScript every page loads) and fails above 240 kB, to become 200 kB when the site header leaves the root layout (Part 4, Task 35). TanStack DB has its own 105 kB line until Task 41 decides where it loads. A route may add at most 250 kB. A font that a `fonts.ts` module preloads must be 150 kB or less; the old portfolio's 709 kB Devanagari face is exempt until Task 40 replaces it, and an exemption that no longer matches a preloaded font fails the check.
+  - **Code splitting:** `tanstackStart({ router: { codeSplittingOptions } })` splits `pendingComponent` too. The router plugin's default (component, errorComponent, notFoundComponent) kept Test CRUD's skeleton, and everything it imports (forms, Tiptap, libphonenumber), in the entry chunk. Route options must stay inline object properties: the splitter skips spreads and helper return values.
+  - **Light route options:** `validateSearch`, `params`, `loader` and `head` stay in the entry chunk, so route files import a feature's URL contract from `search.ts`, never `schema.ts` (form schemas pull in rich-text and phone validation). `phone()` moved to `src/lib/phone.ts`, so only schemas with a phone field load libphonenumber.
+  - **Results (gzip, every page):** 399.4 kB before. Splitting `pendingComponent` → 338.3. Sentry off the critical path (0152) → 286.3. Phone and search split → 258.7. Toaster and auth client on demand → 244.6. Impersonation banner's toast on demand → 235.5 (−41%). TanStack DB adds 100.6 kB on top.
+- **Why:** the 300-plus kB were the same for a visitor reading one portfolio page and for an admin, and nothing stopped them growing back. A number in CI does.
+- **Alternatives considered:** Rolldown's `treeshake.manualPureFunctions` for Zod calls (it covers direct calls only, not chains like `z.string().trim()` or the app's helpers); a 200 kB budget now (the site header's Radix menus stay in the root until Task 35).
+
+## 0152: Browser Sentry loads after the entry chunk
+
+- **What:** `src/lib/observability/sentry-client.ts` imports and initialises the browser SDK when `src/client.tsx` starts, in parallel with hydration; errors thrown before it's ready are buffered by two listeners and sent once it is. `captureException`, `setSentryUser` and `traceNavigation` (used by the error page, ObservabilitySync and the router) queue on it. Code that also runs in the browser never imports `@sentry/tanstackstart-react` statically: `src/middleware/sentry.ts` re-implements Sentry's global request middleware (a try/catch around `next()`) with the SDK imported inside `.server()`, and `normalizeServerError` imports it when it captures. Development sends no traces unless `VITE_SENTRY_DEV_TRACING=true`; production still samples 10%. Supersedes the loading part of 0073.
+- **Why:** the SDK was about 45 kB gzip of every page's entry chunk, and one static import anywhere in the client graph (start.ts, through the request middleware's browser stub) was enough to keep all of it, because a module that is both imported and dynamically imported isn't split. Tracing every dev request and navigation slowed `pnpm dev` noticeably with a DSN in `.env`.
+- **Alternatives considered:** Sentry's loader script (a third-party script the CSP would have to allow); `lazyLoadIntegration` (the core SDK stays in the entry); dropping capture of errors before load (hydration errors are the ones most worth seeing).
+
+## 0153: The session is resolved once per request
+
+- **What:** the request-id store (0123) is now a request scope: `src/server/http/request-scope.ts` holds the id and a memo, and `requestMemo(key, compute)` shares one promise per request. `getServerSession` uses it, so the root `beforeLoad`, the admin gate and every server function called while rendering a page share one Better Auth lookup and one permissions query. Failures aren't kept; `forgetSession()` clears it after stopping an impersonation. Outside a request (scripts, Nitro routes, tests) it computes every time. The session stays in the root `beforeLoad` (0043, 0090) and the cookie cache stays off (0040).
+- **Why:** an admin page looked the session up three times per request (root, `ensureAdminAccess`, each loader's `requirePermission`), each a database round trip, which is about 300 ms each from Kathmandu to Neon's us-east-2.
+- **Alternatives considered:** Better Auth's cookie cache (rejected in 0040: revoked sessions and permission changes would lag); passing the session down through context (server functions are separate entry points and must check for themselves).
+
+## 0154: Feature flags never wait more than 300 ms
+
+- **What:** with `POSTHOG_SECRET_KEY` (a Project Secret or Personal API key), posthog-node polls flag definitions every 30 s and evaluates flags in memory. Without it, a flag request times out after 300 ms (was 1.5 s) and answers are cached per flag and visitor for 30 s, at most 1,000 entries. Off on any failure, as before. Extends 0075.
+- **Why:** `/` waited up to 1.5 s on PostHog for every server render, for a flag that rarely changes.
+- **Alternatives considered:** evaluating flags in the browser after hydration (the UI would flicker, which 0075 avoids); no flags on SSR pages.
+
+## 0155: Dev speed: one message module per locale, Babel only on our code, a local database
+
+- **What:**
+  - **Paraglide:** `paraglide.config.ts` uses `outputStructure: "locale-modules"`, so the CLI, Vitest and `pnpm dev` produce the same files. Only production builds override it to `message-modules` (in `vite.config.ts`), which tree-shakes messages per page. Supersedes 0020's "the same options everywhere".
+  - **React Compiler:** Babel runs on `src/**` only, excluding `src/paraglide` (the plugin's default ran it on all 1,064 compiled message modules).
+  - **Vite:** `server.warmup` transforms the client entry, the layouts and the server entry at startup.
+  - **Database:** `pnpm dev:local` serves PGlite stored in `.data/pglite` (gitignored) over TCP; every start applies new migrations and the first one seeds an admin and the demo data. The dev pool keeps idle connections for 5 minutes (production: 10 s).
+  - **Fonts:** each section's layout preloads its own fonts; the root no longer preloads Inter on portfolio pages.
+  - **Measured on this machine (Windows, Kathmandu):** Neon answers in about 300 ms per query (`pnpm diagnose`), so every page waited for several of those; on `dev:local`, Vite is ready in 3–5 s, a new page renders in 0.3–0.4 s and a repeat in about 50 ms. The first page after a cold start takes 5–12 s (server-side transforms, noisy on Windows).
+- **Why:** dev was slow for three stacked reasons: a thousand message modules (each a request and a Babel pass), a remote database far away, and Sentry tracing (0152).
+- **Alternatives considered:** keeping `message-modules` in dev with only the Babel filter (still a thousand requests per first page; Paraglide's docs recommend `locale-modules` for dev); a Docker Postgres for `dev:local` (another tool to install; PGlite is already a dependency). 0149 rejected a persistent PGlite because the seed isn't idempotent; `dev:local` seeds only a new directory.
+
+## 0156: `pnpm setup:local` and `pnpm diagnose`
+
+- **What:** `pnpm setup:local` takes a fresh clone to a runnable app: it checks Node, creates `.env` from `.env.example` if missing and fills an empty `BETTER_AUTH_SECRET`, compiles the messages and creates the local database. `pnpm diagnose` checks Node and pnpm against the pins, `.env` against both env schemas, which optional services are on, database reachability and per-query latency, pending migrations, compiled messages, and ports 3000 and 3100 (a running e2e server is reused as is), and prints the fix for each problem. Both are TypeScript run by Node directly.
+- **Why:** a first run needed a Neon project and reading three guides; most "it doesn't start" problems are one of the things `diagnose` checks.
+- **Alternatives considered:** the names `pnpm setup` and `pnpm doctor` (both are pnpm's own commands, so the scripts would never run); a postinstall hook (installs run in CI and on Vercel too).
+
+## 0157: inlang CLI for machine translation and checks; plugins load from node_modules
+
+- **What:** `project.inlang/settings.json` loads the message-format and m-function-matcher plugins from pinned devDependencies (`./node_modules/...`) instead of an unpinned jsdelivr URL. `pnpm i18n:translate` runs `inlang machine translate` from English into Nepali and fills only messages that have no Nepali yet (existing translations are skipped). `pnpm i18n:check` runs `inlang check` (missing or empty translations, variables, markup, plural forms) and runs in CI; the message-usage test still covers unused keys, because inlang can't follow re-exports.
+- **Why:** every compile (dev start, typecheck, CI) fetched the plugins first and needed the network, from an unpinned major version. Machine translation was the Paraglide feature the project didn't use, and adding a message meant typing Nepali by hand.
+- **Caveat recorded:** without a key the CLI uses a community-run service (translate.demosjarco.dev). A test produced fluent but wrong Nepali (it added sentences that weren't in the English). Set `INLANG_GOOGLE_TRANSLATE_API_KEY` for quality, and always review the diff; DeepL has no Nepali.
+- **Alternatives considered:** a script calling an LLM or Google directly (more code for what the CLI does); committing the CDN cache (the cache is keyed by URL and still needs the first fetch).
+
+## 0158: `src/lib` is grouped by area, and Biome enforces the import boundaries
+
+- **What:**
+  - **Layout:** `lib/list/` (`params.ts` URL param schemas, `paging.ts` `Paged` and page maths, `url.ts` search serialization; was `list.ts` + `search.ts`, split by what each export is rather than at random), `lib/env/`, `lib/i18n/` (intl, Nepali digits, calendar days), `lib/http/` (CSP, cache-control, redirects), `lib/observability/`, `lib/start/` (modules that need the Start runtime: `http-status`, `read-preferences`), `lib/tanstack-db.ts` (was `db.ts`, easily confused with the database). Hooks moved to `src/hooks/` (where `components.json` expects them); the server-function validator to `src/functions/_lib/validator.ts`; the locale function middleware to `src/middleware/locale.ts`; `zodFieldErrors` to `lib/errors.ts`.
+  - **Biome:** `noRestrictedImports` refuses `zod/v4` and `zod/mini` everywhere but the alias target, and in `src/components/**`, `src/features/**/components/**` and `src/hooks/**` refuses `@/server/**` and `@/lib/start/**`. The React, test and Playwright rule domains are on.
+  - **Scripts:** the seed, coverage and commit-check scripts are TypeScript, type-checked with the app and run by Node directly; `engines` is `>=22.18` (type stripping), which the `.ts` scripts already needed.
+- **Why:** a flat folder of 40 files with names like `db.ts` and `cache.ts` didn't say what was safe to import where; the rules that did (CLAUDE.md pitfalls, tests scanning imports) caught mistakes late.
+- **Alternatives considered:** Biome's `useSortedClasses` (a nursery rule, and it doesn't know the Tailwind 4 custom utilities); converting `new-feature` and `strip-demo` now (both are rewritten in Part 4, Tasks 35 and 38); converting `install-hooks` (it runs during `pnpm install`, on whatever Node is installed).
+
+## 0159: Tests start from one migrated PGlite database per run
+
+- **What:** the unit project's global setup (`tests/setup/pglite.ts`) migrates one PGlite database and dumps its data directory to `node_modules/.cache/vitest-pglite/`, keyed by a hash of `drizzle/`. `createTestDb()` loads it (`loadDataDir`) instead of running initdb and the migrations, takes an optional `seed` for a file's own fixtures, and `reset()` truncates every table and adds the admin and the seed back. Testing Library loads only under jsdom. Both Storybook passes run in one `vitest run`. The e2e harness deletes saved sign-ins (`e2e/.auth`) when it starts a new database.
+- **Why:** starting PGlite costs about 1.5 s (initdb) against 0.4 s to load a snapshot, and `reset()` only cleared two tables, so tests could depend on each other's users and roles. Measured: `pnpm test` 43–50 s → 29 s; `pnpm test:storybook` two sequential runs → one 69 s run.
+- **Alternatives considered:** PGlite `clone()` (needs a live instance in the same worker; files run isolated); one shared database for all files (tests would interfere).
+
+## 0160: Postgres image storage from Part 1 is dropped
+
+- **What:** migration `0009_drop_legacy_test_crud_image` drops `test_crud.image` and the `test_crud_image` table, and `pnpm attachments:import-legacy` is removed. The migration is hand-ordered (foreign key, column, table): drizzle-kit generated `DROP TABLE … CASCADE` first, which removes the foreign key, so its own next statement would have failed.
+- **Why:** nothing in the app has read them since attachments moved to Cloudinary (0098), and every new project inherited a `bytea` table it would never use.
+- **Before migrating a database that may still hold Part 1 images:** run `attachments:import-legacy` from the commit before this one first.
+- **Alternatives considered:** keeping them until each project drops them (every project would have to know to).

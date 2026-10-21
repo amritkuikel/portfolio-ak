@@ -1,5 +1,5 @@
 import type { PostHog } from "posthog-js";
-import { clientEnv } from "./client-env";
+import { clientEnv } from "../env/client";
 
 /**
  * Browser analytics (PostHog), strictly opt-in.

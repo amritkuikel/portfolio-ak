@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STACK_PAGE_SIZE, stackSearchSchema } from "@/features/stack/schema";
-import { redirectSearchSchema, safeRedirectPath } from "@/lib/redirect";
+import { redirectSearchSchema, safeRedirectPath } from "@/lib/http/redirect";
 import { STACK } from "@/server/stack/data";
 import { queryStack } from "@/server/stack/query";
 

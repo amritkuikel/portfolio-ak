@@ -9,7 +9,7 @@ import { caseStudyJsonLd } from "@/features/portfolio/lib/structured-data";
 import { projectQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema } from "@/features/portfolio/schema";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
-import { parseParams } from "@/lib/search";
+import { parseParams } from "@/lib/list/params";
 import { seo } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

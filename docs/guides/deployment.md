@@ -21,7 +21,8 @@
 - **Gates:** CI runs `typecheck`, `check`, `knip`, `test`, `test:storybook`, `build` and `build-storybook` on every PR and on `main`. Deploy only a green commit.
 - **Schema changes:** run `pnpm db:generate`, commit the SQL in `drizzle/` (CI fails if the schema and migrations disagree), and run `pnpm db:migrate` before (or with) the deploy. Keep a migration compatible with the version still running (add columns and tables first; drop them in a later release).
 - **CSP reporting check (once per project, and after changing the CSP):** on a preview deploy with a Sentry DSN, open the browser console on any page and run `document.body.append(Object.assign(new Image(), { src: "https://csp-check.invalid/x.png" }))`. Within a minute or two Sentry shows a warning `CSP violation: img-src blocked https://csp-check.invalid/x.png`, and the function logs have a `csp violation` line (0139).
-- **One-off scripts:** `pnpm attachments:import-legacy` moved Part 1 images from Postgres to Cloudinary. Once it has run everywhere, a migration can drop the legacy `test_crud.image` column and `test_crud_image` table.
+- **Legacy images:** migration `0009` drops `test_crud.image` and `test_crud_image` (0160). If a database may still hold Part 1 images, run `attachments:import-legacy` from the commit before 0160 first.
+- **Feature flags:** set `POSTHOG_SECRET_KEY` in production so flags are evaluated on the server without a request per page (0154).
 
 ## Running a production build locally
 

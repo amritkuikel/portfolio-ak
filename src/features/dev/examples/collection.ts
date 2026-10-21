@@ -1,7 +1,7 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { collectionOptions } from "@tanstack/react-db";
 import { listExampleTasks, setExampleTasksDone } from "@/functions/examples";
-import { queryClientOf } from "@/lib/db";
+import { queryClientOf } from "@/lib/tanstack-db";
 import { exampleKeys, exampleTasksQueryOptions } from "./queries";
 import { EXAMPLE_SEARCH_DEFAULTS, type ExampleTask, type ExampleTaskSearch } from "./schema";
 

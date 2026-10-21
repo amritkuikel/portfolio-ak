@@ -14,9 +14,10 @@ import { createTestDb } from "../utils/test-db";
 let testDb: Awaited<ReturnType<typeof createTestDb>>;
 let cloud: ReturnType<typeof createFakeCloudinary>;
 beforeAll(async () => {
-	testDb = await createTestDb();
-	await testDb.db.insert(schema.user).values({ id: "other", name: "O", email: "o@example.com" });
-}, 60_000);
+	testDb = await createTestDb("admin-1", (db) =>
+		db.insert(schema.user).values({ id: "other", name: "O", email: "o@example.com" }),
+	);
+});
 afterAll(() => testDb.close());
 beforeEach(async () => {
 	await testDb.reset();

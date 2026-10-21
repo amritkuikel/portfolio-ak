@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { ProjectSummary } from "../../types";
 import { ArrowLink } from "../primitives/arrow-link";

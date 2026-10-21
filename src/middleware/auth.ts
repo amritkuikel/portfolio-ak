@@ -5,21 +5,19 @@ import type { Session } from "@/lib/session";
 import { m } from "@/paraglide/messages";
 
 /**
- * The session for the current request, from Better Auth, with the user's
- * permissions resolved from the database (once per request: each server
- * function call is one request and runs this once). Loaded with a dynamic
- * import inside `.server()` so this file (which client code reaches through
- * server function modules) never pulls src/server/** into the client bundle.
+ * Adds `context.session` (Session | null): the signed-in user from Better Auth,
+ * with their permissions from the database, resolved once per request (0153).
+ * Does not reject anonymous calls.
+ *
+ * The session module is imported inside `.server()`, which the client build
+ * strips: this file reaches the browser through server-function modules, and
+ * src/server/** must never follow it there (import protection).
  */
-export const resolveSession = async (): Promise<Session | null> => {
+export const sessionMiddleware = createMiddleware({ type: "function" }).server(async ({ next }) => {
 	const { getServerSession } = await import("@/server/auth/session");
-	return getServerSession();
-};
-
-/** Adds `context.session` (Session | null). Does not reject anonymous calls. */
-export const sessionMiddleware = createMiddleware({ type: "function" }).server(async ({ next }) =>
-	next({ context: { session: await resolveSession() } }),
-);
+	const session: Session | null = await getServerSession();
+	return next({ context: { session } });
+});
 
 /**
  * Rejects anonymous calls with UNAUTHORIZED; adds `context.user`, `context.permissions`,

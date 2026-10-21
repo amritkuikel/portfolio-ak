@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { versionSchema } from "@/lib/concurrency";
-import { enumParam, type Paged, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list";
+import type { Paged } from "@/lib/list/paging";
+import { enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
 import { email, optionalText, required } from "@/lib/validation";
 import { locales } from "@/paraglide/runtime";
 import { isPermission, type Permission } from "./permissions";

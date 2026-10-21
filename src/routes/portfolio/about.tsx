@@ -18,7 +18,7 @@ import {
 } from "@/features/portfolio/queries";
 import type { Experience } from "@/features/portfolio/types";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatMonthYear } from "@/lib/intl";
+import { formatMonthYear } from "@/lib/i18n/intl";
 import { seo } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

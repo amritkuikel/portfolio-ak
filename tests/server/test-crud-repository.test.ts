@@ -1,7 +1,4 @@
-import { PGlite } from "@electric-sql/pglite";
 import { count, eq, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TestCrudInput } from "@/features/test-crud/schema";
 import { AppError, FORM_ERROR_KEY } from "@/lib/errors";
@@ -20,28 +17,22 @@ import {
 	updateTestCrud,
 } from "@/server/test-crud/repository";
 import { createFakeCloudinary } from "../utils/fake-cloudinary";
+import { createTestDb } from "../utils/test-db";
 
 /**
  * Runs the repository against a real (in-process) Postgres with the committed
  * migrations applied, so SQL, constraints and transactions are what production sees.
  */
-let client: PGlite;
+let testDb: Awaited<ReturnType<typeof createTestDb>>;
 let db: Db;
 const USER_ID = "admin-1";
 
 beforeAll(async () => {
-	client = new PGlite();
-	const pglite = drizzle({ client, schema, casing: "snake_case" });
-	await migrate(pglite, { migrationsFolder: "./drizzle" });
-	db = pglite;
-	await db.insert(schema.user).values({ id: USER_ID, name: "Admin", email: "admin@example.com", role: "admin" });
-	// Booting WASM Postgres and applying migrations can take a while under a parallel test run.
-}, 60_000);
-afterAll(() => client.close());
-beforeEach(async () => {
-	await db.delete(schema.testCrud);
-	await db.delete(schema.attachment);
+	testDb = await createTestDb(USER_ID);
+	db = testDb.db;
 });
+afterAll(() => testDb.close());
+beforeEach(() => testDb.reset());
 
 const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
 	title: "First item",

@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { portfolioSource } from "@/features/portfolio/sources"; // @demo
 import { STACK_PAGE_SIZE } from "@/features/stack/schema"; // @demo
-import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/schema";
+import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/search";
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, locales } from "@/paraglide/runtime";
 import type { Db } from "@/server/db/types";

@@ -11,6 +11,7 @@
  *   node e2e/harness/server.ts       # Playwright runs this; run it yourself to keep a server up between test runs
  */
 import { spawn, spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { PGlite } from "@electric-sql/pglite";
 import { E2E } from "./config.ts";
@@ -19,6 +20,9 @@ import { serveHarness } from "./inbox.ts";
 import { servePglite } from "./pglite-server.ts";
 
 const log = (message: string) => console.log(`[e2e] ${message}`);
+
+// Saved sign-ins belong to the previous harness's database: start without them.
+rmSync("e2e/.auth", { recursive: true, force: true });
 
 /** App settings a developer's shell may export; the server under test gets only the harness's values. */
 const APP_ENV =

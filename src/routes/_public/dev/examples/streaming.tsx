@@ -2,7 +2,7 @@ import { Await, createFileRoute } from "@tanstack/react-router";
 import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { getSlowExample } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatDateTime, formatNumber } from "@/lib/intl";
+import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

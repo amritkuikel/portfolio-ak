@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import type { AuditAction, AuditTarget, AuditValues } from "@/features/audit/schema";
 import { auditEvent, user } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
-import { currentRequestId } from "@/server/http/request-id";
+import { currentRequestId } from "@/server/http/request-scope";
 
 /**
  * Writes audit rows (docs/decisions.md 0132). Services call it with the same

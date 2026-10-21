@@ -3,7 +3,7 @@
  * Vite dev-server middleware (vite.config.ts). Nothing imports this module from
  * the app, so it never ends up in a production build.
  */
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import { type Locale, locales } from "@/paraglide/runtime";
 import { renderEmail } from "./render";
 import { EMAIL_TEMPLATE_IDS, type EmailTemplateId, emailTemplates } from "./templates";

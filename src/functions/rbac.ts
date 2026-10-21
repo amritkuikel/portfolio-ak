@@ -13,7 +13,7 @@ import {
 	userListInputSchema,
 	userRolesSchema,
 } from "@/features/rbac/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import type { Session } from "@/lib/session";
 import { requirePermission } from "@/middleware/auth";
 import { auditActorFrom } from "@/server/audit/actor";

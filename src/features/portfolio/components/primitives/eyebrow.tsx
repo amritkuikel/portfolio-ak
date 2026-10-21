@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "../../lib/cn";
 
 /** "07" in the page's digits (०७ in Nepali), for real sequences such as process steps. */

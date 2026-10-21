@@ -4,7 +4,7 @@ import { sessionQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { canEnterAdmin } from "@/features/rbac/permissions";
 import { isBareChrome } from "@/lib/chrome";
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "./theme";

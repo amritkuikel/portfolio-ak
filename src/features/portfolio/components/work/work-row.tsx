@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { DISCIPLINE_LABELS } from "../../lib/labels";
 import type { ProjectSummary } from "../../types";
 import { CoverArt } from "../primitives/cover-art";

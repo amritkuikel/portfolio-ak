@@ -14,11 +14,11 @@ import {
 	type ExampleTaskSearch,
 	exampleTaskSearchSchema,
 } from "@/features/dev/examples/schema";
+import { useListQuery } from "@/hooks/use-list-query";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { loadList } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
-import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
 
 /**

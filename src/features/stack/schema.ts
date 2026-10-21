@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { enumParam, type Paged, pageParam, searchParam } from "@/lib/list";
+import type { Paged } from "@/lib/list/paging";
+import { enumParam, pageParam, searchParam } from "@/lib/list/params";
 
 export const STACK_SORTS = ["name", "-name", "category"] as const;
 export type StackSort = (typeof STACK_SORTS)[number];

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type AccountSecurity, sessionIdSchema, setPasswordSchema } from "@/features/auth/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import type { Session } from "@/lib/session";
 import {
 	requireAccountOwnerMiddleware,
@@ -123,15 +123,18 @@ export const setMyPassword = createServerFn({ method: "POST" })
 export const stopImpersonating = createServerFn({ method: "POST" })
 	.middleware([requireUserMiddleware])
 	.handler(async ({ context }): Promise<void> => {
-		const [{ auth }, rbac, { auditActorFrom }, { db }, { getRequestHeaders }] = await Promise.all([
+		const [{ auth }, rbac, { auditActorFrom }, { db }, { getRequestHeaders }, { forgetSession }] = await Promise.all([
 			import("@/server/auth/auth"),
 			import("@/server/rbac/service"),
 			import("@/server/audit/actor"),
 			import("@/server/db/client"),
 			import("@tanstack/react-start/server"),
+			import("@/server/auth/session"),
 		]);
 		const headers = getRequestHeaders();
 		await rbac.stopImpersonating(db, auditActorFrom(context), async () => {
 			await auth.api.stopImpersonating({ headers });
 		});
+		// The rest of this request must not see the impersonated session.
+		forgetSession();
 	});

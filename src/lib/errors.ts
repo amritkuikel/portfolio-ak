@@ -8,6 +8,7 @@
  * sent; the client picks a localized message by `code` (see errorMessage()).
  */
 import { createSerializationAdapter } from "@tanstack/react-router";
+import type { z } from "zod";
 
 export const APP_ERROR_CODES = [
 	"BAD_REQUEST",
@@ -121,3 +122,15 @@ export const appErrorSerializationAdapter = createSerializationAdapter({
  */
 export const ruleError = (code: AppErrorCode, devMessage: string, userMessage: string) =>
 	new AppError(code, devMessage, { fieldErrors: { [FORM_ERROR_KEY]: [userMessage] } });
+
+/** Groups Zod issues by dotted field path ("_" for form-level issues). */
+export const zodFieldErrors = (error: z.ZodError): FieldErrors => {
+	const fields: Record<string, string[]> = {};
+	for (const issue of error.issues) {
+		const key = issue.path.map(String).join(".") || "_";
+		const list = fields[key] ?? [];
+		list.push(issue.message);
+		fields[key] = list;
+	}
+	return fields;
+};

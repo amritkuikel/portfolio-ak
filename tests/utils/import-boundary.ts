@@ -35,7 +35,7 @@ const isAllowedImporter = (file: string, source: string) =>
 	// Server routes, e.g. the Better Auth API, /sitemap.xml, /robots.txt.
 	isServerRoute(file, source) ||
 	// Isomorphic helper whose server branch (createIsomorphicFn().server) is compiled out of the client.
-	file === "src/lib/http-status.ts" ||
+	file === "src/lib/start/http-status.ts" ||
 	// The server entry and its Sentry setup (imported only by src/server.ts).
 	file === "src/server.ts" ||
 	file === "src/instrument.server.ts";

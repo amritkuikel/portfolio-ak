@@ -2,7 +2,7 @@ import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { permissionsForUser } from "@/server/rbac/repository";
 import { listPublishedTestCrud } from "@/server/test-crud/repository";
-import { DEMO_ITEM_COUNT, seedDemo } from "../../scripts/lib/demo-data.mjs";
+import { DEMO_ITEM_COUNT, seedDemo } from "../../scripts/lib/demo-data.ts";
 import { createTestDb } from "../utils/test-db";
 
 /** `pnpm db:seed-demo`'s data, run against the real migrations. */

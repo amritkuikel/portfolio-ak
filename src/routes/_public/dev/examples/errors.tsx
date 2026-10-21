@@ -8,8 +8,8 @@ import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { EXAMPLE_ERROR_CASES, type ExampleErrorCase } from "@/features/dev/examples/schema";
 import { failExample } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { setErrorStatus } from "@/lib/http-status";
 import { privateHead } from "@/lib/seo";
+import { setErrorStatus } from "@/lib/start/http-status";
 import { m } from "@/paraglide/messages";
 
 /**

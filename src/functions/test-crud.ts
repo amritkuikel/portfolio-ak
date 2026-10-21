@@ -6,11 +6,11 @@ import {
 	testCrudIdSchema,
 	testCrudIdsSchema,
 	testCrudInputSchema,
-	testCrudListInputSchema,
 	testCrudStatusUpdateSchema,
 	testCrudUpdateSchema,
 } from "@/features/test-crud/schema";
-import { zodInput } from "@/lib/fn-input";
+import { testCrudListInputSchema } from "@/features/test-crud/search";
+import { zodInput } from "@/functions/_lib/validator";
 import { requirePermission } from "@/middleware/auth";
 import { imageStore } from "@/server/attachments/store";
 import { auditActorFrom } from "@/server/audit/actor";

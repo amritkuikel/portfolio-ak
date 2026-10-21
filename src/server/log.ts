@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
-import { type LogLevel, writeLogLine } from "@/lib/log-line";
-import { currentRequestId } from "./http/request-id";
+import { type LogLevel, writeLogLine } from "@/lib/observability/log-line";
+import { currentRequestId } from "./http/request-scope";
 
 /** A server log line: JSON, with the current request's id when there is one. */
 export const log = (level: LogLevel, msg: string, fields: Record<string, unknown> = {}) => {

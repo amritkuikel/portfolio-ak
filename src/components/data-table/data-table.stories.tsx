@@ -5,7 +5,7 @@ import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { DataTableColumnsMenu } from "./columns-menu";
 import { DataTable, type DataTableColumn } from "./data-table";

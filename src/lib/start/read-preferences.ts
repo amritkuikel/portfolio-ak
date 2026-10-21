@@ -1,6 +1,6 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookies } from "@tanstack/react-start/server";
-import { type Preferences, parseCookieHeader, parsePreferences } from "./preferences";
+import { type Preferences, parseCookieHeader, parsePreferences } from "../stores/preferences";
 
 /**
  * Current preferences from cookies: the request's Cookie header during SSR,

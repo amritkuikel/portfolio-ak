@@ -8,7 +8,7 @@ import { authFeaturesQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { field, validateEmail, validateOtp } from "@/features/auth/validation";
 import { authClient } from "@/lib/auth-client";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { ensureQuery } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
 import { m } from "@/paraglide/messages";

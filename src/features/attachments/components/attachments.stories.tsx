@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
 import { z } from "zod";
 import { FieldStory } from "@/components/forms/story-harness";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin, sampleImageAsset } from "../../../../.storybook/mocks/data";
 import type { FieldImage } from "./attachments-field";

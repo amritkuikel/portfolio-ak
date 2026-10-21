@@ -8,7 +8,7 @@ import { collectionPageJsonLd } from "@/features/portfolio/lib/structured-data";
 import { projectsQueryOptions } from "@/features/portfolio/queries";
 import { DISCIPLINES, type Discipline, workSearchSchema } from "@/features/portfolio/schema";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { seo } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

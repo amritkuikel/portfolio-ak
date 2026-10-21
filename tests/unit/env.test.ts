@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { createClientEnv } from "@/lib/client-env.schema";
-import { EnvValidationError } from "@/lib/env.shared";
+import { createClientEnv } from "@/lib/env/client.schema";
+import { EnvValidationError } from "@/lib/env/shared";
 
 const validServer = {
 	DATABASE_URL: "postgresql://user:pass@ep-x-123.us-east-2.aws.neon.tech/neondb?sslmode=require",

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { z } from "zod";
+import { phone } from "@/lib/phone";
 import {
 	acceptsType,
 	choice,
@@ -16,7 +17,6 @@ import {
 	otp,
 	password,
 	passwordStrength,
-	phone,
 	required,
 	richText,
 	richTextPlainText,

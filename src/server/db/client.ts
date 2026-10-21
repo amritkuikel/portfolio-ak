@@ -17,14 +17,16 @@ const createPool = () =>
 		connectionString: withVerifiedSsl(serverEnv.DATABASE_URL),
 		// Neon's PgBouncer (the -pooler host) does the real pooling. Keep the client pool small.
 		max: 5,
-		idleTimeoutMillis: 10_000,
+		// Production closes idle connections quickly (serverless). In dev a remote database is a
+		// long TLS handshake away, so connections are kept for a few minutes between requests.
+		idleTimeoutMillis: process.env.NODE_ENV === "production" ? 10_000 : 300_000,
 		connectionTimeoutMillis: 10_000,
 	});
 
 // Reuse one pool across dev hot reloads instead of leaking a new pool per edit.
-const globalForDb = globalThis as typeof globalThis & { __portfolioPool?: Pool };
-const pool = globalForDb.__portfolioPool ?? createPool();
-if (process.env.NODE_ENV !== "production") globalForDb.__portfolioPool = pool;
+const globalForDb = globalThis as typeof globalThis & { __appDbPool?: Pool };
+const pool = globalForDb.__appDbPool ?? createPool();
+if (process.env.NODE_ENV !== "production") globalForDb.__appDbPool = pool;
 
 // On Vercel Fluid, keeps the function alive until idle connections close. No-op elsewhere.
 attachDatabasePool(pool);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { exampleSnapshotQueryOptions } from "@/features/dev/examples/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatDateTime, formatNumber } from "@/lib/intl";
+import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
 import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";

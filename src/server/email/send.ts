@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import type { Locale } from "@/paraglide/runtime";
 import { getEmailProvider } from "./config";
 import { renderEmail } from "./render";

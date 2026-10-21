@@ -19,7 +19,7 @@ import { verifyJWT } from "better-auth/crypto";
 import { admin, captcha, emailOTP, haveIBeenPwned, twoFactor } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import type { Locale } from "@/paraglide/runtime";
 import { accountOwner, prepareAccountDeletion } from "../account/service";
 import { db } from "../db/client";

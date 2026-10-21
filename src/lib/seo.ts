@@ -2,8 +2,8 @@ import type { ComponentProps } from "react";
 import type { Thing, WithContext } from "schema-dts";
 import { m } from "@/paraglide/messages";
 import { baseLocale, getLocale, type Locale, locales, localizeHref } from "@/paraglide/runtime";
-import { clientEnv } from "./client-env";
-import { formatNumber } from "./intl";
+import { clientEnv } from "./env/client";
+import { formatNumber } from "./i18n/intl";
 
 /** Title template: "Page · Site". The site name comes from VITE_APP_TITLE. */
 export const pageTitle = (page?: string): string =>

@@ -12,7 +12,7 @@ import { overwriteGetLocale } from "@/paraglide/runtime";
 const ensureAdminAccess = vi.hoisted(() => vi.fn<() => Promise<Session>>());
 vi.mock("@/functions/auth", () => ({ ensureAdminAccess }));
 const setErrorStatus = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("@/lib/http-status", () => ({ setErrorStatus }));
+vi.mock("@/lib/start/http-status", () => ({ setErrorStatus }));
 
 const { Route: authedRoute } = await import("@/routes/_authed");
 const { Route: authRoute } = await import("@/routes/_auth");

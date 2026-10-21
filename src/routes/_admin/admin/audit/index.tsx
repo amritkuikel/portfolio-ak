@@ -14,9 +14,9 @@ import {
 } from "@/features/audit/filters";
 import { auditListQueryOptions } from "@/features/audit/queries";
 import { AUDIT_SEARCH_DEFAULTS, AUDIT_TABLE_ID, auditSearchSchema } from "@/features/audit/schema";
+import { tableListInput, useListPage } from "@/hooks/use-list-page";
 import { loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
-import { tableListInput, useListPage } from "@/lib/use-list-page";
 import { m } from "@/paraglide/messages";
 
 /** The audit log: read only, newest first, filtered from the URL (decisions.md 0132). */

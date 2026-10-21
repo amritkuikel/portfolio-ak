@@ -8,7 +8,7 @@ import {
 	formatDateTime,
 	formatNumber,
 	formatRelativeTimeFrom,
-} from "@/lib/intl";
+} from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
@@ -20,7 +20,7 @@ const SAMPLE_NOW = "2026-03-24T08:15:00Z";
 /**
  * i18n + Intl: every string is a Paraglide message called at render time
  * (never at module level: that freezes the first request's language), and
- * numbers, money, dates and sizes go through src/lib/intl.ts, which gives
+ * numbers, money, dates and sizes go through src/lib/i18n/intl.ts, which gives
  * Nepali Devanagari digits and the Asia/Kathmandu time zone.
  */
 export const Route = createFileRoute("/_public/dev/examples/i18n")({

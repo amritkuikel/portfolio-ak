@@ -8,11 +8,11 @@ import { exampleTaskQueryOptions } from "@/features/dev/examples/queries";
 import { exampleTaskIdSchema } from "@/features/dev/examples/schema";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { isAppError } from "@/lib/errors";
-import { setErrorStatus } from "@/lib/http-status";
-import { formatDate } from "@/lib/intl";
+import { formatDate } from "@/lib/i18n/intl";
+import { parseParams } from "@/lib/list/params";
 import { ensureQuery } from "@/lib/query";
-import { parseParams } from "@/lib/search";
 import { privateHead } from "@/lib/seo";
+import { setErrorStatus } from "@/lib/start/http-status";
 import { m } from "@/paraglide/messages";
 
 /**

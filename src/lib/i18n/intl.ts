@@ -11,7 +11,7 @@
  *   local time in browsers).
  * - Relative time takes an explicit `now`; never call Date.now() during render.
  */
-import { getLocale, type Locale } from "@/paraglide/runtime";
+import { getLocale, type Locale } from "@/paraglide/runtime.js";
 import {
 	NE_CURRENCY_SYMBOLS,
 	NE_MONTHS,

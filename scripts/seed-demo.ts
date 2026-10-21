@@ -10,7 +10,7 @@
  * - editor@example.com (editor), viewer@example.com (viewer), member@example.com (no role:
  *   signs in, but /admin shows the forbidden page);
  * - 30 Test CRUD items, published and drafts, with tags and prices.
- * The data itself is in ./lib/demo-data.mjs.
+ * The data itself is in ./lib/demo-data.ts.
  *
  * Run `pnpm db:migrate` first (and `pnpm db:seed-admin` for an admin). Refuses
  * NODE_ENV=production unless --force.
@@ -21,7 +21,7 @@ import { hashPassword } from "better-auth/crypto";
 import pg from "pg";
 // A plain TypeScript module without imports: Node strips its types.
 import { withVerifiedSsl } from "../src/server/db/connection-string.ts";
-import { DEMO_ROLES, DEMO_USERS, seedDemo } from "./lib/demo-data.mjs";
+import { DEMO_ROLES, DEMO_USERS, seedDemo } from "./lib/demo-data.ts";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 
@@ -44,7 +44,7 @@ if (values.help) {
 }
 
 const password = values.password ?? process.env.DEMO_PASSWORD ?? "";
-const problems = [];
+const problems: string[] = [];
 if (password.length < 12) problems.push("a --password (or DEMO_PASSWORD) of at least 12 characters");
 if (!process.env.DATABASE_URL) problems.push("DATABASE_URL");
 if (process.env.NODE_ENV === "production" && !values.force) problems.push("--force to seed with NODE_ENV=production");
@@ -53,7 +53,7 @@ if (problems.length) {
 	process.exit(1);
 }
 
-const client = new pg.Client({ connectionString: withVerifiedSsl(process.env.DATABASE_URL) });
+const client = new pg.Client({ connectionString: withVerifiedSsl(process.env.DATABASE_URL ?? "") });
 await client.connect();
 try {
 	await client.query("begin");

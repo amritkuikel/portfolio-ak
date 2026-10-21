@@ -2,7 +2,8 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OtpField, PhoneField } from "@/components/forms/fields/phone-otp-fields";
-import { otp, phone } from "@/lib/validation";
+import { phone } from "@/lib/phone";
+import { otp } from "@/lib/validation";
 import { expectInvalid, expectValid, renderField } from "./harness";
 
 describe("PhoneField", () => {

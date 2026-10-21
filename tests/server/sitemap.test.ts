@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { portfolioSource } from "@/features/portfolio/sources"; // @demo
 import { STACK_PAGE_SIZE } from "@/features/stack/schema"; // @demo
-import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/schema";
+import { TEST_CRUD_PUBLIC_PAGE_SIZE } from "@/features/test-crud/search";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 import * as schema from "@/server/db/schema";
 import { webManifest } from "@/server/seo/manifest";

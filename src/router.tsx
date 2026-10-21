@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import type { DbClient } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
@@ -8,20 +7,20 @@ import { getGlobalStartContext } from "@tanstack/react-start";
 import { ErrorPage } from "./components/errors/error-page";
 import { NotFoundPage } from "./components/errors/not-found-page";
 import { PendingPage } from "./components/errors/pending-page";
-import { createDbClient } from "./lib/db";
-import { sentryDsn } from "./lib/observability/sentry";
+import { parseSearch, stringifySearch } from "./lib/list/url";
+import { traceNavigation } from "./lib/observability/sentry-client";
 import { createQueryClient } from "./lib/query";
-import { parseSearch, stringifySearch } from "./lib/search";
 import type { Session } from "./lib/session";
+import { readPreferences } from "./lib/start/read-preferences";
 import { createPreferencesStore, type PreferencesStore } from "./lib/stores/preferences";
-import { readPreferences } from "./lib/stores/read-preferences";
+import { createDbClient } from "./lib/tanstack-db";
 import { deLocalizeUrl, localizeUrl } from "./paraglide/runtime";
 import { routeTree } from "./routeTree.gen";
 
 /** Available to every route's beforeLoad/loader via `context`. */
 export type RouterContext = {
 	queryClient: QueryClient;
-	/** TanStack DB client: live collections on top of queryClient (src/lib/db.ts). */
+	/** TanStack DB client: live collections on top of queryClient (src/lib/tanstack-db.ts). */
 	dbClient: DbClient;
 	/** UI preferences (theme, sidebar, tables), seeded from cookies (src/lib/stores). */
 	preferences: PreferencesStore;
@@ -67,7 +66,7 @@ export function getRouter() {
 	setupRouterSsrQueryIntegration({ router, queryClient });
 
 	// Navigation performance traces in the browser (only when Sentry is on).
-	if (!router.isServer && sentryDsn) Sentry.addIntegration(Sentry.tanstackRouterBrowserTracingIntegration(router));
+	if (!router.isServer) traceNavigation(router);
 
 	// Official TanStack DB integration, applied after the Query one because it
 	// wraps the existing dehydrate/hydrate/Wrap: adds <DbProvider>, streams live

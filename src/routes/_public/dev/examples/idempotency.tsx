@@ -10,7 +10,7 @@ import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleMessagesQueryOptions } from "@/features/dev/examples/queries";
 import { resetExampleMessages, sendExampleMessage } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { ensureQuery } from "@/lib/query";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";

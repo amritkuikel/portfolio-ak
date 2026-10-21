@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { fontPreloads } from "@/lib/fonts";
 import { NOINDEX } from "@/lib/seo";
+import { getLocale } from "@/paraglide/runtime";
 
 /**
  * Pages that need a signed-in user. Anonymous visitors go to /login with a
@@ -14,6 +16,6 @@ export const Route = createFileRoute("/_authed")({
 		// Narrow the type for child routes: session is non-null below this layout.
 		return { session: context.session };
 	},
-	head: () => ({ meta: [NOINDEX] }),
+	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
 	component: Outlet,
 });

@@ -1,7 +1,9 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
+import { ClientOnly, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import type { ReactNode } from "react";
+import { lazy, type ReactNode, Suspense } from "react";
 import { ErrorPage } from "@/components/errors/error-page";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
@@ -9,9 +11,7 @@ import { ConsentBanner, ObservabilitySync } from "@/components/layout/observabil
 import { SiteHeader } from "@/components/layout/site-header";
 import { SkipLink } from "@/components/layout/skip-link";
 import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
-import { Toaster } from "@/components/ui/sonner";
 import { sessionQueryOptions } from "@/features/auth/queries";
-import { fontPreloads } from "@/lib/fonts";
 import { pageTitle } from "@/lib/seo";
 import { usePreferences } from "@/lib/stores/hooks";
 import type { ThemePreference } from "@/lib/stores/preferences";
@@ -37,7 +37,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 			{ name: "description", content: m.site_description() },
 		],
 		links: [
-			...fontPreloads(getLocale()),
 			{ rel: "stylesheet", href: appCss },
 			// Icon set: SVG for modern browsers, ICO for the rest, PNG for iOS; the manifest has the app icons.
 			{ rel: "icon", href: "/favicon.ico", sizes: "32x32" },
@@ -50,6 +49,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	notFoundComponent: NotFoundPage,
 	shellComponent: RootDocument,
 });
+
+/**
+ * Toasts render only in the browser, after hydration, so sonner (about 10 kB gzip) is not
+ * part of every page's entry chunk. toast() calls made earlier are replayed when it mounts.
+ */
+const Toaster = lazy(() => import("@/components/ui/sonner").then((module) => ({ default: module.Toaster })));
 
 /** Browser UI colour: --background of the chosen theme, or both for "system" (head() dedupes meta by name). */
 const THEME_COLORS = { light: "#ffffff", dark: "#09090b" } as const;
@@ -83,10 +88,19 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<ThemeSync />
 				<ObservabilitySync />
 				<ConsentBanner />
-				<Toaster theme={theme} />
+				<ClientOnly>
+					<Suspense>
+						<Toaster theme={theme} />
+					</Suspense>
+				</ClientOnly>
+				{/* Dev only: @tanstack/devtools-vite removes this and its panels from builds. */}
 				<TanStackDevtools
 					config={{ position: "bottom-right" }}
-					plugins={[{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+					plugins={[
+						{ name: "TanStack Router", render: <TanStackRouterDevtoolsPanel /> },
+						{ name: "TanStack Query", render: <ReactQueryDevtoolsPanel /> },
+						{ name: "TanStack Form", render: (_el, props) => <FormDevtoolsPanel {...props} /> },
+					]}
 				/>
 				<Scripts />
 			</body>

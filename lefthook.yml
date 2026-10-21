@@ -7,7 +7,9 @@ pre-commit:
     biome:
       glob: "*.{js,mjs,cjs,ts,mts,tsx,json,jsonc,css}"
       # Fixes what it can and re-stages it; anything left (lint errors, warnings) blocks the commit.
-      run: pnpm exec biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      # --staged lets Biome read the staged files from git: passing them as arguments breaks on
+      # Windows once a commit touches a few hundred files ("The command line is too long").
+      run: pnpm exec biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true --staged
       stage_fixed: true
 
 pre-push:

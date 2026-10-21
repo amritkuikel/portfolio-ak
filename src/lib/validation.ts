@@ -6,11 +6,10 @@
  * is using, on the client and on the server. Numbers inside messages are
  * formatted for that language too (e.g. "कम्तीमा ८ ...").
  */
-import { isValidPhoneNumber } from "libphonenumber-js";
 import { z } from "zod";
 import { m } from "@/paraglide/messages";
-import { type IsoDate, isIsoDate, isoDateInstant } from "./date-only";
-import { formatBytes, formatDate, formatNumber } from "./intl";
+import { type IsoDate, isIsoDate, isoDateInstant } from "./i18n/date-only";
+import { formatBytes, formatDate, formatNumber } from "./i18n/intl";
 
 const n = (value: number) => formatNumber(value);
 
@@ -128,15 +127,6 @@ export const mustAccept = () =>
 // ---------------------------------------------------------------------------
 // Phase 7b fields
 // ---------------------------------------------------------------------------
-
-/** E.164 phone number ("+9779812345678"), valid for its country per libphonenumber-js. */
-export const phone = (options: { optional?: boolean } = {}) => {
-	const valid = z.string().refine((value) => isValidPhoneNumber(value), { error: () => m.validation_phone() });
-	const text = z.string({ error: () => m.validation_required() });
-	return options.optional
-		? text.pipe(z.union([z.literal(""), valid]))
-		: text.min(1, { error: () => m.validation_required() }).pipe(valid);
-};
 
 /** A 6-digit one-time code. */
 export const otp = () => z.string().regex(/^\d{6}$/, { error: () => m.validation_otp() });

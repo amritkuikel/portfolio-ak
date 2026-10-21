@@ -4,7 +4,7 @@ import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { useCan } from "@/features/rbac/can";
-import { formatCurrency, formatDateTime } from "@/lib/intl";
+import { formatCurrency, formatDateTime } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { STATUS_LABELS } from "../labels";
 import type { TestCrudListItem } from "../schema";

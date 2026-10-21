@@ -16,7 +16,7 @@ A filter URL looks the same whether JavaScript built it or a plain form submitte
 
 | Param kind | Helper | URL | Parsed |
 | --- | --- | --- | --- |
-| free text | `searchParam()` (list.ts) | `q=momo` | `"momo"` (default `""`) |
+| free text | `searchParam()` (list/params.ts) | `q=momo` | `"momo"` (default `""`) |
 | one of a list | `enumParam(values, fallback)` | `status=draft` | `"draft"` |
 | page / page size | `pageParam()`, `pageSizeParam()` | `page=2` | `2` |
 | several values | `arrayParam(itemSchema, { max })` | `tags=a&tags=b` | `["a", "b"]` (default `[]`) |
@@ -26,7 +26,7 @@ A filter URL looks the same whether JavaScript built it or a plain form submitte
 
 Every helper is forgiving: an empty form field means "not set", and a bad value
 is dropped (`.catch`) rather than failing the page. Arrays are written as repeated
-keys by the router's `stringifySearch` (`src/lib/search.ts`, wired in
+keys by the router's `stringifySearch` (`src/lib/list/url.ts`, wired in
 `src/router.tsx`).
 
 ## Adding a filtered list
@@ -71,7 +71,7 @@ keys by the router's `stringifySearch` (`src/lib/search.ts`, wired in
    	loadList(context.queryClient, projectListQueryOptions(tableListInput(deps, context.preferences.state, PROJECTS_TABLE_ID)), cause),
    ```
 
-   In the component, `useListPage` (`src/lib/use-list-page.ts`) does the rest: it resolves the page size the same way as the loader (URL, then the user's saved choice for this table, then 20), reads the list, and returns the props for `<Pagination>`:
+   In the component, `useListPage` (`src/hooks/use-list-page.ts`) does the rest: it resolves the page size the same way as the loader (URL, then the user's saved choice for this table, then 20), reads the list, and returns the props for `<Pagination>`:
 
    ```tsx
    const { edit, ...listSearch } = Route.useSearch();   // UI-only params stay out of the list input

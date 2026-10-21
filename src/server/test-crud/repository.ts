@@ -7,11 +7,11 @@ import type {
 	PublicTestCrudPage,
 	TestCrudDetail,
 	TestCrudInput,
-	TestCrudListInput,
 	TestCrudListItem,
 	TestCrudPage,
 	TestCrudStatus,
 } from "@/features/test-crud/schema";
+import type { TestCrudListInput } from "@/features/test-crud/search";
 import { staleError } from "@/lib/concurrency";
 import { AppError, ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";

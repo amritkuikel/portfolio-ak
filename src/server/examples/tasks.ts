@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import type { ExamplePriority, ExampleTask, ExampleTaskPage, ExampleTaskSearch } from "@/features/dev/examples/schema";
 import { EXAMPLE_PAGE_SIZE, EXAMPLE_PRIORITIES } from "@/features/dev/examples/schema";
-import { paginateArray, parseSort } from "@/lib/list";
+import { paginateArray, parseSort } from "@/lib/list/paging";
 
 /**
  * The dev examples' task list, kept in memory by the dev server process (it

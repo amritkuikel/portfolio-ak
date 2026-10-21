@@ -1,9 +1,10 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { collectionOptions } from "@tanstack/react-db";
 import { deleteTestCrudFn, listTestCrud, setTestCrudStatusFn } from "@/functions/test-crud";
-import { queryClientOf } from "@/lib/db";
+import { queryClientOf } from "@/lib/tanstack-db";
 import { invalidateTestCrudLists, testCrudKeys } from "./queries";
-import type { TestCrudListInput, TestCrudListItem } from "./schema";
+import type { TestCrudListItem } from "./schema";
+import type { TestCrudListInput } from "./search";
 
 /**
  * TanStack DB collection over ONE admin list page (the reference pattern).

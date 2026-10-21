@@ -13,11 +13,11 @@ import {
 	TEST_CRUD_PUBLIC_PAGE_SIZE,
 	TEST_CRUD_PUBLIC_SEARCH_DEFAULTS,
 	testCrudPublicRouteSearchSchema,
-} from "@/features/test-crud/schema";
-import { formatNumber } from "@/lib/intl";
+} from "@/features/test-crud/search";
+import { useListQuery } from "@/hooks/use-list-query";
+import { formatNumber } from "@/lib/i18n/intl";
 import { loadList } from "@/lib/query";
 import { listSeo } from "@/lib/seo";
-import { useListQuery } from "@/lib/use-list-query";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/test-crud/")({

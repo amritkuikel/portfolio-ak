@@ -1,5 +1,5 @@
 import { confirmImageUpload, signImageUpload } from "@/functions/attachments";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { IMAGE_MAX_BYTES, IMAGE_MIME_TYPES, type UploadScope } from "./constants";
 import type { ImageAsset } from "./schema";

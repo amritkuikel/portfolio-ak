@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import {
-	bulkIdsSchema,
-	enumParam,
-	pageParam,
-	pageSizeParam,
-	pageWindow,
-	paginateArray,
-	parseSort,
-	resolvedPageSize,
-	searchParam,
-} from "@/lib/list";
+import { bulkIdsSchema, pageWindow, paginateArray, parseSort } from "@/lib/list/paging";
+import { enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
 
 describe("list URL params", () => {
 	const schema = z.object({

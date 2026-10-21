@@ -1,5 +1,5 @@
 import "@tanstack/react-start/server-only";
-import { clientEnv } from "@/lib/client-env";
+import { clientEnv } from "@/lib/env/client";
 import { m } from "@/paraglide/messages";
 import { getTextDirection, type Locale, localizeHref } from "@/paraglide/runtime";
 

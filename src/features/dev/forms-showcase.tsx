@@ -5,6 +5,7 @@ import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { phone } from "@/lib/phone";
 import type { SafeHtml } from "@/lib/safe-html";
 import {
 	choice,
@@ -18,7 +19,6 @@ import {
 	numberRange,
 	optionalText,
 	otp,
-	phone,
 	required,
 	richText,
 	tags,

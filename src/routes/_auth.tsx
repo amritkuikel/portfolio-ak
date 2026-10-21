@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
-import { redirectSearchSchema } from "@/lib/redirect";
+import { fontPreloads } from "@/lib/fonts";
+import { redirectSearchSchema } from "@/lib/http/redirect";
 import { NOINDEX } from "@/lib/seo";
-import { localizeHref } from "@/paraglide/runtime";
+import { getLocale, localizeHref } from "@/paraglide/runtime";
 
 /**
  * Sign-in pages (log in, register, sign-in code, forgot password). Signed-in
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_auth")({
 		if (context.session) throw redirect({ href: localizeHref(search.redirect ?? "/account") });
 	},
 	// Sign-in pages have no search value: every child inherits noindex.
-	head: () => ({ meta: [NOINDEX] }),
+	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
 	component: AuthLayout,
 });
 

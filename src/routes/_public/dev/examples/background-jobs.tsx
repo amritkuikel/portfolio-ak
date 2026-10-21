@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { runExampleJobFn } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

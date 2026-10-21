@@ -1,7 +1,7 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { getTestCrud, listTestCrud, listTestCrudTags } from "@/functions/test-crud";
 import { getPublicTestCrud, listPublicTestCrud } from "@/functions/test-crud-public";
-import type { TestCrudListInput, TestCrudPublicSearch } from "./schema";
+import type { TestCrudListInput, TestCrudPublicSearch } from "./search";
 
 /**
  * Query keys. Lists live under ["test-crud", "list", input] so one

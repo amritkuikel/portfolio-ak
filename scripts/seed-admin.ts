@@ -44,7 +44,7 @@ const email = (values.email ?? process.env.ADMIN_EMAIL ?? "").trim();
 const password = values.password ?? process.env.ADMIN_PASSWORD ?? "";
 const name = (values.name ?? process.env.ADMIN_NAME ?? "Admin").trim();
 
-const problems = [];
+const problems: string[] = [];
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("a valid --email (or ADMIN_EMAIL)");
 if (password.length < 12) problems.push("a --password (or ADMIN_PASSWORD) of at least 12 characters");
 if (!name) problems.push("a non-empty --name (or ADMIN_NAME)");

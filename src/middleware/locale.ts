@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
-import { getLocale } from "@/paraglide/runtime";
-import { LOCALE_HEADER } from "./locale-header";
+import { getLocale } from "@/paraglide/runtime.js";
+import { LOCALE_HEADER } from "../lib/i18n/locale-header";
 
 /**
  * Server function requests go to /_serverFn/... without a locale prefix, so the

@@ -2,7 +2,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { FilterField } from "./filter-bar";

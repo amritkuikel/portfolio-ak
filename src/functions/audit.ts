@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type AuditPage, auditListInputSchema } from "@/features/audit/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import { requirePermission } from "@/middleware/auth";
 import { listAuditEvents as listRows } from "@/server/audit/repository";
 import { db } from "@/server/db/client";

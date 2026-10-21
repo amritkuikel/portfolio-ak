@@ -110,6 +110,31 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  template:
+    name: Template (strip-demo, new:feature, gates)
+    runs-on: ubuntu-latest
+    # The promise of decision 0141: a fresh clone, stripped of the demo, plus a scaffolded
+    # feature, passes every gate with no manual edits. Runs the scripts the way a new project would.
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm strip-demo --no-build
+      - run: pnpm new:feature ci-sample --title "Samples" --title-ne "नमूनाहरू"
+      - run: pnpm typecheck
+      - run: pnpm check
+      - run: pnpm knip
+      - run: pnpm test
+      - name: The scaffolded migration matches the schema
+        run: |
+          pnpm exec drizzle-kit generate | tee drizzle-generate.log
+          grep -q "No schema changes" drizzle-generate.log
+          pnpm db:check
+
   build:
     name: Production build
     runs-on: ubuntu-latest
@@ -122,3 +147,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # Fails when every page's JavaScript or a preloaded font goes over budget (decision 0151).
+      - run: node scripts/check-bundle.ts
+      - run: pnpm i18n:check

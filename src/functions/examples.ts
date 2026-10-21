@@ -11,9 +11,9 @@ import {
 	exampleTaskSearchSchema,
 	exampleTasksDoneSchema,
 } from "@/features/dev/examples/schema";
+import { zodInput } from "@/functions/_lib/validator";
 import { AppError } from "@/lib/errors";
-import { zodInput } from "@/lib/fn-input";
-import { bulkIdsSchema } from "@/lib/list";
+import { bulkIdsSchema } from "@/lib/list/paging";
 import { devOnlyMiddleware } from "@/middleware/dev";
 import { m } from "@/paraglide/messages";
 import { trustedClientIp } from "@/server/auth/client-ip";

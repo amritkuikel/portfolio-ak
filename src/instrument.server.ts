@@ -5,7 +5,7 @@
  */
 import * as Sentry from "@sentry/tanstackstart-react";
 import { dropExpectedErrors, sentryDsn, sentryOptions, tagRequestId } from "./lib/observability/sentry";
-import { currentRequestId } from "./server/http/request-id";
+import { currentRequestId } from "./server/http/request-scope";
 
 if (sentryDsn) {
 	Sentry.init({

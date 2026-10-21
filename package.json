@@ -3,7 +3,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"setup:local": "node scripts/setup-local.ts",
+		"diagnose": "node scripts/diagnose.ts",
 		"dev": "vite dev --port 3000",
+		"dev:local": "node scripts/dev-local.ts",
 		"dev:offline": "node scripts/dev-offline.ts",
 		"build": "vite build",
 		"start": "node --env-file-if-exists=.env .output/server/index.mjs",
@@ -21,16 +24,17 @@
 		"storybook": "storybook dev -p 6006 --no-open",
 		"build-storybook": "storybook build",
 		"i18n:compile": "paraglide-js compile --project ./project.inlang --silent",
-		"db:seed-admin": "node scripts/seed-admin.mjs",
-		"db:seed-demo": "node scripts/seed-demo.mjs",
+		"i18n:translate": "inlang machine translate --project ./project.inlang --locale en --targetLocales ne",
+		"i18n:check": "inlang check --project ./project.inlang --missing-translations --empty-translations --empty-variants --missing-variables --unknown-variables --missing-markup --missing-variants --missing-selectors",
+		"db:seed-admin": "node scripts/seed-admin.ts",
+		"db:seed-demo": "node scripts/seed-demo.ts",
 		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts",
-		"test:storybook": "vitest run --project storybook && vitest run --project storybook-dark-ne",
+		"test:storybook": "vitest run --project storybook --project storybook-dark-ne",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",
-		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.mjs",
+		"test:coverage": "vitest run --project unit --coverage && node scripts/coverage-report.ts",
 		"new:feature": "node scripts/new-feature.mjs",
 		"strip-demo": "node scripts/strip-demo.mjs",
-		"attachments:import-legacy": "node scripts/attachments-import-legacy.mjs",
 		"prepare": "node scripts/install-hooks.mjs"
 	},
 	"dependencies": {
@@ -47,7 +51,9 @@
 		"@tanstack/react-db": "^0.5.4",
 		"@tanstack/react-devtools": "^0.10.13",
 		"@tanstack/react-form": "^1.33.5",
-		"@tanstack/react-query": "^5.104.0",
+		"@tanstack/react-form-devtools": "^0.2.34",
+		"@tanstack/react-query": "^5.104.5",
+		"@tanstack/react-query-devtools": "^5.104.5",
 		"@tanstack/react-router": "^1.170.40",
 		"@tanstack/react-router-devtools": "^1.167.2",
 		"@tanstack/react-router-ssr-query": "^1.167.3",
@@ -90,7 +96,10 @@
 		"@babel/core": "^7.29.7",
 		"@biomejs/biome": "2.4.5",
 		"@electric-sql/pglite": "^0.5.8",
+		"@inlang/cli": "3.4.4",
 		"@inlang/paraglide-js": "^2.25.4",
+		"@inlang/plugin-m-function-matcher": "2.3.4",
+		"@inlang/plugin-message-format": "4.5.5",
 		"@playwright/test": "1.64.0",
 		"@rolldown/plugin-babel": "^0.2.4",
 		"@storybook/addon-a11y": "10.6.1",
@@ -138,6 +147,6 @@
 	},
 	"packageManager": "pnpm@10.33.2",
 	"engines": {
-		"node": ">=22"
+		"node": ">=22.18"
 	}
 }

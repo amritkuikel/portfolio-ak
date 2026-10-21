@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { getDbHealth } from "@/functions/health";
-import { formatDateTime, formatNumber } from "@/lib/intl";
+import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

@@ -5,7 +5,7 @@ import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { type AccountSession, revokeMySession } from "@/functions/auth";
 import { authClient } from "@/lib/auth-client";
-import { formatRelativeTimeFrom } from "@/lib/intl";
+import { formatRelativeTimeFrom } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { authErrorMessage } from "../errors";
 import { accountSecurityQueryOptions, accountSessionsQueryOptions, authKeys } from "../queries";

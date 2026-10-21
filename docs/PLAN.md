@@ -257,7 +257,7 @@ Each phase lists **Scope**, **Deliverables** and **Acceptance criteria**. Every 
 **Scope.** Typed, validated environment for server and client.
 
 **Deliverables**
-- T3 Env server schema in its own file (`src/server/env.ts`) and client schema in its own file (`src/lib/client-env.schema.ts`, consumed via `src/lib/client-env.ts`). Client files avoid the `*.client.*` name, which TanStack Start import protection reserves for client-only code.
+- T3 Env server schema in its own file (`src/server/env.ts`) and client schema in its own file (`src/lib/env/client.schema.ts`, consumed via `src/lib/env/client.ts`). Client files avoid the `*.client.*` name, which TanStack Start import protection reserves for client-only code.
 - Client: `VITE_APP_TITLE`, shown in the header and used in `<title>`.
 - Server: `DATABASE_URL` (validated as a postgres URL), `EMAIL_PROVIDER` (`console` or `resend`), `RESEND_API_KEY` (optional), `EMAIL_FROM`.
 - Complete, commented `.env.example`. `.env` gitignored.
@@ -293,7 +293,7 @@ Each phase lists **Scope**, **Deliverables** and **Acceptance criteria**. Every 
 - `<html lang>` correct on SSR for both locales.
 - Preload the Devanagari font subset only on `ne` pages (see decision 0007).
 - Language switcher that preserves path and search params. (The URL hash is not preserved: browsers never send it to the server, so SSR cannot render it.)
-- `src/lib/intl.ts` with date, number, NPR currency and relative-time helpers built on `Intl` and keyed to the current locale.
+- `src/lib/i18n/intl.ts` with date, number, NPR currency and relative-time helpers built on `Intl` and keyed to the current locale.
 - Test asserting `messages/en.json` and `messages/ne.json` have identical keys.
 - All existing UI text migrated to messages.
 
@@ -557,7 +557,7 @@ Part 2 builds on the finished Part 1 app. It turns Test CRUD's one-off admin pie
 ### Phase 14: Setup audit + reusable building blocks (Task 18)
 
 **Deliverables**
-- **Audit:** a written review (`docs/guides/audit.md`) of every module against current official docs and best practice: routing and loaders, Query/DB/Store use, forms, i18n, auth, env, server functions, errors, observability, testing and file structure. Each finding has a verdict (keep, fix, improve) and a fix in this task or a named later task.
+- **Audit:** a written review (`docs/history/audit.md`) of every module against current official docs and best practice: routing and loaders, Query/DB/Store use, forms, i18n, auth, env, server functions, errors, observability, testing and file structure. Each finding has a verdict (keep, fix, improve) and a fix in this task or a named later task.
 - **Folder structure:** a documented convention, with code moved to match it:
   - `src/components/` holds generic UI only
   - `src/features/<name>/` holds schema, queries, collection, components, columns and filters
@@ -874,3 +874,695 @@ Each recipe is a guide section with a dev example or script, decided and documen
 - [x] Clone → strip-demo → new:feature → green gates, with no manual edits.
 - [x] Every recipe has a guide section and a working example or script, except organizations and billing, which are guide-only by design (decision 0150).
 - [x] All gates are green: typecheck, check, knip, test, test:storybook, test:e2e, build and build-storybook. One build notice remains from before Part 3 (Rolldown asks for a `debugName` on a code-splitting group); it doesn't fail the build.
+
+---
+
+## 10. Part 4: template v2 (Tasks 34–45)
+
+Part 4 makes the template the base every project starts from, and the home of the owner's real portfolio:
+- A personal portfolio at `/`, its content in the database and edited in the admin. The current demo site moves to `/dev` (dev builds only).
+- Six showcase apps built in this repo under `/apps/<slug>` (Kanban, Expenses, Links, Notes, Forms, Habits), open to visitors through guest sessions.
+- A "Graphite" design system (Linear-style, with accent, radius and density presets) and an admin component kit, replacing the stock shadcn look.
+- One standard for CRUD, data fetching and permissions, applied to the existing sections **before** the portfolio and the apps are built on it.
+- Fast in dev and production, with the libraries' unused features put to work.
+
+This section is written so that **each task can be done in a fresh session that has read nothing else** but CLAUDE.md and this section. Every fact a task needs from the 2026-10-21 review is written here; where a task says "check", check the code or the docs, because versions move.
+
+### 10.1 How to run a Part 4 task (every session)
+
+The owner runs one task per session and clears the context between tasks. A session that is asked to do "Task N":
+
+1. **Read** CLAUDE.md, then this whole section 10 (the rules, the findings in 10.4 and the task's own section), then the decisions and guides the task names. Read the code it names before changing it.
+2. **Check the ground:** `git status` (expect a clean tree on `main`), `pnpm install`, `pnpm diagnose`. Prefer `pnpm dev:local` for running the app (a local database; the owner's Neon database is about 300 ms per query away).
+3. **Research first:** check the current docs (context7) for every library API the task adopts; record surprises in the task's decision.
+4. **Do only Task N.** If it can't be done as written, change this section in the same commit and record why in `docs/decisions.md`.
+5. **Gates** (all green, no warnings): `pnpm typecheck`, `pnpm check`, `pnpm knip`, `pnpm test`, `pnpm test:storybook`, `pnpm build` then `node scripts/check-bundle.ts`, `pnpm build-storybook`, `pnpm i18n:check`, `pnpm test:e2e`. Before e2e, stop any server on port 3100 (`pnpm diagnose` says if one runs): the suite reuses it and would test the old build.
+6. **Docs move with the code:** a decision entry for every non-obvious choice (next free number; supersede explicitly), the guide for the area, CLAUDE.md (commands, layout, pitfalls), and this section: mark the task done in the table (10.3) and replace its section with a short "Done" summary (what changed, numbers, deviations), as Task 34's.
+7. **Commit on `main`**, one commit for the task (owner's instruction: no branches). Message `feat: Part 4 Task N, <name>` with a body listing the main changes, ending with the Co-Authored-By line. Don't push.
+8. **Stop.** Report what was done, anything the owner must do (for example run a migration on Neon) and anything left over, then wait for the next prompt.
+
+### 10.2 Owner's choices (2026-10-21) and Part 4 rules
+
+| Topic | Choice |
+| --- | --- |
+| Showcase apps | Routes in this app under `/apps/<slug>`: Kanban, Expenses, Links (shortener), Notes, Forms (survey builder), Habits |
+| Visitors trying the apps | Guest sessions (Better Auth `anonymous`), seeded sample data, deleted after 7 days, can upgrade to a real account and keep the data |
+| `/dev` | The current demo site (home, `/stack`, public Test CRUD, `/dev/examples`, `/dev/forms`) lives there, **dev builds only** (404 in production) |
+| Portfolio art direction | **Himalayan topography**: generative contour lines that react to cursor and scroll, earthy palette, big serif display |
+| Admin look | **Linear-style "Graphite"**: dense, refined, one brand accent, keyboard-first, with accent, radius and density presets switchable in admin settings |
+| Machine translation | UI strings only (`pnpm i18n:translate`). Admin content is typed in both languages (no translate button) |
+| New libraries allowed | Motion (motion.dev), dnd-kit, Recharts (shadcn chart), TanStack Table |
+| Git | Commit each task on `main`; no branches; don't push |
+
+- **Order is fixed:** foundation (34) → routes (35) → design system and shells (36) → component kit (37) → CRUD standard (38) → portfolio data and admin (39) → portfolio design (40) → apps platform and Kanban (41) → Notes, Links (42) → Expenses, Habits (43) → Forms (44) → wrap-up (45). The portfolio and the apps are built only on the standardized kit.
+- **Superseding decisions:** a new entry names the one it replaces. Planned: 0046 (Task 35 keeps it, restated), 0061/0103 (35), 0105 (35), 0140 (36), 0064/0066/0068 (38, 41), 0132 (38), 0141/0142 (35, 38), 0109 (40), 0112/0129/0045 (41). Already superseded in Task 34: 0020 (by 0155), 0073 (0152), 0075 (0154). Kept on purpose: 0040 (no Better Auth cookie cache), 0043/0090 (session in the root `beforeLoad`).
+- **Screenshots for the owner's sign-off** after Task 36 (admin and auth) and Task 40 (portfolio): Playwright MCP, light and dark, 390 and 1280 wide, saved under `docs/history/screens/task-NN/` and listed in the task's summary.
+- **Every new page** goes in `e2e/support/pages.ts` (reviewed or excluded with a reason), in `tests/unit/route-seo.test.ts` (indexable or private), and in the sitemap if indexable.
+- **Every new string** goes in `messages/en.json`; run `pnpm i18n:translate` and **review the Nepali** (the free provider can be wrong; with `INLANG_GOOGLE_TRANSLATE_API_KEY` it's better). Never leave English in `ne.json`.
+- **Bundle:** new pages must not grow the entry chunk; heavy libraries (Recharts, Motion, dnd-kit, Tiptap, TanStack Table) load in route chunks or on demand.
+
+### 10.3 Status
+
+| Task | Name | Effort | Status |
+| --- | --- | --- | --- |
+| 34 | Foundation: performance, dev speed, i18n tooling, structure, DX | high | Done (decisions 0151–0160) |
+| 35 | Route restructure: portfolio at `/`, demo at `/dev`, a header per section, strip-demo layers | high | |
+| 36 | "Graphite" design system, admin shell, auth shell, dashboard | high | |
+| 37 | Admin component kit | high | |
+| 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | |
+| 39 | The dynamic portfolio: tables, admin, media library, public reads | high | |
+| 40 | "Himal" portfolio redesign at `/` | xhigh | |
+| 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | |
+| 42 | Notes and Links | high | |
+| 43 | Expenses and Habits | high | |
+| 44 | Forms (survey builder) | high | |
+| 45 | Wrap-up: guides, measurements, full review | medium | |
+
+"Effort" is the recommended reasoning effort for the session (`/effort` or the model picker).
+
+### 10.4 Findings from the review that later tasks rely on
+
+**Admin sections today** (Test CRUD, roles, permission matrix, users, audit). Fixed in Task 38:
+- **Where the UI lives:** only Test CRUD follows "thin routes" (0143): `features/test-crud/components/admin-list.tsx`. Roles (`routes/_admin/admin/roles/index.tsx`, 140 lines), users (`users/index.tsx`, 204 lines), permissions and audit keep their UI in the route file.
+- **Reads:** Test CRUD uses `useListPage` plus a TanStack DB `useLiveQuery`. Roles and permissions use `useSuspenseQuery` (unpaginated). Users and audit use `useListPage`.
+- **Writes, four styles:**
+  - Test CRUD: a TanStack DB collection with optimistic updates (`features/test-crud/collection.ts`, an LRU of 50 per-search collections).
+  - Roles and users: plain `useMutation`.
+  - Permission matrix: `useMutation` with a manual `onMutate` rollback.
+  - Some forms call server functions directly in `onSubmit`.
+- **Query keys, three shapes:**
+  - test-crud: `{ all, lists, list, tags, details, detail, public… }`.
+  - rbac: `{ all, roles, roleOptions, users, userList }`.
+  - audit: `{ all, list }`.
+  - The scaffolder template: `{ all, lists, list, detail }`.
+- **Invalidation:** `invalidateTestCrudLists` for Test CRUD; `refreshRbac` (every rbac key plus the session) for rbac.
+- **Dialogs and confirms:** the Test CRUD edit dialog is a masked route (`?edit=`). Roles and users use local `useState`. Every page defines its own confirm type (`DeleteRequest`, `Dialog`, `Confirming`).
+- **Forms:**
+  - Test CRUD reloads a stale version by remounting with a new key; roles by `form.reset()`.
+  - `UserRolesDialog` has no stale check and no `clearServerErrorOnChange`.
+  - Only Test CRUD has the unsaved-changes guard.
+- **UI permission checks:** `useCan`, but also `usePermissions().includes` (test-crud admin-list, lines 125–127) and `hasAll(actor.permissions, …)` (users route, lines 106–108).
+- **Toasts:** roles borrows `users_toast_failed` (roles/index.tsx:75).
+- **Duplicates:**
+  - `Actor` is defined 4 times: `rbac/can.tsx:36`, `user-roles-dialog.tsx:16`, `permission-matrix.tsx:14`, `server/rbac/service.ts:35`.
+  - `notFound` 4 times: test-crud repository and service, rbac service, the template.
+  - Slug code 3 times: `SLUG_PATTERN` and `slugify` in test-crud, `SLUG` in portfolio, `freeRoleKey` in rbac.
+  - `day()` twice: `test-crud/filters.tsx:58`, `audit/filters.tsx:43`.
+  - `testCrudIdSchema` and `testCrudIdParamSchema` are identical.
+  - Skeleton column counts are hard-coded (5/4/5).
+- **Server:**
+  - **Version checks, two ways:** Test CRUD locks the row (`.for("update")`), compares `sameVersion`, then throws `staleError` (`server/test-crud/repository.ts:239`). Rbac puts `sameVersion` in the `UPDATE … WHERE` and returns a boolean (`server/rbac/repository.ts:157`).
+  - **Uniqueness, two ways:** Test CRUD catches 23505 by constraint name (`isSlugConflict`, `repository.ts:159`). Rbac checks first (`roleNameTaken`, `emailTaken`), which races.
+  - **Locking twice:** `setItemStatus` locks the row, then `setTestCrudStatus` opens a savepoint and locks it again.
+  - **Services skipped:** `listTestCrud`, `listTestCrudTags` (`functions/test-crud.ts:18`) and rbac `listUsers` call the repository directly.
+  - **Partial audit:** Test CRUD create and update aren't audited.
+  - **Actor and naming:** services take `userId` in some places and `AuditActor` in others; rbac builds its own `actor()` (`functions/rbac.ts:35`). Server function names are mixed (`setTestCrudStatusFn`/`deleteTestCrudFn` vs `createTestCrud`), and return types are annotated in `functions/test-crud.ts` only.
+- **File placement:**
+  - Filters: `features/<x>/filters.tsx` for test-crud and audit, but `rbac/user-filters.tsx` for users.
+  - `FILTER_KEYS`: in the schema for test-crud, in the filters file for users.
+  - Columns: a constant (`testCrudColumns`) vs factories (`userColumns(id)`, `auditColumns()`).
+  - Table ids: inline `"admin-roles"` vs a constant.
+- **Size of one feature** (Test CRUD, the reference): about 2,700 lines of app code in 28 files, plus about 900 lines of tests.
+- **Scaffolder** (`scripts/new-feature.mjs`, 16 `.tpl` files in `scripts/templates/feature/`):
+  - It emits a simpler shape: search only, `useMutation`, no collection, no publish, no edit dialog.
+  - It inserts at `// @new-feature:<slot>` markers in 8 shared files, appends 35 messages and runs drizzle generate, Biome, Paraglide and a build.
+  - It has no rollback on failure.
+
+**Shared components today:**
+- **`page/`:** `Page` (`<main>` with widths), `PageHeader` (crumbs, title, description, actions), `Breadcrumbs`, `EmptyState`, `PageHeaderSkeleton`, `ListSkeleton`.
+- **`data-table/`:** `DataTable` (custom, not TanStack Table) plus `DataTableColumn<Row>`, sort links, page-local selection with a bulk bar, a "…" row menu, `busy`; `DataTableColumnsMenu`; `DataTableSkeleton`.
+- **`filters/`:** `FilterBar` (a GET form that works without JS), `SearchFilter`, `SelectFilter`, `BooleanFilter`, `MultiSelectFilter`, `NumberRangeFilter`, `DateRangeFilter`, `ActiveFilters`, `ClearFiltersButton`.
+- **`forms/`:**
+  - Core: `useAppForm`, `withForm`, `Form` (`method=post`), `SubmitButton`, `FormErrorSummary`, `FieldShell`, `formValidators`, `handleSaveError`, `clearServerErrorOnChange`, `StaleVersionAlert`, `UnsavedChangesGuard`.
+  - 25 fields: Text, Email, Url, Textarea, Password, Select, Combobox, MultiSelect, RadioGroup, Checkbox, CheckboxGroup, Switch, Date, DateRange, Time, Number, Currency, Phone, Otp, Slider, TagsInput, Color, File, Image, RichText (Tiptap).
+- **Other folders:**
+  - `dialogs/`: `ConfirmDialog` only.
+  - `navigation/`: `Pagination`, `SearchLink`, `useCloseOverlay`.
+  - `layout/`: `admin-sidebar.tsx` (a cookie collapse toggle; icon-only on phones; tooltips are `title`), `site-header.tsx`, `site-footer.tsx`, `theme.tsx`, `language-switcher.tsx`, `impersonation-banner.tsx`, `observability.tsx`, `skip-link.tsx`.
+- **`ui/` (shadcn new-york):** alert-dialog, badge, button, calendar, card, checkbox, command (cmdk), dialog, dropdown-menu, field, input, input-group, input-otp, label, native-select, popover, radio-group, select, separator, slider, sonner, switch, table, textarea.
+  - Missing: sidebar, sheet, tooltip, tabs, avatar, skeleton, scroll-area, breadcrumb, hover-card, accordion, collapsible, toggle, toggle-group, chart, progress, alert, kbd, spinner, button-group, context-menu.
+  - The unified `radix-ui` package is installed, so most of these need no new dependency.
+- **Tokens:** `src/styles/app.css` is stock shadcn zinc (`--radius: .625rem`). It has no success, warning or info tokens, and `--chart-*` and `--sidebar-*` are defined but unused.
+
+**Libraries, used vs not:**
+- **Start:**
+  - Used: `.validator`, middleware, server routes, `createIsomorphicFn`, `ClientOnly`, `Await`, `ScriptOnce`, serialization adapters.
+  - Unused: `ssr: false | "data-only"`, prerender, `createClientOnlyFn`, `createServerOnlyFn`, `useServerFn`.
+- **Router:**
+  - Used: preload on intent, masking, `notFound`, `stripSearchParams`, `loaderDeps`, `createLink`, `useBlocker`.
+  - Unused: `defaultStructuralSharing`, `retainSearchParams`, `linkOptions`, `getRouteApi`, `defaultViewTransition`.
+- **Query:**
+  - Used: `queryOptions`, key factories, `keepPreviousData`.
+  - Unused: `mutationOptions`, `useMutationState`, infinite queries.
+- **TanStack DB:** used only by Test CRUD's collection and `dev/examples/optimistic`. `routerWithDbClient` (src/router.tsx) puts 100.6 kB gzip on every page and is the only way DB state from SSR reaches the browser (0066).
+- **Form:**
+  - Used: `createFormHook`.
+  - Unused: `withForm` (exported, never called), `withFieldGroup`, `formOptions`, async validators, linked fields (`onChangeListenTo`).
+- **Drizzle:**
+  - Used: `$inferSelect`, transactions, `.for("update")`, `onConflictDo*`.
+  - Unused: `db.query` relational queries (v2 needs Drizzle 1.0, deferred by 0016), `$count`. DTO mappers are hand-written per feature.
+- **Zod:**
+  - Unused: `codec`, `strictObject`, `prettifyError`, `stringbool`, `.meta`.
+- **Better Auth plugins enabled:** `admin`, `emailOTP`, `twoFactor`, `haveIBeenPwned`, `captcha` (Turnstile, when configured), `tanstackStartCookies`. Also on: database rate limiting, account linking, change email, delete user.
+
+**The portfolio's content model today** (`src/features/portfolio/schema.ts`; fixtures in `src/features/portfolio/data/`, 8 projects and 6 posts). It becomes tables in Task 39:
+- `localized(T)` is `z.object({ en, ne })`; `resolveLocalized(record, locale)` (`features/portfolio/lib/localize.ts`) turns a record into one language.
+- **profile** (one record): name, initials (2), role, location, timezone, email, availability `{ status: open|limited|closed, note }`, headline[2–4], intro, manifesto, bio[≥2], principles[≥3 `{ title, body }`], impact[3–4 metric], socials[≥2 `{ network, handle, href }`], toolbox[≥6 strings], since, updated.
+- **project:** slug, title (not translated), client, year, disciplines[] (product, frontend, backend, platform, ai), role, duration, summary, stack[≥3], featured, cover `{ motif: grid|orbit|waves|blocks|type|terrain|signal, glyph 1–3 chars }`, links[`{ label, href }`], metrics[3–4], body[≥4 case-study blocks].
+- **metric:** value, format (number|compact|percent|multiplier|plus|ms|seconds), label.
+- **experience:** id, company, role, start and end (YYYY-MM; end null means current), location, summary.
+- **capability:** id, title, summary, skills[≥3].
+- **processStep:** id, title, body, outputs[≥2].
+- **testimonial:** id, quote, name, role, company.
+- **post:** slug, title, excerpt, publishedAt, tags[], body[≥4 prose blocks]; reading time is computed.
+- **Blocks:**
+  - Prose: paragraph, heading, quote (+cite), code (ts, tsx, sql, bash, css; caption), list (≥2 items).
+  - Case study: chapter (title, body[]), quote, code, architecture (nodes `{ id, label, detail, tier: client|edge|service|data }`, edges `[from, to]`), gallery (2–4 captions).
+- **Reads:** `queries.ts` calls `portfolioSource` (the fixture adapter) inside `queryFn`, so client-side navigation runs it in the browser. Routes still use the deprecated `ensureQueryData`. The home page makes 7 separate queries.
+
+**Performance facts (Task 34 measurements):**
+- **Bundle:** every page loads 235.4 kB gzip of JavaScript plus 100.6 kB of TanStack DB. Admin users and roles add about 90–104 kB each, from forms and dialogs pulled in at page level (Tasks 37/38 should split them).
+- **Database:** Neon from Kathmandu is about 300 ms per query.
+- **`pnpm dev:local`:** Vite is ready in 3–5 s; the first page after a cold start takes 5–12 s (server-side transforms); a new page takes 0.3–0.4 s and a repeat about 50 ms.
+- **Tests:** `pnpm test` 29 s; `pnpm test:storybook` 50–70 s; `pnpm test:e2e` 400 checks in 5.7 min.
+
+### Task 34: Foundation (done)
+
+- **Every page's JavaScript:** 399.4 → 235.5 kB gzip (−41%), plus TanStack DB's 100.6 kB until Task 41.
+  - `pendingComponent` is code-split.
+  - Route files import a feature's `search.ts`, not its form schemas, and `phone()` has its own module.
+  - Browser Sentry, the toaster, the auth client and web-vitals load off the critical path.
+  - `scripts/check-bundle.ts` holds the budget in CI (0151, 0152).
+- **Per request:** the session is resolved once (`requestMemo`, 0153); feature flags never wait more than 300 ms (local evaluation with `POSTHOG_SECRET_KEY`, 0154); each section's layout preloads only its own fonts.
+- **Dev:** one message module per locale (production keeps one per message), Babel and the React Compiler only on `src/`, server warmup, Sentry tracing off in dev, and `pnpm dev:local` on a persistent local PGlite (0155).
+- **DX:**
+  - `pnpm setup:local` and `pnpm diagnose` (0156).
+  - `pnpm i18n:translate` and `pnpm i18n:check`, with the inlang plugins pinned in `node_modules` (0157).
+  - `src/lib` grouped by area, hooks in `src/hooks`, Biome import boundaries, scripts in TypeScript, `engines` ≥ 22.18 (0158).
+  - Query and Form devtools panels; `.vscode` recommendations.
+- **Tests:**
+  - One migrated PGlite per run; `reset()` truncates every table; Testing Library loads only under jsdom. `pnpm test` went from 43–50 s to 29 s (0159).
+  - Both Storybook passes run in one run.
+  - The guard test reads `src/functions` recursively.
+  - e2e sign-ins are cleared per harness start.
+- **Cleanup:** the legacy Postgres image table and its import script are gone (0160); the empty `sajdf` folders too; `components.json` points at `src/styles/app.css`; `audit.md` moved to `docs/history/`; CI gained a template job (strip-demo, new:feature, gates) and the bundle and i18n checks.
+- **Deviations from the plan:**
+  - **`Session.user.isAnonymous`** moves to Task 41, as an optional `isAnonymous?: true` on `Session` (like `twoFactorRequired`), which touches no consumer.
+  - **First page after a cold `pnpm dev`:** 5–12 s on this Windows machine, not the 3 s target. Later pages take 0.3–0.4 s.
+  - **Playwright retries:** it keeps one retry locally (a rare load-time layout shift in 400 checks; a pass on retry is still reported as flaky).
+  - **CI shards:** they still build on their own. They run in parallel, so a shared artifact would save CI minutes, not time, and would add a deploy risk.
+  - **Bundle check:** it doesn't look for `/dev` chunks; a plain build keeps the route files and gates them in `beforeLoad`. Task 35 adds env guards instead.
+  - **`useSortedClasses`:** stays off (a nursery rule that doesn't know Tailwind 4 custom utilities).
+  - **Scripts left as `.mjs`:** `new-feature` and `strip-demo` until their rewrites in Tasks 38 and 35; `install-hooks` because it runs during `pnpm install`.
+- **Left for the owner:**
+  - The Neon database is missing migrations `0008` (audit log) and `0009` (drops the Part 1 image table): run `pnpm db:migrate` with `.env` pointing at it.
+  - pnpm 10.33 prints "Ignored build scripts: core-js, lefthook" on every install, whatever the config says; it is harmless.
+
+### Task 35: Route restructure (portfolio at `/`, demo at `/dev`)
+
+**Goal:** the URL layout of the finished product, with today's pages. The old "Dhaka" portfolio moves to `/` (Task 40 replaces its design), the demo site moves under `/dev` (dev builds only), and the root layout stops rendering a header for everyone.
+
+**Today:**
+- **The root renders `SiteHeader` for every page** (`src/routes/__root.tsx`). A section opts out with `staticData: { chrome: "bare" }` (`src/lib/chrome.ts`, decision 0105); only `/portfolio` does.
+- **The root `beforeLoad` resolves the session for every page** (`context.queryClient.query(sessionQueryOptions())`). It is memoized per request since 0153.
+- **`/dev` is dev-only** through `if (!import.meta.env.DEV) throw notFound()` in `src/routes/_public/dev/route.tsx`. The other dev checks are:
+  - `src/middleware/dev.ts` (`devOnlyMiddleware`);
+  - `src/functions/dev.ts:14` (its own inline check; it should use the middleware);
+  - `src/functions/stack.ts:15`;
+  - `src/routes/_public/dev/forms.tsx:15` (`component: import.meta.env.DEV ? FormsShowcase : () => null`).
+
+  Leave `src/lib/fonts.ts` and `src/features/portfolio/lib/fonts.ts` alone: they skip preloads in dev, which is unrelated.
+- **The e2e review skips `/dev`.** `e2e/support/pages.ts` has `isDevOnlyRoute`, and `NOT_REVIEWED["/dev"]` says "dev-only". The harness (`e2e/harness/server.ts`) strips every inherited `VITE_*` variable (the `APP_ENV` regex) and sets `publicEnv` itself.
+- **34 files mention `"/portfolio`**: the portfolio feature, routes, tests, the sitemap and strip-demo.
+- **Today's routes** (`find src/routes -type f`):
+  - `_public`: `index.tsx`, `stack.tsx`, `test-crud/{route,index,$slug}.tsx`, `health.tsx`, `verify-email.tsx`, `reset-password.tsx`, `dev/route.tsx`, `dev/forms.tsx`, and `dev/examples/**` (20 pages plus `masking/$id`).
+  - `portfolio/`: `route.tsx`, `index.tsx`, `about.tsx`, `contact.tsx`, `work/{index,$slug}.tsx`, `journal/{index,$slug}.tsx`.
+
+**Route map (old file → new file; URL in brackets):**
+
+| Old | New |
+| --- | --- |
+| `routes/portfolio/route.tsx` | `routes/_site.tsx` (pathless layout; drop `chrome: "bare"`, keep `PortfolioShell` and its `notFoundComponent`, add `staticData.session: "skip"`) |
+| `routes/portfolio/index.tsx` [/portfolio] | `routes/_site/index.tsx` [/] |
+| `portfolio/about.tsx`, `contact.tsx` | `_site/about.tsx` [/about], `_site/contact.tsx` [/contact] |
+| `portfolio/work/index.tsx`, `$slug.tsx` | `_site/work/…` [/work, /work/$slug] |
+| `portfolio/journal/index.tsx`, `$slug.tsx` | `_site/journal/…` [/journal, /journal/$slug] |
+| `_public/index.tsx` [/] | `routes/dev/index.tsx` [/dev] (the old demo home) |
+| `_public/stack.tsx` | `routes/dev/stack.tsx` [/dev/stack] |
+| `_public/test-crud/{route,index,$slug}.tsx` | `routes/dev/test-crud/…` [/dev/test-crud, /dev/test-crud/$slug] |
+| `_public/dev/route.tsx` | `routes/dev/route.tsx`: the `DEV_ROUTES` gate, `NOINDEX`, and the demo header and footer (what `_public.tsx` gave these pages) |
+| `_public/dev/forms.tsx`, `_public/dev/examples/**` | `routes/dev/forms.tsx`, `routes/dev/examples/**` |
+| `_public.tsx` | stays, for `health`, `verify-email` and `reset-password` (0046: these must not sit under `_auth`, which redirects signed-in users, and `autoSignInAfterVerification` arrives signed in). It gets the app header (below). `--public` scaffolds go here later. |
+
+Route ids change (`/_public/` → `/dev/`, `/portfolio/` → `/_site/`, `/_public/dev/examples/x` → `/dev/examples/x`): every test that builds a router and looks up ids must follow.
+
+**Steps:**
+1. **Move the files** with `git mv` (keep history), then fix each file's `createFileRoute("…")` id and the links. `pnpm dev` or a build regenerates `src/routeTree.gen.ts` (committed; 0009).
+2. **Headers per section** (Task 36 replaces most of them with shells):
+   - `SiteHeader` (`components/layout/site-header.tsx`) takes a `links` prop and loses its `useMatches(isBareChrome)`.
+   - `dev/route.tsx` renders it with the demo links (`/dev`, `/dev/stack`, `/dev/test-crud`, `/dev/examples`) plus `SiteFooter`.
+   - `_public`, `_auth`, `_authed` and `_admin` render it with no section links: brand → `/`, Admin when permitted, account or sign-in, language, theme.
+   - The root renders no header.
+   - Delete `src/lib/chrome.ts` and its `StaticDataRouteOption` declaration.
+3. **Session opt-out:** declare `session?: "skip"` on `StaticDataRouteOption` (with the breadcrumb declarations), and in the root `beforeLoad` return `{ session: null }` when any match has it.
+   - Verify the root `beforeLoad` receives `matches` in this router version (router-core `ContextOptions`); if not, use `location` and a path check.
+   - `ImpersonationBanner` and `ObservabilitySync` (root-mounted, `useQuery(sessionQueryOptions())`) must pass `enabled: false` when a match skips. Otherwise the browser fetches the session after hydration on every portfolio page, which moves the lookup instead of removing it.
+   - Check navigation from `/` to `/admin` and back: the root `beforeLoad` runs again and must fetch the session for `/admin`.
+4. **`DEV_ROUTES`:** `src/lib/dev-routes.ts` exports `DEV_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DEV_ROUTES === "true"`. Read `import.meta.env` directly so Vite inlines it and a plain build folds it to `false`; `clientEnv` wouldn't fold.
+   - Use it at every dev check listed above. `functions/dev.ts` uses `devOnlyMiddleware` instead of its inline check.
+   - Add `VITE_DEV_ROUTES: z.enum(["true","false"]).optional()` to `clientEnvSchema`, with a comment in `.env.example` ("for the e2e harness only; never in production").
+   - `vite.config.ts` `validateEnv` throws when it is `"true"` and `process.env.VERCEL_ENV === "production"`; `src/server/plugins/validate-env.ts` throws at boot in the same case.
+   - The e2e harness sets `VITE_DEV_ROUTES: "true"` in `publicEnv`.
+5. **Public Test CRUD becomes a dev reference:**
+   - `dev/test-crud/*` heads use `privateHead()`, not `listSeo()`/`seo()`.
+   - `src/functions/test-crud-public.ts` gets `devOnlyMiddleware`; update its entry in `tests/server/guarded-functions.test.ts` (`UNGUARDED_FILES`, with the reason).
+   - Links: `features/test-crud/components/{public-card,quick-view,masked-links}.tsx` and the admin list's "view" links go to `/dev/test-crud/…`.
+6. **Sitemap** (`src/server/seo/sitemap.ts`, test `tests/server/sitemap.test.ts`):
+   - Only the portfolio: `/`, `/work`, `/work/<slug>`, `/about`, `/journal`, `/journal/<slug>`, `/contact`.
+   - Remove `/stack` and the `/test-crud` entries and their published-items query; keep the hreflang alternates. `robots.txt` needs no change (`/dev` is a 404 in production).
+7. **SEO and structured data:**
+   - Fix every path in `seo()` calls and `features/portfolio/lib/structured-data.ts` (the `Person` `@id` becomes `${SITE}/#person`).
+   - The old home's WebSite and Organization JSON-LD goes away with it (now private). Add `websiteJsonLd` to the portfolio home if useful.
+   - The error and 404 "home" links keep going to `/`.
+8. **Every `"/portfolio` mention** (`grep -rln '"/portfolio' src tests e2e .storybook`): the portfolio nav items (`features/portfolio/components/chrome/nav-items.ts`), components, routes, stories, tests.
+9. **Tests to update:**
+   - `tests/unit/route-seo.test.ts`: `INDEXABLE` becomes the portfolio pages with their new ids and paths. Remove the home, `/stack` and `/test-crud` entries; dev pages are private through the layout.
+   - `tests/unit/seo.test.ts`, `tests/unit/breadcrumbs.test.ts`, `tests/unit/dev-examples.test.ts` (route ids), `tests/server/sitemap.test.ts`, `tests/server/csp-report.test.ts` (paths), `tests/unit/portfolio-*.test.ts`, `tests/components/portfolio/portfolio-ui.test.tsx`.
+   - Replace `tests/components/layout/site-chrome.test.tsx` with a test that the root renders no header, each layout renders its own, and `_site` skips the session.
+10. **e2e:**
+    - `e2e/support/pages.ts`: remove `isDevOnlyRoute` and `NOT_REVIEWED["/dev"]`. Add every `/dev` page: `/dev`, `/dev/stack`, `/dev/test-crud`, `/dev/test-crud/$slug`, `/dev/forms`, `/dev/examples` and each example, including `masking/$id`.
+    - Add a `params: { from: "seeded-slug" }` source using `SEEDED_ITEM_SLUG` (the sitemap no longer lists Test CRUD), and teach `e2e/review.spec.ts` to resolve it.
+    - Portfolio routes move to `/`, `/work`, etc.; `/work/$slug` and `/journal/$slug` still come from the sitemap.
+    - Flows: `e2e/flows/no-js.spec.ts` and any flow using `/test-crud` → `/dev/test-crud`.
+    - This adds about 25 pages × 12 combinations. Raise CI shards from 3 to 5 (`.github/workflows/ci.yml`, `--shard=${{ matrix.shard }}/5`) to keep wall time near 6 minutes.
+11. **strip-demo rewritten as `scripts/strip-demo.ts`**, with layers:
+    - **Layers:**
+      - `core` is never removed: auth, admin, RBAC, audit, attachments, i18n, SEO, Test CRUD and all of `/dev`. `/dev/stack` and the Intl showcase now stay, as dev-only references.
+      - `portfolio` is `routes/_site.tsx` and `_site/`, `features/portfolio`, `styles/portfolio.css`, the portfolio tests and `docs/guides/portfolio.md`. Tasks 39–40 append their paths: `server/portfolio`, `functions/portfolio*`, `server/db/schema/portfolio.ts`, the admin portfolio routes, the seed script, `himal.css`.
+      - `apps` (Task 41 fills it).
+    - **Markers:** `portfolio:start`/`portfolio:end` and `// @portfolio`, and `apps:start`/`apps:end` and `// @apps` (also `<!-- @portfolio -->` in Markdown). Convert today's `demo:*`/`@demo` markers: the ones around portfolio code become `portfolio`; the ones around `/stack` and the Intl showcase are removed (kept as core).
+    - **Flags:** `--keep-portfolio`, `--keep-apps`, `--no-build`. Paths per layer are data at the top of the script, so later tasks append to it.
+    - **When the portfolio layer goes:** write a neutral landing `src/routes/_public/index.tsx` from `scripts/templates/landing/index.tsx.tpl`, and add its messages (`landing_*`, en and ne, held in the script) to the message files at that moment, because unused keys fail the message-usage test while the portfolio exists.
+    - **Schema:** remove the layer's schema files and their lines in `src/server/db/schema/index.ts` (marked), then run `drizzle-kit generate --name strip_<layers>` so the drop is a migration. CI's "migrations match the schema" check would fail otherwise.
+    - **Files that can't hold markers:** `package.json` scripts (e.g. `db:seed-portfolio`), `vercel.json` crons and `knip.json` entries are edited in code. Unused dependencies are found with `knip --fix --fix-type dependencies` (it edits `package.json`), then `pnpm install`.
+    - **As before:** drop messages nothing uses (the message-usage test's rule), format what changed, compile messages, optionally build, then delete itself.
+    - **Marker test:** `tests/unit/strip-markers.test.ts` checks every tracked text file for balanced markers per layer.
+    - **CI:** the `template` job becomes a matrix of (all layers stripped), (`--keep-apps`), (`--keep-portfolio`), each followed by `new:feature`, typecheck, check, knip and test.
+12. **Docs:**
+    - CLAUDE.md: the "Dev-only pages" pitfall now points at `src/routes/dev/`; update the layout block and the pitfalls (one header per layout, `staticData.session`).
+    - Guides: `routing-data.md` (the route list), `portfolio.md` (paths), `seo.md` (sitemap), `testing.md` (dev pages are reviewed), `new-project.md` (strip-demo layers), `architecture.md`.
+    - Decisions: supersede 0105 (chrome opt-out → a header per layout) and 0061/0103 (an env flag for dev routes, with its guards); restate 0046; update 0101 (sitemap contents) and 0142 (strip-demo).
+
+**Pitfalls:**
+- **Root not-found pages** (`/no-such-page`) now render without a header. Make sure `NotFoundPage` still has a `<main>` skip target and a link home.
+- **One skip link per page:** the root `SkipLink` plus `PortfolioShell`'s own link would make two on `/`. Keep one; the browser review checks `<main>`.
+- **`useRouteContext().session` readers** (`verify-email.tsx`, `account.tsx`, `account_.delete.tsx`) still get it: only `_site` skips.
+- **`_admin`'s `cause === "stay"` reuse** of the session must still work.
+- **Route options stay inline** (0151); don't wrap them in helpers.
+
+**Acceptance:** `/` (en) and `/ne` show the old portfolio. `/dev/*` works under `pnpm dev` and `pnpm dev:local`, and is a 404 in a plain `pnpm build && pnpm start`. The e2e suite reviews every `/dev` page in a build with `VITE_DEV_ROUTES=true`. The CI template matrix passes locally: run it in a scratch worktree (`git worktree add C:\tw HEAD`; short path, 0029). All gates are green.
+
+### Task 36: "Graphite" design system and shells
+
+**Goal:** the product's look. A Linear-style system for everything except the portfolio: the admin shell, the auth pages, the account page, the `/dev` header and, later, the apps.
+
+**Today:**
+- **Tokens:** see 10.4 (stock zinc, no status tokens).
+- **Preferences:** `src/lib/stores/preferences.ts` holds `THEMES`, `PREFERENCE_COOKIES`, `PAGE_SIZES`, `Preferences`, `DEFAULT_PREFERENCES`, `parsePreferences`, `writePreferenceCookie` and `createPreferencesStore` (theme, sidebar, analytics consent, table prefs). It is read on the server by `src/lib/start/read-preferences.ts`.
+- **Theme in the document:** `themeHtmlProps`, `SystemThemeScript` and `ThemeSync` (`components/layout/theme.tsx`). `THEME_COLORS` is in `src/routes/__root.tsx`.
+- **Admin:**
+  - The admin layout is `components/layout/admin-sidebar.tsx`: `AdminLayout` plus a sidebar collapse cookie.
+  - The sections are `ADMIN_SECTIONS` in `src/features/admin/sections.ts`: `{ to, label, description, icon, permission, exact? }`, with a `@new-feature:admin-sections` marker.
+  - The dashboard (`routes/_admin/admin/index.tsx`) is one card per permitted section.
+  - The command palette exists only as `/dev/examples/command-palette` (`components/ui/command.tsx`, cmdk).
+- **CSP:** `style-src` allows `'unsafe-inline'` (`src/lib/http/csp.ts:59`), so libraries that set style attributes work.
+
+**Steps:**
+1. **Design the palette first** with the `frontend-design` and `ui-ux-pro-max` skills:
+   - Graphite neutrals in oklch for light and dark: a near-black but not pure background in dark mode, and layered surfaces (`--background`, `--surface-1`, `--surface-2`) for sidebar, cards and popovers.
+   - Hairline borders, a subtle shadow scale and a crisp focus ring.
+   - Write the tokens in `src/styles/app.css` (`:root` and `.dark`), mapped in `@theme inline`. Inter and Noto Sans Devanagari stay, so their fallbacks stay valid; add `font-feature-settings: "cv11", "ss01"`, tabular numerals for tables and figures, and a type scale (`--text-display`, `--text-title`, `--text-heading`, `--text-body`, `--text-caption` with line heights).
+2. **Presets:**
+   - **Accent:** `html[data-accent="indigo|violet|emerald|amber|rose"]` (indigo default) sets `--primary`, `--primary-foreground`, `--ring`, `--sidebar-primary`, `--accent-subtle` and `--chart-1…5`, in both themes.
+   - **Radius:** `html[data-radius="sharp|default|round"]`, about 4, 8 and 14 px.
+   - **Density:** `html[data-density="compact|comfortable"]` sets `--control-height` and `--row-padding`, used by Button, Input and table rows.
+   - **Status tokens:** `success`, `warning`, `info` and `danger` (danger maps onto `destructive`), each with `-foreground` and `-subtle`, used by a `StatusBadge` and alerts.
+3. **Preferences:**
+   - Add `accent`, `radius` and `density` to `Preferences`, its cookies, `parsePreferences` and the store actions.
+   - Render them as `<html>` attributes on the server (extend `themeHtmlProps` or add `preferenceHtmlProps`), so nothing flashes.
+   - Update `THEME_COLORS` to the new backgrounds.
+   - Tests: the preferences parsing tests and `tests/components/layout/preferences-ui.test.tsx`.
+4. **Contrast test** (`tests/unit/design-tokens.test.ts`): parse the custom properties per selector from `app.css`, convert oklch to sRGB, and assert WCAG ≥ 4.5:1 for every text pair in every accent × theme (foreground on background and surfaces, muted foreground, primary foreground on primary, status foreground on status and on subtle, sidebar pairs). The e2e review only sees the default preset.
+5. **shadcn primitives** this task needs: sidebar, sheet, tooltip, avatar, breadcrumb, kbd, skeleton, separator (exists).
+   - Use `pnpm dlx shadcn@latest add <name>` (`components.json` is fixed). Never let it overwrite an existing `ui/` file; review the diff.
+   - The sidebar's open state uses the existing `sidebar` preference cookie (SSR), not shadcn's own cookie.
+6. **Admin shell** (`src/components/admin-shell/`: `admin-shell.tsx`, `app-sidebar.tsx`, `topbar.tsx`, `user-menu.tsx`, `command-menu.tsx`):
+   - **Sidebar:** shadcn Sidebar with icon-collapse on desktop and a Sheet on phones. Sections are grouped: `ADMIN_SECTIONS` gains `group: "overview" | "portfolio" | "apps" | "access" | "system"` and `keywords` (keep the marker). Labels show in tooltips when collapsed. Its footer holds the user.
+   - **Topbar:** breadcrumbs (taken out of `PageHeader`, which keeps the title, description and actions), a ⌘K button with a `Kbd` hint, the language switcher, the theme toggle, and a user menu (avatar initials, account, appearance, sign out).
+   - **Command palette** (supersedes 0140): opened with Ctrl/⌘ K. It lists the permitted sections (`useCan`), actions registered by features (`features/<name>/commands.ts`, e.g. "New Test CRUD item"), theme and language, and sign out. Recent pages are kept in `localStorage` as a convenience (wrapped in try/catch).
+   - `_admin.tsx` renders `AdminShell` (no `SiteHeader`). Delete `components/layout/admin-sidebar.tsx`.
+7. **Dashboard:**
+   - A `getDashboard` server function (`src/functions/admin.ts`, `requireAdminAccessMiddleware`, declared in the guard test) returns, for the sections the actor may read: Test CRUD totals by status, users (total, banned; later without guests), role count, and the last 10 audit events (with `audit:read`).
+   - `components/data-display/stat-card.tsx` (value, label, delta, icon) is built here; Task 37 extends the kit. Add quick actions.
+8. **Auth shell:**
+   - `_auth` and `_public` render a split screen: the form on the left; on the right a brand panel with deterministic contour art (`src/components/brand/contour-art.tsx`, seeded, server-rendered SVG, `aria-hidden`), which Task 40 can reuse. One column on phones.
+   - `_authed` (account) renders a compact app header (`src/components/app-header/`: brand, admin link when permitted, user menu), also used by `_apps` later.
+   - `dev/route.tsx` keeps `SiteHeader` with its links.
+9. **Appearance page:** `/admin/settings/appearance` (route, `privateHead`, e2e entry, messages) with live previews of accent, radius, density and theme.
+10. **Stories** (both Storybook projects): shell, sidebar collapsed and expanded, topbar, command menu, stat cards, dashboard, auth shell, appearance.
+11. **Messages and docs:**
+    - Messages in en, then `pnpm i18n:translate` and review the Nepali.
+    - New guide `docs/guides/design-system.md` (tokens, presets, shells, how to theme a new project; `new-project.md` step "Theme" points to it).
+    - Decisions: Graphite tokens and presets; the command palette as core (supersedes 0140); the dashboard's server function.
+12. **Screenshots for sign-off** (see 10.2).
+
+**Acceptance:** every admin, auth, account and `/dev` page renders in its shell in all 12 review combinations; changing a preset applies immediately and survives a reload with no flash; the contrast test passes; the entry chunk doesn't grow (the shell is in route chunks); all gates are green.
+
+### Task 37: Admin component kit
+
+**Goal:** everything an admin page needs, as shared, storied, accessible components, so features only supply data, columns, fields and actions.
+
+**Steps:**
+1. **Remaining shadcn primitives**, restyled to Graphite: tabs, scroll-area, hover-card, accordion, collapsible, toggle, toggle-group, chart, progress, alert, spinner, button-group, context-menu.
+2. **`components/page/`:** `PageHeader` v2 (title, description, actions, a tabs slot), `DetailLayout` (main plus aside), `SettingsLayout` (side navigation), `PageTabs` (route-based tabs from `linkOptions`), `StickyFormBar` (save and cancel on long forms), `FormSection` and `FormCard`.
+3. **`components/data-display/`:** `StatCard` (from Task 36, plus a sparkline), `DescriptionList`, `StatusBadge` (a per-feature map from status to tone), `UserCell` and `Avatar`, `RelativeTime` (Intl, both locales, hydration-safe), `CopyButton`, `Timeline`/`ActivityFeed` (audit events), and `EmptyState` v2 (icon, title, text, a primary and a secondary action, "nothing yet" vs "no matches").
+4. **`components/charts/`:**
+   - shadcn `chart.tsx` on Recharts 3 (check the shadcn docs' v3 notes: `var(--chart-1)`, not `hsl(...)`).
+   - `AreaChart`, `BarChart`, `DonutChart` and `Sparkline` wrappers, loaded with `React.lazy`.
+   - `ChartContainer` has a fixed aspect ratio and renders a same-size skeleton on the server, so there is no layout shift.
+5. **`components/dialogs/`:** `ConfirmProvider` plus `useConfirm()` (a promise API, mounted once in the shells), replacing every per-page confirm state. `FormDialog` and `FormSheet` wrap `AppForm` with submit and cancel, `StaleVersionAlert`, `UnsavedChangesGuard` and the server-error helpers.
+6. **`components/data-table/` v2 on TanStack Table** (`@tanstack/react-table`, in manual sorting and pagination mode):
+   - Keep the public API (`DataTableColumn<Row>`, `DataTableProps`, `BulkSelection` in `data-table.tsx`) or migrate its callers (Test CRUD, users, audit, `/dev/examples/data-table`, the scaffolder templates) in this task.
+   - Keep the no-JS sort links (`SearchLink`) and the URL contract.
+   - Add column visibility (merge `DataTableColumnsMenu`), selection across the page with a bulk bar, `RowActions` (items with `permission`, hidden unless `can()`), a sticky header, density from preferences, and a pinned first column on narrow screens.
+   - CSV export (`src/lib/csv.ts`) and saved views (`localStorage`) move from `/dev/examples/list-extras` into the toolbar. Column resizing and row expansion become a recipe.
+7. **`components/forms/fields/`:**
+   - **`AsyncComboboxField`:** server search, debounced, built on Command.
+   - **`RelationField`:** picks records of another feature.
+   - **`SortableListField`:** dnd-kit, with the keyboard sensor and localized screen-reader announcements. Decide between `@dnd-kit/react` (new) and `@dnd-kit/core` + `@dnd-kit/sortable`, check React 19 support, and record it.
+   - **`ImageGalleryField`:** attachments, sortable, alt text; it extends `features/attachments/components/attachments-field.tsx`.
+   - **`LocalizedField` and `LocalizedRichTextField`:** value `{ en, ne }`, en/ne tabs, a "Nepali missing" badge; use `withFieldGroup`.
+   - **`BlocksField`:** a typed discriminated union, add, remove and reorder, and a subform per block type through a render prop.
+   - **`SlugField`:** generated from a title through a linked field (`onChangeListenTo`), editable, with an async uniqueness validator (a passed server function, debounced).
+   - **`KeyValueField`.**
+8. **`src/hooks/`:** `useHotkeys` (with `Kbd` hints), `useDebouncedValue`, `useMediaQuery`.
+9. **Bundle:** the users and roles routes add about 90–104 kB today (10.4). Find what pulls the form fields into the page chunk (dialogs imported at module level) and lazy-load dialogs that open on click.
+10. **Wiring and docs:**
+    - Rebuild `/dev/examples` on the kit; delete superseded internals.
+    - Stories for every component (both projects, a11y passes) and jsdom tests for the interactive ones (sortable via keyboard, async combobox, confirm).
+    - The `design-system.md` guide gets a "Components" section.
+
+**Acceptance:** every kit component has a story passing in both Storybook projects and is used somewhere (knip clean); `/dev/examples` uses only kit components; the entry chunk doesn't grow; all gates are green.
+
+### Task 38: The CRUD standard
+
+**Goal:** one way to build a feature, documented once, used by every admin section and emitted by the scaffolder. Read "Admin sections today" in 10.4 first: it lists every inconsistency this task removes.
+
+**The shape** (`docs/guides/crud.md` becomes the only "add a feature" text; CLAUDE.md, the README, `conventions.md` and `new-project.md` link to it):
+
+```
+src/features/<name>/             search.ts (URL contract), schema.ts (inputs, DTOs), keys.ts, queries.ts (queryOptions + mutationOptions),
+                                 columns.tsx, filters.tsx, labels.ts, commands.ts, components/ (list, form, detail, <name>-pending.tsx)
+src/functions/<name>.ts          createServerFn({ method }).middleware([requirePermission("<name>:<action>"), withServices]).validator(zodInput(schema)).handler(→ service)
+src/server/<name>/               repository.ts (Drizzle over an injected Db) + service.ts (rules, audit, versions)
+src/routes/_admin/admin/<name>/  route.tsx, index.tsx, new.tsx, $id.tsx: literal createFileRoute objects; helpers only for loader/search/head values
+```
+
+**Steps:**
+1. **Client helpers** (`src/lib/crud/`, unit-tested):
+   - `createCrudKeys(name)`: `{ all, lists(), list(input), details(), detail(id) }`.
+   - `listSearch({ schema, defaults })`: `validateSearch` plus `search.middlewares` (`stripSearchParams`).
+   - `listLoader({ tableId, query })`: `tableListInput` plus `loadList`.
+   - `loadDetailOr404(queryClient, options)`: `ensureQuery`; `NOT_FOUND` → `notFound()` plus `setErrorStatus`.
+   - **`useCrudMutation(mutationOptions, { optimistic?, invalidate })`:** cancel the in-flight list queries; snapshot and patch every cached list page (`queryClient.getQueriesData({ queryKey: keys.lists() })`); roll back on error; invalidate `keys.all`; show the shared `common_toast_failed` toast; turn a stale `CONFLICT` into the reload prompt.
+   - `useCrudForm({ schema, item, save, onSaved })`: default values, server field errors, stale handling and reload, the unsaved guard, success toasts.
+   - **`<CrudListPage>`:** header, `FilterBar`, `ActiveFilters`, DataTable v2, `Pagination`, `EmptyState` (filtered or empty), and confirm.
+   - `defineFilters({ keys, chips })`.
+2. **Server helpers** (`src/server/db/crud.ts`, tested on PGlite), one rule each:
+   - `listPage(db, table, { where, order, input, map })`.
+   - `findOrThrow` / `notFound(what)`.
+   - `updateVersioned`: the version is checked in the `UPDATE … WHERE`; zero rows → `staleError()`; no separate lock.
+   - `uniqueViolation(error, constraint)` → a field error: insert, then map, instead of check-then-insert.
+   - `uniqueSlug`.
+   - `withAudit(db, actor, fn)`: the transaction plus the audit row, for admin and content changes (supersedes 0132's scope: create and update are audited too).
+   - **`withServices` function middleware:** `context.db`, `context.actor`, `context.imageStore`. Import the server modules inside `.server()` (dynamic import), never at the top of the file.
+3. **Shared schema pieces** (`src/lib/validation.ts` or `src/lib/crud/schema.ts`):
+   - `idSchema`; `slugSchema` and `slugify` (moved from test-crud; replaces the portfolio and rbac copies); a `listSchema({ sorts, filters, defaults })` factory.
+   - `z.codec` for DTO dates (ISO string ↔ Date) in place of hand-written `toISOString`.
+   - `z.strictObject` for server-function inputs only, never for `validateSearch`: unknown search params such as utm tags must still pass.
+4. **TanStack Form:** `formOptions` per feature, `withForm` for split form sections, `withFieldGroup` for reusable groups (localized text, links, metrics), async validators (slug, email), and linked fields.
+5. **Router:** feature components use `getRouteApi("<id>")` instead of importing route files; nav items use `linkOptions`; turn `defaultStructuralSharing` on in `src/router.tsx`.
+6. **RBAC:**
+   - One isomorphic `Actor` type in `src/features/rbac/types.ts` (delete the four copies).
+   - `useCan` and `<Can>` are the only UI checks.
+   - Server functions are named `listX`, `getX`, `createX`, `updateX`, `deleteX`, `setXStatus`, with explicit return types.
+   - The permission matrix groups resources by `ADMIN_SECTIONS` group.
+7. **Migrate in this order, running the gates after each:**
+   1. **Test CRUD:** keep its public pages under `/dev`. Admin edits move off the TanStack DB collection: delete `features/test-crud/collection.ts` and its LRU; keep TanStack DB for `/dev/examples/optimistic` and the apps.
+   2. Users, roles, the permission matrix and audit, with thin routes (UI in `features/<name>/components`). Delete the duplicates listed in 10.4.
+   3. The functions call services only.
+8. **Mutation-style decision** (a new decision superseding 0064/0068): admin CRUD uses Query mutations. TanStack DB is for client-first apps (Kanban, Habits, Notes), where live queries and optimistic transactions pay off.
+9. **Scaffolder v2** (`scripts/new-feature.ts`; rewrite `scripts/templates/feature/` to this shape):
+   - Flags: `--public` (public list and detail pages under `_public`, `seo()` and the sitemap) and `--localized` (`{ en, ne }` fields with `LocalizedField`).
+   - It refuses to run on a dirty git tree and, on failure, restores with `git checkout -- . && git clean -fd` on the files it created (supersedes 0141).
+   - It keeps the `@new-feature` markers.
+   - Its own test generates a feature into a temp worktree in CI (the template job already runs it).
+10. **Count lines** before and after (features, functions, server, routes) for Test CRUD and record them in the decision.
+
+**Pitfalls:**
+- `tests/server/guarded-functions.test.ts` checks each definition with a regex: `= createServerFn({ method: "GET"|"POST" }).middleware([requirePermission("…")`. Keep `requirePermission` first in the array, or update the regex to allow `withServices` after it.
+- Start extracts server functions statically: keep `createServerFn(...)` literal in each functions file, with no factory around it.
+- Removing Test CRUD's collection: `useDbClient` is still used by `features/dev/examples` and `.storybook/app-providers.tsx`.
+- `useCrudMutation` must patch every cached page, or another page shows stale rows after a delete.
+
+**Acceptance:**
+- Test CRUD's admin code is about 40% smaller (counted).
+- Every section follows the shape, and the guide matches the code.
+- `pnpm new:feature x --public --localized` passes every gate unchanged (the CI template job).
+- The existing flows (Test CRUD create, edit, publish and delete; conflict; permissions; user management) pass.
+- All gates are green.
+
+### Task 39: The dynamic portfolio (data, admin, media)
+
+**Goal:** the portfolio's content lives in the database and is edited in the admin; the public pages read it on the server. The design stays the old one until Task 40. Read "The portfolio's content model today" in 10.4.
+
+**Steps:**
+1. **Localized content:**
+   - `src/lib/i18n/localized.ts`: the Zod `localized(schema)` and `resolveLocalized`, moved from `features/portfolio/lib/localize.ts`. A missing `ne` falls back to `en`, and the fallback is rendered with `lang="en"` (accessibility).
+   - A Drizzle `localizedText()` jsonb column helper.
+2. **Tables** (`src/server/db/schema/portfolio.ts`, `portfolio_*`, one migration; localized fields are `{ en, ne }` jsonb; blocks are jsonb validated by the Zod block schemas on both sides):
+   - `profile` (one row): every profile field above, plus portrait and résumé attachments and SEO defaults (title, description, OG image).
+   - `projects`:
+     - Fields: slug (unique), title, client, year, disciplines, role, duration, summary, stack, links, metrics, blocks, cover attachment, gallery, art seed and motif, `appSlug` (nullable; behind `@apps` markers), featured, `sortOrder`.
+     - Status and versioning: status (draft or published), `publishedAt`, `createdAt`, `updatedAt` (the version).
+   - `posts`: slug, title, excerpt, body (sanitized rich text per locale), tags, cover, status, `publishedAt`, version.
+   - `experience`, `skills` (was capabilities), `process_steps`, `testimonials` (with `published`): each with `sortOrder`.
+   - `contact_messages`: name, email, message, locale, `readAt`, `archivedAt`, `createdAt`, an IP hash for rate limiting.
+3. **Services and functions:**
+   - Repositories and services per entity, on the Task 38 standard, with PGlite tests.
+   - Permissions `portfolio:read`, `portfolio:write`, `portfolio:publish`, `messages:read`, `messages:manage`, `media:read` and `media:write` in the catalog and labels, a matrix group "Portfolio", and the demo "Editor" role in `scripts/lib/demo-data.ts`.
+4. **Admin** (sidebar group "Portfolio"):
+   - `/admin/portfolio/profile`: a `SettingsLayout` form.
+   - `/admin/portfolio/projects` and `/admin/portfolio/journal`: list, form, publish, drag-to-reorder (`SortableListField` or a sortable table), and draft preview. A `?preview=1` link on the public page shows drafts only to holders of `portfolio:read`; such pages are noindex.
+   - `/admin/portfolio/{experience,skills,process,testimonials}`: sortable lists edited in a `FormSheet`.
+   - `/admin/portfolio/messages`: an inbox with read and archive, and a reply link (`mailto:`).
+5. **Media library** at `/admin/media`:
+   - Browse attachments (a thumbnail grid, filters) and upload.
+   - Edit alt text in en and ne.
+   - Delete only when unused.
+   - `ImageGalleryField` picks from it. Alt text moves to `{ en, ne }`: a migration and the attachments guide.
+6. **Public reads:**
+   - `src/functions/portfolio-public.ts` (deliberately unguarded: declare it in `UNGUARDED_FILES` with the reason) → `src/server/portfolio/` (published rows only).
+   - One combined read per page: `getHome()` returns profile, featured projects, experience, skills, process, testimonials and recent posts in one round trip.
+   - `features/portfolio/queries.ts` calls these functions (never the database from the browser) with `ensureQuery`.
+   - Delete the `PortfolioSource` port and fixture adapter (`source.ts`, `sources/`). Move the fixture data to `scripts/lib/portfolio-data/` for seeding.
+   - No server cache (on Vercel a cache cleared on write reaches one instance only).
+7. **Seeding:** `pnpm db:seed-portfolio` (`scripts/seed-portfolio.ts`, idempotent) writes the fixtures. Call it from the e2e harness seed, `dev:local`/`setup:local` first runs and `db:seed-demo`, so `/` is never empty.
+8. **Sitemap and SEO:** sitemap entries come from the published rows; structured data comes from the database.
+9. **Contact form** (`/contact`):
+   - A public server function with `enforceRateLimit` (`src/server/http/rate-limit.ts`), `verifyTurnstile` (`src/server/http/turnstile.ts`) and a honeypot (`features/auth/components/bot-check.tsx` shows the pattern).
+   - It saves to `contact_messages` and emails the profile's address (a new email template in en and ne). `/dev/examples/contact` shows the pattern.
+10. **Tests and strip-demo:**
+    - Tests: PGlite tests per service and permission; e2e flows "create, publish and reorder a project; it appears on `/`" and "a draft is visible only in preview".
+    - Mark all of it for strip-demo's `portfolio` layer.
+
+**Acceptance:** every public section renders from the database; publishing shows on `/` at once; drafts are visible only to previewers; the messages inbox receives the contact form; all gates are green.
+
+### Task 40: "Himal" portfolio redesign (frontend at `/`)
+
+**Goal:** an original, artistic portfolio that is bilingual and accessible, with CLS ≤ 0.01 and Lighthouse mobile performance ≥ 95. Use the `frontend-design` skill. Build only on the Task 39 data.
+
+**Design brief:**
+- **Concept:** the owner's work as an expedition map.
+  - **Hero:** the name over generative contour lines of a ridge; altitude labels; a live "Kathmandu · 27.7° N 85.3° E · 1,400 m" marker with local time.
+  - **Sections:** Basecamp (about and principles), Routes (projects as waypoints along an elevation profile), Ascent log (experience drawn as an elevation chart over time), Toolkit (skills), Field notes (journal), Summit (contact). The case study and article pages use the same language.
+- **"Himal" system** (`src/styles/himal.css`, tokens scoped under `.himal`, utilities prefixed `hm-`):
+  - Light palette: snow paper, granite ink, glacier blue, rhododendron red (the only accent that carries text). Prayer-flag colours (blue, white, red, green, yellow) are sparing markers only.
+  - Dark mode is "night on the ridge".
+  - Every text pair is ≥ 4.5:1; add a contrast test like Task 36's.
+- **Type:**
+  - Display: a serif, e.g. Fraunces (`@fontsource-variable/fraunces`; check axes and file sizes), paired with a Devanagari serif (e.g. Noto Serif Devanagari).
+  - Body: Inter and Noto Sans Devanagari (shared with the app). Code: JetBrains Mono.
+  - Preload only the Latin display face, from `_site`'s `head`. Each preloaded file must be ≤ 150 kB (use the `wght`-only axis file if the full one is bigger); the bundle check enforces it.
+  - Measure a metric-matched fallback per face and width, as decision 0110 did: `size-adjust` and ascent/descent overrides measured in Chrome.
+- **Contour art** (`features/portfolio/components/art/`):
+  - Seeded simplex noise on a grid → marching squares at 8–12 levels → smoothed paths (Catmull-Rom) → SVG, rendered on the server.
+  - Coordinates are rounded, so the server and the browser print identical markup (no hydration mismatch).
+  - `aria-hidden`, colours from tokens.
+  - Contour cover art per project (its seed and motif) when it has no cover image.
+- **Motion** (`motion` package, `motion/react`, loaded on demand; supersedes 0109's CSS-only rule):
+  - Section reveals; depth on project-card hover; the hero's contour layers drift with the cursor and scroll (transforms on 2–3 SVG layers, not a new path per frame).
+  - CSS scroll timelines where enough; view transitions from a card to its case study (`Link viewTransition`).
+  - Everything is off under `prefers-reduced-motion`, paused offscreen, and only transform, opacity and clip-path animate.
+- **Live apps:** a project with `appSlug` shows "Try the live app" → `/apps/<slug>` (behind `@apps` markers until Task 41 exists; hide the button when the app route doesn't exist yet).
+- **SEO:** `seo()` and JSON-LD (Person, ProfilePage, CreativeWork, BlogPosting; one `Person` `@id`), and an OG image per project (the Cloudinary cover or a generated default).
+
+**Steps:**
+1. Build the components (`features/portfolio/components/{chrome,sections,project,journal,art,primitives}`), each presentational and storied, with thin routes.
+2. **Remove the old design:**
+   - `src/styles/portfolio.css` and its import in `app.css`.
+   - The Dhaka primitives (weave, cover-art, screen-art, marquee, …) and `features/portfolio/lib/{weave,seeded-random,cn}.ts` if unused.
+   - The Anek font packages (`pnpm remove @fontsource-variable/anek-latin @fontsource-variable/anek-devanagari`).
+   - The font exemption in `scripts/check-bundle.ts` (the check fails while it is stale).
+   - Unused `portfolio_*` messages.
+3. **Rewrite `docs/guides/portfolio.md`:** design system, content and admin, motion, fonts and fallbacks, pitfalls.
+4. **Measure:**
+   - Lighthouse mobile on a production build (`node e2e/harness/server.ts` serves one with seeded data on port 3100, then `npx lighthouse http://localhost:3100/ --form-factor=mobile --only-categories=performance`).
+   - Record performance, LCP and CLS in the decision.
+5. Screenshots for the owner's sign-off.
+
+**Acceptance:** the browser review is clean on every portfolio page; Lighthouse mobile performance ≥ 95 on `/`; no font over budget; the owner signs off on the screenshots before Task 41.
+
+### Task 41: Apps platform and Kanban
+
+**Goal:** visitors can try real apps without signing up, safely; the first app is Kanban.
+
+**Guest sessions** (Better Auth `anonymous` plugin; read its docs first: `onLinkAccount`, `disableDeleteAnonymousUser`, `generateName`):
+1. **Setup:**
+   - Enable the plugin in `src/server/auth/auth.ts` and its client in `src/lib/auth-client.ts`.
+   - Run `pnpm auth:schema` and check that the diff only adds `user.is_anonymous` (default false). Generate the migration.
+   - Add `isAnonymous?: true` to `Session` (`src/lib/session.ts`) and set it in `getServerSession`.
+2. **Guards, all of them:**
+   - `permissionsForUser` (`src/server/rbac/repository.ts`) returns `[]` for an anonymous user, so the baseline `user` role never reaches a guest and `canEnterAdmin` is false.
+   - `requireUserMiddleware` (`src/middleware/auth.ts`) refuses guests (`UNAUTHORIZED`); a new `requireAppUser` allows them. Account export, session listing, setting a password and 2FA must use the refusing one.
+   - `_authed` sends guests to an "upgrade" page; `_auth` treats a guest as signed out, so a guest can reach `/register` and `/login` to upgrade.
+   - A Better Auth `hooks.before` (`src/server/auth/hooks.ts`, like `refuseOwnerOnlyWhileImpersonating`) refuses guests on `/change-email`, `/change-password`, `/two-factor/*`, `/link-social` and `/delete-user`.
+   - `/delete-anonymous-user` is disabled over HTTP (`src/server/auth/disabled-paths.ts`; extends 0112).
+   - `sendEmail` refuses `*.invalid` addresses (guests get `…@anonymous.placeholder.invalid` style emails).
+   - No PostHog identify for guests (`ObservabilitySync`).
+   - Guests are filtered from `/admin/users` and from dashboard counts.
+   - Guest app data is never audited.
+   - Rate limits: a strict custom Better Auth rule for `/sign-in/anonymous` (e.g. 5 per hour per IP; optionally Turnstile), plus per-user row quotas in each app's service.
+3. **Upgrading keeps the data:**
+   - `onLinkAccount` moves the guest's rows to the new user in one transaction (each app's registry entry provides `claim(tx, fromUserId, toUserId)`).
+   - Because sign-up with email verification sets no session (the move would only run on the verify page, in the same browser) and 2FA sign-in finishes on `/two-factor/verify-totp` (which the plugin's hook doesn't match), also add an idempotent `claimGuestData` server function. It reads an httpOnly, signed `guest_claim` cookie (HMAC with `BETTER_AUTH_SECRET`, 7 days) set when the guest starts. It is called after sign-in (`useAuthNavigation.afterSignIn`), on the verify-email landing and after 2FA, and moves the rows if that guest still exists.
+4. **No public publishing by guests:** a guest's short links don't resolve, forms can't be published and notes can't be shared until they upgrade (phishing on the owner's domain).
+5. **Cleanup:** a daily cron `/api/cron/guests`:
+   - A Nitro route in `vite.config.ts` like `cron-attachments`, an entry in `knip.json` and a cron in `vercel.json` (Hobby plans run crons daily only).
+   - Bearer `CRON_SECRET`.
+   - It deletes guests created more than 7 days ago, their rows by cascade, and their attachments through the attachments service (the plugin's delete skips `deleteUser.beforeDelete`).
+6. Decisions superseding or extending 0112, 0129 (deletion), 0045 (rate limits) and 0132 (no audit for guest data).
+
+**Apps platform:**
+- **Registry and shell:**
+  - `src/features/apps/registry.ts`: `{ slug, name(), description(), icon, projectSlug, claim, seedGuestData }`. It drives the `/apps` gallery, the app switcher, the sitemap and the admin usage page.
+  - `_apps.tsx` layout (the app header from Task 36): the app switcher, a guest banner ("Your data is deleted after 7 days · Create an account to keep it"), the user menu, and a link back to the project's case study.
+- **Each app's shape:**
+  - `features/apps/<app>/`, `server/apps/<app>/` (repositories scoped with an `ownedBy(userId)` helper), `functions/apps/<app>.ts` (`requireAppUser`), `routes/_apps/apps/<app>/…`, `server/db/schema/apps/<app>.ts` (every table has `owner_id text not null references user(id) on delete cascade`).
+  - A landing at `/apps/<app>` explains the app with a "Try it" button (`signIn.anonymous()`) when signed out, and shows the app when signed in.
+  - The landing is indexable; the app's inner pages are private.
+- **TanStack DB decision (do this first):**
+  - Try a `DbProvider` in the `_apps` layout with the SSR hydration `@tanstack/react-router-with-db` does today (read its source).
+  - If Kanban's live queries render on the server and hydrate, remove `routerWithDbClient` from `src/router.tsx` (the 100.6 kB leaves every page; lower the budget line in `scripts/check-bundle.ts`). Otherwise keep it.
+  - Either way, a decision superseding 0066.
+- **Admin:** group "Apps", `/admin/apps`: usage per app (users vs guests, rows) with charts; permission `apps:read`.
+
+**Kanban:**
+- **Tables:** `boards` (name), `columns` (board, name, position), `cards` (column, board, title, description, labels text[], due date, checklist jsonb, position), with timestamps.
+- **Ordering:** positions are fractional-index keys (`src/lib/fractional-index.ts`, `generateKeyBetween`, unit-tested), so a move updates one row.
+- **Board UI:**
+  - dnd-kit with the keyboard sensor and localized announcements; cards move within and between columns, and columns reorder.
+  - TanStack DB live queries with optimistic moves and rollback on failure; the first paint is server-rendered.
+  - Quotas: 20 boards, 500 cards per user.
+- **Guest seed:** a sample board with columns and cards, on the first visit.
+- **Tests:** PGlite tests (ownership isolation: user A can't read or move user B's cards), jsdom tests of keyboard moves, stories, review pages, and an e2e flow: "a guest tries Kanban with the keyboard, registers, verifies and keeps the board".
+
+**Strip-demo:** fill the `apps` layer (paths, markers, the `vercel.json` cron, migrations).
+
+**Acceptance:** a guest can use Kanban, can't reach `/admin`, account changes or emails, and keeps the data on upgrade (email-verification path and 2FA path); the cleanup cron removes old guests and their attachments; all gates are green.
+
+### Task 42: Notes and Links
+
+**Notes** (`/apps/notes`):
+- **Table:** `notes` with title, body (sanitized HTML, `src/server/rich-text`), body text, tags text[], pinned, archived, and `search tsvector` generated from title and body text with the `simple` configuration (it works in PGlite and for Devanagari; Postgres has no Nepali stemmer).
+- **Search:** `websearch_to_tsquery('simple', q)` with a GIN index.
+- **Editor:** Tiptap (the existing `RichTextField`), tags, pin, archive, and image attachments (`entity_type` `note`).
+- **Sharing:** `share_token` (nullable, unique, random, revocable). A public read-only page at `/apps/notes/s/$token` with `noindex` and the `X-Robots-Tag` header; registered users only.
+- **List:** a TanStack DB live list.
+
+**Links** (`/apps/links`):
+- **Tables:** `links` (slug unique, target URL, title, active, expires at) and `link_clicks` (link, at, referrer host, country from `x-vercel-ip-country`, device class from the user agent; **no IP**).
+- **Validation:**
+  - Slug: `[a-z0-9-]{3,32}`, not in a reserved list.
+  - Target: http(s) only, never this site's origin, at most 2,048 characters.
+  - Create is rate-limited (30 per hour).
+- **Redirect:** a server route `src/routes/l/$slug.ts` (`server.handlers.GET`, 302).
+  - Inactive, expired or guest-owned links get the localized 404.
+  - The click is recorded with `waitUntil` from `@vercel/functions`, so the redirect doesn't wait.
+  - Not indexed; listed in `NOT_REVIEWED` with a flow test.
+- **Analytics:** charts of clicks over time, top referrers and countries.
+- **QR codes:** `uqr` `renderSVG`, with SVG and PNG download.
+- **Moderation:** `/admin/links` (permission `links:moderate`; disable or delete; audited).
+
+Both apps get a registry entry, `claim`, `seedGuestData`, quotas, tests, stories, review pages and an e2e flow ("a short link redirects and is counted").
+
+### Task 43: Expenses and Habits
+
+**Expenses** (`/apps/expenses`):
+- **Tables:**
+  - `categories`: name, colour, icon.
+  - `transactions`: `amount_minor` bigint, currency NPR or USD, category, `occurred_on` date, note.
+  - `budgets`: category, month (first day), `amount_minor`.
+- **Charts:** spending by category (donut), monthly trend (bars), budget progress.
+- **Intl:** formatting through `src/lib/i18n/intl.ts`, with Devanagari digits in `ne`.
+- **CSV import:**
+  - A tested RFC 4180 parser in `src/lib/csv.ts`, which today only exports.
+  - A mapping step (which column is date, amount, category), a preview with per-row Zod errors, and a server function inserting up to 1,000 rows with an idempotency key (the `/dev/examples/idempotency` recipe).
+- **CSV export.**
+
+**Habits** (`/apps/habits`):
+- **Tables:**
+  - `habits`: name, colour, a days-of-week bitmask, a daily target, archived.
+  - `checkins`: habit, day (date), count; primary key (habit, day).
+- **Streaks and completion rate** come from `src/features/apps/habits/streaks.ts`, unit-tested around month and year boundaries and in Kathmandu time (dates are calendar days from `src/lib/i18n/date-only.ts`).
+- **Heatmap:** an SVG, GitHub-style, 53 × 7, server-rendered.
+- **Check-ins:** TanStack DB optimistic check-ins.
+- **Stretch goals** (each its own decision, only if time allows):
+  - A Bikram Sambat calendar view. Evaluate `nepali-date-pro-max` and `@remotemerge/nepali-date-converter` (typed, zero dependencies, maintained?) or vendor a tested table.
+  - A daily reminder digest for registered users through the daily cron.
+
+### Task 44: Forms (survey builder)
+
+- **Tables:**
+  - `forms`: slug unique, title, description, fields jsonb, status (draft or published).
+  - `form_responses`: form, data jsonb, submitted at, an IP hash for rate limiting.
+- **Field definitions:**
+  - A Zod discriminated union of short text, long text, email, number, single select, multi select, rating 1–5, date and consent, each with label, help, required and type-specific options.
+  - `toZodSchema(fields)` generates the response schema, used on both client and server; it is unit-tested heavily.
+- **Builder:**
+  - A palette of field types, dragged into the form (dnd-kit, keyboard-accessible).
+  - A settings panel per field, live preview, draft and publish.
+  - Only registered users can publish.
+- **Public form:**
+  - `src/routes/f/$slug.tsx`: server-rendered, rendered from the definition with TanStack Form, noindex.
+  - Its submission is a public server function with a rate limit, Turnstile and a honeypot.
+- **Results:** a chart per field (bars for choices, the average and distribution for ratings), a response table (DataTable v2), and CSV export.
+- **Also:** a registry entry, `claim`, `seedGuestData` (a sample survey with responses), tests, stories, review pages, and an e2e flow ("a published form is filled in and the response appears in the results").
+
+### Task 45: Wrap-up
+
+- **Guides:** `design-system.md` and `crud.md` complete; new `apps.md` (guest sessions, ownership, adding an app); `portfolio.md` matches the code; CLAUDE.md's route map, layout block and pitfalls match the code.
+- **Measure and record** in a decision: the entry bundle and the heaviest routes; `pnpm dev:local` ready time, first page and later pages; Lighthouse mobile on `/`; the durations of `pnpm test`, `test:storybook` and `test:e2e`.
+- **Review:** run `/code-review` (or a full review) over the Part 4 diff (`git diff <Task 33 commit>..HEAD`), fix the findings, and rerun the gates.
+- **Check the promise:** a fresh clone → `pnpm setup:local` → `pnpm dev:local` works; the CI template matrix (strip-demo layers, new:feature, gates) is green.
+- Mark Part 4 done in 10.3 and CLAUDE.md.

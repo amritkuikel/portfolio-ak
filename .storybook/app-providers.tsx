@@ -8,10 +8,10 @@ import {
 } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { sessionQueryOptions } from "../src/features/auth/queries";
-import { createDbClient } from "../src/lib/db";
-import { parseSearch, stringifySearch } from "../src/lib/search";
+import { parseSearch, stringifySearch } from "../src/lib/list/url";
 import type { Session } from "../src/lib/session";
 import { createPreferencesStore, DEFAULT_PREFERENCES, type Preferences } from "../src/lib/stores/preferences";
+import { createDbClient } from "../src/lib/tanstack-db";
 import { deLocalizeUrl, localizeUrl } from "../src/paraglide/runtime";
 import type { RouterContext } from "../src/router";
 

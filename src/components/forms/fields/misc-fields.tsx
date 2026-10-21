@@ -4,7 +4,7 @@ import { type KeyboardEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { useFieldContext } from "../contexts";
 import { type FieldBaseProps, FieldLabelText, FieldMessages, FieldShell, useFieldA11y } from "../field-shell";

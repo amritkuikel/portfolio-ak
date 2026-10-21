@@ -7,9 +7,9 @@ Vitest for logic, server code and components; Storybook for every component in a
 | Command | What runs | Environment |
 | --- | --- | --- |
 | `pnpm test` | `tests/**/*.test.{ts,tsx}` (Vitest project `unit`) | Node; files starting with `// @vitest-environment jsdom` get a DOM |
-| `pnpm test:storybook` | Every story, twice: en/light, then ne/dark. Play functions run, and any a11y violation fails the story. | Headless Chrome (the installed one) |
+| `pnpm test:storybook` | Every story, twice, in one run: en/light and ne/dark. Play functions run, and any a11y violation fails the story. | Headless Chrome (the installed one) |
 | `pnpm test:e2e` | `e2e/`: flows and the browser review (Playwright), against a production server the harness builds and starts | Installed Chrome; in-memory PGlite (CI: Postgres) |
-| `pnpm test:coverage` | The unit project with v8 coverage, then a per-area table (`scripts/coverage-report.mjs`) | `coverage/index.html` |
+| `pnpm test:coverage` | The unit project with v8 coverage, then a per-area table (`scripts/coverage-report.ts`) | `coverage/index.html` |
 
 | Folder | For |
 | --- | --- |
@@ -23,6 +23,9 @@ Vitest for logic, server code and components; Storybook for every component in a
 ## Patterns
 
 - **Database:** `createTestDb()` (`tests/utils/test-db.ts`) is an in-process Postgres (PGlite) with the committed migrations and one admin user. Repositories and services take a `db`, so tests call them directly.
+  - It loads a migrated data directory that the unit project's global setup (`tests/setup/pglite.ts`) builds once per run and caches in `node_modules/.cache/vitest-pglite/`, rebuilt when `drizzle/` changes. Don't create `new PGlite()` and migrate in a test file: that costs initdb plus the migrations again (0159).
+  - `reset()` truncates every table, then adds the admin back. Fixtures a file needs in every test (another user, a role) go in the second argument, `createTestDb("admin-1", (db) => db.insert(…))`, which runs again after each reset.
+- **DOM setup:** `tests/setup/dom.ts` loads Testing Library only in jsdom files, so server tests don't pay for it.
 - **Server functions** run only inside Start. Test the functions they call, and the wiring with static checks: `tests/server/guarded-functions.test.ts` asserts each function's `requirePermission` and that every file in `src/functions` is declared, and `env-boundary.test.ts` asserts no client code imports `src/server`.
 - **Routes:**
   - `createRouter({ routeTree, context: {} as RouterContext })` resolves real route ids (see `route-seo.test.ts`, `dev-examples.test.ts`);

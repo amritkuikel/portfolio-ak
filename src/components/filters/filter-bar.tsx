@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { formSearchPatch } from "@/lib/search";
+import { formSearchPatch } from "@/lib/list/url";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 

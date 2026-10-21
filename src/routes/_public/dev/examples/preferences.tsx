@@ -6,7 +6,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
 import { staticCrumb } from "@/lib/breadcrumbs";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
 import { useSidebar, useTablePreferences, useTheme } from "@/lib/stores/hooks";
 import { PAGE_SIZES, THEMES, type ThemePreference } from "@/lib/stores/preferences";

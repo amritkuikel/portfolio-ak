@@ -1,7 +1,7 @@
 import type { Organization, Product, WebSite } from "schema-dts";
 import { getLocale, localizeHref } from "@/paraglide/runtime";
-import { clientEnv } from "./client-env";
-import { DEFAULT_CURRENCY } from "./intl";
+import { clientEnv } from "./env/client";
+import { DEFAULT_CURRENCY } from "./i18n/intl";
 import { absoluteUrl } from "./seo";
 
 /**

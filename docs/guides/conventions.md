@@ -22,7 +22,8 @@ src/
   features/admin/         Admin sections (sidebar + dashboard, each with its permission)
   features/dev/examples/  The /dev/examples pages' registry, page frame, schema and in-memory data (development only)
   features/<name>/        Everything specific to one feature, shared by client and server:
-    schema.ts             Zod input + URL search schemas, DTO types (built from src/lib/list.ts and src/lib/validation.ts)
+    search.ts             The URL contract: search and path param schemas, list input (src/lib/list/params.ts). Route files import this
+    schema.ts             Zod input schemas and DTO types (src/lib/validation.ts); never imported by route options (0151)
     constants.ts labels.ts  Enum values and their localized labels
     queries.ts            Query keys + queryOptions
     collection.ts         TanStack DB collection (optimistic list edits)
@@ -33,8 +34,13 @@ src/
     db/                   client, schema/, types.ts (Db, Tx), list.ts (SQL list helpers)
     <name>/               repository.ts (Drizzle over an injected Db) and service.ts (logic, I/O)
   middleware/             Start middleware (security headers, CSRF, auth, logging, errors)
-  lib/                    Isomorphic helpers: list contract (list.ts), filter params + URL serialization (search.ts),
-                          loadList/useListQuery, breadcrumbs, seo, intl, date-only, validation, errors, stores, zod
+  hooks/                  React hooks: useListPage, useListQuery
+  lib/                    Isomorphic helpers, grouped by area (0158):
+    list/                 params.ts (URL params), paging.ts (Paged, page maths), url.ts (search serialization)
+    env/ i18n/ http/      client env schema; intl, Nepali digits, calendar days; CSP, cache-control, redirects
+    observability/        Sentry (sentry-client.ts in the browser), PostHog, Web Vitals, log lines
+    start/                Needs the Start runtime: routes and server code only, never components (Biome enforces it)
+    *.ts                  query (loadList, ensureQuery), seo, breadcrumbs, validation, phone, errors, tanstack-db, zod, utils
 ```
 
 **Naming:** files are kebab-case and components PascalCase. Server-only modules live under `src/server/` or are named `*.server.ts`. Stories sit next to their component as `*.stories.tsx`. Tests live in `tests/`:
@@ -161,9 +167,14 @@ The others are linked from their guides: filters and masking ([search-filters-ma
 
 `pnpm new:feature <name>` (decision 0141) writes the admin half of the Test CRUD shape from `scripts/templates/feature/` and adds the entries shared lists need at their `// @new-feature:<slot>` lines. The generated routes are thin (`index.tsx` loads the list and renders `<Name>AdminList` from `features/<name>/components/admin-list.tsx`), like Test CRUD's own (`TestCrudAdminList`, `AccountPage`). Change the templates when a convention changes, so new features follow it. Full checklist: [new-project.md](new-project.md).
 
-## Recipe: grouping `src/lib` by area
+## Import boundaries
 
-`src/lib` is flat (about 30 files). When it grows, group by area with an index per folder, e.g. `src/lib/list/` (`list.ts`, `search.ts`, `use-list-page.ts`, `use-list-query.ts`, `query.ts`'s `loadList`), `src/lib/seo/` (`seo.ts`, `structured-data.ts`, `breadcrumbs.ts`) and `src/lib/env/` (`client-env.ts`, `client-env.schema.ts`, `env.shared.ts`). Move one area per commit, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file. The template stays flat so its docs' paths stay valid (0143).
+Biome fails `pnpm check` on imports that would break at runtime (0158):
+
+- `zod/v4` or `zod/mini` anywhere: import `"zod"`, which resolves to `src/lib/zod.ts` (0086).
+- `@/server/**` or `@/lib/start/**` from `src/components/**`, `src/features/**/components/**` or `src/hooks/**`: components run in the browser and in Storybook. Call a server function, or move the Start-runtime code into a route.
+
+When moving files, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file.
 
 ## Recipe: command palette and view transitions
 

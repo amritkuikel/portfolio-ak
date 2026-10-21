@@ -1,7 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
-import { analyticsHost, analyticsKey } from "@/lib/analytics";
-import { clientEnv } from "@/lib/client-env";
-import { buildCsp, CSP_REPORT_PATH, originOf, reportingEndpoints } from "@/lib/csp";
+import { clientEnv } from "@/lib/env/client";
+import { buildCsp, CSP_REPORT_PATH, originOf, reportingEndpoints } from "@/lib/http/csp";
+import { analyticsHost, analyticsKey } from "@/lib/observability/analytics";
 
 /** Sentry ingest and PostHog hosts, only when those services are configured. */
 const clientConnectOrigins = [

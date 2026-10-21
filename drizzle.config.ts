@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { createEnv } from "@t3-oss/env-core";
 import { defineConfig } from "drizzle-kit";
-import { postgresUrl, throwEnvError } from "./src/lib/env.shared.ts";
+import { postgresUrl, throwEnvError } from "./src/lib/env/shared.ts";
 import { withVerifiedSsl } from "./src/server/db/connection-string.ts";
 
 // drizzle-kit doesn't read .env files. Real environment variables still win.

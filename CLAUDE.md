@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is in progress: Tasks 25–33 are done. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Task 34 is done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Live examples:** `pnpm dev`, then `/dev/examples`: one working page per module, each naming its source file and guide (404 in production).
 
@@ -29,7 +29,6 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [observability.md](docs/guides/observability.md) | Logs, Sentry, PostHog consent, feature flags |
 | [security.md](docs/guides/security.md) | Headers, CSP, CSRF, authorization, sanitizing, secrets |
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
-| [audit.md](docs/guides/audit.md) | The Part 2 module review and what each task changed |
 | [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
 | [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo`, renaming, first admin, `pnpm new:feature` |
 | [portfolio.md](docs/guides/portfolio.md) | The editorial `/portfolio` site: content source, demo data, "Dhaka" design system, motion <!-- @demo --> |
@@ -47,7 +46,10 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 ## Commands
 
 ```bash
-pnpm dev                 # http://localhost:3000
+pnpm setup:local         # fresh clone -> runnable: .env, secret, messages, local database (0156)
+pnpm diagnose            # checks Node, .env, database latency and migrations, ports; prints fixes
+pnpm dev                 # http://localhost:3000, on DATABASE_URL from .env
+pnpm dev:local           # same, on a local PGlite database in .data/pglite (fast; kept between runs, 0155)
 pnpm dev:offline         # same, on in-memory PGlite with every outside service off (0149)
 pnpm typecheck           # compiles messages, then tsc
 pnpm check               # Biome lint + format check (warnings fail). pnpm check:fix to fix
@@ -59,9 +61,12 @@ pnpm test:coverage       # v8 coverage + per-area table
 pnpm build               # production build (.output/); pnpm start runs it
 pnpm build-storybook
 pnpm db:generate | db:migrate | db:check | db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
+pnpm i18n:translate      # machine-translates Nepali for messages that have none (review the diff, 0157)
+pnpm i18n:check          # missing or empty translations, variables, plural forms
+node scripts/check-bundle.ts   # after a build: every page's JavaScript and preloaded fonts against the budget (0151)
 ```
 
-A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `test:e2e`, `build` and `build-storybook` are all green (CI runs them on every PR) with no warnings. `test:e2e` is the browser review: every page on a production build, en/ne × light/dark × 390/768/1280 (axe, overflow, console, CSP, CLS ≤ 0.01), plus the flows.
+A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `test:e2e`, `build`, `build-storybook`, `i18n:check` and the bundle budget are all green (CI runs them on every PR) with no warnings. `test:e2e` is the browser review: every page on a production build, en/ne × light/dark × 390/768/1280 (axe, overflow, console, CSP, CLS ≤ 0.01), plus the flows.
 
 ## Where everything lives
 
@@ -74,12 +79,14 @@ src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL), auth, em
                        <feature>/repository.ts + service.ts, Nitro routes (cron, manifest)
 src/middleware/        security headers + CSP, CSRF, logging, errors, auth/permissions, dev-only
 src/components/        shared UI: page/, data-table/, filters/, navigation/, dialogs/, forms/, layout/, errors/, ui/ (shadcn)
-src/lib/               isomorphic helpers: list + search (URL contract), query (loadList), seo, structured-data,
-                       breadcrumbs, intl, validation, errors, stores, analytics, csp, zod
+src/hooks/             React hooks: useListPage, useListQuery
+src/lib/               isomorphic helpers by area: list/ (URL params, paging, serialization), env/, i18n/, http/,
+                       observability/, start/ (Start runtime: routes and server only); query, seo, validation, errors, zod
 messages/              en.json, ne.json        drizzle/   SQL migrations        public/   icons, og-default.png
-tests/                 unit/, server/, components/, i18n/, email/, utils/ (test-db, fake-cloudinary)
+tests/                 unit/, server/, components/, i18n/, email/, setup/ (env, dom, PGlite snapshot), utils/ (test-db, fake-cloudinary)
 e2e/                   Playwright: review.spec.ts, flows/, harness/ (build + PGlite + fake Resend + server), support/
-docs/                  PLAN.md, decisions.md, guides/
+scripts/               setup-local, diagnose, dev-local, dev-offline, check-bundle, seeds, new-feature, strip-demo (TypeScript run by Node)
+docs/                  PLAN.md, decisions.md, guides/, history/ (past reviews)
 .github/               CI workflow, Dependabot        lefthook.yml   git hooks        knip.json   dead-code config
 ```
 
@@ -87,11 +94,11 @@ docs/                  PLAN.md, decisions.md, guides/
 
 1. **Server-render everything.** The loader awaits `ensureQuery(queryClient, opts)` (`src/lib/query.ts`; Query 5.104 deprecated `ensureQueryData`, 0111) and the component calls `useSuspenseQuery(opts)`. No first-paint fetching in effects. Loaders return only what `head`/`staticData` need.
 2. **Reuse before writing.** Pages are built from `src/components/page`, `data-table`, `filters`, `navigation`, `dialogs` and `forms`. Feature code supplies columns, filters, fields and actions. A pattern used twice becomes shared.
-3. **The URL is the state** for lists (`q`, filters, `sort`, `page`, `pageSize`). These come from the shared list contract: `src/lib/list.ts` + `src/lib/search.ts` on both sides, plus `src/server/db/list.ts` for SQL. Filters go in `<FilterBar>`, which works without JS. List pages call `tableListInput` + `loadList` in the loader and `useListPage` in the component, which also wires `<Pagination>` (0116).
+3. **The URL is the state** for lists (`q`, filters, `sort`, `page`, `pageSize`). These come from the shared list contract: `src/lib/list/` (params, paging, URL serialization) on both sides, plus `src/server/db/list.ts` for SQL. Filters go in `<FilterBar>`, which works without JS. List pages call `tableListInput` + `loadList` in the loader and `useListPage` in the component, which also wires `<Pagination>` (0116).
 4. **The server is the authority.** Every protected server function runs `requirePermission("<resource>:<action>")` (`tests/server/guarded-functions.test.ts` makes every file in `src/functions` declare its guards), validates input with the feature's Zod schema, and calls into `src/server/**`. Routes add `assertRoutePermission` in `beforeLoad`; the UI only hides (`useCan`, `<Can>`) what the server would refuse.
 5. **Server-only code stays server-only:** `src/server/**` and `*.server.ts`, enforced by Start import protection and tests.
 6. **i18n:** every user-visible string is a Paraglide message in `messages/en.json` and `messages/ne.json`. Call `m.key()` at render time, never in module-level constants. Delete keys whose UI is gone (a test checks).
-7. **Import Zod as `"zod"`.** It resolves to `src/lib/zod.ts` (jitless). The CSP forbids eval (decision 0086).
+7. **Import Zod as `"zod"`.** It resolves to `src/lib/zod.ts` (jitless). The CSP forbids eval (decision 0086). Biome refuses `zod/v4`.
 8. **No `any`, no `@ts-ignore`,** and no lint suppression without a reason in the comment.
 9. **Every page is indexable or private:** public content uses `seo()` (lists `listSeo()`) and goes in the sitemap; everything else is `noindex` via its layout or `privateHead()`. `tests/unit/route-seo.test.ts` checks every route (0100).
 10. **Docs move with code:** update the guide for the area, `decisions.md` for non-obvious choices, and this file for new pitfalls, in the same commit.
@@ -115,12 +122,13 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 - **Windows:** keep the checkout path short, about 90 characters at most (0029). In Git Bash, avoid apostrophes inside heredocs and `node -e`, and backslashes inside `node -e` strings; write a script file instead. In edit scripts, pass replacements to `String.replace` as functions: `$`` in a replacement string is a special pattern.
 - **Zod and the CSP:** Zod 4 probes eval when a `z.object` is created. Always import `"zod"` (aliased), never `zod/v4` in app code (0086).
 - **Server functions run only inside the Start runtime.** Keep them as thin wrappers and test the plain functions in `src/server/**` they call.
-- **Start-only helpers stay out of components:** modules using `createIsomorphicFn` or other `@tanstack/react-start` runtime APIs (e.g. `src/lib/http-status.ts`) may be imported by routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story that renders it. Example: `assertRoutePermission` lives in `rbac/route-guard.ts`, not `rbac/can.tsx`.
+- **Start-only helpers stay out of components:** modules using `createIsomorphicFn` or other `@tanstack/react-start` runtime APIs (e.g. `src/lib/start/http-status.ts`) may be imported by routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story that renders it. Example: `assertRoutePermission` lives in `rbac/route-guard.ts`, not `rbac/can.tsx`.
 - **Locale frozen at module scope:** JSX or strings built from `m.*` at module level render in the first request's language on the server.
 - **Forms handled in JavaScript set `method="post"`** (the shared `Form` does): without it a submit before hydration puts the fields, passwords included, in the URL. A test checks every `<form>` (0104).
 - **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
 - **Dev-only pages** live under `src/routes/_public/dev/` (the layout 404s in builds); their server functions use `devOnlyMiddleware`.
+- **Slow `pnpm dev`?** Run `pnpm diagnose`: a remote database costs a few hundred ms per query from far away; `pnpm dev:local` uses a local one (0155).
 - **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
 - **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
 - **Schema changes need a migration:** CI fails when `drizzle-kit generate` would produce one. There is no `db:push` (0118).
@@ -130,6 +138,10 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 - **Routes stay thin:** loader, search, head and a component that renders one from `src/features/<name>/components` (0143).
 - **Every `<main>` is the skip link's target** (0137): use `Page`, or spread `MAIN_CONTENT` (`components/layout/skip-link.tsx`) on a hand-written `<main>`. The browser review fails a page without it.
 - **The React Compiler memoizes client code** (0136): don't add `useMemo`/`useCallback` for speed. Keep `useMemo` where identity matters (creating a TanStack DB collection). It runs in Storybook too, not in SSR.
+- **Route options are in every page's JavaScript** (0151): only `component`, `pendingComponent`, `errorComponent` and `notFoundComponent` are split out, and only when written inline in `createFileRoute("…")({ … })` (not spread or returned by a helper). Route files import a feature's `search.ts` (URL contract), never `schema.ts` (form schemas). `node scripts/check-bundle.ts` after a build shows the cost.
+- **No static Sentry import in browser code** (0152): `start.ts`, function middleware and components run in the browser too, and one static `@sentry/tanstackstart-react` import puts the whole SDK in every page. Use `src/lib/observability/sentry-client.ts`, or import the SDK inside `.server()`.
+- **Server-only imports in middleware go inside `.server()`** (`await import("@/server/…")`). A dynamic import in an exported helper is still in the client graph, and import protection warns in dev.
+- **Moving or renaming files:** `src/lib` is grouped by area and Biome enforces the boundaries (0158). Update `knip.json` entries and path mentions in docs with the move.
 
 ### Per area
 

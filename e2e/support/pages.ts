@@ -22,7 +22,7 @@ export type ReviewedPage = {
 	label?: string;
 };
 
-/** A seeded Test CRUD item (scripts/lib/demo-data.mjs) for admin detail pages. */
+/** A seeded Test CRUD item (scripts/lib/demo-data.ts) for admin detail pages. */
 export const SEEDED_ITEM_SLUG = "momo-masterclass-1";
 
 export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [

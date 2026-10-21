@@ -1,14 +1,11 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { TestCrudAdminList, TestCrudAdminPending } from "@/features/test-crud/components/admin-list";
 import { testCrudListQueryOptions, testCrudTagsQueryOptions } from "@/features/test-crud/queries";
-import {
-	TEST_CRUD_SEARCH_DEFAULTS,
-	TEST_CRUD_TABLE_ID,
-	testCrudAdminRouteSearchSchema,
-} from "@/features/test-crud/schema";
+import { TEST_CRUD_TABLE_ID } from "@/features/test-crud/schema";
+import { TEST_CRUD_SEARCH_DEFAULTS, testCrudAdminRouteSearchSchema } from "@/features/test-crud/search";
+import { tableListInput } from "@/hooks/use-list-page";
 import { ensureQuery, loadList } from "@/lib/query";
 import { pageTitle } from "@/lib/seo";
-import { tableListInput } from "@/lib/use-list-page";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/test-crud/")({

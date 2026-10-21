@@ -1,10 +1,10 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { type AppErrorCode, FORM_ERROR_KEY, isAppError } from "@/lib/errors";
+import { captureException } from "@/lib/observability/sentry-client";
 import { m } from "@/paraglide/messages";
 
 const messages: Record<AppErrorCode, () => string> = {
@@ -49,7 +49,7 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	// Render/loader errors in the browser. AppErrors are expected or already reported
 	// on the server (see sentry.ts); a no-op without a DSN.
 	useEffect(() => {
-		if (!isAppError(error)) Sentry.captureException(error);
+		if (!isAppError(error)) captureException(error);
 	}, [error]);
 
 	const retry = () => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { DISCIPLINE_LABELS } from "../../lib/labels";
 import type { Project } from "../../types";

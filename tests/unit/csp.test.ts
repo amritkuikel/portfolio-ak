@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, CSP_REPORT_GROUP, originOf, reportingEndpoints, STATIC_SECURITY_HEADERS } from "@/lib/csp";
+import { buildCsp, CSP_REPORT_GROUP, originOf, reportingEndpoints, STATIC_SECURITY_HEADERS } from "@/lib/http/csp";
 
 const directives = (policy: string) =>
 	Object.fromEntries(

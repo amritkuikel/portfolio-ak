@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { getRequest } from "@tanstack/react-start/server";
 import { trustedClientIp } from "@/server/auth/client-ip";
-import { currentRequestId } from "@/server/http/request-id";
+import { currentRequestId } from "@/server/http/request-scope";
 import type { AuditActor } from "./record";
 
 /**

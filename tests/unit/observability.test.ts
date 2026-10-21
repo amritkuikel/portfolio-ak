@@ -1,14 +1,14 @@
 import type { ErrorEvent } from "@sentry/tanstackstart-react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/errors";
 import { dropExpectedErrors, sentryOptions } from "@/lib/observability/sentry";
+import { webVitalProperties } from "@/lib/observability/web-vitals";
 import {
 	createPreferencesStore,
 	DEFAULT_PREFERENCES,
 	parseCookieHeader,
 	parsePreferences,
 } from "@/lib/stores/preferences";
-import { webVitalProperties } from "@/lib/web-vitals";
 
 describe("Sentry beforeSend", () => {
 	const event = (user?: ErrorEvent["user"]): ErrorEvent => ({
@@ -30,11 +30,18 @@ describe("Sentry beforeSend", () => {
 		expect(dropExpectedErrors(event(), { originalException: new TypeError("x") })).not.toBeNull();
 	});
 
-	it("sends no default PII and samples traces", () => {
+	it("sends no default PII and, in development, no traces unless asked to", () => {
 		const options = sentryOptions("https://key@o1.ingest.sentry.io/1");
 		expect(options.sendDefaultPii).toBe(false);
-		expect(options.tracesSampleRate).toBeGreaterThan(0);
+		expect(options.tracesSampleRate).toBe(0);
 		expect(options.beforeSend).toBe(dropExpectedErrors);
+	});
+
+	it("traces every development request with VITE_SENTRY_DEV_TRACING=true", async () => {
+		vi.stubEnv("VITE_SENTRY_DEV_TRACING", "true");
+		vi.resetModules();
+		const sentry = await import("@/lib/observability/sentry");
+		expect(sentry.sentryOptions("https://key@o1.ingest.sentry.io/1").tracesSampleRate).toBe(1);
 	});
 });
 
@@ -50,7 +57,7 @@ describe("analytics consent preference", () => {
 
 describe("browser analytics without a key", () => {
 	it("is a no-op: nothing to start, nothing tracked", async () => {
-		const analytics = await import("@/lib/analytics");
+		const analytics = await import("@/lib/observability/analytics");
 		expect(analytics.analyticsKey).toBeUndefined();
 		expect(await analytics.startAnalytics()).toBeNull();
 		expect(() => analytics.track("x")).not.toThrow();

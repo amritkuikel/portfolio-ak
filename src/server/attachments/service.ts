@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 import { IMAGE_FORMATS, IMAGE_MAX_BYTES, type UploadScope } from "@/features/attachments/constants";
 import type { ImageAsset, UploadTicket } from "@/features/attachments/schema";
 import { ruleError } from "@/lib/errors";
-import { formatNumber } from "@/lib/intl";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { AttachmentRow } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";

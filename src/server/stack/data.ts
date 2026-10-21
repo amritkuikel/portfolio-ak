@@ -5,7 +5,7 @@ import { m } from "@/paraglide/messages";
 /**
  * Static reference data for the /stack page. Descriptions are Paraglide
  * messages resolved on the server in the caller's locale (server functions get
- * it from the locale header, see src/lib/i18n/locale-middleware.ts).
+ * it from the locale header, see src/middleware/locale.ts).
  */
 type StackEntry = { id: string; name: string; category: StackCategory; url: string; describe: () => string };
 

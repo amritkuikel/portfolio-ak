@@ -4,7 +4,7 @@ What protects the app, and the rules that keep it that way. Most of it is enforc
 
 ## Headers and CSP
 
-- **Every response** (Nitro `routeRules`, `STATIC_SECURITY_HEADERS` in `src/lib/csp.ts`):
+- **Every response** (Nitro `routeRules`, `STATIC_SECURITY_HEADERS` in `src/lib/http/csp.ts`):
   - `Strict-Transport-Security`;
   - `X-Content-Type-Options: nosniff`;
   - `Referrer-Policy: strict-origin-when-cross-origin`;
@@ -36,7 +36,7 @@ What protects the app, and the rules that keep it that way. Most of it is enforc
 - **Sessions:** signed cookies (`BETTER_AUTH_SECRET`).
 - **Email:** sign-up requires a verified email. An email change sends a notice to the old address.
 - **Rate limits:** stored in the database (they hold across serverless instances) and keyed by a trusted client IP (`src/server/auth/client-ip.ts`). Sign-in is limited to 5 a minute. Behind a proxy other than Vercel, set its trusted header there.
-- **Redirects:** the sign-in `?redirect=` target must be a same-site path (`src/lib/redirect.ts`).
+- **Redirects:** the sign-in `?redirect=` target must be a same-site path (`src/lib/http/redirect.ts`).
 - **Expired sessions:** any server function that answers UNAUTHORIZED in the browser sends the user to `/login?redirect=…` (`src/middleware/session-expiry.ts`, 0113). Client route guards read a session at most a minute old (0111); server functions always check it themselves.
 - **Admin plugin endpoints are off:** `/api/auth/admin/*` answers 404 (`src/server/auth/disabled-paths.ts`, 0112), so nothing skips the RBAC rules in `src/server/rbac/service.ts`.
 - **Audit log:** role, user and publish/delete changes write an `audit_event` row in the same transaction, with the request id and client IP; `/admin/audit` needs `audit:read` (0132, [rbac.md](rbac.md)).

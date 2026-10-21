@@ -1,14 +1,15 @@
 /**
- * Component-test setup (runs for every file; only acts under jsdom).
+ * Component-test setup (runs for every file; only acts under jsdom, and only
+ * loads Testing Library there, so server tests don't pay for it).
  * - jest-dom matchers (toBeInTheDocument, toHaveAttribute, …)
  * - unmount rendered trees between tests
  * - browser APIs that Radix UI, cmdk and input-otp use but jsdom doesn't implement
  */
-import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
 if (typeof window !== "undefined") {
+	await import("@testing-library/jest-dom/vitest");
+	const { cleanup } = await import("@testing-library/react");
 	afterEach(() => cleanup());
 
 	class ResizeObserverStub {

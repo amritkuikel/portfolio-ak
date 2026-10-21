@@ -6,7 +6,7 @@ import {
 	type UploadTicket,
 	uploadScopeSchema,
 } from "@/features/attachments/schema";
-import { zodInput } from "@/lib/fn-input";
+import { zodInput } from "@/functions/_lib/validator";
 import { requirePermission } from "@/middleware/auth";
 import { confirmUpload, discardUpload, signUpload } from "@/server/attachments/service";
 import { imageStore } from "@/server/attachments/store";

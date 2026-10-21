@@ -7,7 +7,7 @@ const limiter = createReportLimiter({ perClient: 10, total: 100 });
 
 /**
  * /api/csp-report: where browsers send Content-Security-Policy violations
- * (the policy's report-to and report-uri, src/lib/csp.ts). Forwarded to Sentry
+ * (the policy's report-to and report-uri, src/lib/http/csp.ts). Forwarded to Sentry
  * and the logs, rate-limited.
  */
 export const Route = createFileRoute("/api/csp-report")({
