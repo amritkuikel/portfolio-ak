@@ -1,8 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
-import type { Crumb } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
-import { Breadcrumbs } from "./breadcrumbs";
 
 const WIDTHS = {
 	/** Admin pages: full width of the content area next to the sidebar. */
@@ -30,16 +28,15 @@ export function Page({
 }
 
 /**
- * Breadcrumbs, the page's <h1>, an optional description and actions (top right on
- * wide screens, below the title on narrow ones), plus optional extra content such
- * as a search form. One per page.
+ * The page's <h1>, an optional description and actions (top right on wide screens,
+ * below the title on narrow ones), plus optional extra content such as a search
+ * form. One per page. Breadcrumbs belong to the section's frame: the admin topbar
+ * shows them; other pages render <Breadcrumbs /> above this header.
  */
 export function PageHeader({
 	title,
 	description,
 	actions,
-	breadcrumbs = true,
-	breadcrumbsJsonLd = false,
 	size = "default",
 	children,
 	className,
@@ -47,10 +44,6 @@ export function PageHeader({
 	title: ReactNode;
 	description?: ReactNode;
 	actions?: ReactNode;
-	/** The route's breadcrumb trail above the title (true), none (false) or an explicit trail. */
-	breadcrumbs?: boolean | Crumb[];
-	/** Also emit the trail as schema.org JSON-LD (indexable public pages). */
-	breadcrumbsJsonLd?: boolean;
 	/** "display" is the large public-page heading. */
 	size?: "default" | "display";
 	children?: ReactNode;
@@ -58,21 +51,19 @@ export function PageHeader({
 }) {
 	return (
 		<header className={cn("flex flex-col gap-4", className)}>
-			{breadcrumbs ? (
-				<Breadcrumbs jsonLd={breadcrumbsJsonLd} items={Array.isArray(breadcrumbs) ? breadcrumbs : undefined} />
-			) : null}
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div className="flex min-w-0 flex-col gap-1.5">
 					<h1
 						className={cn(
-							"font-semibold tracking-tight",
-							size === "display" ? "text-3xl leading-tight sm:text-4xl" : "text-2xl",
+							size === "display" ? "font-semibold text-3xl leading-tight tracking-tight sm:text-4xl" : "text-title",
 						)}
 					>
 						{title}
 					</h1>
 					{description ? (
-						<div className={cn("max-w-2xl text-muted-foreground", size === "default" && "text-sm")}>{description}</div>
+						<div className={cn("max-w-2xl text-muted-foreground", size === "default" && "text-body")}>
+							{description}
+						</div>
 					) : null}
 				</div>
 				{actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

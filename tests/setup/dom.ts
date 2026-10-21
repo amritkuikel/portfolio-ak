@@ -19,6 +19,19 @@ if (typeof window !== "undefined") {
 	}
 	globalThis.ResizeObserver ??= ResizeObserverStub;
 
+	// The sidebar asks whether this is a phone, ThemeSync for the OS theme: a wide, light screen.
+	window.matchMedia ??= (query: string) =>
+		({
+			matches: false,
+			media: query,
+			onchange: null,
+			addEventListener: () => {},
+			removeEventListener: () => {},
+			addListener: () => {},
+			removeListener: () => {},
+			dispatchEvent: () => false,
+		}) satisfies MediaQueryList;
+
 	// The router restores scroll position on navigation; jsdom has no layout to scroll.
 	window.scrollTo = () => {};
 

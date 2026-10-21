@@ -53,7 +53,6 @@ import { Route as DevExamplesAnalyticsRouteImport } from './routes/dev/examples/
 import { Route as DevExamplesAttachmentsRouteImport } from './routes/dev/examples/attachments'
 import { Route as DevExamplesBackgroundJobsRouteImport } from './routes/dev/examples/background-jobs'
 import { Route as DevExamplesCachingRouteImport } from './routes/dev/examples/caching'
-import { Route as DevExamplesCommandPaletteRouteImport } from './routes/dev/examples/command-palette'
 import { Route as DevExamplesContactRouteImport } from './routes/dev/examples/contact'
 import { Route as DevExamplesDataTableRouteImport } from './routes/dev/examples/data-table'
 import { Route as DevExamplesErrorsRouteImport } from './routes/dev/examples/errors'
@@ -74,6 +73,7 @@ import { Route as DevTestCrudSlugRouteImport } from './routes/dev/test-crud/$slu
 import { Route as AdminAdminAuditIndexRouteImport } from './routes/_admin/admin/audit/index'
 import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
 import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
+import { Route as AdminAdminSettingsAppearanceRouteImport } from './routes/_admin/admin/settings.appearance'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
@@ -297,12 +297,6 @@ const DevExamplesCachingRoute = DevExamplesCachingRouteImport.update({
   path: '/caching',
   getParentRoute: () => DevExamplesRouteRoute,
 } as any)
-const DevExamplesCommandPaletteRoute =
-  DevExamplesCommandPaletteRouteImport.update({
-    id: '/command-palette',
-    path: '/command-palette',
-    getParentRoute: () => DevExamplesRouteRoute,
-  } as any)
 const DevExamplesContactRoute = DevExamplesContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -404,6 +398,12 @@ const AdminAdminRolesPermissionsRoute =
     path: '/permissions',
     getParentRoute: () => AdminAdminRolesRouteRoute,
   } as any)
+const AdminAdminSettingsAppearanceRoute =
+  AdminAdminSettingsAppearanceRouteImport.update({
+    id: '/settings/appearance',
+    path: '/settings/appearance',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
 const AdminAdminTestCrudIndexRoute = AdminAdminTestCrudIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -472,7 +472,6 @@ export interface FileRoutesByFullPath {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
-  '/dev/examples/command-palette': typeof DevExamplesCommandPaletteRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
@@ -494,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
+  '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
@@ -531,7 +531,6 @@ export interface FileRoutesByTo {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
-  '/dev/examples/command-palette': typeof DevExamplesCommandPaletteRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
@@ -553,6 +552,7 @@ export interface FileRoutesByTo {
   '/dev/examples': typeof DevExamplesIndexRoute
   '/dev/test-crud': typeof DevTestCrudIndexRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
+  '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
@@ -605,7 +605,6 @@ export interface FileRoutesById {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
-  '/dev/examples/command-palette': typeof DevExamplesCommandPaletteRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
@@ -627,6 +626,7 @@ export interface FileRoutesById {
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
+  '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
@@ -675,7 +675,6 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
-    | '/dev/examples/command-palette'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
@@ -697,6 +696,7 @@ export interface FileRouteTypes {
     | '/dev/examples/'
     | '/dev/test-crud/'
     | '/admin/roles/permissions'
+    | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/dev/examples/masking/$id'
@@ -734,7 +734,6 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
-    | '/dev/examples/command-palette'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
@@ -756,6 +755,7 @@ export interface FileRouteTypes {
     | '/dev/examples'
     | '/dev/test-crud'
     | '/admin/roles/permissions'
+    | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/dev/examples/masking/$id'
@@ -807,7 +807,6 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
-    | '/dev/examples/command-palette'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
@@ -829,6 +828,7 @@ export interface FileRouteTypes {
     | '/dev/examples/'
     | '/dev/test-crud/'
     | '/_admin/admin/roles/permissions'
+    | '/_admin/admin/settings/appearance'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
     | '/dev/examples/masking/$id'
@@ -1164,13 +1164,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevExamplesCachingRouteImport
       parentRoute: typeof DevExamplesRouteRoute
     }
-    '/dev/examples/command-palette': {
-      id: '/dev/examples/command-palette'
-      path: '/command-palette'
-      fullPath: '/dev/examples/command-palette'
-      preLoaderRoute: typeof DevExamplesCommandPaletteRouteImport
-      parentRoute: typeof DevExamplesRouteRoute
-    }
     '/dev/examples/contact': {
       id: '/dev/examples/contact'
       path: '/contact'
@@ -1311,6 +1304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminRolesPermissionsRouteImport
       parentRoute: typeof AdminAdminRolesRouteRoute
     }
+    '/_admin/admin/settings/appearance': {
+      id: '/_admin/admin/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/admin/settings/appearance'
+      preLoaderRoute: typeof AdminAdminSettingsAppearanceRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
     '/_admin/admin/test-crud/': {
       id: '/_admin/admin/test-crud/'
       path: '/'
@@ -1378,7 +1378,6 @@ interface DevExamplesRouteRouteChildren {
   DevExamplesAttachmentsRoute: typeof DevExamplesAttachmentsRoute
   DevExamplesBackgroundJobsRoute: typeof DevExamplesBackgroundJobsRoute
   DevExamplesCachingRoute: typeof DevExamplesCachingRoute
-  DevExamplesCommandPaletteRoute: typeof DevExamplesCommandPaletteRoute
   DevExamplesContactRoute: typeof DevExamplesContactRoute
   DevExamplesDataTableRoute: typeof DevExamplesDataTableRoute
   DevExamplesErrorsRoute: typeof DevExamplesErrorsRoute
@@ -1402,7 +1401,6 @@ const DevExamplesRouteRouteChildren: DevExamplesRouteRouteChildren = {
   DevExamplesAttachmentsRoute: DevExamplesAttachmentsRoute,
   DevExamplesBackgroundJobsRoute: DevExamplesBackgroundJobsRoute,
   DevExamplesCachingRoute: DevExamplesCachingRoute,
-  DevExamplesCommandPaletteRoute: DevExamplesCommandPaletteRoute,
   DevExamplesContactRoute: DevExamplesContactRoute,
   DevExamplesDataTableRoute: DevExamplesDataTableRoute,
   DevExamplesErrorsRoute: DevExamplesErrorsRoute,
@@ -1515,6 +1513,7 @@ interface AdminAdminRouteRouteChildren {
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminSettingsAppearanceRoute: typeof AdminAdminSettingsAppearanceRoute
 }
 
 const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
@@ -1523,6 +1522,7 @@ const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminSettingsAppearanceRoute: AdminAdminSettingsAppearanceRoute,
 }
 
 const AdminAdminRouteRouteWithChildren = AdminAdminRouteRoute._addFileChildren(

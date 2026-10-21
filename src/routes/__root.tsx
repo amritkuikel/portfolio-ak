@@ -9,12 +9,12 @@ import { NotFoundPage } from "@/components/errors/not-found-page";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { ConsentBanner, ObservabilitySync } from "@/components/layout/observability";
 import { SkipLink } from "@/components/layout/skip-link";
-import { SystemThemeScript, ThemeSync, themeHtmlProps } from "@/components/layout/theme";
+import { preferenceHtmlProps, SystemThemeScript, ThemeSync } from "@/components/layout/theme";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { pageTitle } from "@/lib/seo";
 import type { Session } from "@/lib/session";
 import { skipsSession } from "@/lib/session-scope";
-import { usePreferences } from "@/lib/stores/hooks";
+import { useAppearance } from "@/lib/stores/hooks";
 import type { ThemePreference } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
 import { getLocale, getTextDirection, localizeHref } from "@/paraglide/runtime";
@@ -59,8 +59,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
  */
 const Toaster = lazy(() => import("@/components/ui/sonner").then((module) => ({ default: module.Toaster })));
 
-/** Browser UI colour: --background of the chosen theme, or both for "system" (head() dedupes meta by name). */
-const THEME_COLORS = { light: "#ffffff", dark: "#09090b" } as const;
+/**
+ * Browser UI colour: Graphite's --background of the chosen theme (oklch(0.995 0.0015 265) and
+ * oklch(0.165 0.005 265) in app.css), or both for "system" (head() dedupes meta by name).
+ */
+const THEME_COLORS = { light: "#fdfdfe", dark: "#0d0e11" } as const;
 
 function ThemeColor({ theme }: { theme: ThemePreference }) {
 	if (theme !== "system") return <meta name="theme-color" content={THEME_COLORS[theme]} />;
@@ -74,10 +77,11 @@ function ThemeColor({ theme }: { theme: ThemePreference }) {
 
 function RootDocument({ children }: { children: ReactNode }) {
 	const locale = getLocale();
-	const theme = usePreferences((preferences) => preferences.theme);
+	const appearance = useAppearance();
+	const { theme } = appearance;
 	return (
 		// suppressHydrationWarning: SystemThemeScript may add class="dark" before hydration (this element only).
-		<html lang={locale} dir={getTextDirection(locale)} {...themeHtmlProps(theme)} suppressHydrationWarning>
+		<html lang={locale} dir={getTextDirection(locale)} {...preferenceHtmlProps(appearance)} suppressHydrationWarning>
 			<head>
 				<SystemThemeScript />
 				<ThemeColor theme={theme} />

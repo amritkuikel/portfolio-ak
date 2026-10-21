@@ -147,7 +147,7 @@ export function MultiSelectFilter({
 			<details ref={detailsRef} className="group relative">
 				<summary
 					aria-describedby={legendId}
-					className="flex h-9 w-44 cursor-pointer list-none items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 [&::-webkit-details-marker]:hidden"
+					className="flex h-(--control-height) w-44 cursor-pointer list-none items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 [&::-webkit-details-marker]:hidden"
 				>
 					<span className="truncate">
 						<span className="sr-only">{label}: </span>

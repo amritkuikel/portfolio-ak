@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin, sampleUser } from "../../../.storybook/mocks/data";
-import { AdminSidebar } from "./admin-sidebar";
 import { ImpersonationBanner } from "./impersonation-banner";
 import { LanguageSwitcher } from "./language-switcher";
 import { SiteFooter } from "./site-footer";
@@ -59,24 +58,5 @@ export const ThemeMenu: Story = {
 	render: () => <ThemeToggle />,
 	play: async ({ canvas, userEvent }) => {
 		await userEvent.click(canvas.getByTestId("theme-toggle"));
-	},
-};
-
-export const AdminSidebarExpanded: Story = {
-	parameters: { app: { route: "/admin/test-crud" } },
-	render: () => <AdminSidebar />,
-};
-
-export const AdminSidebarCollapsed: Story = {
-	parameters: { app: { route: "/admin", preferences: { sidebarCollapsed: true } } },
-	render: () => <AdminSidebar />,
-	play: async ({ canvas, userEvent }) => {
-		const toggle = canvas.getByRole("button", { name: m.admin_sidebar_expand() });
-		await expect(toggle).toHaveAttribute("aria-expanded", "false");
-		await userEvent.click(toggle);
-		await expect(canvas.getByRole("button", { name: m.admin_sidebar_collapse() })).toHaveAttribute(
-			"aria-expanded",
-			"true",
-		);
 	},
 };

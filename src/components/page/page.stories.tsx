@@ -20,7 +20,7 @@ const trail = [
 const meta = {
 	title: "Page/Building blocks",
 	component: PageHeader,
-	args: { title: "Test CRUD", description: "Create, edit and publish items.", breadcrumbs: trail },
+	args: { title: "Test CRUD", description: "Create, edit and publish items." },
 } satisfies Meta<typeof PageHeader>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -36,17 +36,27 @@ export const Header: Story = {
 	},
 	play: async ({ canvas }) => {
 		await expect(canvas.getByRole("heading", { level: 1, name: "Test CRUD" })).toBeVisible();
-		const nav = canvas.getByRole("navigation", { name: m.breadcrumbs_label() });
-		await expect(nav).toBeVisible();
+		await expect(canvas.getByRole("button", { name: "New item" })).toBeVisible();
+	},
+};
+
+export const DisplayHeader: Story = { args: { size: "display" } };
+
+/** Outside the admin area (whose topbar shows the trail), a page renders <Breadcrumbs /> above its header. */
+export const WithBreadcrumbs: Story = {
+	render: (args) => (
+		<div className="flex flex-col gap-4">
+			<Breadcrumbs items={trail} />
+			<PageHeader {...args} />
+		</div>
+	),
+	play: async ({ canvas }) => {
+		await expect(canvas.getByRole("navigation", { name: m.breadcrumbs_label() })).toBeVisible();
 		// Earlier crumbs are links; the last one is the current page.
 		await expect(canvas.getByRole("link", { name: "Test CRUD" })).toBeVisible();
 		await expect(canvas.getByText("Momo Kitchen")).toHaveAttribute("aria-current", "page");
 	},
 };
-
-export const DisplayHeader: Story = { args: { size: "display", breadcrumbs: trail.slice(0, 2) } };
-
-export const HeaderWithoutBreadcrumbs: Story = { args: { breadcrumbs: false } };
 
 /** Public pages also emit the trail as schema.org JSON-LD (absolute, localized URLs). */
 export const BreadcrumbsWithJsonLd: Story = {

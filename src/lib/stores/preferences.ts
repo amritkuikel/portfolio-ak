@@ -2,7 +2,7 @@ import { createStore } from "@tanstack/react-store";
 import { z } from "zod";
 
 /**
- * UI preferences (theme, admin sidebar, table settings) in one TanStack Store.
+ * UI preferences (theme, Graphite presets, admin sidebar, table settings) in one TanStack Store.
  *
  * Persistence is cookies, not localStorage: the server reads them on every
  * request, so SSR renders the user's real theme / sidebar / page size and the
@@ -15,8 +15,19 @@ import { z } from "zod";
 export const THEMES = ["light", "dark", "system"] as const;
 export type ThemePreference = (typeof THEMES)[number];
 
+/** Graphite presets (src/styles/app.css): set on <html> as data-accent, data-radius and data-density. */
+export const ACCENTS = ["indigo", "violet", "emerald", "amber", "rose"] as const;
+export type AccentPreference = (typeof ACCENTS)[number];
+export const RADII = ["sharp", "default", "round"] as const;
+export type RadiusPreference = (typeof RADII)[number];
+export const DENSITIES = ["comfortable", "compact"] as const;
+export type DensityPreference = (typeof DENSITIES)[number];
+
 export const PREFERENCE_COOKIES = {
 	theme: "theme",
+	accent: "accent",
+	radius: "radius",
+	density: "density",
 	sidebar: "sidebar",
 	tables: "table-prefs",
 	analytics: "analytics-consent",
@@ -41,6 +52,9 @@ const tablesSchema = z.record(z.string().regex(/^[\w-]{1,64}$/), tablePreference
 
 export type Preferences = {
 	theme: ThemePreference;
+	accent: AccentPreference;
+	radius: RadiusPreference;
+	density: DensityPreference;
 	sidebarCollapsed: boolean;
 	tables: Record<string, TablePreferences>;
 	analyticsConsent: AnalyticsConsent;
@@ -48,6 +62,9 @@ export type Preferences = {
 
 export const DEFAULT_PREFERENCES: Preferences = {
 	theme: "system",
+	accent: "indigo",
+	radius: "default",
+	density: "comfortable",
 	sidebarCollapsed: false,
 	tables: {},
 	analyticsConsent: "unset",
@@ -65,10 +82,16 @@ const parseJson = (text: string | undefined): unknown => {
 /** Preferences from decoded cookie values (server: getCookies(); browser: parseCookieHeader(document.cookie)). */
 export const parsePreferences = (cookies: Readonly<Record<string, string | undefined>>): Preferences => {
 	const theme = z.enum(THEMES).safeParse(cookies[PREFERENCE_COOKIES.theme]);
+	const accent = z.enum(ACCENTS).safeParse(cookies[PREFERENCE_COOKIES.accent]);
+	const radius = z.enum(RADII).safeParse(cookies[PREFERENCE_COOKIES.radius]);
+	const density = z.enum(DENSITIES).safeParse(cookies[PREFERENCE_COOKIES.density]);
 	const tables = tablesSchema.safeParse(parseJson(cookies[PREFERENCE_COOKIES.tables]));
 	const consent = z.enum(["granted", "denied"]).safeParse(cookies[PREFERENCE_COOKIES.analytics]);
 	return {
 		theme: theme.success ? theme.data : DEFAULT_PREFERENCES.theme,
+		accent: accent.success ? accent.data : DEFAULT_PREFERENCES.accent,
+		radius: radius.success ? radius.data : DEFAULT_PREFERENCES.radius,
+		density: density.success ? density.data : DEFAULT_PREFERENCES.density,
 		sidebarCollapsed: cookies[PREFERENCE_COOKIES.sidebar] === "collapsed",
 		tables: tables.success ? tables.data : DEFAULT_PREFERENCES.tables,
 		analyticsConsent: consent.success ? consent.data : "unset",
@@ -124,6 +147,18 @@ export const createPreferencesStore = (initial: Preferences) =>
 			setTheme: (theme: ThemePreference) => {
 				setState((state) => ({ ...state, theme }));
 				writePreferenceCookie(PREFERENCE_COOKIES.theme, theme);
+			},
+			setAccent: (accent: AccentPreference) => {
+				setState((state) => ({ ...state, accent }));
+				writePreferenceCookie(PREFERENCE_COOKIES.accent, accent);
+			},
+			setRadius: (radius: RadiusPreference) => {
+				setState((state) => ({ ...state, radius }));
+				writePreferenceCookie(PREFERENCE_COOKIES.radius, radius);
+			},
+			setDensity: (density: DensityPreference) => {
+				setState((state) => ({ ...state, density }));
+				writePreferenceCookie(PREFERENCE_COOKIES.density, density);
 			},
 			setSidebarCollapsed: (sidebarCollapsed: boolean) => {
 				setState((state) => ({ ...state, sidebarCollapsed }));

@@ -13,8 +13,9 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminSidebar } from "@/components/layout/admin-sidebar";
-import { ThemeSync, ThemeToggle } from "@/components/layout/theme";
+import { AdminShell } from "@/components/admin-shell/admin-shell";
+import { preferenceHtmlProps, ThemeSync, ThemeToggle } from "@/components/layout/theme";
+import { AppearanceSettings } from "@/features/admin/components/appearance-settings";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { ALL_PERMISSIONS } from "@/features/rbac/permissions";
 import type { Session } from "@/lib/session";
@@ -72,7 +73,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	listeners.clear();
 	document.documentElement.className = "";
-	for (const name of ["theme", "sidebar", "table-prefs"]) {
+	for (const name of ["theme", "accent", "radius", "density", "sidebar", "table-prefs"]) {
 		// biome-ignore lint/suspicious/noDocumentCookie: test cleanup of the cookies the store writes.
 		document.cookie = `${name}=; Path=/; Max-Age=0`;
 	}
@@ -109,26 +110,52 @@ describe("ThemeToggle + ThemeSync", () => {
 	});
 });
 
-describe("AdminSidebar", () => {
+describe("AdminShell sidebar", () => {
 	it("collapses and expands, announcing state, and remembers it", async () => {
-		const { user, preferences } = await renderWithPreferences(<AdminSidebar />);
+		const { user, preferences } = await renderWithPreferences(<AdminShell>page</AdminShell>);
 		const toggle = await screen.findByRole("button", { name: "Collapse sidebar" });
 		expect(toggle).toHaveAttribute("aria-expanded", "true");
 		expect(screen.getByRole("navigation", { name: "Admin navigation" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("data-status", "active");
+		expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("data-active", "true");
 
 		await user.click(toggle);
 		expect(preferences.state.sidebarCollapsed).toBe(true);
 		expect(document.cookie).toContain("sidebar=collapsed");
-		const expand = screen.getByRole("button", { name: "Expand sidebar" });
-		expect(expand).toHaveAttribute("aria-expanded", "false");
-		// Collapsed: the link keeps its accessible name (sr-only text) and gains a tooltip.
-		expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("title", "Dashboard");
+		expect(screen.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute("aria-expanded", "false");
+		expect(screen.getByTestId("admin-sidebar").closest("[data-state]")).toHaveAttribute("data-state", "collapsed");
 	});
 
 	it("renders collapsed when the stored preference says so", async () => {
-		await renderWithPreferences(<AdminSidebar />, { sidebarCollapsed: true });
-		expect(await screen.findByTestId("admin-sidebar")).toHaveAttribute("data-collapsed", "true");
+		await renderWithPreferences(<AdminShell>page</AdminShell>, { sidebarCollapsed: true });
+		await screen.findByText("page");
+		expect(screen.getByTestId("admin-sidebar").closest("[data-state]")).toHaveAttribute("data-state", "collapsed");
+	});
+});
+
+describe("Graphite presets", () => {
+	it("are attributes of <html>, from the preferences", () => {
+		expect(preferenceHtmlProps({ theme: "dark", accent: "rose", radius: "round", density: "compact" })).toEqual({
+			className: "dark",
+			"data-theme": "dark",
+			"data-accent": "rose",
+			"data-radius": "round",
+			"data-density": "compact",
+		});
+	});
+
+	it("the appearance page changes each one and keeps it in a cookie", async () => {
+		const { user, preferences } = await renderWithPreferences(<AppearanceSettings />);
+		const violet = await screen.findByRole("radio", { name: "Violet" });
+		expect(screen.getByRole("radio", { name: "Indigo" })).toBeChecked();
+		await user.click(violet);
+		await user.click(screen.getByRole("radio", { name: "Round" }));
+		await user.click(screen.getByRole("radio", { name: "Compact" }));
+		await user.click(screen.getByRole("radio", { name: "Dark" }));
+		expect(preferences.state).toMatchObject({ accent: "violet", radius: "round", density: "compact", theme: "dark" });
+		expect(violet).toBeChecked();
+		for (const cookie of ["accent=violet", "radius=round", "density=compact", "theme=dark"]) {
+			expect(document.cookie).toContain(cookie);
+		}
 	});
 });
 

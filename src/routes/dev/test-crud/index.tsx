@@ -2,6 +2,7 @@ import { createFileRoute, Link, stripSearchParams } from "@tanstack/react-router
 import { FilterBar } from "@/components/filters/filter-bar";
 import { SearchFilter } from "@/components/filters/filters";
 import { Pagination } from "@/components/navigation/pagination";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { ListSkeleton, PageHeaderSkeleton } from "@/components/page/skeletons";
@@ -42,12 +43,8 @@ function PublicListPage() {
 
 	return (
 		<Page width="wide" className="gap-8">
-			<PageHeader
-				size="display"
-				title={m.test_crud_public_title()}
-				description={m.test_crud_public_description()}
-				breadcrumbsJsonLd
-			>
+			<Breadcrumbs />
+			<PageHeader size="display" title={m.test_crud_public_title()} description={m.test_crud_public_description()}>
 				<FilterBar values={search} label={m.test_crud_search_label()} submitLabel={m.test_crud_search_submit()}>
 					<SearchFilter
 						label={m.test_crud_search_label()}

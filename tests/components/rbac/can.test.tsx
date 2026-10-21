@@ -11,7 +11,8 @@ import {
 import { act, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { AppSidebar } from "@/components/admin-shell/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { Can, useCan } from "@/features/rbac/can";
 import type { Permission } from "@/features/rbac/permissions";
@@ -72,19 +73,32 @@ describe("<Can> and useCan", () => {
 	});
 });
 
-describe("<AdminSidebar>", () => {
+describe("<AppSidebar>", () => {
+	const AdminSidebar = () => (
+		<SidebarProvider>
+			<AppSidebar />
+		</SidebarProvider>
+	);
+	// Every link but the brand (to the dashboard too) at the top.
 	const links = () =>
 		within(screen.getByRole("navigation"))
 			.getAllByRole("link")
+			.slice(1)
 			.map((link) => link.getAttribute("href"));
 
-	it("an editor sees the dashboard and Test CRUD only", async () => {
+	it("an editor sees the dashboard, Test CRUD and their own appearance settings only", async () => {
 		await renderAs(["test-crud:read", "test-crud:create"], <AdminSidebar />);
-		expect(links()).toEqual(["/admin", "/admin/test-crud"]);
+		expect(links()).toEqual(["/admin", "/admin/test-crud", "/admin/settings/appearance"]);
 	});
 
 	it("users:read and roles:read add Users, Roles and Permissions", async () => {
 		await renderAs(["users:read", "roles:read"], <AdminSidebar />);
-		expect(links()).toEqual(["/admin", "/admin/users", "/admin/roles", "/admin/roles/permissions"]);
+		expect(links()).toEqual([
+			"/admin",
+			"/admin/users",
+			"/admin/roles",
+			"/admin/roles/permissions",
+			"/admin/settings/appearance",
+		]);
 	});
 });

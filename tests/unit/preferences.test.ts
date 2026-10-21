@@ -8,7 +8,7 @@ import {
 } from "@/lib/stores/preferences";
 
 const clearCookies = () => {
-	for (const name of ["theme", "sidebar", "table-prefs", "analytics-consent"]) {
+	for (const name of ["theme", "accent", "radius", "density", "sidebar", "table-prefs", "analytics-consent"]) {
 		// biome-ignore lint/suspicious/noDocumentCookie: test cleanup of the cookies the store writes.
 		document.cookie = `${name}=; Path=/; Max-Age=0`;
 	}
@@ -24,11 +24,17 @@ describe("parsePreferences", () => {
 		expect(
 			parsePreferences({
 				theme: "dark",
+				accent: "emerald",
+				radius: "sharp",
+				density: "compact",
 				sidebar: "collapsed",
 				"table-prefs": JSON.stringify({ "test-crud": { pageSize: 50, hiddenColumns: ["price"] } }),
 			}),
 		).toEqual({
 			theme: "dark",
+			accent: "emerald",
+			radius: "sharp",
+			density: "compact",
 			sidebarCollapsed: true,
 			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
 			analyticsConsent: "unset",
@@ -36,9 +42,16 @@ describe("parsePreferences", () => {
 	});
 
 	it("ignores tampered or malformed values", () => {
-		expect(parsePreferences({ theme: "neon", sidebar: "yes", "table-prefs": "{not json" })).toEqual(
-			DEFAULT_PREFERENCES,
-		);
+		expect(
+			parsePreferences({
+				theme: "neon",
+				accent: "chartreuse",
+				radius: "9px",
+				density: "<x>",
+				sidebar: "yes",
+				"table-prefs": "{not json",
+			}),
+		).toEqual(DEFAULT_PREFERENCES);
 		// Page sizes outside the allowed list and odd table ids are rejected as a whole.
 		expect(parsePreferences({ "table-prefs": JSON.stringify({ t: { pageSize: 5000 } }) }).tables).toEqual({});
 		expect(parsePreferences({ "table-prefs": JSON.stringify({ "<script>": {} }) }).tables).toEqual({});
@@ -55,6 +68,9 @@ describe("preferences store", () => {
 	it("updates state and persists each preference to a cookie the server can read", () => {
 		const store = createPreferencesStore(DEFAULT_PREFERENCES);
 		store.actions.setTheme("dark");
+		store.actions.setAccent("amber");
+		store.actions.setRadius("round");
+		store.actions.setDensity("compact");
 		store.actions.setSidebarCollapsed(true);
 		store.actions.setTablePageSize("test-crud", 50);
 		store.actions.setColumnVisible("test-crud", "price", false);
@@ -63,6 +79,9 @@ describe("preferences store", () => {
 
 		expect(store.state).toEqual({
 			theme: "dark",
+			accent: "amber",
+			radius: "round",
+			density: "compact",
 			sidebarCollapsed: true,
 			tables: { "test-crud": { pageSize: 50, hiddenColumns: ["price"] } },
 			analyticsConsent: "unset",

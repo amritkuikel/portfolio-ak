@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34 and 35 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34, 35 and 36 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
@@ -15,7 +15,8 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | Guide | Covers |
 | --- | --- |
 | [architecture.md](docs/guides/architecture.md) | Layers, a request end to end, where to start for each task |
-| [conventions.md](docs/guides/conventions.md) | File map, building blocks, list-page recipe, breadcrumbs, rules |
+| [conventions.md](docs/guides/conventions.md) | File map, building blocks, list-page recipe, breadcrumbs, command palette, rules |
+| [design-system.md](docs/guides/design-system.md) | Graphite tokens, accent/radius/density presets, contrast test, the shells, theming a project |
 | [routing-data.md](docs/guides/routing-data.md) | Routes, loaders (SSR, no refetch), streaming, server functions, errors, server-only code |
 | [search-filters-masking.md](docs/guides/search-filters-masking.md) | URL search params, the list contract, filters, route masking, path params |
 | [tables-filters.md](docs/guides/tables-filters.md) | DataTable, FilterBar and chips, Pagination, bulk and row actions |
@@ -78,7 +79,8 @@ src/functions/         server functions: middleware + validator + one call into 
 src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL), auth, email, rbac, attachments, seo,
                        <feature>/repository.ts + service.ts, Nitro routes (cron, manifest)
 src/middleware/        security headers + CSP, CSRF, logging, errors, auth/permissions, dev-only
-src/components/        shared UI: page/, data-table/, filters/, navigation/, dialogs/, forms/, layout/, errors/, ui/ (shadcn)
+src/components/        shared UI: admin-shell/, auth-shell/, app-header/, brand/, data-display/, page/, data-table/, filters/,
+                       navigation/, dialogs/, forms/, layout/, errors/, ui/ (shadcn)
 src/hooks/             React hooks: useListPage, useListQuery
 src/lib/               isomorphic helpers by area: list/ (URL params, paging, serialization), env/, i18n/, http/,
                        observability/, start/ (Start runtime: routes and server only); query, seo, validation, errors, zod
@@ -112,7 +114,7 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 4. Permissions in the catalog; thin server functions with `requirePermission`, listed in the guarded-functions test.
 5. Queries (and a collection for optimistic admin edits).
 6. Routes with `staticData.breadcrumb`, `seo()`/`privateHead()`; columns for `DataTable`, filters for `FilterBar`, forms with `useAppForm`.
-7. Messages in both languages; a sidebar link and dashboard card for admin sections.
+7. Messages in both languages; an `ADMIN_SECTIONS` entry (sidebar, palette) and, for actions, `features/<name>/commands.ts`.
 8. Stories + tests (a new route goes in `e2e/support/pages.ts`, or `pnpm test` fails), then the gates.
 
 ## Pitfalls already solved (don't reintroduce)
@@ -128,7 +130,7 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 - **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
 - **Dev-only pages** live under `src/routes/dev/`: the layout 404s unless `DEV_ROUTES` (`src/lib/dev-routes.ts`: `vite dev`, or a build with `VITE_DEV_ROUTES=true`, which the e2e harness uses and production refuses; 0162). Their server functions use `devOnlyMiddleware`. Gate dev-only code on `DEV_ROUTES`, not `import.meta.env.DEV`, or the e2e build breaks it.
-- **One header per section** (0161): the root renders none. Each layout renders its own (`SiteHeader` with its `links`, or the portfolio's), so a new layout must too. A section that never reads the session sets `staticData: { session: "skip" }` (`src/lib/session-scope.ts`); root-mounted session readers pass `enabled: !useSessionSkipped()`.
+- **One header per section** (0161): the root renders none. Each layout renders its own frame (`AdminShell`, `AuthShell`, `AppHeader`, `SiteHeader` for `/dev`, or the portfolio's), so a new layout must too. Breadcrumbs belong to the frame: the admin topbar shows them, `PageHeader` doesn't (0164). A section that never reads the session sets `staticData: { session: "skip" }` (`src/lib/session-scope.ts`); root-mounted session readers pass `enabled: !useSessionSkipped()`.
 - **Slow `pnpm dev`?** Run `pnpm diagnose`: a remote database costs a few hundred ms per query from far away; `pnpm dev:local` uses a local one (0155).
 - **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
 - **Knip entries:** files reached only by a string path (Nitro routes and plugins in `vite.config.ts`, Vite-plugin modules, alias targets) must be listed in `knip.json`'s `entry`, or knip reports them unused. Don't delete them on knip's word alone.
@@ -160,3 +162,4 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
 - [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.
+- [design-system.md](docs/guides/design-system.md): shadcn's sidebar cookie and `<main>`; No `isMobile` state after hydration; `CommandDialog`'s hidden title; English in shadcn primitives; `aria-label` hiding visible text; platform text after hydration.

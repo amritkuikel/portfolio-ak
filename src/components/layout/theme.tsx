@@ -11,19 +11,29 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/lib/stores/hooks";
-import { THEMES, type ThemePreference } from "@/lib/stores/preferences";
+import { type Preferences, THEMES, type ThemePreference } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 /**
- * Attributes for <html>. An explicit "dark" choice is rendered by the server
- * (from the cookie), so it is dark from the first byte. "system" can only be
- * resolved in the browser: SystemThemeScript does that before first paint.
+ * Attributes for <html>: the theme and the Graphite presets (accent, radius, density;
+ * src/styles/app.css). They come from the preference cookies, so the server renders
+ * them and nothing flashes; a change in the store re-renders them at once. An explicit
+ * "dark" choice is dark from the first byte. "system" can only be resolved in the
+ * browser: SystemThemeScript does that before first paint.
  */
-export const themeHtmlProps = (theme: ThemePreference) => ({
+export const preferenceHtmlProps = ({
+	theme,
+	accent,
+	radius,
+	density,
+}: Pick<Preferences, "theme" | "accent" | "radius" | "density">) => ({
 	className: theme === "dark" ? "dark" : undefined,
 	"data-theme": theme,
+	"data-accent": accent,
+	"data-radius": radius,
+	"data-density": density,
 });
 
 /**
@@ -57,19 +67,20 @@ export function ThemeSync() {
 	return null;
 }
 
-const ICONS = { light: SunIcon, dark: MoonIcon, system: MonitorIcon } as const;
-const LABELS: Record<ThemePreference, () => string> = {
+/** Icon and name of each theme, for every place that offers the choice (toggle, user menu, palette, appearance). */
+export const THEME_ICONS = { light: SunIcon, dark: MoonIcon, system: MonitorIcon } as const;
+export const THEME_LABELS: Record<ThemePreference, () => string> = {
 	light: m.theme_light,
 	dark: m.theme_dark,
 	system: m.theme_system,
 };
 
-const isTheme = (value: string): value is ThemePreference => (THEMES as ReadonlyArray<string>).includes(value);
+export const isTheme = (value: string): value is ThemePreference => (THEMES as ReadonlyArray<string>).includes(value);
 
 /** Light / dark / system picker for the header. */
 export function ThemeToggle() {
 	const { theme, setTheme } = useTheme();
-	const Icon = ICONS[theme];
+	const Icon = THEME_ICONS[theme];
 	// Non-modal: a small menu shouldn't aria-hide the page (it closes on Escape or outside click).
 	return (
 		<DropdownMenu modal={false}>
@@ -77,7 +88,7 @@ export function ThemeToggle() {
 				<Button
 					variant="ghost"
 					size="icon"
-					aria-label={`${m.theme_label()}: ${LABELS[theme]()}`}
+					aria-label={`${m.theme_label()}: ${THEME_LABELS[theme]()}`}
 					data-testid="theme-toggle"
 				>
 					<Icon aria-hidden />
@@ -87,11 +98,11 @@ export function ThemeToggle() {
 				<DropdownMenuLabel>{m.theme_label()}</DropdownMenuLabel>
 				<DropdownMenuRadioGroup value={theme} onValueChange={(value) => isTheme(value) && setTheme(value)}>
 					{THEMES.map((option) => {
-						const OptionIcon = ICONS[option];
+						const OptionIcon = THEME_ICONS[option];
 						return (
 							<DropdownMenuRadioItem key={option} value={option}>
 								<OptionIcon aria-hidden />
-								{LABELS[option]()}
+								{THEME_LABELS[option]()}
 							</DropdownMenuRadioItem>
 						);
 					})}

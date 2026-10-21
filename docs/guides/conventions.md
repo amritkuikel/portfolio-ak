@@ -16,10 +16,15 @@ src/
     filters/              FilterBar + Search/Select/MultiSelect/Boolean/NumberRange/DateRange filters, ActiveFilters chips
     dialogs/              ConfirmDialog
     forms/                useAppForm + the field library (see the forms showcase at /dev/forms)
-    layout/               Site header/footer, admin sidebar, theme, consent banner
+    admin-shell/          The admin frame: AdminShell, AppSidebar, Topbar, UserMenu, CommandMenu (design-system.md)
+    auth-shell/           The sign-in pages' split screen (AuthShell)
+    app-header/           The compact header of signed-in pages outside the admin (AppHeader)
+    brand/                BrandMark, BrandName, ContourArt
+    data-display/         StatCard, StatusBadge
+    layout/               Site header/footer (/dev), theme, language switcher, consent banner, skip link
     errors/               Error, not-found and pending pages
   features/rbac/          Permission catalog + labels, useCan/<Can>/assertRoutePermission, users and roles UI
-  features/admin/         Admin sections (sidebar + dashboard, each with its permission)
+  features/admin/         Admin sections and groups, commands (the palette's actions), dashboard, appearance page
   features/dev/examples/  The /dev/examples pages' registry, page frame, schema and in-memory data (development only)
   features/<name>/        Everything specific to one feature, shared by client and server:
     search.ts             The URL contract: search and path param schemas, list input (src/lib/list/params.ts). Route files import this
@@ -111,7 +116,7 @@ export async function listProjects(db: Db, input: ProjectListInput): Promise<Pro
 
 Filters, the loader (`loadList` + `useListQuery`) and record dialogs (route masking) are covered step by step in [search-filters-masking.md](search-filters-masking.md).
 
-Public lists use `<Page width="wide">`, `<PageHeader size="display" breadcrumbsJsonLd>`, a card grid, `<EmptyState>` and `<Pagination layout="center" hideWhenSingle />`. Pending states use `PageHeaderSkeleton` with `ListSkeleton` or `DataTableSkeleton`, matching the page's footprint.
+Public lists use `<Page width="wide">`, `<Breadcrumbs jsonLd />` above `<PageHeader size="display">`, a card grid, `<EmptyState>` and `<Pagination layout="center" hideWhenSingle />`. Pending states use `PageHeaderSkeleton` with `ListSkeleton` or `DataTableSkeleton`, matching the page's footprint.
 
 ## Breadcrumbs
 
@@ -127,7 +132,7 @@ staticData: { breadcrumb: loaderTitleCrumb },
 loader: async (…) => { const item = await ensureQuery(queryClient, …); return { title: item.title }; },
 ```
 
-`<PageHeader>` renders the trail. Pass `breadcrumbsJsonLd` on indexable public pages. A detail page without a `PageHeader` renders `<Breadcrumbs jsonLd />` itself.
+In the admin area the topbar renders the trail (`components/admin-shell/topbar.tsx`). Elsewhere a page renders `<Breadcrumbs />` above its `<PageHeader>` (`jsonLd` on indexable public pages). `PageHeader` itself has no breadcrumbs (Task 36).
 
 ## Rules
 
@@ -159,7 +164,6 @@ Run `pnpm dev` and open `/dev/examples` (or `/ne/dev/examples`): one small, real
 | Store preferences (cookies, SSR) | `/dev/examples/preferences` | `src/routes/dev/examples/preferences.tsx` |
 | i18n messages and Intl formatting | `/dev/examples/i18n` | `src/routes/dev/examples/i18n.tsx` |
 | Errors, not found and HTTP status | `/dev/examples/errors` | `src/routes/dev/examples/errors.tsx` |
-| Recipe: admin command palette with view transitions | `/dev/examples/command-palette` | `src/routes/dev/examples/command-palette.tsx` |
 
 The others are linked from their guides: filters and masking ([search-filters-masking.md](search-filters-masking.md)), permissions ([rbac.md](rbac.md)), attachments ([attachments.md](attachments.md)), SEO ([seo.md](seo.md)), analytics and flags ([observability.md](observability.md)). Tables and filters in depth: [tables-filters.md](tables-filters.md); forms: [forms.md](forms.md); state: [state.md](state.md); i18n: [i18n.md](i18n.md).
 
@@ -176,13 +180,14 @@ Biome fails `pnpm check` on imports that would break at runtime (0158):
 
 When moving files, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file.
 
-## Recipe: command palette and view transitions
+## The command palette and view transitions
 
-`/dev/examples/command-palette` (decision 0140) is a `cmdk` palette (`components/ui/command.tsx`) opened with Ctrl/⌘ K:
+The admin shell's palette (`components/admin-shell/command-menu.tsx`, decision 0165, which replaced the 0140 recipe) opens with Ctrl/⌘ K or the topbar's search button:
 
-- **Permission-filtered:** it lists `ADMIN_SECTIONS` the user holds the permission for, like the sidebar. It only hides; routes and server functions check on their own.
-- **To ship it:** move `AdminCommandPalette` into `src/components/layout/` and render it in `AdminLayout` with its own `open` state. Add other commands as more `CommandGroup`s (each item's `onSelect` navigates or calls a mutation).
-- **View transitions:** `navigate({ to, viewTransition: true })` (or `<Link viewTransition>`) cross-fades the old and new page where the browser supports it. For every navigation, set `defaultViewTransition: true` in `src/router.tsx`. Name elements with `view-transition-name` to animate them between pages (the portfolio does, 0109). Reduced motion removes the animation (`app.css`).
+- **Permission-filtered:** it lists the sections (`permittedSections`) and the feature actions (`permittedCommands`) the user may open, like the sidebar. It only hides; routes and server functions check on their own.
+- **A feature's actions** go in `features/<name>/commands.ts` (an `AdminCommand[]`: label, icon, permission, target, keywords), listed in `ADMIN_COMMANDS` (`features/admin/commands.ts`). They show in the palette and in the dashboard's quick actions. A section's `keywords` widen what the palette matches.
+- **Recent pages** are kept in `localStorage` (a per-browser convenience; every access is in try/catch).
+- **View transitions:** the palette navigates with `viewTransition: true`; `navigate({ to, viewTransition: true })` (or `<Link viewTransition>`) cross-fades the old and new page where the browser supports it. For every navigation, set `defaultViewTransition: true` in `src/router.tsx`. Name elements with `view-transition-name` to animate them between pages (the portfolio does, 0109). Reduced motion removes the animation (`app.css`).
 
 **Adding an example:** a route under `src/routes/dev/examples/` built with `ExamplePage` and `Demo`, an entry in `features/dev/examples/registry.ts` (a test checks the two match), `privateHead()` and a breadcrumb, server functions with `devOnlyMiddleware`, and a link from the guide.
 
@@ -191,4 +196,4 @@ When moving files, update imports with your editor's "move file" refactor (TypeS
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
 - **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
-- **One header per section:** the root renders no header; each layout renders its own (`<SiteHeader links={…} />`, or the portfolio's), so a new layout must too (0161, which replaced 0105's `chrome: "bare"` opt-out). Don't hide headers with CSS or path checks.
+- **One header per section:** the root renders no header; each layout renders its own frame (`AdminShell`, `AuthShell`, `AppHeader`, `<SiteHeader links={…} />` for `/dev`, or the portfolio's), so a new layout must too (0161, which replaced 0105's `chrome: "bare"` opt-out; 0164). Don't hide headers with CSS or path checks.

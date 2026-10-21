@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { Page, PageHeader } from "@/components/page/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,8 @@ function TaskPage() {
 	const { data: task } = useSuspenseQuery(exampleTaskQueryOptions(id));
 	return (
 		<Page width="narrow" className="gap-6">
-			<PageHeader title={task.title} description={m.examples_masking_full_page()} breadcrumbs />
+			<Breadcrumbs />
+			<PageHeader title={task.title} description={m.examples_masking_full_page()} />
 			<div className="flex flex-wrap items-center gap-2 text-sm">
 				<Badge variant="secondary">{PRIORITY_LABELS[task.priority]()}</Badge>
 				<span>{task.done ? m.examples_done() : m.examples_open()}</span>

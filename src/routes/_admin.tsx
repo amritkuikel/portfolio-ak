@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { AdminLayout } from "@/components/layout/admin-sidebar";
-import { SiteHeader } from "@/components/layout/site-header";
+import { AdminShell } from "@/components/admin-shell/admin-shell";
 import { canEnterAdmin } from "@/features/rbac/permissions";
 import { ensureAdminAccess } from "@/functions/auth";
 import { isAppError } from "@/lib/errors";
@@ -42,16 +41,10 @@ export const Route = createFileRoute("/_admin")({
 	},
 	// Private: every admin page inherits this (child heads set only the title).
 	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
-	component: AdminShell,
+	// The shell is in this route's chunk (inline component), not in every page's JavaScript.
+	component: () => (
+		<AdminShell>
+			<Outlet />
+		</AdminShell>
+	),
 });
-
-function AdminShell() {
-	return (
-		<>
-			<SiteHeader />
-			<AdminLayout>
-				<Outlet />
-			</AdminLayout>
-		</>
-	);
-}

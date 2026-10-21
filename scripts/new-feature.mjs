@@ -158,6 +158,7 @@ insert("src/features/admin/sections.ts", "admin-sections", [
 	`\tdescription: m.${s}_description,`,
 	"\ticon: FolderIcon,",
 	`\tpermission: "${n}:read",`,
+	'\tgroup: "overview",',
 	"},",
 ]);
 const sections = read("src/features/admin/sections.ts");

@@ -13,7 +13,7 @@ function NativeSelect({ className, ...props }: React.ComponentProps<"select">) {
 			<select
 				data-slot="native-select"
 				className={cn(
-					"h-9 w-full min-w-0 appearance-none rounded-md border border-input bg-transparent py-1 ps-3 pe-8 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
+					"h-(--control-height) w-full min-w-0 appearance-none rounded-md border border-input bg-transparent py-1 ps-3 pe-8 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
 					"focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
 					// Options render in the OS menu; give them the page colours in dark mode.
 					"[&>option]:bg-popover [&>option]:text-popover-foreground",

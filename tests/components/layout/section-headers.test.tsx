@@ -11,7 +11,7 @@ import {
 	type RouteComponent,
 	RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { sessionQueryOptions } from "@/features/auth/queries";
@@ -68,12 +68,26 @@ describe("section headers", () => {
 		["_authed", AuthedRoute],
 		["_admin", AdminRoute],
 		["dev", DevRoute],
-	] as const)("the %s layout renders the app header once", async (_name, route) => {
+	] as const)("the %s layout renders its header once", async (_name, route) => {
 		const visit = await renderLayout(route.options.component);
 		await visit("/section");
 		await screen.findByText("page");
 		expect(screen.getAllByRole("banner")).toHaveLength(1);
-		expect(screen.getByTestId("nav-login")).toBeTruthy();
+	});
+
+	it("each section has its own frame (Graphite shells, decision 0164)", async () => {
+		const frames = [
+			[AuthRoute, "auth-brand-panel"],
+			[PublicRoute, "auth-brand-panel"],
+			[AdminRoute, "admin-sidebar"],
+			[DevRoute, "nav-login"],
+		] as const;
+		for (const [route, testId] of frames) {
+			const visit = await renderLayout(route.options.component);
+			await visit("/section");
+			expect(await screen.findByTestId(testId)).toBeTruthy();
+			cleanup();
+		}
 	});
 
 	it("only /dev's header has section links", async () => {

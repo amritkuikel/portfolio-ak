@@ -124,13 +124,6 @@ export const EXAMPLES = [
 		guide: "README.md",
 	},
 	{
-		slug: "command-palette",
-		title: m.examples_palette_title,
-		description: m.examples_palette_description,
-		source: route("command-palette.tsx"),
-		guide: "docs/guides/conventions.md",
-	},
-	{
 		slug: "list-extras",
 		title: m.examples_extras_title,
 		description: m.examples_extras_description,

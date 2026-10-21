@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRightIcon } from "lucide-react";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { Page, PageHeader } from "@/components/page/page";
 import { EXAMPLES } from "@/features/dev/examples/registry";
 import { privateHead } from "@/lib/seo";
@@ -14,7 +15,8 @@ export const Route = createFileRoute("/dev/examples/")({
 function ExamplesIndex() {
 	return (
 		<Page className="gap-8">
-			<PageHeader title={m.examples_title()} description={m.examples_description()} breadcrumbs />
+			<Breadcrumbs />
+			<PageHeader title={m.examples_title()} description={m.examples_description()} />
 			<ul className="grid gap-4 sm:grid-cols-2" data-testid="examples-list">
 				{EXAMPLES.map((example) => (
 					<li key={example.slug}>

@@ -2,6 +2,7 @@ import { Await, createFileRoute, Link, stripSearchParams } from "@tanstack/react
 import { FilterBar } from "@/components/filters/filter-bar";
 import { SearchFilter } from "@/components/filters/filters";
 import { Pagination } from "@/components/navigation/pagination";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { ListSkeleton, PageHeaderSkeleton } from "@/components/page/skeletons";
@@ -57,7 +58,8 @@ function StackPage() {
 
 	return (
 		<Page className="gap-8">
-			<PageHeader size="display" title={m.stack_title()} description={m.stack_description()} breadcrumbsJsonLd />
+			<Breadcrumbs />
+			<PageHeader size="display" title={m.stack_title()} description={m.stack_description()} />
 
 			<section aria-labelledby="stack-stats" className="rounded-lg border p-4">
 				<h2 id="stack-stats" className="font-medium">

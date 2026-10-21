@@ -65,7 +65,7 @@ Builders live in `src/lib/structured-data.ts`, typed with `schema-dts` (a misspe
 | Where | Types |
 | --- | --- |
 | Home | `WebSite` (in the page's language, `websiteJsonLd(description, publisher?)`); on the portfolio its publisher is the owner's `Person` (`@id` `/#person`) |
-| Pages with breadcrumbs | `BreadcrumbList`, from `<Breadcrumbs jsonLd>` / `<PageHeader breadcrumbsJsonLd>` |
+| Pages with breadcrumbs | `BreadcrumbList`, from `<Breadcrumbs jsonLd />` (above the page's `PageHeader`) |
 | Portfolio pages | `Person`, `ProfilePage`, `CollectionPage`, `Blog`, `CreativeWork` (case studies), `BlogPosting` (`src/features/portfolio/lib/structured-data.ts`) <!-- @portfolio --> |
 
 Add a builder there for a new type, and assert its output in the route test.

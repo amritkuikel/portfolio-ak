@@ -64,7 +64,6 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/dev/examples/idempotency" },
 	{ route: "/dev/examples/errors" },
 	{ route: "/dev/examples/analytics" },
-	{ route: "/dev/examples/command-palette" },
 	{ route: "/dev/examples/list-extras" },
 	{ route: "/dev/examples/caching" },
 	{ route: "/dev/examples/background-jobs" },
@@ -89,6 +88,7 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/roles/permissions", as: "admin" },
 	{ route: "/admin/users", as: "admin" },
 	{ route: "/admin/audit", as: "admin" },
+	{ route: "/admin/settings/appearance", as: "admin" },
 	// The editor's roles don't include audit:read (decisions.md 0132).
 	{ route: "/admin/audit", as: "editor", status: 403, label: "forbidden" },
 	// @new-feature:reviewed-pages

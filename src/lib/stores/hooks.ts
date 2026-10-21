@@ -14,6 +14,21 @@ export const useTheme = () => {
 	return { theme: usePreferences((state) => state.theme), setTheme: store.actions.setTheme };
 };
 
+/** The theme and the Graphite presets (accent, radius, density), with their setters. */
+export const useAppearance = () => {
+	const { actions } = usePreferencesStore();
+	return {
+		theme: usePreferences((state) => state.theme),
+		accent: usePreferences((state) => state.accent),
+		radius: usePreferences((state) => state.radius),
+		density: usePreferences((state) => state.density),
+		setTheme: actions.setTheme,
+		setAccent: actions.setAccent,
+		setRadius: actions.setRadius,
+		setDensity: actions.setDensity,
+	};
+};
+
 export const useSidebar = () => {
 	const store = usePreferencesStore();
 	const collapsed = usePreferences((state) => state.sidebarCollapsed);

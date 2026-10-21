@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Breadcrumbs } from "@/components/page/breadcrumbs";
 import { Page, PageHeader } from "@/components/page/page";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -9,7 +10,8 @@ export function ExamplePage({ slug, children }: { slug: ExampleSlug; children: R
 	const example = exampleBySlug(slug);
 	return (
 		<Page className="gap-8">
-			<PageHeader title={example.title()} description={example.description()} breadcrumbs>
+			<Breadcrumbs />
+			<PageHeader title={example.title()} description={example.description()}>
 				<dl className="grid gap-x-3 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
 					<dt className="text-muted-foreground">{m.examples_source()}</dt>
 					<dd className="break-all font-mono text-xs leading-5">{example.source}</dd>

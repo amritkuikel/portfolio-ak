@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { SiteHeader } from "@/components/layout/site-header";
+import { AuthShell } from "@/components/auth-shell/auth-shell";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { fontPreloads } from "@/lib/fonts";
 import { redirectSearchSchema } from "@/lib/http/redirect";
@@ -19,16 +19,11 @@ export const Route = createFileRoute("/_auth")({
 	},
 	// Sign-in pages have no search value: every child inherits noindex.
 	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
-	component: AuthLayout,
-});
-
-function AuthLayout() {
-	return (
-		<>
-			<SiteHeader />
-			<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
+	component: () => (
+		<AuthShell>
+			<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-12">
 				<Outlet />
 			</main>
-		</>
-	);
-}
+		</AuthShell>
+	),
+});

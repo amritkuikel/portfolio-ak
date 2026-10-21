@@ -1,3 +1,4 @@
+import type { Dashboard } from "../../src/features/admin/dashboard";
 import type { ImageAsset } from "../../src/features/attachments/schema";
 import type { AuditEventItem } from "../../src/features/audit/schema";
 import { ALL_PERMISSIONS } from "../../src/features/rbac/permissions";
@@ -198,3 +199,12 @@ export const sampleAuditEvents: AuditEventItem[] = [
 		createdAt: "2026-09-30T16:45:00.000Z",
 	},
 ];
+
+/** The admin dashboard of an admin who may read everything. */
+export const sampleDashboard: Dashboard = {
+	testCrud: { total: 30, published: 20, draft: 10, recent: 4 },
+	users: { total: 128, banned: 2, recent: 9 },
+	roles: { total: 4 },
+	activity: sampleAuditEvents,
+	generatedAt: "2026-10-01T09:00:00.000Z",
+};

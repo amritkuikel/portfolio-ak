@@ -67,6 +67,10 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"stopImpersonating",
 		],
 	},
+	"admin.ts": {
+		why: "the admin area's gate (requireAdminAccessMiddleware); the dashboard fills only the parts whose read permission the user holds",
+		functions: ["getDashboard"],
+	},
 	"test-crud-public.ts": {
 		why: "dev-only /dev/test-crud reads (devOnlyMiddleware); the repository only returns published rows",
 		functions: ["listPublicTestCrud", "getPublicTestCrud"],

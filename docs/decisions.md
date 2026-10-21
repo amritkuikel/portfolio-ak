@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (163 entries)</summary>
+<summary>Index (166 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -169,6 +169,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0161](#0161-the-portfolio-is-the-site-at--each-layout-renders-its-own-header-sections-can-skip-the-session): The portfolio is the site at `/`; each layout renders its own header; sections can skip the session
 - [0162](#0162-dev-pages-exist-in-dev-and-in-e2e-builds-dev_routes-a-production-deploy-refuses-the-flag): `/dev` pages exist in dev and in e2e builds (`DEV_ROUTES`); a production deploy refuses the flag
 - [0163](#0163-pnpm-strip-demo-removes-layers-portfolio-apps-by-data-lists-and-markers-the-core-stays): `pnpm strip-demo` removes layers (portfolio, apps) by data lists and markers; the core stays
+- [0164](#0164-graphite-layered-oklch-tokens-accent-radius-and-density-presets-on-html-contrast-tested): "Graphite": layered oklch tokens, accent, radius and density presets on `<html>`, contrast tested
+- [0165](#0165-the-command-palette-is-part-of-the-admin-shell): The command palette is part of the admin shell
+- [0166](#0166-the-admin-dashboard-reads-one-server-function-filtered-by-permission): The admin dashboard reads one server function, filtered by permission
 </details>
 
 ---
@@ -1769,6 +1772,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Why:** both are product choices (a shortcut can clash with an app's own; a cross-fade on every admin navigation is a matter of taste), so the base stays plain and the recipe is ready to copy.
 - **Alternatives considered:** shipping both in the admin layout (every project would carry the shortcut and the transition, wanted or not).
 
+*Superseded by 0165: the palette is part of the admin shell; view transitions stay opt-in.*
+
 ## 0141: `pnpm new:feature` generates an admin CRUD section from templates and marker lines
 
 - **What:** `scripts/new-feature.mjs <name> [--title] [--title-ne] [--no-build]` copies `scripts/templates/feature/` (paths and contents use `__name__`, `__snake__`, `__camel__`, `__Pascal__`, `__UPPER__`, `__Title__`; `.tpl` files, so Biome, TypeScript and knip ignore them) and inserts entries above `// @new-feature:<slot>` lines in the shared lists: the schema index, the permission catalog and its labels, audit actions, targets and labels, `ADMIN_SECTIONS`, the guarded-functions test and the e2e page lists. It appends messages to both locales, runs `drizzle-kit generate --name <snake>`, Biome on what it touched (and `drizzle/`), the Paraglide compiler and a build (which regenerates the route tree). The generated feature is the admin half of Test CRUD: title and notes, search, sort, pagination, create, edit with the version check (0122), delete and bulk delete with an audit row each (0132), thin routes, a PGlite service test and stories with their server-function mocks. `AdminSection["to"]` is now derived from the route tree (every `/admin/…` path without a param), so a new section needs no type edit.
@@ -1965,3 +1970,30 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - `tests/setup/env.ts` only defaulted its values, so CI's `VITE_APP_TITLE` changed what the tests expected. It now sets them.
 - **Why:** later tasks add the database-driven portfolio and six apps, which a new project may or may not want, so one all-or-nothing demo no longer fits.
 - **Alternatives considered:** one script per layer (the shared steps would be duplicated); an AST-based remover (markers are simpler, and they work in CSS, Markdown and YAML); deleting by directory only (shared files like the sitemap and the route test need edits). Supersedes 0142.
+
+## 0164: "Graphite": layered oklch tokens, accent, radius and density presets on `<html>`, contrast tested
+
+- **What:**
+  - **Tokens** (`src/styles/app.css`): cool graphite neutrals (hue 265) with three layers (`--background`, `--surface-1` for the sidebar and muted panels, `--surface-2` for cards and popovers); a near-black dark mode (`oklch(0.165 0.005 265)`); hairline borders; an elevation scale (`--elevation-*`, mapped to `shadow-*`, darker with a faint top highlight in dark mode); status tokens `success`, `warning`, `info` and `danger` (= `destructive`), each with `-foreground` (text on the fill) and `-subtle` (a tint); a type scale (`text-display`, `text-title`, `text-heading`, `text-body`, `text-caption`, registered in the app's `cn`); Inter's `cv11` and `ss01`; tabular figures in tables and `[data-figures]`.
+  - **Presets**, each an attribute on `<html>` rendered by the server from a cookie (`preferenceHtmlProps`), so nothing flashes: `data-accent` (indigo, violet, emerald, amber, rose: `--primary`, `--primary-foreground`, `--accent-subtle`, `--chart-2…5` per theme), `data-radius` (sharp 4 px, default 8 px, round 14 px; `rounded-sm…xl` scale from `--radius` by multiplication, so the sharp preset never goes negative) and `data-density` (`--control-height` 36/32 px and `--row-padding`, used by Button, Input, InputGroup, Select, NativeSelect, the filter bar and table cells). `Preferences` gained `accent`, `radius` and `density`, with cookies, parsing and store actions; the appearance page (`/admin/settings/appearance`) sets them.
+  - **Dark accents are light, with dark text on them** (as shadcn's dark primary): an indigo fill with white text would leave `text-primary` under 4.5:1 on the dark background.
+  - **Accent selectors match any element** (`[data-accent="rose"]`, `.dark[data-accent="rose"], .dark [data-accent="rose"]`), so a swatch can show another accent; indigo repeats the `:root` defaults for that.
+  - **`tests/unit/design-tokens.test.ts`** parses `app.css`, applies its rules as `<html>` would match them per accent × theme, resolves `var()`, converts oklch to sRGB (clipped) and checks 4.5:1 for every text pair. The browser review only sees the default preset.
+  - **Shells** (`components/admin-shell`, `auth-shell`, `app-header`, `brand`): the admin frame on shadcn's `Sidebar` (icon collapse, a sheet on phones chosen by CSS rather than an `isMobile` state, which broke hydration of 403 pages on phones; the `sidebar` preference cookie instead of shadcn's own; a sticky container instead of a fixed one so the impersonation banner pushes it down; a `<div>` inset because pages own `<main>`), a split-screen sign-in frame with server-rendered contour art, and a compact header for the account page. Breadcrumbs moved out of `PageHeader`: the admin topbar shows them, other pages render `<Breadcrumbs />` above the header.
+- **Checked:** Tailwind 4's `--text-<name>--line-height`, `--letter-spacing` and `--font-weight` sub-properties compile into the `text-<name>` utility (built CSS). shadcn's CLI (`shadcn@latest add`) still writes `from "cn"` and adds the unrelated `cn` package (reverted, 0118); every overwrite prompt was answered "no". Its sidebar writes a `sidebar_state` cookie, renders `<main>` and hard-codes English screen-reader text; its `BreadcrumbPage` is `role="link" aria-disabled`. All changed in our copies (design-system.md, pitfalls).
+- **Why:** the owner chose a Linear-style admin with switchable presets (PLAN 10.2). Attributes on `<html>` keep the presets in CSS (no JavaScript per component, no runtime theme object) and SSR-safe; the test makes ten combinations as safe as the one the browser review sees.
+- **Alternatives considered:** CSS variables set inline from JavaScript (flashes before hydration); generating the accent ramps at runtime with relative `oklch(from …)` colours (contrast can't be tested statically); one fixed accent (the owner asked for presets).
+- **Entry JS:** +1.4 kB gzip (234.8 → 236.2): the root needs the preset state and `useAppearance` to render `<html>`'s attributes, plus the new route's options. The shell itself is in the `_admin` route chunk (35 kB).
+
+## 0165: The command palette is part of the admin shell
+
+- **What:** `components/admin-shell/command-menu.tsx` (cmdk) opens with Ctrl/⌘ K anywhere in the admin area, or with the topbar's search button. Groups: recent pages (the last five admin pages opened, in `localStorage`, every access in try/catch), every section the user may open (`permittedSections`, matching labels and each section's localized `keywords`), feature actions (`AdminCommand`s from `features/<name>/commands.ts`, collected in `ADMIN_COMMANDS`; Test CRUD's "New Test CRUD item"), theme, language (a full load, like the switcher) and sign out. It navigates with `viewTransition: true`. The `/dev/examples/command-palette` recipe and its messages are gone.
+- **Why:** the owner chose a keyboard-first admin (PLAN 10.2); a palette that only exists as a recipe isn't keyboard-first. Actions registered per feature keep the palette free of feature imports beyond one list.
+- **Known quirk:** after typing, cmdk's `aria-activedescendant` can briefly name an item the filter just removed, which axe flags while the dialog is open. The e2e review never opens it; the story closes it before its a11y check.
+- **Alternatives considered:** keeping the recipe (0140); a palette that searches records too (needs a search endpoint per feature; later, when a feature wants it). Supersedes 0140.
+
+## 0166: The admin dashboard reads one server function, filtered by permission
+
+- **What:** `getDashboard` (`src/functions/admin.ts`, `requireAdminAccessMiddleware`, listed in the guarded-functions test with its reason) calls `src/server/admin/dashboard.ts`, which runs these reads in parallel, each only when the actor holds that section's read permission: Test CRUD totals by status plus items created in the last 7 days (one scan with `count(*) filter (where …)`), users (total, banned, new in 7 days), the role count, and the last 10 audit events (the audit list query). Parts the user may not read are `null`, so the browser never gets numbers it couldn't open. It also returns `generatedAt`, the "now" for relative times, so the server and the browser render the same words. The page (`features/admin/components/dashboard.tsx`) shows `StatCard`s, the activity list and quick actions (the `ADMIN_COMMANDS` the user may run, plus Appearance).
+- **Why:** one round trip for the whole page (the database is about 300 ms away from the owner), and the permission rule lives on the server like every other read.
+- **Alternatives considered:** one query per card through each section's list function (four round trips, and list functions return pages, not totals); counting on the client from cached lists (wrong once a list is filtered or paged).
