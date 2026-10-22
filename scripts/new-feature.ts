@@ -241,17 +241,14 @@ insert("src/features/admin/sections.ts", "admin-sections", [
 	'\tgroup: "overview",',
 	"},",
 ]);
-// The icon goes into the icons' import (unless an earlier feature added it); Biome sorts the names.
+// The icon goes into the icons' import (unless an earlier feature added it), first: the last name may
+// carry a trailing `// @layer` comment. Biome sorts the names.
 const iconImport = /import \{([^}]*)\} from "lucide-react";/;
 const sectionsFile = read("src/features/admin/sections.ts");
 if (!/\bFolderIcon\b/.test(iconImport.exec(sectionsFile)?.[1] ?? "")) {
 	write(
 		"src/features/admin/sections.ts",
-		sectionsFile.replace(
-			iconImport,
-			(_, list: string) =>
-				`import {${list.trimEnd()}${list.trimEnd().endsWith(",") ? "" : ","} FolderIcon } from "lucide-react";`,
-		),
+		sectionsFile.replace(iconImport, (_, list: string) => `import { FolderIcon,${list}} from "lucide-react";`),
 	);
 }
 addImport("src/features/admin/commands.ts", `import { ${c}Commands } from "@/features/${n}/commands";`);

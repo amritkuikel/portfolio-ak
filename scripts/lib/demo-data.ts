@@ -20,7 +20,18 @@ export const DEMO_ROLES: ReadonlyArray<{ key: string; name: string; description:
 		key: "editor",
 		name: "Editor",
 		description: "Writes and publishes Test CRUD items.",
-		permissions: ["test-crud:read", "test-crud:create", "test-crud:update", "test-crud:publish", "attachments:upload"],
+		permissions: [
+			"test-crud:read",
+			"test-crud:create",
+			"test-crud:update",
+			"test-crud:publish",
+			"attachments:upload",
+			"portfolio:read", // @portfolio
+			"portfolio:write", // @portfolio
+			"portfolio:publish", // @portfolio
+			"media:read", // @portfolio
+			"media:write", // @portfolio
+		],
 	},
 	{
 		key: "viewer",

@@ -57,7 +57,8 @@ function ThingForm() {
 | `FileField`, `ImageField` | `File[]` | `files({ maxBytes, accept })` |
 | `RichTextField` | HTML (untrusted) | `richText()`; sanitize on the server |
 
-- **Images for a record** are not `ImageField`: use `ImageGalleryField` (Cloudinary uploads, sortable, alt text; [attachments.md](attachments.md)).
+- **Images for a record** are not `ImageField`: use `ImageGalleryField` (Cloudinary uploads, sortable, alt text in both languages; [attachments.md](attachments.md)).
+- **Schema helpers for these fields** (`src/lib/validation.ts`): `localizedText()` and `localizedRichText()` (`{ en, ne }`, Nepali optional), `list(item, { min, max })` for array fields (localized min/max messages).
 - **Rich text:** the editor loads only in the browser, and the server renders a same-size placeholder. On the server, pass its HTML through `sanitizeRichText()` before storing it and again before sending it to a page, then render it with `<RichTextContent html={safe} />`. That component only accepts the `SafeHtml` the sanitizer returns.
 
 ## Composite fields
@@ -72,6 +73,7 @@ The kit's fields for structured content (Task 37, decision 0168). They are **not
 | `BlocksField` | `Block[]` (`{ id, type, … }`, a discriminated union) | `types`: per type a label, `create()`, an optional `summary` and `render`; blocks collapse and stay mounted |
 | `KeyValueField` | `{ key, value }[]` | metadata, headers |
 | `LocalizedField`, `LocalizedRichTextField` (`fields/localized-fields.tsx`) | `{ en, ne }` | field groups (`withFieldGroup`): `<LocalizedField form={form} fields="title" label=… />`; en/ne tabs, "Nepali missing", a failed submit opens the tab with the error; Nepali is optional |
+| `MediaField` (`features/media/components/media-field.tsx`) | `{ id, preview }[]` | items of the media library (`max={1}` for one image, `kind="document"` for a PDF); a lazily loaded picker searches, selects and uploads; alt text is the item's own (0177) | <!-- @portfolio -->
 | `SlugField` (`fields/slug-field.tsx`) | `string` | made from `from` (a dotted path: `title.en`) while linked; pair with `slugValidators({ from, isAvailable })` on the AppField for a debounced server check that re-runs when the source changes (`onChangeListenTo`) |
 
 - **Reordering** (`SortableList`, `fields/sortable-list.tsx`, on `@dnd-kit/react`, decision 0170): drag the handle, or Space + arrow keys + Space from the keyboard, or Alt + ↑/↓ for one step. Moves are announced in the page's language. `moveItem(items, from, to)` for your own lists.

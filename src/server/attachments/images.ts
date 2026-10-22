@@ -37,6 +37,8 @@ export function toImageAsset(store: ImageStore, row: AttachmentRow): ImageAsset 
 	return {
 		id: row.id,
 		alt: row.alt,
+		format: row.format,
+		url: store.original(row),
 		width,
 		height,
 		full: source(store, row, width, (w) => `c_limit,w_${w},${AUTO}`),

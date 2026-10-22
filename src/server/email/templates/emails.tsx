@@ -157,3 +157,26 @@ export function SecurityNotice({ locale, siteName, name, url, kind }: SecurityNo
 		</EmailLayout>
 	);
 }
+
+// portfolio:start
+/** A message from the portfolio's contact form, to the owner (decision 0176). */
+export type ContactMessageProps = EmailBaseProps & WithUrl & { name: string; email: string; message: string };
+
+export function ContactMessage({ locale, siteName, name, email, message, url }: ContactMessageProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={m.email_contact_preview({ name }, { locale })}>
+			<Heading as="h1" style={styles.heading}>
+				{m.email_contact_heading({ name }, { locale })}
+			</Heading>
+			<Text style={styles.muted}>{m.email_contact_from({ name, email }, { locale })}</Text>
+			{message.split(/\n{2,}/).map((paragraph) => (
+				<Text key={paragraph} style={{ ...styles.text, whiteSpace: "pre-line" }}>
+					{paragraph}
+				</Text>
+			))}
+			<ActionButton locale={locale} href={url} label={m.email_contact_button({}, { locale })} />
+			<Text style={styles.muted}>{m.email_contact_reply({ email }, { locale })}</Text>
+		</EmailLayout>
+	);
+}
+// portfolio:end

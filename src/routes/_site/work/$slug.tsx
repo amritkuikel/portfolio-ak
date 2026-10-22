@@ -1,27 +1,24 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { CaseStudyBody } from "@/features/portfolio/components/case-study/case-study-body";
-import { CaseStudyHero } from "@/features/portfolio/components/case-study/case-study-hero";
-import { FactSheet } from "@/features/portfolio/components/case-study/fact-sheet";
-import { NextProject } from "@/features/portfolio/components/case-study/next-project";
-import { StatGrid } from "@/features/portfolio/components/primitives/stat";
+import { CaseStudyPage } from "@/features/portfolio/components/pages/case-study-page";
 import { caseStudyJsonLd } from "@/features/portfolio/lib/structured-data";
 import { projectQueryOptions } from "@/features/portfolio/queries";
-import { portfolioSlugParamSchema } from "@/features/portfolio/schema";
+import { portfolioSlugParamSchema, previewSearchSchema } from "@/features/portfolio/search";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { parseParams } from "@/lib/list/params";
+import { ensureQuery } from "@/lib/query";
 import { seo } from "@/lib/seo";
-import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_site/work/$slug")({
 	// Not a slug -> can't exist: the route doesn't match and the 404 needs no query.
 	params: { parse: (raw) => parseParams(portfolioSlugParamSchema, raw) },
-	loader: async ({ context, params }) => {
-		const detail = await context.queryClient.ensureQueryData(projectQueryOptions(params.slug));
+	validateSearch: previewSearchSchema,
+	loaderDeps: ({ search }) => ({ preview: search.preview === 1 }),
+	loader: async ({ context, params, deps }) => {
+		const detail = await ensureQuery(context.queryClient, projectQueryOptions(params.slug, deps.preview));
 		if (!detail) throw notFound();
 		// Only what head() and the breadcrumb need; the full project is in the Query cache.
-		const { title, summary, slug, year, client, stack } = detail.project;
-		return { title, summary, slug, year, client, stack };
+		const { title, summary, slug, year, client, stack, cover } = detail.project;
+		return { title, summary, slug, year, client, stack, image: cover.image, preview: deps.preview };
 	},
 	staticData: { breadcrumb: loaderTitleCrumb },
 	head: ({ loaderData }) =>
@@ -31,40 +28,13 @@ export const Route = createFileRoute("/_site/work/$slug")({
 					description: loaderData.summary,
 					path: `/work/${loaderData.slug}`,
 					type: "article",
+					// A preview may show a draft: never indexed.
+					noindex: loaderData.preview,
+					image: loaderData.image
+						? { url: loaderData.image.og, width: 1200, height: 630, alt: loaderData.title }
+						: null,
 					jsonLd: caseStudyJsonLd(loaderData),
 				})
 			: {},
 	component: CaseStudyPage,
 });
-
-function CaseStudyPage() {
-	const { slug } = Route.useParams();
-	const { data } = useSuspenseQuery(projectQueryOptions(slug));
-	// The loader already threw for a missing slug; this narrows the type.
-	if (!data) throw notFound();
-	const { project, index, total, next } = data;
-
-	return (
-		<article aria-labelledby="case-title">
-			<CaseStudyHero project={project} index={index} total={total} />
-
-			<section aria-labelledby="outcomes-title" className="pf-container pt-[clamp(4rem,8vw,7rem)]">
-				<h2 id="outcomes-title" className="pf-label mb-8 text-pf-stone">
-					{m.portfolio_case_outcomes()}
-				</h2>
-				<StatGrid metrics={project.metrics} className="lg:grid-cols-4" />
-			</section>
-
-			<div className="pf-container pf-grid gap-y-16 py-[clamp(5rem,10vw,9rem)]">
-				<div className="col-span-4 md:col-span-4 lg:col-span-3">
-					<FactSheet project={project} />
-				</div>
-				<div className="col-span-4 md:col-span-8 lg:col-span-8 lg:col-start-5">
-					<CaseStudyBody blocks={project.body} seed={project.slug} />
-				</div>
-			</div>
-
-			<NextProject next={next} />
-		</article>
-	);
-}

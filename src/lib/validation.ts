@@ -48,7 +48,26 @@ export const email = () =>
  * @public
  */
 export const localizedText = ({ max, optional = false }: { max?: number; optional?: boolean } = {}) =>
-	z.object({ en: optional ? optionalText({ max }) : required({ max }), ne: optionalText({ max }) });
+	z.strictObject({ en: optional ? optionalText({ max }) : required({ max }), ne: optionalText({ max }) });
+
+/**
+ * Rich-text HTML in both languages (LocalizedRichTextField): English required unless `optional`.
+ *
+ * @public
+ */
+export const localizedRichText = ({ max, optional = false }: { max?: number; optional?: boolean } = {}) =>
+	z.strictObject({ en: richText({ required: !optional, max }), ne: richText({ required: false, max }) });
+
+/**
+ * A list of `item`s (a SortableListField, BlocksField): at least `min`, at most `max`.
+ *
+ * @public
+ */
+export const list = <T extends z.ZodType>(item: T, { min = 0, max }: { min?: number; max: number }) =>
+	z
+		.array(item)
+		.min(min, { error: () => m.validation_list_min({ min: n(min) }) })
+		.max(max, { error: () => m.validation_list_max({ max: n(max) }) });
 
 /** A URL slug ("hello-world", ./slug.ts): required, lowercase words joined by hyphens. */
 export const slug = ({ max = SLUG_MAX }: { max?: number } = {}) =>

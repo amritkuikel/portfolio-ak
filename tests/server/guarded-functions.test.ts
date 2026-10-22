@@ -48,6 +48,60 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["exampleReadItems", "test-crud:read"],
 		["exampleManageRoles", "roles:manage"],
 	],
+	// portfolio:start
+	"portfolio.ts": [
+		["getPortfolioProfile", "portfolio:read"],
+		["updatePortfolioProfile", "portfolio:write"],
+		["listProjects", "portfolio:read"],
+		["listProjectOrder", "portfolio:read"],
+		["getProject", "portfolio:read"],
+		["isProjectSlugFree", "portfolio:read"],
+		["createProject", "portfolio:write"],
+		["updateProject", "portfolio:write"],
+		["setProjectStatus", "portfolio:publish"],
+		["deleteProjects", "portfolio:write"],
+		["reorderProjects", "portfolio:write"],
+		["listPosts", "portfolio:read"],
+		["getPost", "portfolio:read"],
+		["isPostSlugFree", "portfolio:read"],
+		["createPost", "portfolio:write"],
+		["updatePost", "portfolio:write"],
+		["setPostStatus", "portfolio:publish"],
+		["deletePosts", "portfolio:write"],
+	],
+	"portfolio-sections.ts": [
+		["listExperience", "portfolio:read"],
+		["createExperience", "portfolio:write"],
+		["updateExperience", "portfolio:write"],
+		["deleteExperience", "portfolio:write"],
+		["reorderExperience", "portfolio:write"],
+		["listSkills", "portfolio:read"],
+		["createSkill", "portfolio:write"],
+		["updateSkill", "portfolio:write"],
+		["deleteSkills", "portfolio:write"],
+		["reorderSkills", "portfolio:write"],
+		["listProcessSteps", "portfolio:read"],
+		["createProcessStep", "portfolio:write"],
+		["updateProcessStep", "portfolio:write"],
+		["deleteProcessSteps", "portfolio:write"],
+		["reorderProcessSteps", "portfolio:write"],
+		["listTestimonials", "portfolio:read"],
+		["createTestimonial", "portfolio:write"],
+		["updateTestimonial", "portfolio:write"],
+		["deleteTestimonials", "portfolio:write"],
+		["reorderTestimonials", "portfolio:write"],
+	],
+	"portfolio-messages.ts": [
+		["listContactMessages", "messages:read"],
+		["setContactMessageState", "messages:manage"],
+		["deleteContactMessages", "messages:manage"],
+	],
+	"media.ts": [
+		["listMedia", "media:read"],
+		["updateMediaAlt", "media:write"],
+		["deleteMedia", "media:write"],
+	],
+	// portfolio:end
 	// @new-feature:guarded-functions
 };
 
@@ -73,6 +127,21 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 		why: "the admin area's gate (requireAdminAccessMiddleware); the dashboard fills only the parts whose read permission the user holds",
 		functions: ["getDashboard"],
 	},
+	// portfolio:start
+	"portfolio-public.ts": {
+		why: "the portfolio's public pages and contact form: published content only; drafts only in a preview the handler grants to a session holding portfolio:read; the form is rate limited, Turnstile-checked and honeypotted",
+		functions: [
+			"getPublicProfile",
+			"getHome",
+			"getWork",
+			"getCaseStudy",
+			"getAbout",
+			"getJournal",
+			"getArticle",
+			"submitContactMessage",
+		],
+	},
+	// portfolio:end
 	"test-crud-public.ts": {
 		why: "dev-only /dev/test-crud reads (devOnlyMiddleware); the repository only returns published rows",
 		functions: ["listPublicTestCrud", "getPublicTestCrud"],

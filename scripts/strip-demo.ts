@@ -46,16 +46,33 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/routes/_site",
 			"src/features/portfolio",
 			"src/styles/portfolio.css",
+			// The portfolio admin, its media library and its contact inbox (Task 39, decision 0176).
+			"src/routes/_admin/admin/portfolio",
+			"src/routes/_admin/admin/media.tsx",
+			"src/features/media",
+			"src/functions/portfolio.ts",
+			"src/functions/portfolio-sections.ts",
+			"src/functions/portfolio-messages.ts",
+			"src/functions/portfolio-public.ts",
+			"src/functions/media.ts",
+			"src/server/portfolio",
+			"src/server/media",
+			"scripts/seed-portfolio.ts",
+			"scripts/lib/portfolio-seed.ts",
+			"scripts/lib/portfolio-content.ts",
+			"scripts/lib/portfolio-data",
 			"tests/components/portfolio",
 			"tests/unit/portfolio-data.test.ts",
 			"tests/unit/portfolio-lib.test.ts",
-			"tests/unit/portfolio-source.test.ts",
+			"tests/server/portfolio-admin.test.ts",
+			"tests/server/portfolio-public.test.ts",
+			"e2e/flows/portfolio.spec.ts",
 			"docs/guides/portfolio.md",
 		],
-		packageScripts: [],
+		packageScripts: ["db:seed-portfolio"],
 		crons: [],
 		knipEntries: [],
-		schema: [],
+		schema: ["src/server/db/schema/portfolio.ts"],
 	},
 	apps: {
 		sentinel: "src/routes/apps",
@@ -279,13 +296,21 @@ run("formatting", node, [
 	"--no-errors-on-unmatched",
 	...[...changed].filter((file) => existsSync(at(file))),
 ]);
-if (stripped.some((layer) => SPECS[layer].schema.length > 0)) {
+// Always: a layer can also own columns of a kept table (the apps layer, a project's app_slug); drizzle-kit
+// writes nothing when the schema didn't change.
+if (stripped.length > 0) {
 	run(
-		"writing the migration that drops the layers' tables",
+		"writing the migration that drops the layers' tables and columns",
 		node,
 		["node_modules/drizzle-kit/bin.cjs", "generate", "--name", `strip_${stripped.join("_")}`],
 		configEnv,
 	);
+	run("formatting the migration's metadata", node, [
+		"node_modules/@biomejs/biome/bin/biome",
+		"format",
+		"--write",
+		"drizzle/meta",
+	]);
 }
 if (build) {
 	run("building (regenerates the route tree)", node, ["node_modules/vite/bin/vite.js", "build"], configEnv);

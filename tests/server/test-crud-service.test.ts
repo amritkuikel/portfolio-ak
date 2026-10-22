@@ -55,9 +55,9 @@ const upload = async () => {
 		testDb.db,
 		cloud.store,
 		{ publicId: ticket.publicId, scope: "test-crud" },
-		testDb.adminId,
+		{ id: testDb.adminId, permissions: [] },
 	);
-	return { id: image.id, alt: "", publicId: ticket.publicId };
+	return { id: image.id, alt: { en: "", ne: "" }, publicId: ticket.publicId };
 };
 const MISSING = "00000000-0000-4000-8000-000000000000";
 /** Any version: the row doesn't exist, so it's never compared. */

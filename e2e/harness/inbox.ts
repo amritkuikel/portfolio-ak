@@ -68,6 +68,15 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				]);
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
+			// portfolio:start
+			if (route === "GET /e2e/portfolio") {
+				const table = url.searchParams.get("kind") === "post" ? "portfolio_post" : "portfolio_project";
+				const { rows } = await query(`select "id", "slug", "status" from "${table}" where "slug" = $1`, [
+					url.searchParams.get("slug"),
+				]);
+				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
+			}
+			// portfolio:end
 			return send(response, 404, { error: `no route ${route}` });
 		} catch (error) {
 			return send(response, 500, { error: error instanceof Error ? error.message : String(error) });

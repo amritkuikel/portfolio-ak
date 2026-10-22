@@ -9,7 +9,8 @@
  * - roles "editor" (Test CRUD read/create/update/publish + uploads) and "viewer" (read-only admin);
  * - editor@example.com (editor), viewer@example.com (viewer), member@example.com (no role:
  *   signs in, but /admin shows the forbidden page);
- * - 30 Test CRUD items, published and drafts, with tags and prices.
+ * - 30 Test CRUD items, published and drafts, with tags and prices;
+ * - the portfolio's demo content, when it has none (scripts/lib/portfolio-seed.ts).
  * The data itself is in ./lib/demo-data.ts.
  *
  * Run `pnpm db:migrate` first (and `pnpm db:seed-admin` for an admin). Refuses
@@ -22,6 +23,7 @@ import pg from "pg";
 // A plain TypeScript module without imports: Node strips its types.
 import { withVerifiedSsl } from "../src/server/db/connection-string.ts";
 import { DEMO_ROLES, DEMO_USERS, seedDemo } from "./lib/demo-data.ts";
+import { seedPortfolio } from "./lib/portfolio-seed.ts"; // @portfolio
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 
@@ -60,7 +62,9 @@ try {
 	const { created } = await seedDemo((sql, params) => client.query(sql, params), {
 		passwordHash: await hashPassword(password),
 	});
+	const portfolio = await seedPortfolio((sql, params) => client.query(sql, params)); // @portfolio
 	await client.query("commit");
+	if (portfolio.seeded) console.log("seed-demo: the portfolio's demo content written."); // @portfolio
 	console.log(
 		`seed-demo: roles ${DEMO_ROLES.map((role) => role.key).join(", ")}; ` +
 			`users ${DEMO_USERS.map((user) => user.email).join(", ")}; ${created} new Test CRUD items.`,

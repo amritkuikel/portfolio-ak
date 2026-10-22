@@ -3,6 +3,8 @@ import { m } from "@/paraglide/messages";
 import {
 	AccountDeleted,
 	type AccountDeletedProps,
+	ContactMessage, // @portfolio
+	type ContactMessageProps, // @portfolio
 	DeleteAccount,
 	type DeleteAccountProps,
 	EmailChanged,
@@ -33,6 +35,7 @@ export interface EmailPropsMap {
 	"delete-account": DeleteAccountProps;
 	"account-deleted": AccountDeletedProps;
 	"security-notice": SecurityNoticeProps;
+	"contact-message": ContactMessageProps; // @portfolio
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -102,6 +105,18 @@ export const emailTemplates: EmailRegistry = {
 		subject: ({ locale, siteName }) => m.email_notice_subject({ site: siteName }, { locale }),
 		sample: { name: "Sita Sharma", kind: "two-factor-enabled", url: "https://example.com/account" },
 	},
+	// portfolio:start
+	"contact-message": {
+		component: ContactMessage,
+		subject: ({ locale, siteName, name }) => m.email_contact_subject({ name, site: siteName }, { locale }),
+		sample: {
+			name: "Sita Sharma",
+			email: "sita@example.com",
+			message: "Namaste! We are planning a bilingual booking site for our trekking agency.\n\nCould we talk next week?",
+			url: "https://example.com/admin/portfolio/messages",
+		},
+	},
+	// portfolio:end
 };
 
 export const EMAIL_TEMPLATE_IDS = Object.keys(emailTemplates) as EmailTemplateId[];

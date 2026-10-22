@@ -11,15 +11,21 @@ import { Progress } from "@/components/ui/progress";
 import { useCan } from "@/features/rbac/can";
 import { discardImageUpload, getUploadSettings } from "@/functions/attachments";
 import { formatNumber } from "@/lib/i18n/intl";
+import type { Localized } from "@/lib/i18n/localized";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { IMAGE_MAX_BYTES, IMAGE_MIME_TYPES, type UploadScope } from "../constants";
+import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "../constants";
 import type { ImageAsset } from "../schema";
 import { UploadError, uploadImage } from "../upload";
 import { CloudImage } from "./cloud-image";
 
-/** One image in the field's value: an attachment, its alt text and its preview. */
-export type FieldImage = { id: string; alt: string; preview: ImageAsset };
+/** One image in the field's value: an attachment, its alt text (both languages) and its preview. */
+export type FieldImage = { id: string; alt: Localized; preview: ImageAsset };
+
+const ALT_LANGUAGES = [
+	["en", m.language_en],
+	["ne", m.language_ne],
+] as const;
 
 type Upload = { key: string; name: string; progress: number; error?: string; controller: AbortController };
 
@@ -99,7 +105,7 @@ export function ImageGalleryField({
 					setUploads((current) => current.filter((upload) => upload.key !== key));
 					// Appended atomically: uploads finish in any order, close together, and a
 					// value read when this upload started would drop the others.
-					field.pushValue({ id: preview.id, alt: "", preview });
+					field.pushValue({ id: preview.id, alt: { en: "", ne: "" }, preview });
 					field.handleBlur();
 					setAnnouncement(m.attachments_field_uploaded({ name: file.name }));
 				})
@@ -124,8 +130,12 @@ export function ImageGalleryField({
 		if (fresh.current.delete(image.id)) void discardImageUpload({ data: { id: image.id } }).catch(() => {});
 		setAnnouncement(m.attachments_field_removed());
 	};
-	const setAlt = (index: number, alt: string) =>
-		field.handleChange(images.map((image, position) => (position === index ? { ...image, alt } : image)));
+	const setAlt = (index: number, language: keyof Localized, text: string) =>
+		field.handleChange(
+			images.map((image, position) =>
+				position === index ? { ...image, alt: { ...image.alt, [language]: text } } : image,
+			),
+		);
 
 	const onDrop = (event: DragEvent<HTMLDivElement>) => {
 		event.preventDefault();
@@ -168,17 +178,22 @@ export function ImageGalleryField({
 									<span className="font-medium text-sm">{m.attachments_field_image_n({ n })}</span>
 									{index === 0 ? <Badge variant="secondary">{m.attachments_field_cover()}</Badge> : null}
 								</div>
-								<label className="sr-only" htmlFor={`${a11y.id}-alt-${image.id}`}>
-									{m.attachments_field_alt({ n })}
-								</label>
-								<Input
-									id={`${a11y.id}-alt-${image.id}`}
-									value={image.alt}
-									maxLength={200}
-									placeholder={m.attachments_field_alt_placeholder()}
-									onChange={(event) => setAlt(index, event.target.value)}
-									onBlur={field.handleBlur}
-								/>
+								{ALT_LANGUAGES.map(([language, name]) => (
+									<div key={language} className="contents">
+										<label className="sr-only" htmlFor={`${a11y.id}-alt-${image.id}-${language}`}>
+											{m.attachments_field_alt_in({ n, language: name() })}
+										</label>
+										<Input
+											id={`${a11y.id}-alt-${image.id}-${language}`}
+											lang={language}
+											value={image.alt[language]}
+											maxLength={200}
+											placeholder={m.attachments_field_alt_placeholder_in({ language: name() })}
+											onChange={(event) => setAlt(index, language, event.target.value)}
+											onBlur={field.handleBlur}
+										/>
+									</div>
+								))}
 								<Button
 									type="button"
 									variant="ghost"
@@ -256,7 +271,7 @@ export function ImageGalleryField({
 						<input
 							ref={inputRef}
 							type="file"
-							accept={IMAGE_MIME_TYPES.join(",")}
+							accept={uploadRule(scope).mimeTypes.join(",")}
 							multiple
 							className="sr-only"
 							tabIndex={-1}

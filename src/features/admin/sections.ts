@@ -1,12 +1,21 @@
 import { type ActiveOptions, linkOptions } from "@tanstack/react-router";
 import {
+	BriefcaseIcon, // @portfolio
 	DatabaseIcon,
+	FolderKanbanIcon, // @portfolio
+	ImagesIcon, // @portfolio
+	InboxIcon, // @portfolio
 	KeyRoundIcon,
 	type LucideIcon,
+	NotebookPenIcon, // @portfolio
 	PaletteIcon,
+	QuoteIcon, // @portfolio
 	ScrollTextIcon,
 	ShieldCheckIcon,
+	UserRoundIcon, // @portfolio
 	UsersIcon,
+	WorkflowIcon, // @portfolio
+	WrenchIcon, // @portfolio
 } from "lucide-react";
 import type { Permission } from "@/features/rbac/permissions";
 import { m } from "@/paraglide/messages";
@@ -57,6 +66,89 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		group: "overview",
 		keywords: m.admin_keywords_test_crud,
 	},
+	// portfolio:start
+	{
+		...linkOptions({ to: "/admin/portfolio/profile" }),
+		label: m.admin_nav_portfolio_profile,
+		description: m.portfolio_admin_profile_description,
+		icon: UserRoundIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_profile,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/projects" }),
+		label: m.admin_nav_portfolio_projects,
+		description: m.portfolio_admin_projects_description,
+		icon: FolderKanbanIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_projects,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/journal" }),
+		label: m.admin_nav_portfolio_posts,
+		description: m.portfolio_admin_posts_description,
+		icon: NotebookPenIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_posts,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/experience" }),
+		label: m.admin_nav_portfolio_experience,
+		description: m.portfolio_admin_experience_description,
+		icon: BriefcaseIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_experience,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/skills" }),
+		label: m.admin_nav_portfolio_skills,
+		description: m.portfolio_admin_skills_description,
+		icon: WrenchIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_skills,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/process" }),
+		label: m.admin_nav_portfolio_process,
+		description: m.portfolio_admin_process_description,
+		icon: WorkflowIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_process,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/testimonials" }),
+		label: m.admin_nav_portfolio_testimonials,
+		description: m.portfolio_admin_testimonials_description,
+		icon: QuoteIcon,
+		permission: "portfolio:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_portfolio_testimonials,
+	},
+	{
+		...linkOptions({ to: "/admin/portfolio/messages" }),
+		label: m.admin_nav_messages,
+		description: m.messages_description,
+		icon: InboxIcon,
+		permission: "messages:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_messages,
+	},
+	{
+		...linkOptions({ to: "/admin/media" }),
+		label: m.admin_nav_media,
+		description: m.media_description,
+		icon: ImagesIcon,
+		permission: "media:read",
+		group: "portfolio",
+		keywords: m.admin_keywords_media,
+	},
+	// portfolio:end
 	{
 		...linkOptions({ to: "/admin/users" }),
 		label: m.admin_nav_users,

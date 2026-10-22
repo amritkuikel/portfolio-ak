@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { IMAGE_FORMATS, IMAGE_MAX_BYTES } from "@/features/attachments/constants";
+import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "@/features/attachments/constants";
 import type { UploadTicket } from "@/features/attachments/schema";
 
 /**
@@ -37,10 +37,12 @@ export type RemoteImage = {
 
 export type ImageStore = {
 	readonly config: CloudinaryConfig;
-	signUpload(scope: string, now?: Date): UploadTicket;
+	signUpload(scope: UploadScope, now?: Date): UploadTicket;
 	getImage(publicId: string): Promise<RemoteImage | null>;
 	destroy(publicId: string): Promise<"ok" | "not found">;
 	url(image: { publicId: string; version: number }, transformation: string): string;
+	/** The original file as uploaded (a PDF to open or download). */
+	original(image: { publicId: string; version: number; format: string }): string;
 	/** True when a public_id belongs to this app (its folder). */
 	owns(publicId: string): boolean;
 };
@@ -68,8 +70,9 @@ export function createCloudinary(config: CloudinaryConfig, fetcher: typeof fetch
 
 		signUpload(scope, now = new Date()) {
 			const publicId = `${config.folder}/${scope}/${randomUUID()}`;
+			const { formats } = uploadRule(scope);
 			const signed = {
-				allowed_formats: IMAGE_FORMATS.join(","),
+				allowed_formats: formats.join(","),
 				overwrite: "false",
 				public_id: publicId,
 				timestamp: timestamp(now),
@@ -83,7 +86,7 @@ export function createCloudinary(config: CloudinaryConfig, fetcher: typeof fetch
 				},
 				publicId,
 				maxBytes: IMAGE_MAX_BYTES,
-				formats: IMAGE_FORMATS,
+				formats,
 			};
 		},
 
@@ -123,6 +126,10 @@ export function createCloudinary(config: CloudinaryConfig, fetcher: typeof fetch
 
 		url({ publicId, version }, transformation) {
 			return `${config.deliveryBase.replace(/\/$/, "")}/${config.cloudName}/image/upload/${transformation}/v${version}/${publicId}`;
+		},
+
+		original({ publicId, version, format }) {
+			return `${config.deliveryBase.replace(/\/$/, "")}/${config.cloudName}/image/upload/v${version}/${publicId}.${format}`;
 		},
 
 		owns(publicId) {

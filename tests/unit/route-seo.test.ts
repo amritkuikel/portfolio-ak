@@ -31,6 +31,7 @@ const samplePerson = {
 	role: "Full-stack developer",
 	intro: "Ten years of shipping web products end to end, from schema to pixel.",
 	socials: ["https://example.com/github"],
+	seo: { title: "", description: "", image: null },
 };
 const sampleProject = {
 	title: "Ledgerline",
@@ -39,6 +40,8 @@ const sampleProject = {
 	year: 2026,
 	client: "Himal Capital",
 	stack: ["PostgreSQL", "TanStack Start"],
+	image: null,
+	preview: false,
 };
 const samplePost = {
 	title: "Server-render everything",
@@ -46,6 +49,8 @@ const samplePost = {
 	slug: "server-render-everything",
 	publishedAt: "2026-09-02",
 	tags: ["React", "SSR"],
+	image: null,
+	preview: false,
 };
 // portfolio:end
 

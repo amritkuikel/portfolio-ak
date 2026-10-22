@@ -30,7 +30,7 @@ export function NextProject({ next }: { next: ProjectDetail["next"] }) {
 					</div>
 					<div className="col-span-4 md:col-span-4 md:col-start-9">
 						<CoverFrame transitionSlug={next.slug} aspect="landscape" zoom>
-							<CoverArt seed={next.slug} motif={next.cover.motif} glyph={next.cover.glyph} />
+							<CoverArt seed={next.cover.seed} motif={next.cover.motif} glyph={next.cover.glyph} />
 						</CoverFrame>
 					</div>
 				</div>

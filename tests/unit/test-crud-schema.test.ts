@@ -68,7 +68,9 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 		const id = "6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0001";
 		const preview = {
 			id,
-			alt: "",
+			alt: { en: "", ne: "" },
+			format: "png",
+			url: "x",
 			width: 1,
 			height: 1,
 			full: { src: "x", srcSet: "x" },
@@ -76,13 +78,22 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 			thumb: "x",
 			og: "x",
 		};
-		const form = { ...valid, status: "draft" as const, tags: [], images: [{ id, alt: " Momo ", preview }] };
+		const form = {
+			...valid,
+			status: "draft" as const,
+			tags: [],
+			images: [{ id, alt: { en: " Momo ", ne: "" }, preview }],
+		};
 		expect(testCrudFormSchema.safeParse(form).success).toBe(true);
-		expect(toTestCrudInput(form).images).toEqual([{ id, alt: "Momo" }]);
-		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id: "nope", alt: "" }] }).success).toBe(false);
-		const nine = Array.from({ length: 9 }, () => ({ id, alt: "" }));
+		expect(toTestCrudInput(form).images).toEqual([{ id, alt: { en: "Momo", ne: "" } }]);
+		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id: "nope", alt: { en: "", ne: "" } }] }).success).toBe(
+			false,
+		);
+		const nine = Array.from({ length: 9 }, () => ({ id, alt: { en: "", ne: "" } }));
 		expect(testCrudInputSchema.safeParse({ ...valid, images: nine }).success).toBe(false);
-		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id, alt: "x".repeat(201) }] }).success).toBe(false);
+		expect(
+			testCrudInputSchema.safeParse({ ...valid, images: [{ id, alt: { en: "x".repeat(201), ne: "" } }] }).success,
+		).toBe(false);
 	});
 });
 

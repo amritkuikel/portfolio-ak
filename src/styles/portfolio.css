@@ -295,6 +295,78 @@
 	max-width: 62ch;
 }
 
+/*
+ * A journal article's rich text (decision 0176): the editor's tags (p, h2, h3,
+ * lists, blockquote, pre/code, links, hr) in the portfolio's type. Code wraps
+ * instead of scrolling, so no unfocusable scroll region appears on phones.
+ */
+@utility pf-prose {
+	display: flex;
+	flex-direction: column;
+	gap: 1.75rem;
+	font-size: var(--text-pf-lead);
+	line-height: var(--text-pf-lead--line-height);
+	color: var(--pf-ink-2);
+	& > p:first-child {
+		color: var(--pf-ink);
+	}
+	& h2,
+	& h3 {
+		/* As .pf-display.text-pf-h3: h3-size type at the normal width. */
+		margin-top: 1.5rem;
+		font-family: var(--font-pf-sans);
+		font-stretch: 100%;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--pf-ink);
+		font-size: var(--text-pf-h3);
+		line-height: var(--text-pf-h3--line-height);
+	}
+	& ul,
+	& ol {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding-inline-start: 1.5rem;
+	}
+	& ul {
+		list-style: square;
+	}
+	& ol {
+		list-style: decimal;
+	}
+	& li::marker {
+		color: var(--pf-accent);
+	}
+	& blockquote {
+		border-inline-start: 4px solid var(--pf-accent);
+		padding-inline-start: 1.25rem;
+		color: var(--pf-ink);
+		font-weight: 500;
+	}
+	& pre {
+		background: var(--pf-paper-2);
+		padding: 1.25rem;
+		font-family: var(--font-pf-mono);
+		font-size: var(--text-pf-small);
+		line-height: 1.7;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	& :not(pre) > code {
+		font-family: var(--font-pf-mono);
+		font-size: 0.9em;
+	}
+	& a {
+		color: var(--pf-accent);
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+	& hr {
+		border-color: var(--pf-line);
+	}
+}
+
 /* A crimson thread that draws in under the text from the left on hover and focus. */
 @utility pf-link {
 	background-image: linear-gradient(var(--pf-accent), var(--pf-accent));

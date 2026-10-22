@@ -109,6 +109,16 @@ export class Harness {
 		if (!row.id) throw new Error(`no seeded Test CRUD item "${slug}"`);
 		return row.id;
 	}
+
+	// portfolio:start
+	/** A portfolio project's or post's id by slug (the seeded ones, or one a flow created). */
+	async portfolioId(kind: "project" | "post", slug: string): Promise<string> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/portfolio?kind=${kind}&slug=${encodeURIComponent(slug)}`);
+		const row = (await response.json()) as { id?: string };
+		if (!row.id) throw new Error(`no portfolio ${kind} "${slug}"`);
+		return row.id;
+	}
+	// portfolio:end
 }
 
 let runId: Promise<string> | undefined;

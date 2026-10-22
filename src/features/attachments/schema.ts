@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { optionalText } from "@/lib/validation";
+import type { Localized } from "@/lib/i18n/localized";
+import { localizedText } from "@/lib/validation";
 import { UPLOAD_SCOPES } from "./constants";
 
 /** A responsive image source: `src` for old browsers, `srcSet` for the rest. */
@@ -12,7 +13,12 @@ export type ImageSource = { src: string; srcSet: string };
  */
 export type ImageAsset = {
 	id: string;
-	alt: string;
+	/** In both languages (decision 0177); CloudImage shows the reader's, English when there is no Nepali. */
+	alt: Localized;
+	/** "jpg", "png", "pdf"…: a PDF is shown by a preview of its first page. */
+	format: string;
+	/** The original file, untransformed (a PDF to download). */
+	url: string;
 	/** Intrinsic size, for width/height attributes (no layout shift). */
 	width: number;
 	height: number;
@@ -29,7 +35,7 @@ export type ImageAsset = {
 export const ALT_MAX = 200;
 
 /** One image in a form: which attachment, in which order (array order), with its alt text. */
-export const attachmentRefSchema = z.object({ id: z.uuid(), alt: optionalText({ max: ALT_MAX }) });
+export const attachmentRefSchema = z.object({ id: z.uuid(), alt: localizedText({ max: ALT_MAX, optional: true }) });
 export type AttachmentRef = z.output<typeof attachmentRefSchema>;
 
 export const uploadScopeSchema = z.object({ scope: z.enum(UPLOAD_SCOPES) });

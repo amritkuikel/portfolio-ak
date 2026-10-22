@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
-import { portfolioSource } from "@/features/portfolio/sources"; // @portfolio
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, locales } from "@/paraglide/runtime";
+import { listSitemap } from "@/server/portfolio/public"; // @portfolio
 import type { Services } from "@/server/services";
 
 /** One indexable page: its de-localized path (the canonical one) and when it last changed. */
@@ -24,14 +24,14 @@ const escapeXml = (value: string) =>
 export async function sitemapEntries({ db }: Pick<Services, "db">): Promise<SitemapEntry[]> {
 	const entries: SitemapEntry[] = [{ path: "/" }];
 	// portfolio:start
-	// The portfolio (content from its PortfolioSource, decision 0106).
-	const portfolio = await portfolioSource.listSlugs();
+	// The portfolio: its pages, and its published projects and posts (decision 0176).
+	const portfolio = await listSitemap(db);
 	entries.push(
 		{ path: "/work" },
-		...portfolio.projects.map((slug) => ({ path: `/work/${slug}` })),
+		...portfolio.projects.map((project) => ({ path: `/work/${project.slug}`, lastmod: project.updatedAt })),
 		{ path: "/about" },
 		{ path: "/journal" },
-		...portfolio.posts.map((slug) => ({ path: `/journal/${slug}` })),
+		...portfolio.posts.map((post) => ({ path: `/journal/${post.slug}`, lastmod: post.updatedAt })),
 		{ path: "/contact" },
 	);
 	// portfolio:end

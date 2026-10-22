@@ -22,7 +22,7 @@ export function WorkRow({ project }: { project: ProjectSummary }) {
 				<div className="col-span-4 md:order-last md:col-span-3">
 					<div className="transition-[clip-path] duration-(--pf-dur-3) ease-(--pf-ease-out) md:[clip-path:inset(0_0_0_100%)] md:group-hover/row:[clip-path:inset(0)] md:group-focus-visible/row:[clip-path:inset(0)]">
 						<CoverFrame transitionSlug={project.slug} aspect="landscape">
-							<CoverArt seed={project.slug} motif={project.cover.motif} glyph={project.cover.glyph} />
+							<CoverArt seed={project.cover.seed} motif={project.cover.motif} glyph={project.cover.glyph} />
 						</CoverFrame>
 					</div>
 				</div>

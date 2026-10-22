@@ -1,15 +1,15 @@
 import { confirmImageUpload, signImageUpload } from "@/functions/attachments";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { IMAGE_MAX_BYTES, IMAGE_MIME_TYPES, type UploadScope } from "./constants";
+import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "./constants";
 import type { ImageAsset } from "./schema";
 
 /** A failure the user should see (localized message). */
 export class UploadError extends Error {}
 
 /** Checks a picked file before any network request (the server checks again after upload). */
-export function checkImageFile(file: File): string | null {
-	if (!(IMAGE_MIME_TYPES as ReadonlyArray<string>).includes(file.type)) return m.attachments_error_format();
+export function checkImageFile(file: File, scope: UploadScope): string | null {
+	if (!uploadRule(scope).mimeTypes.includes(file.type)) return m.attachments_error_format();
 	if (file.size > IMAGE_MAX_BYTES) {
 		return m.attachments_error_too_large({ max: `${formatNumber(IMAGE_MAX_BYTES / 1024 / 1024)} MB` });
 	}
@@ -66,7 +66,7 @@ export async function uploadImage(
 	scope: UploadScope,
 	{ onProgress = () => {}, signal }: { onProgress?: (fraction: number) => void; signal: AbortSignal },
 ): Promise<ImageAsset> {
-	const problem = checkImageFile(file);
+	const problem = checkImageFile(file, scope);
 	if (problem) throw new UploadError(problem);
 	const ticket = await signImageUpload({ data: { scope } });
 	await send(ticket.url, ticket.fields, file, onProgress, signal);

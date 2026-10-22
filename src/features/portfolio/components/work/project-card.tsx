@@ -37,7 +37,7 @@ export function ProjectCard({ project, index, flip = false }: ProjectCardProps) 
 				>
 					<CoverFrame transitionSlug={project.slug} aspect={index % 2 === 0 ? "portrait" : "landscape"} zoom>
 						<CoverArt
-							seed={project.slug}
+							seed={project.cover.seed}
 							motif={project.cover.motif}
 							glyph={project.cover.glyph}
 							ratio={index % 2 === 0 ? "portrait" : "landscape"}

@@ -2,7 +2,7 @@ import { count, eq, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TestCrudInput } from "@/features/test-crud/schema";
 import { AppError, FORM_ERROR_KEY } from "@/lib/errors";
-import { insertPending } from "@/server/attachments/repository";
+import { insertUpload } from "@/server/attachments/repository";
 import * as schema from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import {
@@ -68,7 +68,7 @@ let uploads = 0;
 /** A verified pending upload by `ownerId` (what confirmUpload records). */
 const pending = async (ownerId = USER_ID) => {
 	uploads++;
-	const row = await insertPending(
+	const row = await insertUpload(
 		db,
 		{
 			publicId: `portfolio/test-crud/u${uploads}`,
@@ -81,7 +81,7 @@ const pending = async (ownerId = USER_ID) => {
 		},
 		ownerId,
 	);
-	return { id: row.id, alt: "" };
+	return { id: row.id, alt: { en: "", ne: "" } };
 };
 const liveAttachments = async () =>
 	(await db.select({ total: count() }).from(schema.attachment).where(isNull(schema.attachment.deletedAt)))[0]?.total;
@@ -103,8 +103,8 @@ describe("create and read", () => {
 			input({
 				body: '<p onclick="x()">Hi<script>alert(1)</script></p>',
 				images: [
-					{ id: two.id, alt: "Second upload, shown first" },
-					{ id: one.id, alt: "" },
+					{ id: two.id, alt: { en: "Second upload, shown first", ne: "" } },
+					{ id: one.id, alt: { en: "", ne: "" } },
 				],
 			}),
 			opts(),
@@ -119,7 +119,7 @@ describe("create and read", () => {
 			body: "<p>Hi</p>",
 			publishedAt: null,
 		});
-		expect(created.images.map((image) => [image.id, image.alt])).toEqual([
+		expect(created.images.map((image) => [image.id, image.alt.en])).toEqual([
 			[two.id, "Second upload, shown first"],
 			[one.id, ""],
 		]);
@@ -311,11 +311,11 @@ describe("update, status and delete", () => {
 		const c = await pending();
 		const { item, removed } = await update(
 			created.id,
-			input({ title: "Renamed", tags: [], images: [c, { id: a.id, alt: "Now described" }] }),
+			input({ title: "Renamed", tags: [], images: [c, { id: a.id, alt: { en: "Now described", ne: "" } }] }),
 			opts({ version: created.updatedAt }),
 		);
 		expect(item).toMatchObject({ title: "Renamed", tags: [] });
-		expect(item.images.map((image) => [image.id, image.alt])).toEqual([
+		expect(item.images.map((image) => [image.id, image.alt.en])).toEqual([
 			[c.id, ""],
 			[a.id, "Now described"],
 		]);

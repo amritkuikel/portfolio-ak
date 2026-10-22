@@ -38,6 +38,14 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 		return page.route.replace("$id", await harness.testCrudId(SEEDED_ITEM_SLUG));
 	}
 	if (page.params.from === "seeded-slug") return page.route.replace("$slug", SEEDED_PUBLISHED_SLUG);
+	// portfolio:start
+	if (page.params.from === "portfolio-project-id") {
+		return page.route.replace("$id", await harness.portfolioId("project", "ledgerline"));
+	}
+	if (page.params.from === "portfolio-post-id") {
+		return page.route.replace("$id", await harness.portfolioId("post", "server-render-everything"));
+	}
+	// portfolio:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

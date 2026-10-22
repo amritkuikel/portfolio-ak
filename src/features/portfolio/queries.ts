@@ -1,91 +1,61 @@
 import { queryOptions } from "@tanstack/react-query";
+import {
+	getAbout,
+	getArticle,
+	getCaseStudy,
+	getHome,
+	getJournal,
+	getPublicProfile,
+	getWork,
+} from "@/functions/portfolio-public";
 import { getLocale } from "@/paraglide/runtime";
-import type { ProjectFilter } from "./source";
-import { portfolioSource } from "./sources";
 
 /**
- * Query options for every portfolio read. Loaders await them with
- * ensureQueryData (so pages arrive complete) and components read them with
- * useSuspenseQuery. Keys include the locale: content is resolved per language,
- * so English and Nepali never share a cache entry.
- *
- * The content only changes with a deploy, so it never goes stale in a session.
+ * The public pages' reads (decision 0176): one server function per page, so a
+ * page is one round trip. Loaders `ensureQuery` these (pages arrive complete)
+ * and components read them with useSuspenseQuery; the database is only ever
+ * read on the server, a client-side navigation calls the function. Keys
+ * include the locale: content is resolved per language. A preview is its own
+ * entry (it may hold a draft).
  */
-const STATIC = { staleTime: Number.POSITIVE_INFINITY } as const;
+
+const scope = () => ["portfolio", getLocale()] as const;
+const input = () => ({ data: { locale: getLocale() } });
 
 export const portfolioKeys = {
 	all: ["portfolio"] as const,
-	scoped: () => [...portfolioKeys.all, getLocale()] as const,
-	profile: () => [...portfolioKeys.scoped(), "profile"] as const,
-	projects: (filter: ProjectFilter) => [...portfolioKeys.scoped(), "projects", filter] as const,
-	project: (slug: string) => [...portfolioKeys.scoped(), "project", slug] as const,
-	experience: () => [...portfolioKeys.scoped(), "experience"] as const,
-	capabilities: () => [...portfolioKeys.scoped(), "capabilities"] as const,
-	process: () => [...portfolioKeys.scoped(), "process"] as const,
-	testimonials: () => [...portfolioKeys.scoped(), "testimonials"] as const,
-	posts: (limit?: number) => [...portfolioKeys.scoped(), "posts", { limit }] as const,
-	post: (slug: string) => [...portfolioKeys.scoped(), "post", slug] as const,
+	profile: () => [...scope(), "profile"] as const,
+	home: () => [...scope(), "home"] as const,
+	work: () => [...scope(), "work"] as const,
+	project: (slug: string, preview: boolean) => [...scope(), "project", slug, { preview }] as const,
+	about: () => [...scope(), "about"] as const,
+	journal: () => [...scope(), "journal"] as const,
+	post: (slug: string, preview: boolean) => [...scope(), "post", slug, { preview }] as const,
 };
 
+/** The owner, for every page's header and footer. */
 export const profileQueryOptions = () =>
+	queryOptions({ queryKey: portfolioKeys.profile(), queryFn: () => getPublicProfile(input()) });
+
+export const homeQueryOptions = () => queryOptions({ queryKey: portfolioKeys.home(), queryFn: () => getHome(input()) });
+
+/** Every published project (the work index filters by discipline on the page). */
+export const workQueryOptions = () => queryOptions({ queryKey: portfolioKeys.work(), queryFn: () => getWork(input()) });
+
+export const projectQueryOptions = (slug: string, preview = false) =>
 	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.profile(),
-		queryFn: () => portfolioSource.getProfile(getLocale()),
+		queryKey: portfolioKeys.project(slug, preview),
+		queryFn: () => getCaseStudy({ data: { locale: getLocale(), slug, preview } }),
 	});
 
-export const projectsQueryOptions = (filter: ProjectFilter = {}) =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.projects(filter),
-		queryFn: () => portfolioSource.listProjects(getLocale(), filter),
-	});
+export const aboutQueryOptions = () =>
+	queryOptions({ queryKey: portfolioKeys.about(), queryFn: () => getAbout(input()) });
 
-export const projectQueryOptions = (slug: string) =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.project(slug),
-		queryFn: () => portfolioSource.getProject(getLocale(), slug),
-	});
+export const journalQueryOptions = () =>
+	queryOptions({ queryKey: portfolioKeys.journal(), queryFn: () => getJournal(input()) });
 
-export const experienceQueryOptions = () =>
+export const postQueryOptions = (slug: string, preview = false) =>
 	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.experience(),
-		queryFn: () => portfolioSource.listExperience(getLocale()),
-	});
-
-export const capabilitiesQueryOptions = () =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.capabilities(),
-		queryFn: () => portfolioSource.listCapabilities(getLocale()),
-	});
-
-export const processQueryOptions = () =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.process(),
-		queryFn: () => portfolioSource.listProcess(getLocale()),
-	});
-
-export const testimonialsQueryOptions = () =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.testimonials(),
-		queryFn: () => portfolioSource.listTestimonials(getLocale()),
-	});
-
-export const postsQueryOptions = (limit?: number) =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.posts(limit),
-		queryFn: () => portfolioSource.listPosts(getLocale(), { limit }),
-	});
-
-export const postQueryOptions = (slug: string) =>
-	queryOptions({
-		...STATIC,
-		queryKey: portfolioKeys.post(slug),
-		queryFn: () => portfolioSource.getPost(getLocale(), slug),
+		queryKey: portfolioKeys.post(slug, preview),
+		queryFn: () => getArticle({ data: { locale: getLocale(), slug, preview } }),
 	});

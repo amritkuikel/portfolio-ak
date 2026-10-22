@@ -25,6 +25,21 @@ import { Route as PublicRoute } from "@/routes/_public";
 import { Route as SiteRoute } from "@/routes/_site"; // @portfolio
 import { Route as DevRoute } from "@/routes/dev/route";
 
+// portfolio:start
+// The portfolio's reads are server functions whose modules import server code (Start strips it from
+// the browser build; here nothing does). This test only reads the layout's options.
+vi.mock("@/functions/portfolio-public", () => ({
+	getPublicProfile: vi.fn(),
+	getHome: vi.fn(),
+	getWork: vi.fn(),
+	getCaseStudy: vi.fn(),
+	getAbout: vi.fn(),
+	getJournal: vi.fn(),
+	getArticle: vi.fn(),
+	submitContactMessage: vi.fn(),
+}));
+// portfolio:end
+
 /**
  * One header per section (decision 0161): the root renders none, each layout
  * renders its own, and the portfolio layout skips the session lookup.

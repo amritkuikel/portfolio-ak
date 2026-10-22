@@ -4,7 +4,8 @@
  * so the app, drizzle-kit and `pg` use it like any Postgres (decision 0155).
  *
  * The first start migrates and seeds an admin and the demo data; later starts only
- * apply new migrations. Delete .data/pglite to start over.
+ * apply new migrations (and write the portfolio's content while there is none).
+ * Delete .data/pglite to start over.
  */
 import { existsSync, mkdirSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";

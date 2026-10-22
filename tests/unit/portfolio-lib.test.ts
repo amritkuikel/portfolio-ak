@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { cn } from "@/features/portfolio/lib/cn";
 import { formatMetric } from "@/features/portfolio/lib/format-metric";
-import { isLocalized, resolveLocalized } from "@/features/portfolio/lib/localize";
 import { readingMinutes } from "@/features/portfolio/lib/reading-time";
 import { hashString, round, seededRandom } from "@/features/portfolio/lib/seeded-random";
 import { weave } from "@/features/portfolio/lib/weave";
+import { isFallback, isLocalized, localized, resolveLocalized } from "@/lib/i18n/localized";
 
 describe("resolveLocalized", () => {
 	it("resolves { en, ne } pairs deeply, through arrays and objects", () => {
@@ -23,6 +24,31 @@ describe("resolveLocalized", () => {
 			edge: ["a", "b"],
 		});
 		expect(resolveLocalized(record, "en").title).toBe("Dumplings");
+	});
+
+	it("falls back to English where Nepali is empty, and marks a record with no Nepali at all lang=en", () => {
+		const untranslated = { slug: "momo", title: { en: "Dumplings", ne: "" }, body: [{ en: "Fold", ne: " " }] };
+		expect(resolveLocalized(untranslated, "ne")).toEqual({
+			slug: "momo",
+			title: "Dumplings",
+			body: ["Fold"],
+			lang: "en",
+		});
+		// Partly translated: the translated text wins, nothing is marked.
+		const partly = { title: { en: "Dumplings", ne: "मःम" }, note: { en: "Hot", ne: "" } };
+		expect(resolveLocalized(partly, "ne")).toEqual({ title: "मःम", note: "Hot" });
+		// English pages never mark anything; a block nested in a record is marked on its own.
+		expect(resolveLocalized(untranslated, "en")).not.toHaveProperty("lang");
+		const nested = resolveLocalized({ title: { en: "A", ne: "क" }, blocks: [{ text: { en: "B", ne: "" } }] }, "ne");
+		expect(nested).toEqual({ title: "क", blocks: [{ text: "B", lang: "en" }] });
+		expect(isFallback({ en: "A", ne: "" }, "ne")).toBe(true);
+		expect(isFallback({ en: "A", ne: "" }, "en")).toBe(false);
+	});
+
+	it("validates a localized string: English as given, Nepali optional", () => {
+		const schema = localized(z.string().min(1));
+		expect(schema.safeParse({ en: "Hi", ne: "" }).success).toBe(true);
+		expect(schema.safeParse({ en: "", ne: "नमस्ते" }).success).toBe(false);
 	});
 
 	it("only treats objects with exactly the locale keys as localized", () => {
@@ -116,16 +142,15 @@ describe("weave", () => {
 });
 
 describe("readingMinutes", () => {
-	it("counts words across every block kind, at least one minute", () => {
+	it("counts the words of the HTML's text, at least one minute", () => {
 		const words = (count: number) => Array.from({ length: count }, () => "word").join(" ");
-		expect(readingMinutes([{ kind: "paragraph", text: "Short." }])).toBe(1);
+		expect(readingMinutes("<p>Short.</p>")).toBe(1);
 		expect(
-			readingMinutes([
-				{ kind: "paragraph", text: words(300) },
-				{ kind: "list", items: [words(100), words(40)] },
-				{ kind: "code", language: "ts", code: "x" },
-			]),
+			readingMinutes(
+				`<p>${words(300)}</p><ul><li><p>${words(100)}</p></li><li>${words(40)}</li></ul><pre><code>x</code></pre>`,
+			),
 		).toBe(2);
+		expect(readingMinutes("<p>a&nbsp;b</p>")).toBe(1);
 	});
 });
 

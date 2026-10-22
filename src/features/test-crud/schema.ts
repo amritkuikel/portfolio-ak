@@ -7,7 +7,7 @@ import type { Paged } from "@/lib/list/paging";
 import { phone } from "@/lib/phone";
 import type { SafeHtml } from "@/lib/safe-html";
 import { SLUG_PATTERN } from "@/lib/slug";
-import { currency, optionalText, required, richText, slug, tags } from "@/lib/validation";
+import { currency, localizedText, optionalText, required, richText, slug, tags } from "@/lib/validation";
 import { TEST_CRUD_STATUSES } from "./constants";
 
 export * from "./constants";
@@ -40,7 +40,7 @@ export const testCrudUpdateSchema = testCrudInputSchema.extend({ id: z.uuid(), u
 /** One image in the form: the attachment, its alt text, and its preview (not sent to the server). */
 const formImageSchema = z.object({
 	id: z.uuid(),
-	alt: optionalText({ max: ALT_MAX }),
+	alt: localizedText({ max: ALT_MAX, optional: true }),
 	preview: z.custom<ImageAsset>(),
 });
 

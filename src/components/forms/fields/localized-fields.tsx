@@ -7,8 +7,8 @@ import { m } from "@/paraglide/messages";
 import { withFieldGroup } from "../index";
 
 /**
- * Text typed in both languages: the value is `{ en, ne }` (the portfolio's `localized()`
- * content). English and Nepali sit in tabs; the Nepali tab says "Nepali missing" while
+ * Text typed in both languages: the value is `{ en, ne }` (`Localized`, src/lib/i18n/localized.ts).
+ * English and Nepali sit in tabs; the Nepali tab says "Nepali missing" while
  * it's empty (the site falls back to English there). Both stay mounted, so both
  * validate and appear in the error summary; a failed submit opens the tab that has
  * the error.

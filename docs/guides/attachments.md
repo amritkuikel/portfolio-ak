@@ -1,6 +1,6 @@
 # Attachments (images on Cloudinary)
 
-How images are uploaded, stored, shown and deleted, and how to add images to a new feature. Decisions 0098–0099 explain the choices.
+How images are uploaded, stored, shown and deleted, and how to add images to a new feature. Decisions 0098–0099 and 0177 explain the choices.
 
 ## Setup
 
@@ -17,13 +17,13 @@ Part 1 stored images in Postgres; that table and its import script are gone (016
 
 1. **Sign:** the browser calls `signImageUpload({ scope })` (needs `attachments:upload`). The server picks the `public_id` and signs it together with the allowed formats.
 2. **Upload:** the browser POSTs the file straight to Cloudinary (`uploadImage` in `features/attachments/upload.ts`: progress, cancel).
-3. **Confirm:** `confirmImageUpload` reads the asset back with the Admin API, checks its format and size, and records a *pending* attachment owned by the uploader. It returns an `ImageAsset`.
+3. **Confirm:** `confirmImageUpload` reads the asset back with the Admin API, checks its format and size against the scope's rules, and records a *pending* attachment owned by the uploader (a library scope records it in its library instead). It returns an `ImageAsset`.
 4. **Save:** the item's own save links the pending uploads (`syncEntityAttachments`) in order, with their alt text, in the item's transaction. Images the item no longer lists are marked removed and their assets deleted.
 5. **Clean up:** removed rows and day-old pending uploads are deleted by `/api/cron/attachments` (and right away, when Cloudinary answers).
 
 ## Showing images
 
-The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thumb` (`full` and `cover` with `src`/`srcSet`), all using `f_auto,q_auto`, plus `og`, a 1200×630 JPEG for social previews. Render it with `CloudImage`:
+The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thumb` (`full` and `cover` with `src`/`srcSet`), all using `f_auto,q_auto`, plus `og`, a 1200×630 JPEG for social previews, `url` (the original file) and `format`. Its `alt` is `{ en, ne }` (0177). Render it with `CloudImage`:
 
 ```tsx
 <div className="relative aspect-[16/9] overflow-hidden">
@@ -35,12 +35,12 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
 - **Layout:** put "cover" images in a 16:9 box; width and height attributes are always set (no layout shift).
 - **`sizes`:** pass it to match the displayed width.
 - **Main image:** use `loading="eager" fetchPriority="high"` for the largest image on a page.
-- **Alt text:** decorative images (a card whose link text names it) get `alt=""`.
+- **Alt text:** `CloudImage` uses the image's own in the page's language (English, marked `lang="en"`, when there is no Nepali); decorative images (a card whose link text names it) get `alt=""`.
 
 ## Adding images to a feature ("projects")
 
-1. **Scope:** add `"projects"` to `UPLOAD_SCOPES` (`features/attachments/constants.ts`).
-2. **Schema:** `images: z.array(attachmentRefSchema).max(N)` in the input. The form uses `{ id, alt, preview }` items (see `formImageSchema` and `toTestCrudInput` in Test CRUD).
+1. **Scope:** add `projects: IMAGES` to `UPLOAD_RULES` (`features/attachments/constants.ts`); a rule can also take other formats, need a permission, or put uploads straight into a library.
+2. **Schema:** `images: z.array(attachmentRefSchema).max(N)` in the input. The form uses `{ id, alt, preview }` items, `alt` being `{ en, ne }` (see `formImageSchema` and `toTestCrudInput` in Test CRUD).
 3. **Repository:**
    - Inside create and update transactions, call `syncEntityAttachments(tx, { entityType: "projects", entityId, ownerId }, input.images)`.
    - On delete, call `removeForEntities(tx, "projects", ids)`.
@@ -50,11 +50,15 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
 5. **Form:** `<form.AppField name="images">{() => <ImageGalleryField label=… scope="projects" max={N} onBusyChange=… />}</form.AppField>`, with an `onSubmit` validator that refuses while uploads are running (see `TestCrudForm`).
 6. **Pages:** `CloudImage` as above. For `seo({ image })` use the `og` URL (1200×630 JPEG): `{ url: image.og, width: 1200, height: 630, alt }` (see [seo.md](seo.md)).
 
+## The media library <!-- @portfolio -->
+
+The portfolio's images and PDFs live in a library at `/admin/media` (0177): the `media` scope (PDFs too; `media:write` on top of `attachments:upload`) records uploads straight into it (entity type `media`, never pending). Records reference library items by id (foreign keys `on delete restrict`, a gallery as `uuid[]`), lock them while saving, and an item is deleted only when nothing uses it. Forms pick with `MediaField`; `ImageGalleryField` stays for images a record owns. See [portfolio.md](portfolio.md). <!-- @portfolio -->
+
 ## Rules (server-side)
 
 - Uploads need `attachments:upload`. Linking happens under the item's own permission (e.g. `test-crud:update`).
 - Only the uploader's own pending uploads, or images already on that item, can be linked; anything else is a `BAD_REQUEST` with a clear message.
-- Allowed formats: JPEG, PNG, WebP, AVIF, GIF (Cloudinary enforces the signed `allowed_formats`). Maximum size: 10 MB, checked after upload; oversized assets are deleted.
+- Allowed formats: JPEG, PNG, WebP, AVIF, GIF, per scope (`UPLOAD_RULES`; Cloudinary enforces the signed `allowed_formats`). Maximum size: 10 MB, checked after upload; oversized assets are deleted.
 
 ## Testing
 

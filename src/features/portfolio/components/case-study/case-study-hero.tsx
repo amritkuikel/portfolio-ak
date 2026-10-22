@@ -40,7 +40,7 @@ export function CaseStudyHero({ project, index, total }: CaseStudyHeroProps) {
 			<div className="pf-container mt-[clamp(3rem,7vw,6rem)]">
 				<CoverFrame transitionSlug={project.slug} aspect="wide">
 					<div className="pf-parallax h-full w-full">
-						<CoverArt seed={project.slug} motif={project.cover.motif} glyph={project.cover.glyph} ratio="wide" />
+						<CoverArt seed={project.cover.seed} motif={project.cover.motif} glyph={project.cover.glyph} ratio="wide" />
 					</div>
 				</CoverFrame>
 			</div>

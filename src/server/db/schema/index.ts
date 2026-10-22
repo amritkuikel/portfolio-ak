@@ -7,6 +7,8 @@
  * - rbac.ts: roles, role permissions and user roles.
  * - attachments.ts: files stored in Cloudinary, linked to entities.
  * - audit.ts: the audit log of admin actions.
+ * - portfolio.ts: the portfolio at `/` and its contact messages (the `portfolio` layer).
+ * - columns.ts: column helpers (localized text), no tables.
  *
  * `pnpm new:feature` adds its table's file above the marker line.
  */
@@ -14,6 +16,7 @@
 export * from "./attachments";
 export * from "./audit";
 export * from "./auth";
+export * from "./portfolio"; // @portfolio
 export * from "./rbac";
 export * from "./test-crud";
 // @new-feature:schema

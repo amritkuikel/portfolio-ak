@@ -13,7 +13,12 @@ export type ReviewedPage = {
 	/** Who visits it; anonymous when unset. */
 	as?: E2EUser;
 	/** How a `$param` route gets a concrete URL (or give its `path`). */
-	params?: { from: "sitemap" } | { from: "test-crud-id" } | { from: "seeded-slug" };
+	params?:
+		| { from: "sitemap" }
+		| { from: "test-crud-id" }
+		| { from: "seeded-slug" }
+		| { from: "portfolio-project-id" } // @portfolio
+		| { from: "portfolio-post-id" }; // @portfolio
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -93,6 +98,23 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/settings/appearance", as: "admin" },
 	// The editor's roles don't include audit:read (decisions.md 0132).
 	{ route: "/admin/audit", as: "editor", status: 403, label: "forbidden" },
+	// portfolio:start
+	{ route: "/admin/portfolio/profile", as: "admin" },
+	{ route: "/admin/portfolio/projects", as: "admin" },
+	{ route: "/admin/portfolio/projects/new", as: "admin" },
+	{ route: "/admin/portfolio/projects/$id", as: "admin", params: { from: "portfolio-project-id" } },
+	{ route: "/admin/portfolio/journal", as: "admin" },
+	{ route: "/admin/portfolio/journal/new", as: "admin" },
+	{ route: "/admin/portfolio/journal/$id", as: "admin", params: { from: "portfolio-post-id" } },
+	{ route: "/admin/portfolio/experience", as: "admin" },
+	{ route: "/admin/portfolio/skills", as: "admin" },
+	{ route: "/admin/portfolio/process", as: "admin" },
+	{ route: "/admin/portfolio/testimonials", as: "admin" },
+	{ route: "/admin/portfolio/messages", as: "admin" },
+	{ route: "/admin/media", as: "admin" },
+	// The demo editor writes the portfolio but doesn't read the inbox.
+	{ route: "/admin/portfolio/messages", as: "editor", status: 403, label: "forbidden" },
+	// portfolio:end
 	// @new-feature:reviewed-pages
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },

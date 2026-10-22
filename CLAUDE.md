@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–38 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–39 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
@@ -33,7 +33,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
 | [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo` (layers), renaming, first admin, your first feature |
-| [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content source, demo data, "Dhaka" design system, motion <!-- @portfolio --> |
+| [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content in the database, its admin, the media library, the contact form, seeding, "Dhaka" design system, motion <!-- @portfolio --> |
 
 ## Stack
 
@@ -63,6 +63,7 @@ pnpm test:coverage       # v8 coverage + per-area table
 pnpm build               # production build (.output/); pnpm start runs it
 pnpm build-storybook
 pnpm db:generate | db:migrate | db:check | db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
+pnpm db:seed-portfolio   # the portfolio's demo content, only when there is no profile yet (0176) <!-- @portfolio -->
 pnpm i18n:translate      # machine-translates Nepali for messages that have none (review the diff, 0157)
 pnpm i18n:check          # missing or empty translations, variables, plural forms
 pnpm new:feature <name> [--public] [--localized]   # a feature in the CRUD standard (crud.md, 0175); needs a committed tree
@@ -146,6 +147,7 @@ Read [crud.md](docs/guides/crud.md): it is the only "add a feature" text, and ev
 - **The React Compiler memoizes client code** (0136): don't add `useMemo`/`useCallback` for speed. Keep `useMemo` where identity matters (creating a TanStack DB collection). It runs in Storybook too, not in SSR.
 - **Route options are in every page's JavaScript** (0151): only `component`, `pendingComponent`, `errorComponent` and `notFoundComponent` are split out, and only when written inline in `createFileRoute("…")({ … })` (not spread or returned by a helper). Route files import a feature's `search.ts` (URL contract), never `schema.ts` (form schemas). `node scripts/check-bundle.ts` after a build shows the cost.
 - **No static Sentry import in browser code** (0152): `start.ts`, function middleware and components run in the browser too, and one static `@sentry/tanstackstart-react` import puts the whole SDK in every page. Use `src/lib/observability/sentry-client.ts`, or import the SDK inside `.server()`.
+- **Component tests that load a route whose queries call server functions** (the portfolio's `_site` layout) `vi.mock` that functions module: function files import server code statically, which only Start's compiler strips from browser code (`tests/components/layout/section-headers.test.tsx`).
 - **Server-only imports in middleware go inside `.server()`** (`await import("@/server/…")`). A dynamic import in an exported helper is still in the client graph, and import protection warns in dev.
 - **Heavy fields aren't on `useAppForm`** (0168): every page with a form loads the registered fields. The composite fields (sortable lists, blocks, slug, localized, relations, the image gallery) are imported where used and rendered inside `form.AppField`. Dialogs that open on click are `React.lazy`, or their forms load with the page.
 - **Confirms are `await useConfirm()(…)`** (0168): the shells mount `ConfirmProvider` (`AdminShell`, the `/dev` layout). A new shell that asks for confirmation mounts one too; there is no `ConfirmDialog` any more.
@@ -163,7 +165,7 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
 - [testing.md](docs/guides/testing.md): Radix menus in tests.
 - [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
-- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width. <!-- @portfolio -->
+- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width; Reordering keeps the version; Seeds read rows, not row counts. <!-- @portfolio -->
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
 - [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.

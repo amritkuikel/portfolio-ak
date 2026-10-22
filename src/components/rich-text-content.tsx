@@ -18,10 +18,19 @@ export const richTextClass = cn(
  * sanitizeRichText() on the server can produce, so this is the single
  * innerHTML sink in the app and it never receives raw input.
  */
-export function RichTextContent({ html, className }: { html: SafeHtml; className?: string }) {
+export function RichTextContent({
+	html,
+	className,
+	unstyled = false,
+}: {
+	html: SafeHtml;
+	className?: string;
+	/** Leave out the default typography (a section with its own, e.g. the portfolio's `pf-prose`). */
+	unstyled?: boolean;
+}) {
 	return (
 		<div
-			className={cn(richTextClass, className)}
+			className={unstyled ? className : cn(richTextClass, className)}
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: html is SafeHtml, produced only by the server-side sanitizer (src/server/rich-text/sanitize.ts).
 			dangerouslySetInnerHTML={{ __html: html }}
 		/>

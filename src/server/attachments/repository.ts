@@ -10,8 +10,16 @@ import type { RemoteImage } from "./cloudinary";
  * rules and the Cloudinary calls live in ./service.ts.
  */
 
-/** Records a verified upload as pending (not yet saved with an entity). */
-export async function insertPending(db: Db, remote: RemoteImage, ownerId: string): Promise<AttachmentRow> {
+/**
+ * Records a verified upload: pending (not yet saved with an entity), or straight
+ * into a library (`library`: its entity type, e.g. "media"), where it stays.
+ */
+export async function insertUpload(
+	db: Db,
+	remote: RemoteImage,
+	ownerId: string,
+	library: string | null = null,
+): Promise<AttachmentRow> {
 	const [row] = await db
 		.insert(attachment)
 		.values({
@@ -23,6 +31,7 @@ export async function insertPending(db: Db, remote: RemoteImage, ownerId: string
 			width: remote.width,
 			height: remote.height,
 			ownerId,
+			entityType: library,
 		})
 		.returning();
 	if (!row) throw new Error("Attachment insert returned no row");

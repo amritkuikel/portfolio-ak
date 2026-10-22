@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { portfolioCommands } from "@/features/portfolio/admin/commands"; // @portfolio
 import type { Permission } from "@/features/rbac/permissions";
 import { testCrudCommands } from "@/features/test-crud/commands";
 import type { AdminPath } from "./sections";
@@ -22,6 +23,7 @@ export type AdminCommand = {
 
 export const ADMIN_COMMANDS: ReadonlyArray<AdminCommand> = [
 	...testCrudCommands,
+	...portfolioCommands, // @portfolio
 	// @new-feature:commands
 ];
 

@@ -43,6 +43,11 @@ describe("demo seed", async () => {
 			"test-crud:update",
 			"test-crud:publish",
 			"attachments:upload",
+			"portfolio:read", // @portfolio
+			"portfolio:write", // @portfolio
+			"portfolio:publish", // @portfolio
+			"media:read", // @portfolio
+			"media:write", // @portfolio
 		]);
 		expect(await permissions("viewer@example.com")).toEqual(["test-crud:read", "users:read", "roles:read"]);
 		expect(await permissions("member@example.com")).toEqual([]);

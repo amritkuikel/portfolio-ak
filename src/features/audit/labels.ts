@@ -19,6 +19,29 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"test-crud.publish": m.audit_action_test_crud_publish,
 	"test-crud.unpublish": m.audit_action_test_crud_unpublish,
 	"test-crud.delete": m.audit_action_test_crud_delete,
+	// portfolio:start
+	"profile.update": m.audit_action_profile_update,
+	"project.create": m.audit_action_project_create,
+	"project.update": m.audit_action_project_update,
+	"project.publish": m.audit_action_project_publish,
+	"project.unpublish": m.audit_action_project_unpublish,
+	"project.delete": m.audit_action_project_delete,
+	"project.reorder": m.audit_action_project_reorder,
+	"post.create": m.audit_action_post_create,
+	"post.update": m.audit_action_post_update,
+	"post.publish": m.audit_action_post_publish,
+	"post.unpublish": m.audit_action_post_unpublish,
+	"post.delete": m.audit_action_post_delete,
+	"portfolio-section.create": m.audit_action_portfolio_section_create,
+	"portfolio-section.update": m.audit_action_portfolio_section_update,
+	"portfolio-section.delete": m.audit_action_portfolio_section_delete,
+	"portfolio-section.reorder": m.audit_action_portfolio_section_reorder,
+	"message.archive": m.audit_action_message_archive,
+	"message.unarchive": m.audit_action_message_unarchive,
+	"message.delete": m.audit_action_message_delete,
+	"media.update": m.audit_action_media_update,
+	"media.delete": m.audit_action_media_delete,
+	// portfolio:end
 	// @new-feature:audit-action-labels
 };
 
@@ -26,6 +49,17 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	role: m.audit_target_role,
 	user: m.audit_target_user,
 	"test-crud": m.audit_target_test_crud,
+	// portfolio:start
+	profile: m.audit_target_profile,
+	project: m.audit_target_project,
+	post: m.audit_target_post,
+	experience: m.audit_target_experience,
+	skill: m.audit_target_skill,
+	"process-step": m.audit_target_process_step,
+	testimonial: m.audit_target_testimonial,
+	message: m.audit_target_message,
+	media: m.audit_target_media,
+	// portfolio:end
 	// @new-feature:audit-target-labels
 };
 
@@ -47,4 +81,15 @@ export const AUDIT_FIELD_LABELS: Readonly<Record<string, () => string>> = {
 	price: m.audit_field_price,
 	phone: m.audit_field_phone,
 	tags: m.audit_field_tags,
+	// portfolio:start
+	year: m.audit_field_year,
+	featured: m.audit_field_featured,
+	disciplines: m.audit_field_disciplines,
+	stack: m.audit_field_stack,
+	availability: m.audit_field_availability,
+	label: m.audit_field_label,
+	alt: m.audit_field_alt,
+	altNe: m.audit_field_alt_ne,
+	moved: m.audit_field_moved,
+	// portfolio:end
 };

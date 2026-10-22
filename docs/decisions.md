@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (166 entries)</summary>
+<summary>Index (169 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -180,6 +180,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0173](#0173-the-crud-standard-one-shape-shared-helpers-on-both-sides-every-section-on-it): The CRUD standard: one shape, shared helpers on both sides, every section on it
 - [0174](#0174-admin-crud-writes-use-query-mutations-tanstack-db-is-for-client-first-apps): Admin CRUD writes use Query mutations; TanStack DB is for client-first apps
 - [0175](#0175-pnpm-newfeature-v2-the-standards-shape---public-and---localized-and-a-clean-tree): `pnpm new:feature` v2: the standard's shape, `--public` and `--localized`, and a clean tree
+- [0176](#0176-the-portfolios-content-lives-in-the-database-edited-in-the-admin-read-through-public-server-functions): The portfolio's content lives in the database, edited in the admin, read through public server functions
+- [0177](#0177-a-media-library-items-reference-library-attachments-by-id-alt-text-in-both-languages): A media library: items reference library attachments by id; alt text in both languages
+- [0178](#0178-missing-nepali-falls-back-to-english-marked-langen-on-the-record-or-block): Missing Nepali falls back to English, marked `lang="en"` on the record or block
 </details>
 
 ---
@@ -1434,6 +1437,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0106: Portfolio content sits behind a PortfolioSource port; the demo adapter lazy-loads fixtures
 
+*Superseded by 0176 (the content is in the database; the port and the fixture adapter are gone, the fixtures seed the database).*
+
 - **What:**
   - **The port:** `src/features/portfolio/source.ts` defines the reads the UI needs (profile, projects, a project with its neighbour, posts, experience…). Every method takes the locale and returns records resolved to it; a missing slug is `null`.
   - **The adapter:** `sources/fixture-source.ts` implements it over typed fixtures in `data/`, imported with `import("../data")`. `sources/index.ts` picks the adapter.
@@ -2095,3 +2100,33 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **Checked:** in a scratch worktree, `pnpm new:feature ci-pages --public --localized` then typecheck, check, knip, test (664 tests), test:storybook (364), i18n:check, the migration check and the full e2e review (735 passed, the generated admin and public pages included). CI's template job generates a plain feature and a `--public --localized` one after `strip-demo`, committing in between.
 - **Why:** the generator now emits the standard, so the six apps and every new project start from it; the flags cover the two variants the portfolio needs (public pages, bilingual content). The clean-tree rule is what makes the rollback safe.
 - **Alternatives considered:** separate templates per flag combination (four copies to keep in step); a template engine dependency (sections are a 15-line function).
+
+## 0176: The portfolio's content lives in the database, edited in the admin, read through public server functions
+
+*Supersedes 0106.*
+
+- **What:** Task 39 moves the portfolio from typed fixtures to tables (`src/server/db/schema/portfolio.ts`, migration `0011_portfolio`): `portfolio_profile` (one row, id `profile`), `portfolio_project`, `portfolio_post`, `portfolio_experience`, `portfolio_skill`, `portfolio_process_step`, `portfolio_testimonial` and `portfolio_contact_message`.
+  - **Columns:** localized fields are `{ en, ne }` jsonb (`localizedText()` in `schema/columns.ts`: one column per field, so a third language needs no migration); structured content (case-study blocks, metrics, links, principles) is jsonb written only after the same Zod schema the admin form uses (`features/portfolio/schema.ts`). Blocks carry an `id` and a `type` (what `BlocksField` needs); architecture edges are `{ from, to }`. Journal bodies are rich-text HTML per language, sanitized on the way in and out.
+  - **Admin** (`/admin/portfolio/*`, sidebar group "Portfolio"): the profile (one form in a `SettingsLayout`), projects and journal on the CRUD standard (0173: list, form, publish, preview), projects reordered in a dialog, the four ordered sections on one `OrderedSection` page with a sheet each, the contact inbox. Permissions `portfolio:read|write|publish`, `messages:read|manage`, `media:read|write`; a save may change a status only with `portfolio:publish` (the services check it; a new record must then be a draft). Reordering keeps `updatedAt`, so it never makes an open edit stale. Every change is audited.
+  - **Public reads:** `src/functions/portfolio-public.ts` (unguarded, declared in the guard test) calls `src/server/portfolio/public.ts`: published rows only, one call per page (`getHome` returns the whole story), the locale as an input. `?preview=1` asks for drafts; the handler grants it only when the session holds `portfolio:read` (the pages never look the session up otherwise, 0161), and such pages are noindex. The sitemap reads the published slugs.
+  - **Seeding:** the fixtures moved to `scripts/lib/portfolio-data/`; `scripts/lib/portfolio-seed.ts` (plain SQL, idempotent and never destructive: it writes nothing once a profile exists) runs from `pnpm db:seed-portfolio`, `db:seed-demo`, the e2e harness and `dev:local`/`setup:local` (on every start, so a database that predates the tables gets content), so `/` is never empty.
+  - **Contact form:** honeypot, Turnstile when configured, a database rate limit keyed by a keyed hash of the IP (3 per 10 minutes); the message is saved for the inbox, then emailed to the profile's address (`contact-message` template, in the site's base locale); a failed email is logged, not shown.
+- **Why:** the owner edits the portfolio without a deploy, in both languages, with the same kit, permissions, audit and tests as every other section; publishing shows on `/` at once (no server cache: on Vercel a cache cleared on write would reach one instance only).
+- **Notes:** the locale is an explicit input although server functions already receive the page's locale in a header (0022): it is part of the Query key anyway, and a read can't silently use another language. Only projects are reordered by hand; posts are chronological. The projects list has no year filter (there is no single-number filter control, and the list is short).
+- **Alternatives considered:** keeping the `PortfolioSource` port with a database adapter (an extra layer once there is one source); one column per language (a migration per language, twice the columns); a CMS (another service to run, and the content would leave the template's audit and permissions).
+
+## 0177: A media library: items reference library attachments by id; alt text in both languages
+
+- **What:** `/admin/media` holds the portfolio's images and PDFs. Uploads use the existing direct-to-Cloudinary flow (0098) with the `media` scope, whose rules (`UPLOAD_RULES` in `features/attachments/constants.ts`) add PDFs, need `media:write` on top of `attachments:upload`, and record the verified upload straight into the library (entity type `media`: never pending, never cleaned up after a day). Portfolio records reference library items by id (`cover_id`, `portrait_id`… as foreign keys with `on delete restrict`; the project gallery as a `uuid[]`); a save locks them `FOR SHARE` and refuses an unknown or removed id on its form field. An item can be deleted only while nothing uses it: the delete locks it `FOR UPDATE`, checks every reference, and otherwise refuses with the first user's name.
+  - **Alt text** moved to `{ en, ne }` jsonb (the migration keeps the old text as English). `CloudImage` shows the reader's language and marks an English fallback `lang="en"`; `ImageGalleryField` edits both. In the library the alt text belongs to the item and shows wherever it is used.
+  - **Picking:** `MediaField` (features/media) is the form field for library items: "Choose from the library" opens a lazily loaded picker that searches, selects and uploads. `ImageGalleryField` stays for item-owned images (Test CRUD).
+  - `ImageAsset` gained `format` and `url` (the original file: a PDF to open).
+- **Why:** one image can serve several records (a portrait as the social image too) and be described once; a project's images outlive its edits; "used by" is what the owner needs to see before deleting.
+- **Deviation from the plan:** the plan said `ImageGalleryField` picks from the library. Owned and shared images behave differently (who edits the alt text, whether removing deletes the file), so the library got its own field instead of a mode switch in the owned one.
+- **Alternatives considered:** a usage join table for every attachment (a rewrite of Test CRUD's owned images for no gain there); copying a library image into each record (the alt text would drift); letting a delete orphan references (pages with broken images).
+
+## 0178: Missing Nepali falls back to English, marked `lang="en"` on the record or block
+
+- **What:** `resolveLocalized(value, locale)` (now in `src/lib/i18n/localized.ts`) shows English where a Nepali text is empty, and adds `lang: "en"` to an object none of whose own localized texts is in the page's language (a record or a block not translated yet). Components put it on the element that renders that object (`<article lang={project.lang}>`, a chapter, a testimonial). A partly translated object stays unmarked. `localized(schema)` is the Zod shape (Nepali may be empty); `isFallback` tells it for one value.
+- **Why:** screen readers choose their voice and pronunciation by `lang`, and hyphenation follows it. A whole untranslated record is the common case (a new project typed in English first), and marking it needs no change to every string-rendering component.
+- **Alternatives considered:** marking each string (a branded string type, or objects instead of strings, would touch every component); marking an object as soon as any text fell back (its translated texts would then be read with the English voice).

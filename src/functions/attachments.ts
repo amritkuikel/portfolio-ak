@@ -18,6 +18,12 @@ import { db } from "@/server/db/client";
  * in that item's own save, under its permissions.
  */
 
+/** The caller as an uploader: library scopes check their own permission too (media:write). */
+const uploader = (context: { user: { id: string }; permissions: ReadonlyArray<string> }) => ({
+	id: context.user.id,
+	permissions: context.permissions,
+});
+
 /** Whether uploads are configured (the editor shows a note instead of the picker when not). */
 export const getUploadSettings = createServerFn({ method: "GET" })
 	.middleware([requirePermission("attachments:upload")])
@@ -26,12 +32,12 @@ export const getUploadSettings = createServerFn({ method: "GET" })
 export const signImageUpload = createServerFn({ method: "POST" })
 	.middleware([requirePermission("attachments:upload")])
 	.validator(zodInput(uploadScopeSchema))
-	.handler(({ data }): UploadTicket => signUpload(imageStore, data.scope));
+	.handler(({ data, context }): UploadTicket => signUpload(imageStore, data.scope, uploader(context)));
 
 export const confirmImageUpload = createServerFn({ method: "POST" })
 	.middleware([requirePermission("attachments:upload")])
 	.validator(zodInput(confirmUploadSchema))
-	.handler(({ data, context }): Promise<ImageAsset> => confirmUpload(db, imageStore, data, context.user.id));
+	.handler(({ data, context }): Promise<ImageAsset> => confirmUpload(db, imageStore, data, uploader(context)));
 
 /** Removes one's own upload that was never saved with an item. */
 export const discardImageUpload = createServerFn({ method: "POST" })

@@ -28,6 +28,7 @@
 		"i18n:check": "inlang check --project ./project.inlang --missing-translations --empty-translations --empty-variants --missing-variables --unknown-variables --missing-markup --missing-variants --missing-selectors",
 		"db:seed-admin": "node scripts/seed-admin.ts",
 		"db:seed-demo": "node scripts/seed-demo.ts",
+		"db:seed-portfolio": "node scripts/seed-portfolio.ts",
 		"auth:schema": "auth generate --config src/server/auth/auth.ts --output src/server/db/schema/auth.ts --yes && biome format --write src/server/db/schema/auth.ts",
 		"test:storybook": "vitest run --project storybook --project storybook-dark-ne",
 		"test:e2e": "playwright test",

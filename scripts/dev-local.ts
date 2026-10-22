@@ -5,7 +5,8 @@
  *
  * - Database: PGlite in .data/pglite (scripts/lib/local-db.ts), on
  *   127.0.0.1:LOCAL_DB_PORT (default 54320). New migrations are applied on every
- *   start; the first start also seeds an admin and the demo data.
+ *   start; the first start also seeds an admin and the demo data, and any start
+ *   writes the portfolio's demo content while there is none (0176).
  * - Everything else (email, Sentry, PostHog, Cloudinary…) comes from .env, as
  *   with `pnpm dev`. For no outside services at all, use `pnpm dev:offline`.
  */

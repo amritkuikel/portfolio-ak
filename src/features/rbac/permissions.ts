@@ -16,6 +16,14 @@ export const PERMISSION_CATALOG = {
 	attachments: ["upload"],
 	/** The audit log of admin actions (/admin/audit). */
 	audit: ["read"],
+	// portfolio:start
+	/** The portfolio's content (/admin/portfolio): read covers draft previews, publish the status of projects and posts. */
+	portfolio: ["read", "write", "publish"],
+	/** The contact form's inbox: manage marks, archives and deletes. */
+	messages: ["read", "manage"],
+	/** The media library (/admin/media): write uploads, describes and deletes. */
+	media: ["read", "write"],
+	// portfolio:end
 	// @new-feature:permissions
 } as const;
 

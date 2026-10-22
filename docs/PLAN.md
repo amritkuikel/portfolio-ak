@@ -930,7 +930,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 36 | "Graphite" design system, admin shell, auth shell, dashboard | high | Done (decisions 0164–0166) |
 | 37 | Admin component kit | high | Done (decisions 0168–0172) |
 | 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | Done (decisions 0173–0175) |
-| 39 | The dynamic portfolio: tables, admin, media library, public reads | high | |
+| 39 | The dynamic portfolio: tables, admin, media library, public reads | high | Done (decisions 0176–0178) |
 | 40 | "Himal" portfolio redesign at `/` | xhigh | |
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | |
 | 42 | Notes and Links | high | |
@@ -1188,51 +1188,25 @@ The owner runs one task per session and clears the context between tasks. A sess
   - **Found on the way:** the invite flow's e2e test took the first server-function response as the invite's (the new email check answers first); it now waits for the POST. Two PGlite tests lacked the 60 s setup timeout and timed out under load.
 - **Left for the owner:** run `pnpm db:migrate` against Neon (migration `0010_role_name_unique`). Scratch copies to delete: `C:\tw6` (this task's git worktree: `git worktree remove --force C:/tw6`), `C:\tw5` (a half-deleted earlier copy, now a plain folder) and, from Task 35, `C:\tw` and `C:\tw2`.
 
-### Task 39: The dynamic portfolio (data, admin, media)
+### Task 39: The dynamic portfolio (done)
 
-**Goal:** the portfolio's content lives in the database and is edited in the admin; the public pages read it on the server. The design stays the old one until Task 40. Read "The portfolio's content model today" in 10.4.
-
-**Steps:**
-1. **Localized content:**
-   - `src/lib/i18n/localized.ts`: the Zod `localized(schema)` and `resolveLocalized`, moved from `features/portfolio/lib/localize.ts`. A missing `ne` falls back to `en`, and the fallback is rendered with `lang="en"` (accessibility).
-   - A Drizzle `localizedText()` jsonb column helper.
-2. **Tables** (`src/server/db/schema/portfolio.ts`, `portfolio_*`, one migration; localized fields are `{ en, ne }` jsonb; blocks are jsonb validated by the Zod block schemas on both sides):
-   - `profile` (one row): every profile field above, plus portrait and résumé attachments and SEO defaults (title, description, OG image).
-   - `projects`:
-     - Fields: slug (unique), title, client, year, disciplines, role, duration, summary, stack, links, metrics, blocks, cover attachment, gallery, art seed and motif, `appSlug` (nullable; behind `@apps` markers), featured, `sortOrder`.
-     - Status and versioning: status (draft or published), `publishedAt`, `createdAt`, `updatedAt` (the version).
-   - `posts`: slug, title, excerpt, body (sanitized rich text per locale), tags, cover, status, `publishedAt`, version.
-   - `experience`, `skills` (was capabilities), `process_steps`, `testimonials` (with `published`): each with `sortOrder`.
-   - `contact_messages`: name, email, message, locale, `readAt`, `archivedAt`, `createdAt`, an IP hash for rate limiting.
-3. **Services and functions:**
-   - Repositories and services per entity, on the Task 38 standard, with PGlite tests.
-   - Permissions `portfolio:read`, `portfolio:write`, `portfolio:publish`, `messages:read`, `messages:manage`, `media:read` and `media:write` in the catalog and labels, a matrix group "Portfolio", and the demo "Editor" role in `scripts/lib/demo-data.ts`.
-4. **Admin** (sidebar group "Portfolio"):
-   - `/admin/portfolio/profile`: a `SettingsLayout` form.
-   - `/admin/portfolio/projects` and `/admin/portfolio/journal`: list, form, publish, drag-to-reorder (`SortableListField` or a sortable table), and draft preview. A `?preview=1` link on the public page shows drafts only to holders of `portfolio:read`; such pages are noindex.
-   - `/admin/portfolio/{experience,skills,process,testimonials}`: sortable lists edited in a `FormSheet`.
-   - `/admin/portfolio/messages`: an inbox with read and archive, and a reply link (`mailto:`).
-5. **Media library** at `/admin/media`:
-   - Browse attachments (a thumbnail grid, filters) and upload.
-   - Edit alt text in en and ne.
-   - Delete only when unused.
-   - `ImageGalleryField` picks from it. Alt text moves to `{ en, ne }`: a migration and the attachments guide.
-6. **Public reads:**
-   - `src/functions/portfolio-public.ts` (deliberately unguarded: declare it in `UNGUARDED_FILES` with the reason) → `src/server/portfolio/` (published rows only).
-   - One combined read per page: `getHome()` returns profile, featured projects, experience, skills, process, testimonials and recent posts in one round trip.
-   - `features/portfolio/queries.ts` calls these functions (never the database from the browser) with `ensureQuery`.
-   - Delete the `PortfolioSource` port and fixture adapter (`source.ts`, `sources/`). Move the fixture data to `scripts/lib/portfolio-data/` for seeding.
-   - No server cache (on Vercel a cache cleared on write reaches one instance only).
-7. **Seeding:** `pnpm db:seed-portfolio` (`scripts/seed-portfolio.ts`, idempotent) writes the fixtures. Call it from the e2e harness seed, `dev:local`/`setup:local` first runs and `db:seed-demo`, so `/` is never empty.
-8. **Sitemap and SEO:** sitemap entries come from the published rows; structured data comes from the database.
-9. **Contact form** (`/contact`):
-   - A public server function with `enforceRateLimit` (`src/server/http/rate-limit.ts`), `verifyTurnstile` (`src/server/http/turnstile.ts`) and a honeypot (`features/auth/components/bot-check.tsx` shows the pattern).
-   - It saves to `contact_messages` and emails the profile's address (a new email template in en and ne). `/dev/examples/contact` shows the pattern.
-10. **Tests and strip-demo:**
-    - Tests: PGlite tests per service and permission; e2e flows "create, publish and reorder a project; it appears on `/`" and "a draft is visible only in preview".
-    - Mark all of it for strip-demo's `portfolio` layer.
-
-**Acceptance:** every public section renders from the database; publishing shows on `/` at once; drafts are visible only to previewers; the messages inbox receives the contact form; all gates are green.
+- **Data (0176):** tables `portfolio_profile` (one row), `portfolio_project`, `portfolio_post`, `portfolio_experience`, `portfolio_skill`, `portfolio_process_step`, `portfolio_testimonial`, `portfolio_contact_message` (**migration `0011_portfolio`**, which also turns `attachment.alt` into `{ en, ne }`, keeping the old text as English). Localized fields are `{ en, ne }` jsonb (`localizedText()`, `src/server/db/schema/columns.ts`); blocks, metrics and links are jsonb written only after the admin's Zod schemas (`features/portfolio/schema.ts`). Blocks now carry `id` and `type`; edges are `{ from, to }`; journal bodies are sanitized rich text per language.
+- **Localized content (0178):** `src/lib/i18n/localized.ts` has `localized()`, `resolveLocalized`, `isFallback`, `localizedValue`; missing Nepali shows English and a record or block with no Nepali at all gets `lang: "en"`, which the pages put on its element (`CloudImage` marks fallback alt text too). `localizedRichText()` and `list()` joined `src/lib/validation.ts`.
+- **Admin** (sidebar group "Portfolio"; permissions `portfolio:read|write|publish`, `messages:read|manage`, `media:read|write`, the demo Editor holds the portfolio and media ones): `/admin/portfolio/profile` (one form in a `SettingsLayout` with section anchors), `projects` and `journal` on the CRUD standard (list, filters, form, publish, delete, "Preview"), a reorder dialog for projects, `experience`, `skills`, `process`, `testimonials` on one `OrderedSection` page (drag to reorder, edit in a `FormSheet`), `messages` (the inbox: open marks read, reply, read/unread, archive, delete). The case study is edited as typed blocks (chapter, quote, code, system diagram with boxes and arrows, screens). A save may change a status only with `portfolio:publish`; reordering keeps the version. Every change is audited (21 new actions, 9 targets).
+- **Media library (0177):** `/admin/media`: upload (the `media` scope: PDFs too, `media:write` on top of `attachments:upload`, straight into the library), describe in both languages, "used by", delete only what nothing uses (locks on both sides). `MediaField` + a lazy picker (search, select, upload) in the forms; `ImageGalleryField` stays for owned images and edits alt text in both languages. `ImageAsset` gained `format` and `url`; upload rules are per scope (`UPLOAD_RULES`).
+- **Public reads:** `src/functions/portfolio-public.ts` (unguarded, declared in the guard test) → `src/server/portfolio/public.ts`: published rows only, one call per page (`getHome`), the locale as an input, `?preview=1` granted only to a session holding `portfolio:read` (noindex, a "Draft preview" notice). Page components moved to `features/portfolio/components/pages/` (routes stay thin). The `PortfolioSource` port and fixture adapter are deleted (0106 superseded); the sitemap lists published slugs with their last change; the home page's SEO uses the profile's SEO fields and social image.
+- **Contact form:** `/contact` has a form (honeypot, Turnstile when set, 3 per 10 minutes per keyed IP hash) that saves to the inbox and emails the profile's address (`contact-message` template, en and ne); a failed email is logged.
+- **Seeding:** the fixtures moved to `scripts/lib/portfolio-data/`; `pnpm db:seed-portfolio` (`scripts/lib/portfolio-seed.ts`, idempotent, never overwrites) runs from `db:seed-demo`, the e2e harness and every `dev:local`/`setup:local` start.
+- **strip-demo:** everything is in the `portfolio` layer (paths, the `db:seed-portfolio` script, the schema file; `appSlug` behind `apps` markers). strip-demo now always runs `drizzle-kit generate` after a strip (the apps layer owns a column of a kept table) and formats `drizzle/meta`; `pnpm new:feature` puts its sidebar icon first in the import (the last name may carry a `// @portfolio` comment).
+- **Numbers:** entry JS 232.5 → 237.8 kB gzip (budget 240); the profile page adds 75.2 kB, the media page's alt dialog loads on click. `pnpm test`: 87 files, 684 tests (new: `portfolio-admin`, `portfolio-public`, the media scope, the seed's conversions, fallback marking). Storybook: 354 story tests (both passes). `pnpm test:e2e`: 871 checks, 870 passed, 1 flaky (see the deviations), 19.8 min; new flows: create, publish and reorder a project (it appears on `/`), a draft only in a preview, the contact form reaching the inbox and the owner's email.
+- **Checked in a scratch worktree** (CI's template job): `strip-demo --keep-portfolio` and `strip-demo` (all layers), each followed by `new:feature ci-sample` and `ci-pages --public --localized` (or a build), then typecheck, check, knip, test (695 and 619 tests) and the migration check.
+- **Deviations:**
+  - **`MediaField` picks from the library, not `ImageGalleryField`** (0177): shared and owned images differ in who edits the alt text and whether removing deletes the file.
+  - **Only projects are reordered by hand;** posts stay chronological (the plan's posts table has no `sortOrder`). The projects list has no year filter.
+  - **Entry JS grew 5.3 kB gzip** (the plan said new pages shouldn't grow it): route options are in every page's JavaScript (0151), and 15 new routes bring their loaders, search schemas and the server-function stubs their queries call. Still under the 240 kB budget.
+  - **One e2e flake:** axe on the profile form (a long form with both languages mounted) timed out once at 390 px under load; it passed on retry.
+  - **Found on the way:** CI's template job would have failed on two pre-existing gaps that this task exposed: strip-demo never wrote a migration for a layer that owns columns, and `new:feature`'s icon insertion broke on a commented import name (both fixed). Component tests that load the `_site` layout mock its server-function module (CLAUDE.md pitfall).
+- **Left for the owner:** run `pnpm db:migrate` against Neon (migration `0011_portfolio`), then `pnpm db:seed-portfolio` (or edit the content in the admin after seeding). Scratch copies from earlier tasks are still there: `C:\tw`, `C:\tw2`, `C:\tw4`, `C:\tw5`, `C:\tw6` (`git worktree remove --force` for `C:/tw2` and `C:/tw6`).
 
 ### Task 40: "Himal" portfolio redesign (frontend at `/`)
 

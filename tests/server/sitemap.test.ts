@@ -1,15 +1,21 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { portfolioSource } from "@/features/portfolio/sources"; // @portfolio
 import { overwriteGetLocale } from "@/paraglide/runtime";
 import { webManifest } from "@/server/seo/manifest";
 import { robotsTxt } from "@/server/seo/robots";
 import { sitemapEntries, sitemapXml } from "@/server/seo/sitemap";
+import { seedPortfolio } from "../../scripts/lib/portfolio-seed.ts"; // @portfolio
 import { createTestDb } from "../utils/test-db";
 
-/** Features with public pages read their entries from the database (none published here). */
+/** Pages with content read their entries from the database: the portfolio's demo content is seeded. */
 let env: Awaited<ReturnType<typeof createTestDb>>;
 beforeAll(async () => {
 	env = await createTestDb();
+	// portfolio:start
+	await seedPortfolio(async (sql, params) => {
+		const result = await env.client.query<Record<string, unknown>>(sql, params);
+		return { rows: result.rows, rowCount: result.affectedRows ?? 0 };
+	});
+	// portfolio:end
 }, 60_000);
 afterAll(() => env.close());
 const entries = () => sitemapEntries({ db: env.db });
@@ -22,24 +28,28 @@ describe("sitemap", () => {
 	it("lists the home page and the portfolio's pages first", async () => {
 		const paths = (await entries()).map((entry) => entry.path);
 		// portfolio:start
-		const portfolio = await portfolioSource.listSlugs();
+		const projects = paths.filter((path) => path.startsWith("/work/"));
+		const posts = paths.filter((path) => path.startsWith("/journal/"));
 		// portfolio:end
 		const expected = [
 			"/",
 			// portfolio:start
 			"/work",
-			...portfolio.projects.map((slug) => `/work/${slug}`),
+			...projects,
 			"/about",
 			"/journal",
-			...portfolio.posts.map((slug) => `/journal/${slug}`),
+			...posts,
 			"/contact",
 			// portfolio:end
 		];
 		// Generated features with public pages follow (pnpm new:feature --public).
 		expect(paths.slice(0, expected.length)).toEqual(expected);
 		// portfolio:start
-		expect(portfolio.projects).toHaveLength(7);
-		expect(portfolio.posts).toHaveLength(6);
+		// Published rows only, in display order, each with its last change.
+		expect(projects).toHaveLength(7);
+		expect(projects[0]).toBe("/work/ledgerline");
+		expect(posts).toHaveLength(6);
+		expect((await entries()).find((entry) => entry.path === "/work/ledgerline")?.lastmod).toBeInstanceOf(Date);
 		// portfolio:end
 	});
 

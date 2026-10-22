@@ -27,6 +27,9 @@ beforeEach(async () => {
 const userMessage = (error: unknown) => (error as AppError).fieldErrors?.[FORM_ERROR_KEY]?.[0];
 const rejection = (run: () => Promise<unknown>) => run().catch((caught: unknown) => caught);
 
+/** Who uploads: an id and their permissions (a library scope needs its own). */
+const uploader = (id = testDb.adminId, permissions: string[] = []) => ({ id, permissions });
+
 describe("signatures (Cloudinary's documented examples)", () => {
 	it("signs sorted params with the secret appended (SHA-1 hex)", () => {
 		expect(signParams({ timestamp: 1315060510 }, "abcd")).toBe("a21ad0f63beb4de2e5575204b79ab90bffb02c10");
@@ -39,7 +42,7 @@ describe("signatures (Cloudinary's documented examples)", () => {
 	});
 
 	it("an upload ticket fixes the public_id and formats, and is signed over exactly what is sent", () => {
-		const ticket = signUpload(cloud.store, "test-crud");
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
 		expect(ticket.url).toBe("https://api.cloudinary.test/v1_1/demo/image/upload");
 		expect(ticket.publicId).toMatch(/^portfolio\/test-crud\/[0-9a-f-]{36}$/);
 		const { signature, api_key, ...signed } = ticket.fields;
@@ -55,7 +58,7 @@ describe("signatures (Cloudinary's documented examples)", () => {
 	});
 
 	it("without Cloudinary configured, uploads are refused with a clear message", async () => {
-		const error = await rejection(async () => signUpload(null, "test-crud"));
+		const error = await rejection(async () => signUpload(null, "test-crud", uploader()));
 		expect(error).toBeInstanceOf(AppError);
 		expect(userMessage(error)).toBe("Image uploads aren't set up on this site.");
 	});
@@ -63,13 +66,13 @@ describe("signatures (Cloudinary's documented examples)", () => {
 
 describe("confirmUpload (server-side verification)", () => {
 	const confirm = (publicId: string, owner = testDb.adminId) =>
-		confirmUpload(testDb.db, cloud.store, { publicId, scope: "test-crud" }, owner);
+		confirmUpload(testDb.db, cloud.store, { publicId, scope: "test-crud" }, uploader(owner));
 
 	it("records a verified upload as pending, with Cloudinary's real details", async () => {
-		const ticket = signUpload(cloud.store, "test-crud");
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
 		cloud.put(ticket.publicId, { format: "webp", bytes: 5000, width: 800, height: 600 });
 		const image = await confirm(ticket.publicId);
-		expect(image).toMatchObject({ width: 800, height: 600, alt: "" });
+		expect(image).toMatchObject({ width: 800, height: 600, alt: { en: "", ne: "" }, format: "webp" });
 		const [row] = await testDb.db.select().from(schema.attachment).where(eq(schema.attachment.id, image.id));
 		expect(row).toMatchObject({ format: "webp", bytes: 5000, ownerId: testDb.adminId, entityType: null });
 		// Confirming again (a retried request) returns the same attachment.
@@ -90,7 +93,7 @@ describe("confirmUpload (server-side verification)", () => {
 	});
 
 	it("deletes and refuses a file that is too large (Cloudinary can't enforce size for signed uploads)", async () => {
-		const ticket = signUpload(cloud.store, "test-crud");
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
 		cloud.put(ticket.publicId, { bytes: 11 * 1024 * 1024 });
 		expect(userMessage(await rejection(() => confirm(ticket.publicId)))).toBe("The image is larger than 10 MB.");
 		expect(cloud.destroyed).toEqual([ticket.publicId]);
@@ -98,19 +101,71 @@ describe("confirmUpload (server-side verification)", () => {
 	});
 
 	it("deletes and refuses a format outside the allowed list", async () => {
-		const ticket = signUpload(cloud.store, "test-crud");
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
 		cloud.put(ticket.publicId, { format: "svg" });
 		expect(userMessage(await rejection(() => confirm(ticket.publicId)))).toMatch(/isn't accepted/);
 		expect(cloud.destroyed).toEqual([ticket.publicId]);
 	});
 });
 
+// portfolio:start
+describe("the media library scope (decision 0177)", () => {
+	const librarian = () => uploader(testDb.adminId, ["attachments:upload", "media:write"]);
+
+	it("needs media:write on top of attachments:upload, to sign and to confirm", async () => {
+		expect(await rejection(async () => signUpload(cloud.store, "media", uploader()))).toMatchObject({
+			code: "FORBIDDEN",
+		});
+		const ticket = signUpload(cloud.store, "media", librarian());
+		cloud.put(ticket.publicId);
+		expect(
+			await rejection(() =>
+				confirmUpload(testDb.db, cloud.store, { publicId: ticket.publicId, scope: "media" }, uploader()),
+			),
+		).toMatchObject({ code: "FORBIDDEN" });
+	});
+
+	it("takes PDFs too, and records uploads straight into the library (never pending)", async () => {
+		const ticket = signUpload(cloud.store, "media", librarian());
+		expect(ticket.fields.allowed_formats).toBe("jpg,jpeg,png,webp,avif,gif,pdf");
+		cloud.put(ticket.publicId, { format: "pdf" });
+		const file = await confirmUpload(
+			testDb.db,
+			cloud.store,
+			{ publicId: ticket.publicId, scope: "media" },
+			librarian(),
+		);
+		expect(file.format).toBe("pdf");
+		expect(file.url).toMatch(/\/image\/upload\/v\d+\/portfolio\/media\/[0-9a-f-]{36}\.pdf$/);
+		const [row] = await testDb.db.select().from(schema.attachment).where(eq(schema.attachment.id, file.id));
+		expect(row?.entityType).toBe("media");
+	});
+
+	it("still refuses a PDF for other scopes", async () => {
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
+		cloud.put(ticket.publicId, { format: "pdf" });
+		expect(
+			userMessage(
+				await rejection(() =>
+					confirmUpload(testDb.db, cloud.store, { publicId: ticket.publicId, scope: "test-crud" }, uploader()),
+				),
+			),
+		).toMatch(/isn't accepted/);
+	});
+});
+// portfolio:end
+
 describe("discard and cleanup", () => {
 	const pending = async (owner = testDb.adminId) => {
-		const ticket = signUpload(cloud.store, "test-crud");
+		const ticket = signUpload(cloud.store, "test-crud", uploader());
 		cloud.put(ticket.publicId);
 		return {
-			...(await confirmUpload(testDb.db, cloud.store, { publicId: ticket.publicId, scope: "test-crud" }, owner)),
+			...(await confirmUpload(
+				testDb.db,
+				cloud.store,
+				{ publicId: ticket.publicId, scope: "test-crud" },
+				uploader(owner),
+			)),
 			publicId: ticket.publicId,
 		};
 	};

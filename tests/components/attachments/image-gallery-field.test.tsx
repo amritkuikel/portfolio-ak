@@ -28,7 +28,9 @@ vi.mock("@/functions/attachments", () => fns);
 
 const asset = (id: string, alt = ""): ImageAsset => ({
 	id,
-	alt,
+	alt: { en: alt, ne: "" },
+	format: "png",
+	url: `/${id}.png`,
 	width: 1600,
 	height: 900,
 	full: { src: `/${id}.png`, srcSet: `/${id}.png 1600w` },
@@ -125,17 +127,17 @@ afterEach(() => {
 describe("<ImageGalleryField>", () => {
 	it("reorders from the keyboard (Alt + Up on the handle), edits alt text, and submits ids in order", async () => {
 		const { onSubmit, user } = renderField([
-			{ id: ids[0] ?? "", alt: "First", preview: asset(ids[0] ?? "") },
-			{ id: ids[1] ?? "", alt: "", preview: asset(ids[1] ?? "") },
+			{ id: ids[0] ?? "", alt: { en: "First", ne: "" }, preview: asset(ids[0] ?? "") },
+			{ id: ids[1] ?? "", alt: { en: "", ne: "" }, preview: asset(ids[1] ?? "") },
 		]);
 		expect(screen.getAllByText("Cover")).toHaveLength(1);
 		screen.getByRole("button", { name: "Move Image 2" }).focus();
 		await user.keyboard("{Alt>}{ArrowUp}{/Alt}");
 		expect(await screen.findByText("Image 2 moved to position 1 of 2.")).toBeInTheDocument();
-		await user.type(screen.getByRole("textbox", { name: "Alt text for image 2" }), "!");
+		await user.type(screen.getByRole("textbox", { name: "Alt text for image 2 in English" }), "!");
 		await user.click(screen.getByRole("button", { name: "Submit" }));
 		await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-		expect(onSubmit.mock.calls[0]?.[0].map((image) => [image.id, image.alt])).toEqual([
+		expect(onSubmit.mock.calls[0]?.[0].map((image) => [image.id, image.alt.en])).toEqual([
 			[ids[1], ""],
 			[ids[0], "First!"],
 		]);
@@ -211,7 +213,7 @@ describe("<ImageGalleryField>", () => {
 	});
 
 	it("without attachments:upload: existing images stay editable, nothing can be added", async () => {
-		renderField([{ id: ids[0] ?? "", alt: "", preview: asset(ids[0] ?? "") }], ["test-crud:update"]);
+		renderField([{ id: ids[0] ?? "", alt: { en: "", ne: "" }, preview: asset(ids[0] ?? "") }], ["test-crud:update"]);
 		expect(screen.getByRole("button", { name: "Remove image 1" })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Add images" })).toBeNull();
 		expect(fns.getUploadSettings).not.toHaveBeenCalled();

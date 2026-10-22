@@ -27,7 +27,9 @@ export const sampleImage = "/favicon.svg";
 /** A local stand-in for a Cloudinary image (stories never hit the network). */
 export const sampleImageAsset: ImageAsset = {
 	id: "6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0aaa",
-	alt: "A plate of steamed momo",
+	alt: { en: "A plate of steamed momo", ne: "भापमा पकाएको मःमको थाल" },
+	format: "png",
+	url: sampleImage,
 	width: 1600,
 	height: 900,
 	full: { src: sampleImage, srcSet: `${sampleImage} 1600w` },

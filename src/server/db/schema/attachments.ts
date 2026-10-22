@@ -1,5 +1,6 @@
 import { bigint, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { EMPTY_LOCALIZED, localizedText } from "./columns";
 
 /**
  * Files stored in Cloudinary (docs/decisions.md 0098). A row exists only for an
@@ -25,9 +26,10 @@ export const attachment = pgTable(
 		bytes: integer().notNull(),
 		width: integer(),
 		height: integer(),
-		alt: text().notNull().default(""),
+		/** Alt text in both languages (0177); empty English means decorative or not described yet. */
+		alt: localizedText().notNull().default(EMPTY_LOCALIZED),
 		ownerId: text().references(() => user.id, { onDelete: "set null" }),
-		/** What it belongs to ("test-crud") and which row; null while pending. */
+		/** What it belongs to ("test-crud", or "media" for the media library) and which row; null while pending. */
 		entityType: text(),
 		entityId: text(),
 		position: integer().notNull().default(0),

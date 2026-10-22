@@ -1,200 +1,479 @@
 import { z } from "zod";
+import type { ImageAsset } from "@/features/attachments/schema";
+import { versionSchema } from "@/lib/concurrency";
+import { isoDateTime } from "@/lib/crud/schema";
+import type { Localized } from "@/lib/i18n/localized";
+import type { Paged } from "@/lib/list/paging";
 import { SLUG_PATTERN } from "@/lib/slug";
+import {
+	email,
+	list,
+	localizedRichText,
+	localizedText,
+	numberRange,
+	optionalText,
+	required,
+	slug,
+	tags,
+} from "@/lib/validation";
+import { m } from "@/paraglide/messages";
+import { locales } from "@/paraglide/runtime";
+import {
+	ARCHITECTURE_TIERS,
+	AVAILABILITY_STATUSES,
+	CODE_LANGUAGES,
+	COVER_MOTIFS,
+	DISCIPLINES,
+	METRIC_FORMATS,
+	PORTFOLIO_STATUSES,
+	PROFILE_ID,
+} from "./constants";
+
+export * from "./constants";
 
 /**
- * Shapes of the portfolio content. The fixtures in ./data are typed with these
- * records and parsed by tests/unit/portfolio-data.test.ts. A real backend
- * (database or CMS) would return the same records.
+ * The portfolio's content model (decision 0176): what the admin edits, the
+ * database stores and the server functions validate. ONE schema per record
+ * serves the admin form and the server; jsonb columns (blocks, metrics, links…)
+ * are written only after passing it.
  *
- * Content is data, not UI copy: every human-language field is `Localized`
- * ({ en, ne }) and the source resolves it to one language (decision 0107).
- * UI chrome (labels, buttons, headings of the site itself) stays in Paraglide.
+ * Content is data, not UI copy: every human-language field is `{ en, ne }`
+ * (Nepali may be empty: pages fall back to English, decision 0107). Brand and
+ * tech names, code and slugs are plain strings. Public pages receive records
+ * resolved to one language (./types.ts).
  */
-
-/** A value written once per language. */
-export const localized = <T extends z.ZodType>(value: T) => z.object({ en: value, ne: value });
-const text = localized(z.string().trim().min(1));
-
-const slug = z.string().regex(SLUG_PATTERN);
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const yearMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
-const href = z.string().regex(/^(https:\/\/|mailto:)/);
 
 // ---------------------------------------------------------------------------
 // Shared pieces
 // ---------------------------------------------------------------------------
 
-export const DISCIPLINES = ["product", "frontend", "backend", "platform", "ai"] as const;
-export const disciplineSchema = z.enum(DISCIPLINES);
-export type Discipline = z.infer<typeof disciplineSchema>;
+/** https:// links and mailto: addresses only. */
+const href = () =>
+	z
+		.string()
+		.trim()
+		.min(1, { error: () => m.validation_required() })
+		.regex(/^(https:\/\/|mailto:)\S+$/, { error: () => m.validation_url() });
 
-/** How a number is shown: `formatMetric` (lib/format-metric.ts) turns these into localized text. */
-export const METRIC_FORMATS = ["number", "compact", "percent", "multiplier", "plus", "ms", "seconds"] as const;
-export const metricRecordSchema = z.object({
-	value: z.number().finite(),
+const yearMonth = () => z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, { error: () => m.validation_year_month() });
+
+export const metricSchema = z.strictObject({
+	value: numberRange({ min: 0, max: 1_000_000_000_000 }),
 	format: z.enum(METRIC_FORMATS),
-	label: text,
+	label: localizedText({ max: 80 }),
 });
+export type MetricRecord = z.output<typeof metricSchema>;
 
-/** Generative cover art (components/primitives/cover-art.tsx): a motif and a glyph, seeded by the slug. */
-export const COVER_MOTIFS = ["grid", "orbit", "waves", "blocks", "type", "terrain", "signal"] as const;
-export const coverMotifSchema = z.enum(COVER_MOTIFS);
-export type CoverMotif = z.infer<typeof coverMotifSchema>;
-export const coverRecordSchema = z.object({
-	motif: coverMotifSchema,
-	/** One to three characters set huge on the cover. */
-	glyph: z.string().min(1).max(3),
-});
+export const linkSchema = z.strictObject({ label: localizedText({ max: 80 }), href: href() });
 
-export const linkRecordSchema = z.object({ label: text, href });
+/** One image of the media library in a form: which, and its preview (not sent to the server). */
+export const mediaItemSchema = z.object({ id: z.uuid(), preview: z.custom<ImageAsset>() });
 
 // ---------------------------------------------------------------------------
-// Rich content blocks (no HTML: each block is typed and rendered by a component)
+// Case study blocks: typed (no HTML), each rendered by a component. `id` and
+// `type` are what BlocksField needs (a React key, the union's tag).
 // ---------------------------------------------------------------------------
 
-const paragraphBlock = z.object({ kind: z.literal("paragraph"), text });
-const headingBlock = z.object({ kind: z.literal("heading"), text });
-const quoteBlock = z.object({ kind: z.literal("quote"), text, cite: z.string().min(1).optional() });
-const codeBlock = z.object({
-	kind: z.literal("code"),
-	language: z.enum(["ts", "tsx", "sql", "bash", "css"]),
-	caption: text.optional(),
-	code: z.string().min(1),
-});
-const listBlock = z.object({ kind: z.literal("list"), items: z.array(text).min(2) });
+const blockId = z.string().min(1).max(64);
 
-/** Journal article body. */
-export const proseBlockSchema = z.discriminatedUnion("kind", [
-	paragraphBlock,
-	headingBlock,
-	quoteBlock,
-	codeBlock,
-	listBlock,
-]);
+const nodeId = z
+	.string()
+	.trim()
+	.min(1, { error: () => m.validation_required() })
+	.max(32, { error: () => m.validation_text_max({ max: "32" }) })
+	.regex(SLUG_PATTERN, { error: () => m.validation_slug() });
 
-export const ARCHITECTURE_TIERS = ["client", "edge", "service", "data"] as const;
+const architectureBlock = z
+	.strictObject({
+		id: blockId,
+		type: z.literal("architecture"),
+		caption: localizedText({ max: 200 }),
+		nodes: list(
+			z.strictObject({
+				id: nodeId,
+				label: localizedText({ max: 60 }),
+				detail: required({ max: 60 }),
+				tier: z.enum(ARCHITECTURE_TIERS),
+			}),
+			{ min: 2, max: 12 },
+		),
+		edges: list(z.strictObject({ from: nodeId, to: nodeId }), { min: 1, max: 24 }),
+	})
+	.superRefine((block, ctx) => {
+		const ids = block.nodes.map((node) => node.id);
+		ids.forEach((id, index) => {
+			if (ids.indexOf(id) !== index) {
+				ctx.addIssue({ code: "custom", path: ["nodes", index, "id"], message: m.portfolio_error_node_duplicate() });
+			}
+		});
+		block.edges.forEach((edge, index) => {
+			for (const end of ["from", "to"] as const) {
+				if (!ids.includes(edge[end])) {
+					ctx.addIssue({ code: "custom", path: ["edges", index, end], message: m.portfolio_error_node_unknown() });
+				}
+			}
+		});
+	});
 
-/** Case study body: titled chapters plus the special blocks a case study needs. */
-export const caseStudyBlockSchema = z.discriminatedUnion("kind", [
-	z.object({ kind: z.literal("chapter"), title: text, body: z.array(text).min(1) }),
-	quoteBlock,
-	codeBlock,
-	z.object({
-		kind: z.literal("architecture"),
-		caption: text,
-		nodes: z
-			.array(z.object({ id: slug, label: text, detail: z.string().min(1), tier: z.enum(ARCHITECTURE_TIERS) }))
-			.min(3),
-		edges: z.array(z.tuple([slug, slug])).min(2),
+export const caseStudyBlockSchema = z.discriminatedUnion("type", [
+	z.strictObject({
+		id: blockId,
+		type: z.literal("chapter"),
+		title: localizedText({ max: 120 }),
+		body: list(localizedText({ max: 2000 }), { min: 1, max: 12 }),
 	}),
-	z.object({ kind: z.literal("gallery"), captions: z.array(text).min(2).max(4) }),
+	z.strictObject({
+		id: blockId,
+		type: z.literal("quote"),
+		text: localizedText({ max: 600 }),
+		cite: optionalText({ max: 120 }),
+	}),
+	z.strictObject({
+		id: blockId,
+		type: z.literal("code"),
+		language: z.enum(CODE_LANGUAGES),
+		caption: localizedText({ max: 200, optional: true }),
+		code: required({ max: 4000 }),
+	}),
+	architectureBlock,
+	/** Generated screens (ScreenArt), one per caption. */
+	z.strictObject({
+		id: blockId,
+		type: z.literal("gallery"),
+		captions: list(localizedText({ max: 120 }), { min: 1, max: 4 }),
+	}),
 ]);
+export type CaseStudyBlockRecord = z.output<typeof caseStudyBlockSchema>;
 
 // ---------------------------------------------------------------------------
-// Records
+// Profile (one row)
 // ---------------------------------------------------------------------------
 
-export const profileRecordSchema = z.object({
-	name: text,
+const profileFields = {
+	name: localizedText({ max: 80 }),
 	/** Two letters for the header monogram. */
-	initials: z.string().length(2),
-	role: text,
-	location: text,
-	timezone: z.string().min(1),
-	email: z.email(),
-	availability: z.object({ status: z.enum(["open", "limited", "closed"]), note: text }),
-	/** The hero headline, one entry per line (each line rises separately). */
-	headline: z.array(text).min(2).max(4),
-	intro: text,
-	manifesto: text,
-	bio: z.array(text).min(2),
-	principles: z.array(z.object({ title: text, body: text })).min(3),
-	impact: z.array(metricRecordSchema).min(3).max(4),
-	socials: z.array(z.object({ network: z.string().min(1), handle: z.string().min(1), href })).min(2),
+	initials: required({ max: 2 }),
+	role: localizedText({ max: 80 }),
+	location: localizedText({ max: 80 }),
+	timezone: required({ max: 40 }),
+	email: email(),
+	availabilityStatus: z.enum(AVAILABILITY_STATUSES),
+	availabilityNote: localizedText({ max: 200, optional: true }),
+	/** The hero headline, one entry per line. */
+	headline: list(localizedText({ max: 40 }), { min: 1, max: 4 }),
+	intro: localizedText({ max: 400 }),
+	manifesto: localizedText({ max: 1200 }),
+	bio: list(localizedText({ max: 1200 }), { min: 1, max: 6 }),
+	principles: list(z.strictObject({ title: localizedText({ max: 80 }), body: localizedText({ max: 300 }) }), {
+		max: 8,
+	}),
+	impact: list(metricSchema, { max: 4 }),
+	socials: list(z.strictObject({ network: required({ max: 40 }), handle: required({ max: 60 }), href: href() }), {
+		max: 8,
+	}),
 	/** Tool names for the capabilities marquee (brands: not translated). */
-	toolbox: z.array(z.string().min(1)).min(6),
-	/** Year shown in the footer's copyright line (fixed, so server and client agree). */
-	since: z.number().int(),
-	updated: z.number().int(),
-});
+	toolbox: tags({ max: 30, maxLength: 40 }),
+	/** The first year in the footer's copyright line. */
+	since: numberRange({ min: 1950, max: 2100, integer: true }),
+	seoTitle: localizedText({ max: 70, optional: true }),
+	seoDescription: localizedText({ max: 160, optional: true }),
+};
 
-export const projectRecordSchema = z.object({
-	slug,
+export const profileInputSchema = z.strictObject({
+	...profileFields,
+	portraitId: z.uuid().nullable(),
+	/** A PDF in the media library. */
+	resumeId: z.uuid().nullable(),
+	/** The social preview image (1200×630 crop); the portrait when absent. */
+	ogImageId: z.uuid().nullable(),
+});
+export type ProfileInput = z.output<typeof profileInputSchema>;
+export const profileUpdateSchema = profileInputSchema.extend({ id: z.literal(PROFILE_ID), updatedAt: versionSchema() });
+
+/** The profile form: media fields hold library items with previews. */
+export const profileFormSchema = z.object({
+	...profileFields,
+	portrait: z.array(mediaItemSchema).max(1),
+	resume: z.array(mediaItemSchema).max(1),
+	ogImage: z.array(mediaItemSchema).max(1),
+});
+export type ProfileFormValues = z.input<typeof profileFormSchema>;
+
+const firstId = (items: ReadonlyArray<{ id: string }>) => items[0]?.id ?? null;
+
+export const toProfileInput = (values: ProfileFormValues): ProfileInput => {
+	const { portrait, resume, ogImage, ...rest } = profileFormSchema.parse(values);
+	return { ...rest, portraitId: firstId(portrait), resumeId: firstId(resume), ogImageId: firstId(ogImage) };
+};
+
+const image = z.custom<ImageAsset>();
+
+export const profileDetail = z.object({
+	id: z.literal(PROFILE_ID),
+	...profileFields,
+	portrait: image.nullable(),
+	resume: image.nullable(),
+	ogImage: image.nullable(),
+	updatedAt: isoDateTime(),
+});
+export type ProfileDetail = z.output<typeof profileDetail>;
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+export const PROJECT_MAX_GALLERY = 12;
+
+const projectFields = {
 	/** Product names are brands: the same in every language. */
-	title: z.string().min(1),
-	client: text,
-	year: z.number().int().min(2000).max(2100),
-	disciplines: z.array(disciplineSchema).min(1),
-	role: text,
-	duration: text,
-	summary: text,
-	stack: z.array(z.string().min(1)).min(3),
+	title: required({ max: 80 }),
+	slug: slug(),
+	client: localizedText({ max: 80 }),
+	year: numberRange({ min: 2000, max: 2100, integer: true }),
+	disciplines: z.array(z.enum(DISCIPLINES)).min(1, { error: () => m.validation_select_min({ min: "1" }) }),
+	role: localizedText({ max: 80 }),
+	duration: localizedText({ max: 80 }),
+	summary: localizedText({ max: 400 }),
+	stack: tags({ max: 20, maxLength: 40 }),
+	links: list(linkSchema, { max: 6 }),
+	metrics: list(metricSchema, { max: 4 }),
+	blocks: list(caseStudyBlockSchema, { max: 40 }),
+	/** Seeds the generated cover art; empty means the slug. */
+	artSeed: optionalText({ max: 40 }),
+	motif: z.enum(COVER_MOTIFS),
+	/** One to three characters set huge on the cover. */
+	glyph: required({ max: 3 }),
+	// apps:start
+	/** The showcase app this project opens (/apps/<slug>), if any. */
+	appSlug: z.union([z.literal(""), slug({ max: 40 })]),
+	// apps:end
 	featured: z.boolean(),
-	cover: coverRecordSchema,
-	links: z.array(linkRecordSchema),
-	metrics: z.array(metricRecordSchema).min(3).max(4),
-	body: z.array(caseStudyBlockSchema).min(4),
-});
+	status: z.enum(PORTFOLIO_STATUSES),
+};
 
-export const experienceRecordSchema = z.object({
-	id: slug,
-	company: z.string().min(1),
-	role: text,
-	start: yearMonth,
-	/** null: the current position. */
-	end: yearMonth.nullable(),
-	location: text,
-	summary: text,
+export const projectInputSchema = z.strictObject({
+	...projectFields,
+	coverId: z.uuid().nullable(),
+	gallery: z.array(z.uuid()).max(PROJECT_MAX_GALLERY),
 });
+export type ProjectInput = z.output<typeof projectInputSchema>;
+export const projectUpdateSchema = projectInputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
 
-export const capabilityRecordSchema = z.object({
-	id: slug,
-	title: text,
-	summary: text,
-	skills: z.array(z.string().min(1)).min(3),
+export const projectFormSchema = z.object({
+	...projectFields,
+	cover: z.array(mediaItemSchema).max(1),
+	gallery: z.array(mediaItemSchema).max(PROJECT_MAX_GALLERY),
 });
+export type ProjectFormValues = z.input<typeof projectFormSchema>;
 
-export const processStepRecordSchema = z.object({
-	id: slug,
-	title: text,
-	body: text,
-	outputs: z.array(text).min(2),
+export const toProjectInput = (values: ProjectFormValues): ProjectInput => {
+	const { cover, gallery, ...rest } = projectFormSchema.parse(values);
+	return { ...rest, coverId: firstId(cover), gallery: gallery.map((item) => item.id) };
+};
+
+export const projectListItem = z.object({
+	id: z.string(),
+	slug: z.string(),
+	title: z.string(),
+	year: z.number(),
+	status: z.enum(PORTFOLIO_STATUSES),
+	featured: z.boolean(),
+	sortOrder: z.number(),
+	motif: z.enum(COVER_MOTIFS),
+	glyph: z.string(),
+	artSeed: z.string(),
+	cover: image.nullable(),
+	publishedAt: isoDateTime().nullable(),
+	updatedAt: isoDateTime(),
 });
+export type ProjectListItem = z.output<typeof projectListItem>;
+export type ProjectPage = Paged<ProjectListItem>;
 
-export const testimonialRecordSchema = z.object({
-	id: slug,
-	quote: text,
-	name: z.string().min(1),
-	role: text,
-	company: z.string().min(1),
+export const projectDetail = projectListItem.extend({
+	...projectFields,
+	gallery: z.array(image),
+	createdAt: isoDateTime(),
 });
+export type ProjectDetail = z.output<typeof projectDetail>;
 
-export const postRecordSchema = z.object({
-	slug,
-	title: text,
-	excerpt: text,
-	publishedAt: isoDate,
-	tags: z.array(z.string().min(1)).min(1),
-	body: z.array(proseBlockSchema).min(4),
-});
-
-export type ProfileRecord = z.infer<typeof profileRecordSchema>;
-export type ProjectRecord = z.infer<typeof projectRecordSchema>;
-export type ExperienceRecord = z.infer<typeof experienceRecordSchema>;
-export type CapabilityRecord = z.infer<typeof capabilityRecordSchema>;
-export type ProcessStepRecord = z.infer<typeof processStepRecordSchema>;
-export type TestimonialRecord = z.infer<typeof testimonialRecordSchema>;
-export type PostRecord = z.infer<typeof postRecordSchema>;
-export type MetricRecord = z.infer<typeof metricRecordSchema>;
+/** The reorder dialog: every project, in order. */
+export const projectOrderItem = projectListItem.pick({ id: true, title: true, status: true, sortOrder: true });
+export type ProjectOrderItem = z.output<typeof projectOrderItem>;
 
 // ---------------------------------------------------------------------------
-// URL search params
+// Journal posts
 // ---------------------------------------------------------------------------
 
-/** /portfolio/work?discipline=frontend. A bad value means "all" (forgiving, like every list URL). */
-export const workSearchSchema = z.object({
-	discipline: disciplineSchema.optional().catch(undefined),
-});
+const postFields = {
+	title: localizedText({ max: 140 }),
+	slug: slug(),
+	excerpt: localizedText({ max: 300 }),
+	/** Rich-text HTML per language; the server sanitizes it before storing. */
+	body: localizedRichText({ max: 50_000 }),
+	tags: tags({ max: 8, maxLength: 32 }),
+	status: z.enum(PORTFOLIO_STATUSES),
+};
 
-/** Path params of detail pages: anything that isn't a slug can't exist (the route doesn't match). */
-export const portfolioSlugParamSchema = z.object({ slug });
+export const postInputSchema = z.strictObject({ ...postFields, coverId: z.uuid().nullable() });
+export type PostInput = z.output<typeof postInputSchema>;
+export const postUpdateSchema = postInputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
+
+export const postFormSchema = z.object({ ...postFields, cover: z.array(mediaItemSchema).max(1) });
+export type PostFormValues = z.input<typeof postFormSchema>;
+
+export const toPostInput = (values: PostFormValues): PostInput => {
+	const { cover, ...rest } = postFormSchema.parse(values);
+	return { ...rest, coverId: firstId(cover) };
+};
+
+const localizedDto = z.custom<Localized>();
+
+export const postListItem = z.object({
+	id: z.string(),
+	slug: z.string(),
+	title: localizedDto,
+	status: z.enum(PORTFOLIO_STATUSES),
+	tags: z.array(z.string()),
+	cover: image.nullable(),
+	publishedAt: isoDateTime().nullable(),
+	updatedAt: isoDateTime(),
+});
+export type PostListItem = z.output<typeof postListItem>;
+export type PostPage = Paged<PostListItem>;
+
+export const postDetail = postListItem.extend({
+	excerpt: localizedDto,
+	body: localizedDto,
+	createdAt: isoDateTime(),
+});
+export type PostDetail = z.output<typeof postDetail>;
+
+/** The slug check while typing: is `slug` free for the record `id` (absent for a new one)? */
+export const slugCheckSchema = z.strictObject({
+	slug: z.string().max(80).regex(SLUG_PATTERN),
+	id: z.uuid().optional(),
+});
+export const statusUpdateSchema = z.strictObject({ id: z.uuid(), status: z.enum(PORTFOLIO_STATUSES) });
+export const reorderSchema = z.strictObject({ ids: z.array(z.uuid()).min(1).max(500) });
+
+// ---------------------------------------------------------------------------
+// Ordered sections: experience, skills, process steps, testimonials. Each is a
+// short list in display order (`sortOrder`), edited in a sheet.
+// ---------------------------------------------------------------------------
+
+const sectionDto = { id: z.string(), sortOrder: z.number(), updatedAt: isoDateTime() };
+const versioned = { id: z.uuid(), updatedAt: versionSchema() };
+
+export const experienceInputSchema = z
+	.strictObject({
+		company: required({ max: 80 }),
+		role: localizedText({ max: 80 }),
+		start: yearMonth(),
+		/** Empty: the current position. */
+		end: z.union([z.literal(""), yearMonth()]),
+		location: localizedText({ max: 80 }),
+		summary: localizedText({ max: 600 }),
+	})
+	.refine((entry) => entry.end === "" || entry.end >= entry.start, {
+		path: ["end"],
+		error: () => m.validation_date_order(),
+	});
+export type ExperienceInput = z.output<typeof experienceInputSchema>;
+export const experienceUpdateSchema = experienceInputSchema.safeExtend(versioned);
+export const experienceItem = z.object({
+	...sectionDto,
+	company: z.string(),
+	role: localizedDto,
+	start: z.string(),
+	end: z.string(),
+	location: localizedDto,
+	summary: localizedDto,
+});
+export type ExperienceItem = z.output<typeof experienceItem>;
+
+export const skillInputSchema = z.strictObject({
+	title: localizedText({ max: 80 }),
+	summary: localizedText({ max: 400 }),
+	skills: tags({ min: 1, max: 20, maxLength: 40 }),
+});
+export type SkillInput = z.output<typeof skillInputSchema>;
+export const skillUpdateSchema = skillInputSchema.extend(versioned);
+export const skillItem = z.object({
+	...sectionDto,
+	title: localizedDto,
+	summary: localizedDto,
+	skills: z.array(z.string()),
+});
+export type SkillItem = z.output<typeof skillItem>;
+
+export const processStepInputSchema = z.strictObject({
+	title: localizedText({ max: 80 }),
+	body: localizedText({ max: 600 }),
+	outputs: list(localizedText({ max: 80 }), { max: 8 }),
+});
+export type ProcessStepInput = z.output<typeof processStepInputSchema>;
+export const processStepUpdateSchema = processStepInputSchema.extend(versioned);
+export const processStepItem = z.object({
+	...sectionDto,
+	title: localizedDto,
+	body: localizedDto,
+	outputs: z.array(localizedDto),
+});
+export type ProcessStepItem = z.output<typeof processStepItem>;
+
+export const testimonialInputSchema = z.strictObject({
+	quote: localizedText({ max: 600 }),
+	name: required({ max: 80 }),
+	role: localizedText({ max: 80 }),
+	company: required({ max: 80 }),
+	/** Unpublished testimonials stay in the admin (waiting for the person's approval). */
+	published: z.boolean(),
+});
+export type TestimonialInput = z.output<typeof testimonialInputSchema>;
+export const testimonialUpdateSchema = testimonialInputSchema.extend(versioned);
+export const testimonialItem = z.object({
+	...sectionDto,
+	quote: localizedDto,
+	name: z.string(),
+	role: localizedDto,
+	company: z.string(),
+	published: z.boolean(),
+});
+export type TestimonialItem = z.output<typeof testimonialItem>;
+
+// ---------------------------------------------------------------------------
+// Contact messages (the public form → the admin inbox)
+// ---------------------------------------------------------------------------
+
+export const CONTACT_MESSAGE_MAX = 4000;
+
+/** The public contact form. `website` is the honeypot (people leave it empty); `captcha` the Turnstile token. */
+export const contactInputSchema = z.strictObject({
+	name: required({ max: 80 }),
+	email: email(),
+	message: required({ max: CONTACT_MESSAGE_MAX }),
+	website: z.string().max(200).optional(),
+	captcha: z.string().max(4096).optional(),
+	locale: z.enum(locales),
+});
+export type ContactInput = z.output<typeof contactInputSchema>;
+
+export const contactMessageItem = z.object({
+	id: z.string(),
+	name: z.string(),
+	email: z.string(),
+	message: z.string(),
+	locale: z.string(),
+	readAt: isoDateTime().nullable(),
+	archivedAt: isoDateTime().nullable(),
+	createdAt: isoDateTime(),
+});
+export type ContactMessageItem = z.output<typeof contactMessageItem>;
+export type ContactMessagePage = Paged<ContactMessageItem>;
+
+export const messageStateSchema = z.strictObject({
+	ids: z.array(z.uuid()).min(1).max(200),
+	/** read/unread toggles `readAt`; archived/inbox toggles `archivedAt`. */
+	set: z.enum(["read", "unread", "archived", "inbox"]),
+});
+export type MessageStateInput = z.output<typeof messageStateSchema>;

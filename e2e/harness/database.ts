@@ -1,6 +1,7 @@
 /**
- * The e2e database: the committed migrations, an admin and the demo data
- * (`scripts/lib/demo-data.ts`, the same rows `pnpm db:seed-demo` writes).
+ * The e2e database: the committed migrations, an admin, the demo data
+ * (`scripts/lib/demo-data.ts`, the same rows `pnpm db:seed-demo` writes) and the
+ * portfolio's content (`scripts/lib/portfolio-seed.ts`, as `pnpm db:seed-portfolio`).
  */
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
@@ -8,11 +9,13 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 import { type DemoQuery, seedDemo } from "../../scripts/lib/demo-data.ts";
+import { seedPortfolio } from "../../scripts/lib/portfolio-seed.ts"; // @portfolio
 import { E2E } from "./config.ts";
 
 /**
  * Connects, empties the database (a real Postgres may hold an earlier run), migrates and seeds.
- * `seed: false` only migrates (pnpm dev:local on a database it already seeded).
+ * `seed: false` only migrates (pnpm dev:local on a database it already seeded), and
+ * writes the portfolio's content if there is none yet (so `/` is never empty).
  */
 export async function prepareDatabase(
 	connectionString: string,
@@ -28,6 +31,7 @@ export async function prepareDatabase(
 	await migrate(drizzle({ client }), { migrationsFolder: "./drizzle" });
 
 	const query: DemoQuery = (sql, params) => client.query(sql, params);
+	await seedPortfolio(query); // @portfolio
 	if (!seed) return { query, close: () => client.end() };
 	const passwordHash = await hashPassword(E2E.password);
 	await query("begin");

@@ -6,12 +6,12 @@ import { Reveal } from "../primitives/reveal";
 import { ArchitectureDiagram } from "./architecture-diagram";
 import { Gallery } from "./gallery";
 
-/** Renders one typed case study block. Exhaustive: a new block kind fails typecheck until it has a renderer. */
+/** Renders one typed case study block. Exhaustive: a new block type fails typecheck until it has a renderer. */
 function Block({ block, seed }: { block: CaseStudyBlock; seed: string }) {
-	switch (block.kind) {
+	switch (block.type) {
 		case "chapter":
 			return (
-				<section className="flex flex-col gap-6">
+				<section lang={block.lang} className="flex flex-col gap-6">
 					<Display as="h2" size="h3">
 						{block.title}
 					</Display>
@@ -23,9 +23,9 @@ function Block({ block, seed }: { block: CaseStudyBlock; seed: string }) {
 				</section>
 			);
 		case "quote":
-			return <PullQuote text={block.text} cite={block.cite} />;
+			return <PullQuote text={block.text} cite={block.cite || undefined} />;
 		case "code":
-			return <CodeBlock code={block.code} language={block.language} caption={block.caption} />;
+			return <CodeBlock code={block.code} language={block.language} caption={block.caption || undefined} />;
 		case "architecture":
 			return <ArchitectureDiagram block={block} />;
 		case "gallery":
@@ -37,28 +37,12 @@ function Block({ block, seed }: { block: CaseStudyBlock; seed: string }) {
 	}
 }
 
-/** A stable key from the block's own content (blocks have no ids). */
-const blockKey = (block: CaseStudyBlock): string => {
-	switch (block.kind) {
-		case "chapter":
-			return `chapter:${block.title}`;
-		case "quote":
-			return `quote:${block.text}`;
-		case "code":
-			return `code:${block.code}`;
-		case "architecture":
-			return `architecture:${block.caption}`;
-		case "gallery":
-			return `gallery:${block.captions.join("|")}`;
-	}
-};
-
 /** The story of a project, block by block, each wiping into view. */
 export function CaseStudyBody({ blocks, seed }: { blocks: ReadonlyArray<CaseStudyBlock>; seed: string }) {
 	return (
 		<div className="flex flex-col gap-[clamp(3.5rem,7vw,6rem)]">
 			{blocks.map((block) => (
-				<Reveal key={blockKey(block)}>
+				<Reveal key={block.id}>
 					<Block block={block} seed={seed} />
 				</Reveal>
 			))}

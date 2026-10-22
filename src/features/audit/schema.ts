@@ -26,6 +26,29 @@ export const AUDIT_ACTIONS = [
 	"test-crud.publish",
 	"test-crud.unpublish",
 	"test-crud.delete",
+	// portfolio:start
+	"profile.update",
+	"project.create",
+	"project.update",
+	"project.publish",
+	"project.unpublish",
+	"project.delete",
+	"project.reorder",
+	"post.create",
+	"post.update",
+	"post.publish",
+	"post.unpublish",
+	"post.delete",
+	"portfolio-section.create",
+	"portfolio-section.update",
+	"portfolio-section.delete",
+	"portfolio-section.reorder",
+	"message.archive",
+	"message.unarchive",
+	"message.delete",
+	"media.update",
+	"media.delete",
+	// portfolio:end
 	// @new-feature:audit-actions
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -34,6 +57,17 @@ export const AUDIT_TARGETS = [
 	"role",
 	"user",
 	"test-crud",
+	// portfolio:start
+	"profile",
+	"project",
+	"post",
+	"experience",
+	"skill",
+	"process-step",
+	"testimonial",
+	"message",
+	"media",
+	// portfolio:end
 	// @new-feature:audit-targets
 ] as const;
 export type AuditTarget = (typeof AUDIT_TARGETS)[number];

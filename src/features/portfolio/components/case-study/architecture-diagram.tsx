@@ -3,7 +3,7 @@ import { m } from "@/paraglide/messages";
 import { ARCHITECTURE_TIERS } from "../../schema";
 import type { CaseStudyBlock } from "../../types";
 
-type ArchitectureBlock = Extract<CaseStudyBlock, { kind: "architecture" }>;
+type ArchitectureBlock = Extract<CaseStudyBlock, { type: "architecture" }>;
 type Tier = (typeof ARCHITECTURE_TIERS)[number];
 
 const TIER_LABELS: Record<Tier, () => string> = {
@@ -26,7 +26,7 @@ export function ArchitectureDiagram({ block }: { block: ArchitectureBlock }) {
 	const labelOf = (id: string) => block.nodes.find((node) => node.id === id)?.label ?? id;
 
 	return (
-		<figure className="flex flex-col gap-8 border-2 border-pf-line p-5 md:p-8">
+		<figure lang={block.lang} className="flex flex-col gap-8 border-2 border-pf-line p-5 md:p-8">
 			<div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
 				{tiers.map((column, position) => (
 					<div key={column.tier} className="contents">
@@ -53,7 +53,7 @@ export function ArchitectureDiagram({ block }: { block: ArchitectureBlock }) {
 			<div className="border-pf-line border-t pt-5">
 				<p className="pf-label mb-3 text-pf-stone">{m.portfolio_architecture_flows()}</p>
 				<ul className="flex flex-wrap gap-x-6 gap-y-2 text-pf-small text-pf-ink-2">
-					{block.edges.map(([from, to]) => (
+					{block.edges.map(({ from, to }) => (
 						<li key={`${from}-${to}`}>
 							{labelOf(from)} <span className="text-pf-accent">→</span> {labelOf(to)}
 						</li>

@@ -38,6 +38,7 @@ import { Route as DevStackRouteImport } from './routes/dev/stack'
 import { Route as DevTestCrudRouteRouteImport } from './routes/dev/test-crud/route'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminAuditRouteRouteImport } from './routes/_admin/admin/audit/route'
+import { Route as AdminAdminMediaRouteImport } from './routes/_admin/admin/media'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
@@ -73,6 +74,14 @@ import { Route as DevExamplesStreamingRouteImport } from './routes/dev/examples/
 import { Route as DevTestCrudIndexRouteImport } from './routes/dev/test-crud/index'
 import { Route as DevTestCrudSlugRouteImport } from './routes/dev/test-crud/$slug'
 import { Route as AdminAdminAuditIndexRouteImport } from './routes/_admin/admin/audit/index'
+import { Route as AdminAdminPortfolioExperienceRouteImport } from './routes/_admin/admin/portfolio/experience'
+import { Route as AdminAdminPortfolioJournalRouteRouteImport } from './routes/_admin/admin/portfolio/journal/route'
+import { Route as AdminAdminPortfolioMessagesRouteImport } from './routes/_admin/admin/portfolio/messages'
+import { Route as AdminAdminPortfolioProcessRouteImport } from './routes/_admin/admin/portfolio/process'
+import { Route as AdminAdminPortfolioProfileRouteImport } from './routes/_admin/admin/portfolio/profile'
+import { Route as AdminAdminPortfolioProjectsRouteRouteImport } from './routes/_admin/admin/portfolio/projects/route'
+import { Route as AdminAdminPortfolioSkillsRouteImport } from './routes/_admin/admin/portfolio/skills'
+import { Route as AdminAdminPortfolioTestimonialsRouteImport } from './routes/_admin/admin/portfolio/testimonials'
 import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
 import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
 import { Route as AdminAdminSettingsAppearanceRouteImport } from './routes/_admin/admin/settings.appearance'
@@ -82,6 +91,12 @@ import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin
 import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
+import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
+import { Route as AdminAdminPortfolioJournalIdRouteImport } from './routes/_admin/admin/portfolio/journal/$id'
+import { Route as AdminAdminPortfolioJournalNewRouteImport } from './routes/_admin/admin/portfolio/journal/new'
+import { Route as AdminAdminPortfolioProjectsIndexRouteImport } from './routes/_admin/admin/portfolio/projects/index'
+import { Route as AdminAdminPortfolioProjectsIdRouteImport } from './routes/_admin/admin/portfolio/projects/$id'
+import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_admin/admin/portfolio/projects/new'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -221,6 +236,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
 const AdminAdminAuditRouteRoute = AdminAdminAuditRouteRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
+const AdminAdminMediaRoute = AdminAdminMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
 const AdminAdminRolesRouteRoute = AdminAdminRolesRouteRouteImport.update({
@@ -399,6 +419,54 @@ const AdminAdminAuditIndexRoute = AdminAdminAuditIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminAuditRouteRoute,
 } as any)
+const AdminAdminPortfolioExperienceRoute =
+  AdminAdminPortfolioExperienceRouteImport.update({
+    id: '/portfolio/experience',
+    path: '/portfolio/experience',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioJournalRouteRoute =
+  AdminAdminPortfolioJournalRouteRouteImport.update({
+    id: '/portfolio/journal',
+    path: '/portfolio/journal',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioMessagesRoute =
+  AdminAdminPortfolioMessagesRouteImport.update({
+    id: '/portfolio/messages',
+    path: '/portfolio/messages',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioProcessRoute =
+  AdminAdminPortfolioProcessRouteImport.update({
+    id: '/portfolio/process',
+    path: '/portfolio/process',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioProfileRoute =
+  AdminAdminPortfolioProfileRouteImport.update({
+    id: '/portfolio/profile',
+    path: '/portfolio/profile',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioProjectsRouteRoute =
+  AdminAdminPortfolioProjectsRouteRouteImport.update({
+    id: '/portfolio/projects',
+    path: '/portfolio/projects',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioSkillsRoute =
+  AdminAdminPortfolioSkillsRouteImport.update({
+    id: '/portfolio/skills',
+    path: '/portfolio/skills',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
+const AdminAdminPortfolioTestimonialsRoute =
+  AdminAdminPortfolioTestimonialsRouteImport.update({
+    id: '/portfolio/testimonials',
+    path: '/portfolio/testimonials',
+    getParentRoute: () => AdminAdminRouteRoute,
+  } as any)
 const AdminAdminRolesIndexRoute = AdminAdminRolesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -446,6 +514,42 @@ const DevExamplesMaskingIdRoute = DevExamplesMaskingIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => DevExamplesMaskingRouteRoute,
 } as any)
+const AdminAdminPortfolioJournalIndexRoute =
+  AdminAdminPortfolioJournalIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPortfolioJournalRouteRoute,
+  } as any)
+const AdminAdminPortfolioJournalIdRoute =
+  AdminAdminPortfolioJournalIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminPortfolioJournalRouteRoute,
+  } as any)
+const AdminAdminPortfolioJournalNewRoute =
+  AdminAdminPortfolioJournalNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPortfolioJournalRouteRoute,
+  } as any)
+const AdminAdminPortfolioProjectsIndexRoute =
+  AdminAdminPortfolioProjectsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
+  } as any)
+const AdminAdminPortfolioProjectsIdRoute =
+  AdminAdminPortfolioProjectsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
+  } as any)
+const AdminAdminPortfolioProjectsNewRoute =
+  AdminAdminPortfolioProjectsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
@@ -475,6 +579,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
+  '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
@@ -506,6 +611,14 @@ export interface FileRoutesByFullPath {
   '/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
+  '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
+  '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
+  '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
+  '/admin/portfolio/profile': typeof AdminAdminPortfolioProfileRoute
+  '/admin/portfolio/skills': typeof AdminAdminPortfolioSkillsRoute
+  '/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
@@ -516,6 +629,12 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
+  '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
+  '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
+  '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
+  '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof SiteIndexRoute
@@ -536,6 +655,7 @@ export interface FileRoutesByTo {
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
   '/dev': typeof DevIndexRoute
+  '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
@@ -567,6 +687,12 @@ export interface FileRoutesByTo {
   '/work': typeof SiteWorkIndexRoute
   '/dev/examples': typeof DevExamplesIndexRoute
   '/dev/test-crud': typeof DevTestCrudIndexRoute
+  '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
+  '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
+  '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
+  '/admin/portfolio/profile': typeof AdminAdminPortfolioProfileRoute
+  '/admin/portfolio/skills': typeof AdminAdminPortfolioSkillsRoute
+  '/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
@@ -577,6 +703,12 @@ export interface FileRoutesByTo {
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
+  '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
+  '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
+  '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
+  '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
+  '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -612,6 +744,7 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
+  '/_admin/admin/media': typeof AdminAdminMediaRoute
   '/_authed/account_/delete': typeof AuthedAccountDeleteRoute
   '/_site/journal/$slug': typeof SiteJournalSlugRoute
   '/_site/work/$slug': typeof SiteWorkSlugRoute
@@ -643,6 +776,14 @@ export interface FileRoutesById {
   '/_site/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
+  '/_admin/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/_admin/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
+  '/_admin/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
+  '/_admin/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
+  '/_admin/admin/portfolio/profile': typeof AdminAdminPortfolioProfileRoute
+  '/_admin/admin/portfolio/skills': typeof AdminAdminPortfolioSkillsRoute
+  '/_admin/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
@@ -653,6 +794,12 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
+  '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
+  '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
+  '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
+  '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -684,6 +831,7 @@ export interface FileRouteTypes {
     | '/admin/test-crud'
     | '/admin/users'
     | '/dev/examples/masking'
+    | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
     | '/work/$slug'
@@ -715,6 +863,14 @@ export interface FileRouteTypes {
     | '/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/admin/portfolio/journal'
+    | '/admin/portfolio/projects'
+    | '/admin/portfolio/experience'
+    | '/admin/portfolio/messages'
+    | '/admin/portfolio/process'
+    | '/admin/portfolio/profile'
+    | '/admin/portfolio/skills'
+    | '/admin/portfolio/testimonials'
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
@@ -725,6 +881,12 @@ export interface FileRouteTypes {
     | '/admin/test-crud/'
     | '/admin/users/'
     | '/dev/examples/masking/'
+    | '/admin/portfolio/journal/$id'
+    | '/admin/portfolio/journal/new'
+    | '/admin/portfolio/projects/$id'
+    | '/admin/portfolio/projects/new'
+    | '/admin/portfolio/journal/'
+    | '/admin/portfolio/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -745,6 +907,7 @@ export interface FileRouteTypes {
     | '/dev/forms'
     | '/dev/stack'
     | '/dev'
+    | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
     | '/work/$slug'
@@ -776,6 +939,12 @@ export interface FileRouteTypes {
     | '/work'
     | '/dev/examples'
     | '/dev/test-crud'
+    | '/admin/portfolio/experience'
+    | '/admin/portfolio/messages'
+    | '/admin/portfolio/process'
+    | '/admin/portfolio/profile'
+    | '/admin/portfolio/skills'
+    | '/admin/portfolio/testimonials'
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
@@ -786,6 +955,12 @@ export interface FileRouteTypes {
     | '/admin/test-crud'
     | '/admin/users'
     | '/dev/examples/masking'
+    | '/admin/portfolio/journal/$id'
+    | '/admin/portfolio/journal/new'
+    | '/admin/portfolio/projects/$id'
+    | '/admin/portfolio/projects/new'
+    | '/admin/portfolio/journal'
+    | '/admin/portfolio/projects'
   id:
     | '__root__'
     | '/dev'
@@ -820,6 +995,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
     | '/dev/examples/masking'
+    | '/_admin/admin/media'
     | '/_authed/account_/delete'
     | '/_site/journal/$slug'
     | '/_site/work/$slug'
@@ -851,6 +1027,14 @@ export interface FileRouteTypes {
     | '/_site/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/_admin/admin/portfolio/journal'
+    | '/_admin/admin/portfolio/projects'
+    | '/_admin/admin/portfolio/experience'
+    | '/_admin/admin/portfolio/messages'
+    | '/_admin/admin/portfolio/process'
+    | '/_admin/admin/portfolio/profile'
+    | '/_admin/admin/portfolio/skills'
+    | '/_admin/admin/portfolio/testimonials'
     | '/_admin/admin/roles/permissions'
     | '/_admin/admin/settings/appearance'
     | '/_admin/admin/test-crud/$id'
@@ -861,6 +1045,12 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
     | '/dev/examples/masking/'
+    | '/_admin/admin/portfolio/journal/$id'
+    | '/_admin/admin/portfolio/journal/new'
+    | '/_admin/admin/portfolio/projects/$id'
+    | '/_admin/admin/portfolio/projects/new'
+    | '/_admin/admin/portfolio/journal/'
+    | '/_admin/admin/portfolio/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1081,6 +1271,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/admin/audit'
       preLoaderRoute: typeof AdminAdminAuditRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/media': {
+      id: '/_admin/admin/media'
+      path: '/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof AdminAdminMediaRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
     '/_admin/admin/roles': {
@@ -1328,6 +1525,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminAuditIndexRouteImport
       parentRoute: typeof AdminAdminAuditRouteRoute
     }
+    '/_admin/admin/portfolio/experience': {
+      id: '/_admin/admin/portfolio/experience'
+      path: '/portfolio/experience'
+      fullPath: '/admin/portfolio/experience'
+      preLoaderRoute: typeof AdminAdminPortfolioExperienceRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/journal': {
+      id: '/_admin/admin/portfolio/journal'
+      path: '/portfolio/journal'
+      fullPath: '/admin/portfolio/journal'
+      preLoaderRoute: typeof AdminAdminPortfolioJournalRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/messages': {
+      id: '/_admin/admin/portfolio/messages'
+      path: '/portfolio/messages'
+      fullPath: '/admin/portfolio/messages'
+      preLoaderRoute: typeof AdminAdminPortfolioMessagesRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/process': {
+      id: '/_admin/admin/portfolio/process'
+      path: '/portfolio/process'
+      fullPath: '/admin/portfolio/process'
+      preLoaderRoute: typeof AdminAdminPortfolioProcessRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/profile': {
+      id: '/_admin/admin/portfolio/profile'
+      path: '/portfolio/profile'
+      fullPath: '/admin/portfolio/profile'
+      preLoaderRoute: typeof AdminAdminPortfolioProfileRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/projects': {
+      id: '/_admin/admin/portfolio/projects'
+      path: '/portfolio/projects'
+      fullPath: '/admin/portfolio/projects'
+      preLoaderRoute: typeof AdminAdminPortfolioProjectsRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/skills': {
+      id: '/_admin/admin/portfolio/skills'
+      path: '/portfolio/skills'
+      fullPath: '/admin/portfolio/skills'
+      preLoaderRoute: typeof AdminAdminPortfolioSkillsRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/portfolio/testimonials': {
+      id: '/_admin/admin/portfolio/testimonials'
+      path: '/portfolio/testimonials'
+      fullPath: '/admin/portfolio/testimonials'
+      preLoaderRoute: typeof AdminAdminPortfolioTestimonialsRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
     '/_admin/admin/roles/': {
       id: '/_admin/admin/roles/'
       path: '/'
@@ -1390,6 +1643,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/examples/masking/$id'
       preLoaderRoute: typeof DevExamplesMaskingIdRouteImport
       parentRoute: typeof DevExamplesMaskingRouteRoute
+    }
+    '/_admin/admin/portfolio/journal/': {
+      id: '/_admin/admin/portfolio/journal/'
+      path: '/'
+      fullPath: '/admin/portfolio/journal/'
+      preLoaderRoute: typeof AdminAdminPortfolioJournalIndexRouteImport
+      parentRoute: typeof AdminAdminPortfolioJournalRouteRoute
+    }
+    '/_admin/admin/portfolio/journal/$id': {
+      id: '/_admin/admin/portfolio/journal/$id'
+      path: '/$id'
+      fullPath: '/admin/portfolio/journal/$id'
+      preLoaderRoute: typeof AdminAdminPortfolioJournalIdRouteImport
+      parentRoute: typeof AdminAdminPortfolioJournalRouteRoute
+    }
+    '/_admin/admin/portfolio/journal/new': {
+      id: '/_admin/admin/portfolio/journal/new'
+      path: '/new'
+      fullPath: '/admin/portfolio/journal/new'
+      preLoaderRoute: typeof AdminAdminPortfolioJournalNewRouteImport
+      parentRoute: typeof AdminAdminPortfolioJournalRouteRoute
+    }
+    '/_admin/admin/portfolio/projects/': {
+      id: '/_admin/admin/portfolio/projects/'
+      path: '/'
+      fullPath: '/admin/portfolio/projects/'
+      preLoaderRoute: typeof AdminAdminPortfolioProjectsIndexRouteImport
+      parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
+    }
+    '/_admin/admin/portfolio/projects/$id': {
+      id: '/_admin/admin/portfolio/projects/$id'
+      path: '/$id'
+      fullPath: '/admin/portfolio/projects/$id'
+      preLoaderRoute: typeof AdminAdminPortfolioProjectsIdRouteImport
+      parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
+    }
+    '/_admin/admin/portfolio/projects/new': {
+      id: '/_admin/admin/portfolio/projects/new'
+      path: '/new'
+      fullPath: '/admin/portfolio/projects/new'
+      preLoaderRoute: typeof AdminAdminPortfolioProjectsNewRouteImport
+      parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
     }
   }
 }
@@ -1549,12 +1844,58 @@ const AdminAdminUsersRouteRouteChildren: AdminAdminUsersRouteRouteChildren = {
 const AdminAdminUsersRouteRouteWithChildren =
   AdminAdminUsersRouteRoute._addFileChildren(AdminAdminUsersRouteRouteChildren)
 
+interface AdminAdminPortfolioJournalRouteRouteChildren {
+  AdminAdminPortfolioJournalIdRoute: typeof AdminAdminPortfolioJournalIdRoute
+  AdminAdminPortfolioJournalNewRoute: typeof AdminAdminPortfolioJournalNewRoute
+  AdminAdminPortfolioJournalIndexRoute: typeof AdminAdminPortfolioJournalIndexRoute
+}
+
+const AdminAdminPortfolioJournalRouteRouteChildren: AdminAdminPortfolioJournalRouteRouteChildren =
+  {
+    AdminAdminPortfolioJournalIdRoute: AdminAdminPortfolioJournalIdRoute,
+    AdminAdminPortfolioJournalNewRoute: AdminAdminPortfolioJournalNewRoute,
+    AdminAdminPortfolioJournalIndexRoute: AdminAdminPortfolioJournalIndexRoute,
+  }
+
+const AdminAdminPortfolioJournalRouteRouteWithChildren =
+  AdminAdminPortfolioJournalRouteRoute._addFileChildren(
+    AdminAdminPortfolioJournalRouteRouteChildren,
+  )
+
+interface AdminAdminPortfolioProjectsRouteRouteChildren {
+  AdminAdminPortfolioProjectsIdRoute: typeof AdminAdminPortfolioProjectsIdRoute
+  AdminAdminPortfolioProjectsNewRoute: typeof AdminAdminPortfolioProjectsNewRoute
+  AdminAdminPortfolioProjectsIndexRoute: typeof AdminAdminPortfolioProjectsIndexRoute
+}
+
+const AdminAdminPortfolioProjectsRouteRouteChildren: AdminAdminPortfolioProjectsRouteRouteChildren =
+  {
+    AdminAdminPortfolioProjectsIdRoute: AdminAdminPortfolioProjectsIdRoute,
+    AdminAdminPortfolioProjectsNewRoute: AdminAdminPortfolioProjectsNewRoute,
+    AdminAdminPortfolioProjectsIndexRoute:
+      AdminAdminPortfolioProjectsIndexRoute,
+  }
+
+const AdminAdminPortfolioProjectsRouteRouteWithChildren =
+  AdminAdminPortfolioProjectsRouteRoute._addFileChildren(
+    AdminAdminPortfolioProjectsRouteRouteChildren,
+  )
+
 interface AdminAdminRouteRouteChildren {
   AdminAdminAuditRouteRoute: typeof AdminAdminAuditRouteRouteWithChildren
   AdminAdminRolesRouteRoute: typeof AdminAdminRolesRouteRouteWithChildren
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
+  AdminAdminMediaRoute: typeof AdminAdminMediaRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminPortfolioJournalRouteRoute: typeof AdminAdminPortfolioJournalRouteRouteWithChildren
+  AdminAdminPortfolioProjectsRouteRoute: typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  AdminAdminPortfolioExperienceRoute: typeof AdminAdminPortfolioExperienceRoute
+  AdminAdminPortfolioMessagesRoute: typeof AdminAdminPortfolioMessagesRoute
+  AdminAdminPortfolioProcessRoute: typeof AdminAdminPortfolioProcessRoute
+  AdminAdminPortfolioProfileRoute: typeof AdminAdminPortfolioProfileRoute
+  AdminAdminPortfolioSkillsRoute: typeof AdminAdminPortfolioSkillsRoute
+  AdminAdminPortfolioTestimonialsRoute: typeof AdminAdminPortfolioTestimonialsRoute
   AdminAdminSettingsAppearanceRoute: typeof AdminAdminSettingsAppearanceRoute
 }
 
@@ -1563,7 +1904,18 @@ const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
   AdminAdminRolesRouteRoute: AdminAdminRolesRouteRouteWithChildren,
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
+  AdminAdminMediaRoute: AdminAdminMediaRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminPortfolioJournalRouteRoute:
+    AdminAdminPortfolioJournalRouteRouteWithChildren,
+  AdminAdminPortfolioProjectsRouteRoute:
+    AdminAdminPortfolioProjectsRouteRouteWithChildren,
+  AdminAdminPortfolioExperienceRoute: AdminAdminPortfolioExperienceRoute,
+  AdminAdminPortfolioMessagesRoute: AdminAdminPortfolioMessagesRoute,
+  AdminAdminPortfolioProcessRoute: AdminAdminPortfolioProcessRoute,
+  AdminAdminPortfolioProfileRoute: AdminAdminPortfolioProfileRoute,
+  AdminAdminPortfolioSkillsRoute: AdminAdminPortfolioSkillsRoute,
+  AdminAdminPortfolioTestimonialsRoute: AdminAdminPortfolioTestimonialsRoute,
   AdminAdminSettingsAppearanceRoute: AdminAdminSettingsAppearanceRoute,
 }
 

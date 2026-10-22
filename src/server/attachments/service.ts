@@ -1,7 +1,8 @@
 import "@tanstack/react-start/server-only";
-import { IMAGE_FORMATS, IMAGE_MAX_BYTES, type UploadScope } from "@/features/attachments/constants";
+import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "@/features/attachments/constants";
 import type { ImageAsset, UploadTicket } from "@/features/attachments/schema";
-import { ruleError } from "@/lib/errors";
+import { hasAll } from "@/features/rbac/permissions";
+import { AppError, ruleError } from "@/lib/errors";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { AttachmentRow } from "@/server/db/schema";
@@ -22,6 +23,8 @@ import * as repo from "./repository";
  *    uploads, so it's enforced here: a too-large file is deleted again) and
  *    records it as a pending attachment owned by the uploader.
  * 4. The entity's own save links pending attachments (repository.syncEntityAttachments).
+ *    A library scope (the media library, decision 0177) records the upload in
+ *    the library at once instead; items then reference it by id.
  *
  * Removed and orphaned assets are deleted by `cleanup` (scheduled) and, right
  * away when possible, by `purge`.
@@ -37,7 +40,18 @@ export function requireStore(store: ImageStore | null): ImageStore {
 	return store;
 }
 
-export function signUpload(store: ImageStore | null, scope: UploadScope): UploadTicket {
+/** Who uploads: the owner of the new attachment, and what they may do (a library scope needs its own permission). */
+export type Uploader = { id: string; permissions: ReadonlyArray<string> };
+
+function allowScope(uploader: Uploader, scope: UploadScope) {
+	const { permission } = uploadRule(scope);
+	if (permission && !hasAll(uploader.permissions, [permission])) {
+		throw new AppError("FORBIDDEN", `Missing permission: ${permission}`);
+	}
+}
+
+export function signUpload(store: ImageStore | null, scope: UploadScope, uploader: Uploader): UploadTicket {
+	allowScope(uploader, scope);
 	return requireStore(store).signUpload(scope);
 }
 
@@ -45,8 +59,11 @@ export async function confirmUpload(
 	db: Db,
 	storeOrNull: ImageStore | null,
 	input: { publicId: string; scope: UploadScope },
-	ownerId: string,
+	uploader: Uploader,
 ): Promise<ImageAsset> {
+	allowScope(uploader, input.scope);
+	const ownerId = uploader.id;
+	const rule = uploadRule(input.scope);
 	const store = requireStore(storeOrNull);
 	// Only this app's slots for this scope (the signature fixed the public_id).
 	if (!store.owns(input.publicId) || !input.publicId.startsWith(`${store.config.folder}/${input.scope}/`)) {
@@ -62,7 +79,7 @@ export async function confirmUpload(
 	}
 	const remote = await store.getImage(input.publicId);
 	if (!remote) throw ruleError("BAD_REQUEST", "Upload not found", m.attachments_error_missing());
-	const formatOk = remote.resourceType === "image" && (IMAGE_FORMATS as ReadonlyArray<string>).includes(remote.format);
+	const formatOk = remote.resourceType === "image" && rule.formats.includes(remote.format);
 	if (!formatOk || remote.bytes > IMAGE_MAX_BYTES) {
 		await store.destroy(remote.publicId);
 		throw formatOk
@@ -73,7 +90,7 @@ export async function confirmUpload(
 				)
 			: ruleError("BAD_REQUEST", "Upload format", m.attachments_error_format());
 	}
-	return toImageAsset(store, await repo.insertPending(db, remote, ownerId));
+	return toImageAsset(store, await repo.insertUpload(db, remote, ownerId, rule.library ?? null));
 }
 
 /** Throws away one's own pending upload (removed from the form before saving). */

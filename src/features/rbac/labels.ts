@@ -8,6 +8,9 @@ export const RESOURCE_LABELS: Record<Resource, () => string> = {
 	roles: m.perm_resource_roles,
 	attachments: m.perm_resource_attachments,
 	audit: m.perm_resource_audit,
+	portfolio: m.perm_resource_portfolio, // @portfolio
+	messages: m.perm_resource_messages, // @portfolio
+	media: m.perm_resource_media, // @portfolio
 	// @new-feature:resource-labels
 };
 
@@ -25,6 +28,15 @@ export const PERMISSION_LABELS: Record<Permission, () => string> = {
 	"roles:manage": m.perm_roles_manage,
 	"attachments:upload": m.perm_attachments_upload,
 	"audit:read": m.perm_audit_read,
+	// portfolio:start
+	"portfolio:read": m.perm_portfolio_read,
+	"portfolio:write": m.perm_portfolio_write,
+	"portfolio:publish": m.perm_portfolio_publish,
+	"messages:read": m.perm_messages_read,
+	"messages:manage": m.perm_messages_manage,
+	"media:read": m.perm_media_read,
+	"media:write": m.perm_media_write,
+	// portfolio:end
 	// @new-feature:permission-labels
 };
 

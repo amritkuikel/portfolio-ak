@@ -9,8 +9,9 @@ import { CloudImage } from "./cloud-image";
 import type { FieldImage } from "./image-gallery-field";
 import { ImageGalleryField } from "./image-gallery-field";
 
-const image = (n: number, alt = ""): FieldImage => {
+const image = (n: number, en = ""): FieldImage => {
 	const id = `6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0${String(n).padStart(3, "0")}`;
+	const alt = { en, ne: "" };
 	return { id, alt, preview: { ...sampleImageAsset, id, alt } };
 };
 
@@ -40,9 +41,11 @@ export const WithImages: Story = {
 			.getByRole("button", { name: m.sortable_handle({ item: m.attachments_field_image_n({ n: formatNumber(2) }) }) })
 			.focus();
 		await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
-		await expect(canvas.getByRole("textbox", { name: m.attachments_field_alt({ n: formatNumber(2) }) })).toHaveValue(
-			"A plate of momo",
-		);
+		await expect(
+			canvas.getByRole("textbox", {
+				name: m.attachments_field_alt_in({ n: formatNumber(2), language: m.language_en() }),
+			}),
+		).toHaveValue("A plate of momo");
 		await expect(await canvas.findByRole("button", { name: m.attachments_field_add() })).toBeEnabled();
 	},
 };

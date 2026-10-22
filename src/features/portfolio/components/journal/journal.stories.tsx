@@ -33,7 +33,7 @@ export const Article: Story = {
 		if (!post) throw new Error("demo post missing");
 		return (
 			<div className="pf-container py-12">
-				<ArticleBody blocks={post.body} />
+				<ArticleBody html={post.body} />
 			</div>
 		);
 	},
