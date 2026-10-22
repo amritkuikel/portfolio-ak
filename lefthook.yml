@@ -13,7 +13,7 @@ pre-commit:
       stage_fixed: true
 
 pre-push:
-  parallel: true
+  # parallel: true
   commands:
     typecheck:
       run: pnpm typecheck
