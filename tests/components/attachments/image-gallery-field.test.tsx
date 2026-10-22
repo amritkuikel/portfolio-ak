@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { formValidators, useAppForm } from "@/components/forms";
-import { AttachmentsField, type FieldImage } from "@/features/attachments/components/attachments-field";
+import { type FieldImage, ImageGalleryField } from "@/features/attachments/components/image-gallery-field";
 import type { ImageAsset } from "@/features/attachments/schema";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { ALL_PERMISSIONS } from "@/features/rbac/permissions";
@@ -85,7 +85,7 @@ function Harness({ initial, onSubmit }: { initial: FieldImage[]; onSubmit: (valu
 		<form.AppForm>
 			<form.Form>
 				<form.AppField name="value">
-					{() => <AttachmentsField label="Images" scope="test-crud" max={3} />}
+					{() => <ImageGalleryField label="Images" scope="test-crud" max={3} />}
 				</form.AppField>
 				<form.SubmitButton>Submit</form.SubmitButton>
 			</form.Form>
@@ -122,14 +122,16 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
-describe("<AttachmentsField>", () => {
-	it("reorders with buttons, edits alt text, and submits ids in order", async () => {
+describe("<ImageGalleryField>", () => {
+	it("reorders from the keyboard (Alt + Up on the handle), edits alt text, and submits ids in order", async () => {
 		const { onSubmit, user } = renderField([
 			{ id: ids[0] ?? "", alt: "First", preview: asset(ids[0] ?? "") },
 			{ id: ids[1] ?? "", alt: "", preview: asset(ids[1] ?? "") },
 		]);
 		expect(screen.getAllByText("Cover")).toHaveLength(1);
-		await user.click(screen.getByRole("button", { name: "Move image 2 earlier" }));
+		screen.getByRole("button", { name: "Move Image 2" }).focus();
+		await user.keyboard("{Alt>}{ArrowUp}{/Alt}");
+		expect(await screen.findByText("Image 2 moved to position 1 of 2.")).toBeInTheDocument();
 		await user.type(screen.getByRole("textbox", { name: "Alt text for image 2" }), "!");
 		await user.click(screen.getByRole("button", { name: "Submit" }));
 		await waitFor(() => expect(onSubmit).toHaveBeenCalled());
@@ -152,7 +154,7 @@ describe("<AttachmentsField>", () => {
 		expect(xhr.body?.get("signature")).toBe("s");
 		expect(xhr.body?.get("file")).toBeInstanceOf(File);
 		act(() => xhr.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 }));
-		expect(within(screen.getByTestId("uploads")).getByRole("progressbar")).toHaveAttribute("value", "50");
+		expect(within(screen.getByTestId("uploads")).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
 		act(() => xhr.finish(200));
 		await waitFor(() => expect(screen.getByText("Image 1")).toBeInTheDocument());
 		expect(fns.confirmImageUpload).toHaveBeenCalledWith({

@@ -4,7 +4,7 @@ Graphite is the look of everything except the portfolio: the admin area, the sig
 
 The portfolio at `/` has its own scoped system (`src/styles/portfolio.css`, [portfolio.md](portfolio.md)). <!-- @portfolio -->
 
-Decisions: 0164 (tokens and presets), 0165 (the command palette), 0166 (the dashboard).
+Decisions: 0164 (tokens and presets), 0165 (the command palette), 0166 (the dashboard), 0168–0172 (the component kit).
 
 ## Tokens
 
@@ -69,7 +69,36 @@ Each layout renders its own frame (one header per section, 0161):
 
 **Brand:** `BrandMark` (three contour rings in the accent) and `BrandName` (`components/brand/brand.tsx`). `ContourArt` (`components/brand/contour-art.tsx`) draws a seeded topographic ridge as a server-rendered SVG (`aria-hidden`, same output for a seed everywhere); the portfolio redesign can reuse it.
 
-**Building blocks so far:** `StatCard` (value, label, delta, hint, optional link) and `StatusBadge` (a status word with its tint) in `components/data-display/`. Task 37 grows the kit.
+**Building blocks:** see Components below.
+
+## Components
+
+The admin kit (Task 37, decision 0168): everything an admin page needs, so a feature supplies data, columns, fields and actions. Every component has a story (both Storybook passes, axe on), and `/dev/examples/components` and `/dev/examples/fields` show them all on real pages.
+
+**Page** (`components/page/`):
+
+| Component | Use |
+| --- | --- |
+| `Page`, `PageHeader` | The `<main>` and the page's h1, description, actions; `tabs` takes `PageTabs` |
+| `PageTabs` + `PageTab` | Route tabs: links (`createLink`), `aria-current` on the matching route; spread `linkOptions` into `PageTab` (the roles section) |
+| `DetailLayout` | A record: main column plus an `aside` (sticky from `lg`) |
+| `SettingsLayout` + `SettingsNavLink` | Settings pages: side navigation (a row on phones) and the section (Appearance) |
+| `FormSection`, `FormCard`, `StickyFormBar` | Long forms: named sections, cards with a footer, Save/Cancel stuck to the bottom |
+| `EmptyState` | `variant="empty"` (nothing yet: `primaryAction` creates the first) or `"no-matches"` (filters hide everything: clear them), plus `secondaryAction` |
+
+**Data display** (`components/data-display/`): `StatCard` (with `trend` for a sparkline), `StatusBadge` and `StatusOf` with a feature's `defineStatuses({ draft: { tone, label } })` map (`TEST_CRUD_STATUS`), `DescriptionList`, `UserAvatar` and `UserCell`, `RelativeTime` (see below), `CopyButton`, `Timeline` and `ActivityFeed` (audit events with avatars; the dashboard).
+
+**Charts** (`components/charts/`, decision 0171): `AreaChart`, `BarChart`, `DonutChart` take `label`, `data`, `index` (the category field) and `series` (`{ key, label, color? }`; colours default to `--chart-1…5`). Recharts loads with `React.lazy` in the browser only; the server renders a skeleton in a box of fixed aspect ratio, so nothing shifts, and a visually hidden table with the same numbers for screen readers (the drawing is `aria-hidden`). `Sparkline` is plain SVG, server-rendered.
+
+**Dialogs** (`components/dialogs/`): `useConfirm()` returns `confirm(options) => Promise<boolean>`; the shells mount its `ConfirmProvider` (`AdminShell`, the `/dev` layout; Storybook's providers too), so pages keep no confirm state. `FormDialog` and `FormSheet` hold a form ([forms.md](forms.md)).
+
+**Table** (`components/data-table/`, decision 0169): `DataTable` on TanStack Table v9 with its toolbar (saved views, CSV export, Columns), `RowAction`s with permissions and a context menu, a sticky header on long pages and a pinned first column on phones ([tables-filters.md](tables-filters.md)).
+
+**Hooks** (`src/hooks/`): `useHotkeys({ "mod+k": … })` (Ctrl or ⌘; plain keys don't fire while typing) with `useHotkeyLabel("mod+k")` for the `Kbd` hint ("Ctrl K" on the server, "⌘ K" on a Mac after hydration, in a fixed-width `Kbd`); `useDebouncedValue`; `useMediaQuery` (the server value first: for things that open on interaction, not for first-paint layout).
+
+**Primitives added in Task 37** (`components/ui/`, story `UI/Primitives`): tabs, scroll-area (`label` makes the viewport a focusable region), hover-card, accordion, collapsible, toggle, toggle-group, chart, progress, alert (`info`, `success`, `warning`, `destructive` in the status tones), spinner, button-group, context-menu. Tabs, toggles and the like use `--control-height`.
+
+**RelativeTime is hydration-safe:** pass `now`, the time the data was read (a loader's `generatedAt`, or the newest row's time). The server and the first browser render both use it; after hydration a shared one-minute clock takes over.
 
 ## Theming a new project
 
@@ -85,4 +114,10 @@ Each layout renders its own frame (one header per section, 0161):
 - **`CommandDialog`'s hidden title sat outside the dialog** (shadcn renders it before `DialogContent`), so it was page content outside every landmark (axe `region` on every admin page). It is inside the content now.
 - **Hard-coded English in shadcn primitives:** `sidebar.tsx`, `sheet.tsx` and `breadcrumb.tsx` use messages for their screen-reader text; a newly added primitive needs the same pass. `BreadcrumbPage` drops shadcn's `role="link" aria-disabled` (a link that can't be focused).
 - **An `aria-label` that hides visible text** fails axe's `label-content-name-mismatch`: the user menu's avatar initials are `aria-hidden`, and its name is in an `sr-only` span.
+- **shadcn's chart injected a `<style>` per chart** (`ChartStyle`, `dangerouslySetInnerHTML`): our `ui/chart.tsx` sets each series' `--color-<key>` as an inline style on the container instead, and the per-theme `theme` option is gone (`var(--chart-n)` already follows the theme and accent).
+- **shadcn's `Progress` dropped its `value`** from the Radix root (only the indicator used it), so the bar had no `aria-valuenow`. Ours passes it on.
+- **Recharts makes a pie a tab stop** (`rootTabIndex` 0) inside our `aria-hidden` drawing (axe `aria-hidden-focus`): `DonutChart` sets `rootTabIndex={-1}`; cartesian charts set `accessibilityLayer={false}`.
+- **Radix menus and popovers in the kit are non-modal or named:** a modal `ContextMenu` aria-hides the page while it closes (axe), so table rows use `modal={false}`; a `PopoverContent` is a `dialog` and needs an `aria-label` (saved views, the async combobox).
+- **Inactive tab text** was `text-foreground/60` (4.49:1 on `--muted`): tabs use `text-muted-foreground`.
+- **A scroll frame is `relative`:** `sr-only` text is absolutely positioned, so inside an `overflow-x-auto` frame that isn't positioned it lays out against an outer ancestor and widens the whole page on phones (the DataTable's frame; shadcn's `table-container` had it). For the same reason the kit doesn't bleed past its container with negative margins (`StickyFormBar` spans its form).
 - **Platform-specific text after hydration** (`⌘` vs `Ctrl`) renders the server's value first (`useSyncExternalStore` with a server snapshot) in a fixed-width `Kbd`, so the swap never shifts layout.

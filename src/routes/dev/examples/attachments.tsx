@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 import { formValidators, useAppForm } from "@/components/forms";
-import { AttachmentsField, type FieldImage } from "@/features/attachments/components/attachments-field";
+import { type FieldImage, ImageGalleryField } from "@/features/attachments/components/image-gallery-field";
 import { attachmentRefSchema } from "@/features/attachments/schema";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { Can } from "@/features/rbac/can";
@@ -13,7 +13,7 @@ import { m } from "@/paraglide/messages";
 const MAX_IMAGES = 4;
 
 /**
- * Attachments: <AttachmentsField> inside a form. Files go straight from the
+ * Attachments: <ImageGalleryField> inside a form. Files go straight from the
  * browser to Cloudinary with a server signature, are verified by the server and
  * recorded as pending uploads; a feature's save links them (here the form only
  * shows what it would send: ids and alt text). Unlinked uploads are deleted by
@@ -61,7 +61,7 @@ function AttachmentsExample() {
 								validators={{ onSubmit: () => (uploading.current ? m.attachments_field_wait() : undefined) }}
 							>
 								{() => (
-									<AttachmentsField
+									<ImageGalleryField
 										label={m.examples_attachments_label()}
 										scope="examples"
 										max={MAX_IMAGES}

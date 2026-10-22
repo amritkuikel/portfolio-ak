@@ -47,7 +47,7 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
    - Read images with `listForEntities` and `toImageAsset(store, row)`.
    - Pass the store (`imageStore`) through from the server function.
 4. **Service:** after update or delete, `purge(db, store, removed)`.
-5. **Form:** `<form.AppField name="images">{() => <AttachmentsField label=… scope="projects" max={N} onBusyChange=… />}</form.AppField>`, with an `onSubmit` validator that refuses while uploads are running (see `TestCrudForm`).
+5. **Form:** `<form.AppField name="images">{() => <ImageGalleryField label=… scope="projects" max={N} onBusyChange=… />}</form.AppField>`, with an `onSubmit` validator that refuses while uploads are running (see `TestCrudForm`).
 6. **Pages:** `CloudImage` as above. For `seo({ image })` use the `og` URL (1200×630 JPEG): `{ url: image.og, width: 1200, height: 630, alt }` (see [seo.md](seo.md)).
 
 ## Rules (server-side)
@@ -59,7 +59,7 @@ The server builds the URLs. An `ImageAsset` has `full`, `cover` (16:9) and `thum
 ## Testing
 
 - **Server:** `tests/utils/fake-cloudinary.ts` runs the real client over a fake `fetch` that behaves like Cloudinary's API: signed destroy, Admin API with Basic auth, and `put()` standing in for the browser's upload. See `tests/server/attachments.test.ts` (flow, rules, cleanup, the documented signature examples) and `test-crud-*.test.ts`.
-- **Editor:** `tests/components/attachments/attachments-field.test.tsx` stubs `XMLHttpRequest`: upload with progress, cancel, discard, concurrent uploads, permissions.
+- **Editor:** `tests/components/attachments/image-gallery-field.test.tsx` stubs `XMLHttpRequest`: upload with progress, cancel, discard, concurrent uploads, permissions.
 - **Stories:** `features/attachments/components/attachments.stories.tsx`.
 
 ## Live example

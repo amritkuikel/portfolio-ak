@@ -1,7 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { DescriptionList } from "@/components/data-display/description-list";
 import { Button } from "@/components/ui/button";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleSnapshotQueryOptions } from "@/features/dev/examples/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
@@ -30,8 +31,8 @@ function LoaderQueryExample() {
 	return (
 		<ExamplePage slug="loader-query">
 			<Demo title={m.examples_loader_demo()} note={m.examples_loader_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{ label: m.examples_loader_calls(), value: formatNumber(data.calls), testId: "snapshot-calls" },
 						{
 							label: m.examples_loader_rendered(),

@@ -23,6 +23,7 @@ export const __camel__Columns: ReadonlyArray<DataTableColumn<__Pascal__ListItem>
 		sort: "title",
 		cellClassName: "max-w-72",
 		cell: (row) => <TitleCell row={row} />,
+		csv: (row) => row.title,
 	},
 	{
 		id: "updated",
@@ -31,5 +32,6 @@ export const __camel__Columns: ReadonlyArray<DataTableColumn<__Pascal__ListItem>
 		hideable: true,
 		cellClassName: "whitespace-nowrap text-muted-foreground text-sm",
 		cell: (row) => formatDateTime(row.updatedAt),
+		csv: (row) => row.updatedAt,
 	},
 ];

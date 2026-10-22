@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { InboxIcon, PlusIcon } from "lucide-react";
-import { useState } from "react";
-import { expect, fn, waitFor, within } from "storybook/test";
-import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { expect } from "storybook/test";
 import { Button } from "@/components/ui/button";
 import { breadcrumbJsonLd } from "@/lib/breadcrumbs";
 import { m } from "@/paraglide/messages";
@@ -73,7 +71,7 @@ export const Empty: Story = {
 			icon={InboxIcon}
 			title="No items yet"
 			description="Items you create appear here."
-			action={<Button>Create the first item</Button>}
+			primaryAction={<Button>Create the first item</Button>}
 		/>
 	),
 };
@@ -89,42 +87,6 @@ export const Skeletons: Story = {
 			/>
 		</Page>
 	),
-};
-
-function ConfirmDemo({ onConfirm }: { onConfirm: () => void }) {
-	const [open, setOpen] = useState(false);
-	return (
-		<>
-			<Button variant="destructive" onClick={() => setOpen(true)}>
-				Delete
-			</Button>
-			<ConfirmDialog
-				open={open}
-				destructive
-				title="Delete this item?"
-				description="Momo Kitchen will be removed. This can't be undone."
-				confirmLabel="Delete"
-				onConfirm={() => {
-					setOpen(false);
-					onConfirm();
-				}}
-				onCancel={() => setOpen(false)}
-			/>
-		</>
-	);
-}
-
-/** Focus starts on Cancel, so Enter never destroys anything by accident. */
-export const Confirm: Story = {
-	render: () => <ConfirmDemo onConfirm={fn()} />,
-	play: async ({ canvas, userEvent, canvasElement }) => {
-		await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
-		const body = canvasElement.ownerDocument.body;
-		const cancel = await within(body).findByRole("button", { name: m.common_cancel() });
-		await expect(cancel).toHaveFocus();
-		await userEvent.click(cancel);
-		await waitFor(() => expect(within(body).queryByRole("alertdialog")).toBeNull());
-	},
 };
 
 /** Guards the story-test setup: each Vitest project really renders its own locale and theme. */

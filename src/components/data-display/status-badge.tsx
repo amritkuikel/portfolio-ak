@@ -40,3 +40,27 @@ export function StatusBadge({
 		</span>
 	);
 }
+
+/** A feature's statuses: each one's tone and label (a message, read at render time). */
+export type StatusMap<S extends string> = Readonly<Record<S, { tone: StatusTone; label: () => string }>>;
+
+/** Declares a feature's status map once (next to its labels), typed by its status values. */
+export const defineStatuses = <S extends string>(map: StatusMap<S>): StatusMap<S> => map;
+
+/** The badge for one value of a feature's status map: `<StatusOf status={row.status} map={TEST_CRUD_STATUS} />`. */
+export function StatusOf<S extends string>({
+	status,
+	map,
+	className,
+}: {
+	status: S;
+	map: StatusMap<S>;
+	className?: string;
+}) {
+	const { tone, label } = map[status];
+	return (
+		<StatusBadge tone={tone} className={className}>
+			{label()}
+		</StatusBadge>
+	);
+}

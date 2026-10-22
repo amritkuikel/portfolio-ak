@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { DescriptionList } from "@/components/data-display/description-list";
 import { errorMessage } from "@/components/errors/error-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { Can, useActor, useCan } from "@/features/rbac/can";
 import { exampleManageRoles, exampleReadItems } from "@/functions/examples-permissions";
 import { staticCrumb } from "@/lib/breadcrumbs";
@@ -29,8 +30,8 @@ function PermissionsExample() {
 	return (
 		<ExamplePage slug="permissions">
 			<Demo title={m.examples_permissions_you()} note={m.examples_permissions_you_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{
 							label: m.examples_permissions_signed_in(),
 							value: actor ? m.examples_yes() : m.examples_no(),

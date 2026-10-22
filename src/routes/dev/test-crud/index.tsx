@@ -64,8 +64,9 @@ function PublicListPage() {
 			{data.items.length === 0 ? (
 				<EmptyState
 					data-testid="public-empty"
+					variant={search.q ? "no-matches" : "empty"}
 					description={search.q ? m.test_crud_public_no_results({ q: search.q }) : m.test_crud_public_empty()}
-					action={
+					primaryAction={
 						search.q ? (
 							<Button variant="outline" asChild>
 								<Link to="/dev/test-crud">{m.test_crud_public_show_all()}</Link>

@@ -6,6 +6,7 @@ import {
 	testCrudIdSchema,
 	testCrudIdsSchema,
 	testCrudInputSchema,
+	testCrudSlugCheckSchema,
 	testCrudStatusUpdateSchema,
 	testCrudUpdateSchema,
 } from "@/features/test-crud/schema";
@@ -15,7 +16,7 @@ import { requirePermission } from "@/middleware/auth";
 import { imageStore } from "@/server/attachments/store";
 import { auditActorFrom } from "@/server/audit/actor";
 import { db } from "@/server/db/client";
-import { listTestCrud as listRows, listTestCrudTags as listTags } from "@/server/test-crud/repository";
+import { isSlugFree, listTestCrud as listRows, listTestCrudTags as listTags } from "@/server/test-crud/repository";
 import { createItem, deleteItems, getItemOrThrow, setItemStatus, updateItem } from "@/server/test-crud/service";
 
 /**
@@ -40,6 +41,12 @@ export const getTestCrud = createServerFn({ method: "GET" })
 	.middleware([requirePermission("test-crud:read")])
 	.validator(zodInput(testCrudIdSchema))
 	.handler(({ data }): Promise<TestCrudDetail> => getItemOrThrow(db, imageStore, data.id));
+
+/** Whether a slug is free (the form's SlugField checks while typing; saving checks again). */
+export const isTestCrudSlugFree = createServerFn({ method: "GET" })
+	.middleware([requirePermission("test-crud:read")])
+	.validator(zodInput(testCrudSlugCheckSchema))
+	.handler(({ data }): Promise<boolean> => isSlugFree(db, data.slug, data.id));
 
 /** Images are attachment ids (uploaded beforehand, straight to Cloudinary; see functions/attachments.ts). */
 export const createTestCrud = createServerFn({ method: "POST" })

@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { expect, vi } from "vitest";
 import { z } from "zod";
 import { formValidators, useAppForm } from "@/components/forms";
@@ -34,13 +34,22 @@ function Harness({ defaultValue, schema, onSubmit, children }: HarnessProps) {
 	);
 }
 
-export function renderField(field: ReactNode, options: { defaultValue: unknown; schema: z.ZodType }) {
+export function renderField(
+	field: ReactNode,
+	options: {
+		defaultValue: unknown;
+		schema: z.ZodType;
+		/** Providers around the form (a QueryClientProvider for fields that fetch). */
+		wrapper?: ComponentType<{ children: ReactNode }>;
+	},
+) {
 	const onSubmit = vi.fn<(value: unknown) => void>();
 	const user = userEvent.setup();
 	const view = render(
 		<Harness defaultValue={options.defaultValue} schema={options.schema} onSubmit={onSubmit}>
 			{field}
 		</Harness>,
+		options.wrapper ? { wrapper: options.wrapper } : {},
 	);
 	const submit = () => user.click(view.getByRole("button", { name: "Submit" }));
 	return { ...view, user, onSubmit, submit };

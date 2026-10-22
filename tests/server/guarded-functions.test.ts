@@ -15,6 +15,7 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["listTestCrud", "test-crud:read"],
 		["listTestCrudTags", "test-crud:read"],
 		["getTestCrud", "test-crud:read"],
+		["isTestCrudSlugFree", "test-crud:read"],
 		["createTestCrud", "test-crud:create"],
 		["updateTestCrud", "test-crud:update"],
 		["setTestCrudStatusFn", "test-crud:publish"],

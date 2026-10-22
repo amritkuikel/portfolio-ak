@@ -1,5 +1,6 @@
 import { Await, createFileRoute } from "@tanstack/react-router";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { DescriptionList } from "@/components/data-display/description-list";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { getSlowExample } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
@@ -35,8 +36,8 @@ function StreamingExample() {
 						}
 					>
 						{(value) => (
-							<Facts
-								rows={[
+							<DescriptionList
+								items={[
 									{
 										label: m.examples_streaming_took(),
 										value: m.examples_ms({ value: formatNumber(value.tookMs) }),

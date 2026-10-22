@@ -1,3 +1,5 @@
+import { StatusBadge } from "@/components/data-display/status-badge";
+import { UserCell } from "@/components/data-display/user-avatar";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/i18n/intl";
@@ -11,16 +13,9 @@ export const userColumns = (currentUserId: string | undefined): ReadonlyArray<Da
 		header: m.users_col_user,
 		sort: "name",
 		cellClassName: "max-w-72",
+		csv: (row) => `${row.name} <${row.email}>`,
 		cell: (row) => (
-			<div className="flex min-w-0 flex-col">
-				<span className="truncate font-medium">
-					{row.name}
-					{row.id === currentUserId ? (
-						<span className="ms-1 text-muted-foreground text-xs">({m.users_you()})</span>
-					) : null}
-				</span>
-				<span className="truncate text-muted-foreground text-xs">{row.email}</span>
-			</div>
+			<UserCell name={row.name} email={row.email} note={row.id === currentUserId ? `(${m.users_you()})` : undefined} />
 		),
 	},
 	{
@@ -44,11 +39,12 @@ export const userColumns = (currentUserId: string | undefined): ReadonlyArray<Da
 		id: "status",
 		header: m.users_col_status,
 		hideable: true,
+		csv: (row) => (row.banned ? m.users_status_banned() : m.users_status_active()),
 		cell: (row) =>
 			row.banned ? (
-				<Badge variant="destructive">{m.users_status_banned()}</Badge>
+				<StatusBadge tone="danger">{m.users_status_banned()}</StatusBadge>
 			) : (
-				<Badge variant="outline">{m.users_status_active()}</Badge>
+				<StatusBadge tone="success">{m.users_status_active()}</StatusBadge>
 			),
 	},
 	{
@@ -58,5 +54,6 @@ export const userColumns = (currentUserId: string | undefined): ReadonlyArray<Da
 		hideable: true,
 		cellClassName: "whitespace-nowrap text-muted-foreground text-sm",
 		cell: (row) => formatDate(row.createdAt, { dateStyle: "medium" }),
+		csv: (row) => row.createdAt,
 	},
 ];

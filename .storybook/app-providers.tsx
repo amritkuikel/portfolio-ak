@@ -7,6 +7,7 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useState } from "react";
+import { ConfirmProvider } from "../src/components/dialogs/confirm";
 import { sessionQueryOptions } from "../src/features/auth/queries";
 import { parseSearch, stringifySearch } from "../src/lib/list/url";
 import type { Session } from "../src/lib/session";
@@ -27,8 +28,9 @@ export type AppParameters = {
 
 const StoryContext = createContext<ReactNode>(null);
 
+/** The story inside the router, with the confirm dialog the shells provide (useConfirm). */
 function StoryOutlet() {
-	return <>{useContext(StoryContext)}</>;
+	return <ConfirmProvider>{useContext(StoryContext)}</ConfirmProvider>;
 }
 
 function createStoryRouter({ session = null, preferences, route = "/" }: AppParameters, theme: Preferences["theme"]) {

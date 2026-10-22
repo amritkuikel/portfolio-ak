@@ -53,9 +53,11 @@ import { Route as DevExamplesAnalyticsRouteImport } from './routes/dev/examples/
 import { Route as DevExamplesAttachmentsRouteImport } from './routes/dev/examples/attachments'
 import { Route as DevExamplesBackgroundJobsRouteImport } from './routes/dev/examples/background-jobs'
 import { Route as DevExamplesCachingRouteImport } from './routes/dev/examples/caching'
+import { Route as DevExamplesComponentsRouteImport } from './routes/dev/examples/components'
 import { Route as DevExamplesContactRouteImport } from './routes/dev/examples/contact'
 import { Route as DevExamplesDataTableRouteImport } from './routes/dev/examples/data-table'
 import { Route as DevExamplesErrorsRouteImport } from './routes/dev/examples/errors'
+import { Route as DevExamplesFieldsRouteImport } from './routes/dev/examples/fields'
 import { Route as DevExamplesFiltersRouteImport } from './routes/dev/examples/filters'
 import { Route as DevExamplesFormsRouteImport } from './routes/dev/examples/forms'
 import { Route as DevExamplesI18nRouteImport } from './routes/dev/examples/i18n'
@@ -297,6 +299,11 @@ const DevExamplesCachingRoute = DevExamplesCachingRouteImport.update({
   path: '/caching',
   getParentRoute: () => DevExamplesRouteRoute,
 } as any)
+const DevExamplesComponentsRoute = DevExamplesComponentsRouteImport.update({
+  id: '/components',
+  path: '/components',
+  getParentRoute: () => DevExamplesRouteRoute,
+} as any)
 const DevExamplesContactRoute = DevExamplesContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -310,6 +317,11 @@ const DevExamplesDataTableRoute = DevExamplesDataTableRouteImport.update({
 const DevExamplesErrorsRoute = DevExamplesErrorsRouteImport.update({
   id: '/errors',
   path: '/errors',
+  getParentRoute: () => DevExamplesRouteRoute,
+} as any)
+const DevExamplesFieldsRoute = DevExamplesFieldsRouteImport.update({
+  id: '/fields',
+  path: '/fields',
   getParentRoute: () => DevExamplesRouteRoute,
 } as any)
 const DevExamplesFiltersRoute = DevExamplesFiltersRouteImport.update({
@@ -472,9 +484,11 @@ export interface FileRoutesByFullPath {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
+  '/dev/examples/components': typeof DevExamplesComponentsRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
+  '/dev/examples/fields': typeof DevExamplesFieldsRoute
   '/dev/examples/filters': typeof DevExamplesFiltersRoute
   '/dev/examples/forms': typeof DevExamplesFormsRoute
   '/dev/examples/i18n': typeof DevExamplesI18nRoute
@@ -531,9 +545,11 @@ export interface FileRoutesByTo {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
+  '/dev/examples/components': typeof DevExamplesComponentsRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
+  '/dev/examples/fields': typeof DevExamplesFieldsRoute
   '/dev/examples/filters': typeof DevExamplesFiltersRoute
   '/dev/examples/forms': typeof DevExamplesFormsRoute
   '/dev/examples/i18n': typeof DevExamplesI18nRoute
@@ -605,9 +621,11 @@ export interface FileRoutesById {
   '/dev/examples/attachments': typeof DevExamplesAttachmentsRoute
   '/dev/examples/background-jobs': typeof DevExamplesBackgroundJobsRoute
   '/dev/examples/caching': typeof DevExamplesCachingRoute
+  '/dev/examples/components': typeof DevExamplesComponentsRoute
   '/dev/examples/contact': typeof DevExamplesContactRoute
   '/dev/examples/data-table': typeof DevExamplesDataTableRoute
   '/dev/examples/errors': typeof DevExamplesErrorsRoute
+  '/dev/examples/fields': typeof DevExamplesFieldsRoute
   '/dev/examples/filters': typeof DevExamplesFiltersRoute
   '/dev/examples/forms': typeof DevExamplesFormsRoute
   '/dev/examples/i18n': typeof DevExamplesI18nRoute
@@ -675,9 +693,11 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
+    | '/dev/examples/components'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
+    | '/dev/examples/fields'
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
@@ -734,9 +754,11 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
+    | '/dev/examples/components'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
+    | '/dev/examples/fields'
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
@@ -807,9 +829,11 @@ export interface FileRouteTypes {
     | '/dev/examples/attachments'
     | '/dev/examples/background-jobs'
     | '/dev/examples/caching'
+    | '/dev/examples/components'
     | '/dev/examples/contact'
     | '/dev/examples/data-table'
     | '/dev/examples/errors'
+    | '/dev/examples/fields'
     | '/dev/examples/filters'
     | '/dev/examples/forms'
     | '/dev/examples/i18n'
@@ -1164,6 +1188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevExamplesCachingRouteImport
       parentRoute: typeof DevExamplesRouteRoute
     }
+    '/dev/examples/components': {
+      id: '/dev/examples/components'
+      path: '/components'
+      fullPath: '/dev/examples/components'
+      preLoaderRoute: typeof DevExamplesComponentsRouteImport
+      parentRoute: typeof DevExamplesRouteRoute
+    }
     '/dev/examples/contact': {
       id: '/dev/examples/contact'
       path: '/contact'
@@ -1183,6 +1214,13 @@ declare module '@tanstack/react-router' {
       path: '/errors'
       fullPath: '/dev/examples/errors'
       preLoaderRoute: typeof DevExamplesErrorsRouteImport
+      parentRoute: typeof DevExamplesRouteRoute
+    }
+    '/dev/examples/fields': {
+      id: '/dev/examples/fields'
+      path: '/fields'
+      fullPath: '/dev/examples/fields'
+      preLoaderRoute: typeof DevExamplesFieldsRouteImport
       parentRoute: typeof DevExamplesRouteRoute
     }
     '/dev/examples/filters': {
@@ -1378,9 +1416,11 @@ interface DevExamplesRouteRouteChildren {
   DevExamplesAttachmentsRoute: typeof DevExamplesAttachmentsRoute
   DevExamplesBackgroundJobsRoute: typeof DevExamplesBackgroundJobsRoute
   DevExamplesCachingRoute: typeof DevExamplesCachingRoute
+  DevExamplesComponentsRoute: typeof DevExamplesComponentsRoute
   DevExamplesContactRoute: typeof DevExamplesContactRoute
   DevExamplesDataTableRoute: typeof DevExamplesDataTableRoute
   DevExamplesErrorsRoute: typeof DevExamplesErrorsRoute
+  DevExamplesFieldsRoute: typeof DevExamplesFieldsRoute
   DevExamplesFiltersRoute: typeof DevExamplesFiltersRoute
   DevExamplesFormsRoute: typeof DevExamplesFormsRoute
   DevExamplesI18nRoute: typeof DevExamplesI18nRoute
@@ -1401,9 +1441,11 @@ const DevExamplesRouteRouteChildren: DevExamplesRouteRouteChildren = {
   DevExamplesAttachmentsRoute: DevExamplesAttachmentsRoute,
   DevExamplesBackgroundJobsRoute: DevExamplesBackgroundJobsRoute,
   DevExamplesCachingRoute: DevExamplesCachingRoute,
+  DevExamplesComponentsRoute: DevExamplesComponentsRoute,
   DevExamplesContactRoute: DevExamplesContactRoute,
   DevExamplesDataTableRoute: DevExamplesDataTableRoute,
   DevExamplesErrorsRoute: DevExamplesErrorsRoute,
+  DevExamplesFieldsRoute: DevExamplesFieldsRoute,
   DevExamplesFiltersRoute: DevExamplesFiltersRoute,
   DevExamplesFormsRoute: DevExamplesFormsRoute,
   DevExamplesI18nRoute: DevExamplesI18nRoute,

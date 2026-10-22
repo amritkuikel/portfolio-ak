@@ -24,7 +24,7 @@ const chipClass =
  * "Clear filters" as a button, for a list's empty state when filters hid every
  * row. A link (works without JavaScript); returns to page 1.
  *
- *   empty={<EmptyState description={…} action={filtered ? <ClearFiltersButton clearAll={CLEAR} /> : <NewButton />} />}
+ *   empty={<EmptyState description={…} primaryAction={filtered ? <ClearFiltersButton clearAll={CLEAR} /> : <NewButton />} />}
  */
 export function ClearFiltersButton({ clearAll }: { clearAll: SearchPatch }) {
 	return (

@@ -2,8 +2,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { InfoIcon } from "lucide-react";
 import { Page, PageHeader } from "@/components/page/page";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useActor, useCan } from "@/features/rbac/can";
 import { PermissionMatrix } from "@/features/rbac/components/permission-matrix";
+import { RoleTabs } from "@/features/rbac/components/role-tabs";
 import { rolesQueryOptions } from "@/features/rbac/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { ensureQuery } from "@/lib/query";
@@ -24,12 +26,12 @@ function PermissionsPage() {
 	const canEdit = useCan("roles:manage");
 	return (
 		<Page width="admin">
-			<PageHeader title={m.matrix_title()} description={m.matrix_description()} />
+			<PageHeader title={m.matrix_title()} description={m.matrix_description()} tabs={<RoleTabs />} />
 			{canEdit ? null : (
-				<p className="flex items-center gap-2 text-muted-foreground text-sm" role="note">
-					<InfoIcon className="size-4" aria-hidden />
-					{m.matrix_read_only()}
-				</p>
+				<Alert variant="info" role="note">
+					<InfoIcon aria-hidden />
+					<AlertDescription>{m.matrix_read_only()}</AlertDescription>
+				</Alert>
 			)}
 			<PermissionMatrix roles={roles} actor={actor ?? { isAdmin: false, permissions: [] }} canEdit={canEdit} />
 		</Page>

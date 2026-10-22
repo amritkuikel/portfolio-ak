@@ -1,8 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { DescriptionList } from "@/components/data-display/description-list";
 import { Button } from "@/components/ui/button";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { homeFlagsQueryOptions } from "@/features/flags/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { analyticsKey, analyticsRunning, track } from "@/lib/observability/analytics";
@@ -50,8 +51,8 @@ function AnalyticsExample() {
 	return (
 		<ExamplePage slug="analytics">
 			<Demo title={m.examples_analytics_consent()} note={m.examples_analytics_consent_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{
 							label: m.examples_analytics_configured(),
 							value: analyticsKey ? m.examples_yes() : m.examples_no(),
@@ -80,8 +81,8 @@ function AnalyticsExample() {
 				</div>
 			</Demo>
 			<Demo title={m.examples_analytics_flags()} note={m.examples_analytics_flags_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{
 							label: "home-items-cta",
 							value: flags.showItemsCta ? m.examples_on() : m.examples_off(),

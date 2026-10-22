@@ -1,9 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
+import { FormDialog } from "@/components/dialogs/form-dialog";
 import { formValidators, handleSaveError, useAppForm } from "@/components/forms";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { setUserRoles } from "@/functions/rbac";
 import { m } from "@/paraglide/messages";
 import { roleDescription, roleLabel } from "../labels";
@@ -50,49 +49,41 @@ export function UserRolesDialog({
 	});
 	const locked = self || (user.isAdmin && !actor.isAdmin);
 	return (
-		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-h-[90dvh] overflow-y-auto" data-testid="user-roles-dialog">
-				<DialogHeader>
-					<DialogTitle>{m.users_roles_dialog_title({ name: user.name })}</DialogTitle>
-					<DialogDescription>{self ? m.users_roles_self() : m.users_roles_dialog_description()}</DialogDescription>
-				</DialogHeader>
-				<form.AppForm>
-					<form.Form className="flex flex-col gap-6">
-						<form.FormErrorSummary />
-						<form.AppField name="admin">
-							{(field) => (
-								<field.CheckboxField
-									label={m.role_admin_name()}
-									description={m.role_admin_description()}
-									disabled={locked || !actor.isAdmin}
-								/>
-							)}
-						</form.AppField>
-						{custom.length > 0 ? (
-							<form.AppField name="roleIds">
-								{(field) => (
-									<field.CheckboxGroupField
-										label={m.users_col_roles()}
-										optional
-										options={custom.map((role) => ({
-											value: role.id,
-											label: roleLabel(role),
-											description: roleDescription(role) || undefined,
-											disabled: locked || (!actor.isAdmin && !hasAll(actor.permissions, role.permissions)),
-										}))}
-									/>
-								)}
-							</form.AppField>
-						) : null}
-						<div className="flex flex-wrap gap-3">
-							{locked ? null : <form.SubmitButton>{m.users_roles_save()}</form.SubmitButton>}
-							<Button type="button" variant="ghost" onClick={onClose}>
-								{m.common_cancel()}
-							</Button>
-						</div>
-					</form.Form>
-				</form.AppForm>
-			</DialogContent>
-		</Dialog>
+		<form.AppForm>
+			<FormDialog
+				title={m.users_roles_dialog_title({ name: user.name })}
+				description={self ? m.users_roles_self() : m.users_roles_dialog_description()}
+				submitLabel={m.users_roles_save()}
+				readOnly={locked}
+				onClose={onClose}
+				data-testid="user-roles-dialog"
+			>
+				<form.AppField name="admin">
+					{(field) => (
+						<field.CheckboxField
+							label={m.role_admin_name()}
+							description={m.role_admin_description()}
+							disabled={locked || !actor.isAdmin}
+						/>
+					)}
+				</form.AppField>
+				{custom.length > 0 ? (
+					<form.AppField name="roleIds">
+						{(field) => (
+							<field.CheckboxGroupField
+								label={m.users_col_roles()}
+								optional
+								options={custom.map((role) => ({
+									value: role.id,
+									label: roleLabel(role),
+									description: roleDescription(role) || undefined,
+									disabled: locked || (!actor.isAdmin && !hasAll(actor.permissions, role.permissions)),
+								}))}
+							/>
+						)}
+					</form.AppField>
+				) : null}
+			</FormDialog>
+		</form.AppForm>
 	);
 }

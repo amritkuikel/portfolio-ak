@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
-import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
-import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { DataTable, DataTableSkeleton, type RowAction } from "@/components/data-table";
+import { useConfirm } from "@/components/dialogs/confirm";
 import { errorMessage } from "@/components/errors/error-page";
 import { ClearFiltersButton } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
@@ -11,12 +11,8 @@ import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { useActor } from "@/features/rbac/can";
-import { InviteUserDialog } from "@/features/rbac/components/invite-user-dialog";
+import { useActor, useCan } from "@/features/rbac/can";
 import { userColumns } from "@/features/rbac/components/user-columns";
-import { UserRolesDialog } from "@/features/rbac/components/user-roles-dialog";
-import { hasAll } from "@/features/rbac/permissions";
 import { refreshRbac, roleOptionsQueryOptions, usersListQueryOptions } from "@/features/rbac/queries";
 import { USER_SEARCH_DEFAULTS, USERS_TABLE_ID, type UserListItem, userSearchSchema } from "@/features/rbac/schema";
 import {
@@ -51,6 +47,14 @@ export const Route = createFileRoute("/_admin/admin/users/")({
 	component: UsersPage,
 });
 
+// Opened on click: their forms (and every field they use) load then, not with the page.
+const InviteUserDialog = lazy(() =>
+	import("@/features/rbac/components/invite-user-dialog").then((module) => ({ default: module.InviteUserDialog })),
+);
+const UserRolesDialog = lazy(() =>
+	import("@/features/rbac/components/user-roles-dialog").then((module) => ({ default: module.UserRolesDialog })),
+);
+
 /** What's being confirmed for one user: a ban or unban, signing them out everywhere, or viewing as them. */
 type Confirming =
 	| { kind: "ban"; user: UserListItem; banned: boolean }
@@ -84,7 +88,7 @@ function UsersPage() {
 
 	const [editing, setEditing] = useState<UserListItem | null>(null);
 	const [inviting, setInviting] = useState(false);
-	const [confirming, setConfirming] = useState<Confirming | null>(null);
+	const confirm = useConfirm();
 	const act = useMutation({
 		mutationFn: async (request: Confirming) => {
 			const userId = request.user.id;
@@ -104,12 +108,45 @@ function UsersPage() {
 		onSettled: (_, __, request) => (request.kind === "impersonate" ? undefined : refreshRbac(queryClient)),
 	});
 
-	const canAssign = actor !== null && hasAll(actor.permissions, ["users:update"]);
-	const canBan = actor !== null && hasAll(actor.permissions, ["users:ban"]);
-	const canInvite = actor !== null && hasAll(actor.permissions, ["users:invite"]);
+	const canInvite = useCan("users:invite");
 	// Impersonation is for admins only, never of another admin (the server refuses the rest too).
 	const canImpersonate = (row: UserListItem) => actor?.isAdmin === true && !row.isAdmin && !row.banned;
-	const copy = confirming ? confirmCopy(confirming) : null;
+	const ask = async (request: Confirming) => {
+		const copy = confirmCopy(request);
+		const confirmed = await confirm({
+			title: copy.title,
+			description: copy.body,
+			confirmLabel: copy.label,
+			destructive: request.kind === "ban" && request.banned,
+		});
+		if (confirmed) act.mutate(request);
+	};
+	// No actions on your own row: roles, bans and sessions of the signed-in user are changed elsewhere.
+	const rowActions = (row: UserListItem): RowAction[] =>
+		row.id === actor?.id
+			? []
+			: [
+					{ id: "roles", label: m.users_edit_roles(), permission: "users:update", onSelect: () => setEditing(row) },
+					{
+						id: "impersonate",
+						label: m.users_impersonate(),
+						hidden: !canImpersonate(row),
+						onSelect: () => void ask({ kind: "impersonate", user: row }),
+					},
+					{
+						id: "revoke",
+						label: m.users_revoke_sessions(),
+						permission: "users:ban",
+						onSelect: () => void ask({ kind: "revoke", user: row }),
+					},
+					{
+						id: "ban",
+						label: row.banned ? m.users_unban() : m.users_ban(),
+						permission: "users:ban",
+						destructive: !row.banned,
+						onSelect: () => void ask({ kind: "ban", user: row, banned: !row.banned }),
+					},
+				];
 	const columns = userColumns(actor?.id);
 	const filtered = userFilterChips(search, roles).length > 0;
 
@@ -120,16 +157,6 @@ function UsersPage() {
 				description={m.users_description()}
 				actions={canInvite ? <Button onClick={() => setInviting(true)}>{m.users_invite()}</Button> : undefined}
 			/>
-			<div className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-end justify-between gap-3">
-					<FilterBar values={search} preserve={["sort", "pageSize"]}>
-						<UserFilterControls search={search} roles={roles} />
-					</FilterBar>
-					<DataTableColumnsMenu tableId={USERS_TABLE_ID} columns={columns} />
-				</div>
-				<UserActiveFilters search={search} roles={roles} />
-			</div>
-
 			{page && pagination ? (
 				<>
 					<DataTable
@@ -141,40 +168,19 @@ function UsersPage() {
 						sort={search.sort}
 						busy={busy}
 						data-testid="users-table"
-						rowActions={
-							canAssign || canBan
-								? (row) =>
-										row.id === actor?.id ? null : (
-											<>
-												{canAssign ? (
-													<DropdownMenuItem onSelect={() => setEditing(row)}>{m.users_edit_roles()}</DropdownMenuItem>
-												) : null}
-												{canImpersonate(row) ? (
-													<DropdownMenuItem onSelect={() => setConfirming({ kind: "impersonate", user: row })}>
-														{m.users_impersonate()}
-													</DropdownMenuItem>
-												) : null}
-												{canBan ? (
-													<>
-														<DropdownMenuItem onSelect={() => setConfirming({ kind: "revoke", user: row })}>
-															{m.users_revoke_sessions()}
-														</DropdownMenuItem>
-														<DropdownMenuItem
-															variant={row.banned ? "default" : "destructive"}
-															onSelect={() => setConfirming({ kind: "ban", user: row, banned: !row.banned })}
-														>
-															{row.banned ? m.users_unban() : m.users_ban()}
-														</DropdownMenuItem>
-													</>
-												) : null}
-											</>
-										)
-								: undefined
+						toolbar={
+							<FilterBar values={search} preserve={["sort", "pageSize"]}>
+								<UserFilterControls search={search} roles={roles} />
+							</FilterBar>
 						}
+						activeFilters={<UserActiveFilters search={search} roles={roles} />}
+						exportName="users"
+						rowActions={rowActions}
 						empty={
 							<EmptyState
+								variant={filtered ? "no-matches" : "empty"}
 								description={m.users_empty()}
-								action={filtered ? <ClearFiltersButton clearAll={CLEAR_USER_FILTERS} /> : null}
+								primaryAction={filtered ? <ClearFiltersButton clearAll={CLEAR_USER_FILTERS} /> : null}
 							/>
 						}
 					/>
@@ -184,22 +190,12 @@ function UsersPage() {
 				<DataTableSkeleton columns={4} rows={8} />
 			)}
 
-			{editing && actor ? (
-				<UserRolesDialog user={editing} roles={roles} actor={actor} onClose={() => setEditing(null)} />
-			) : null}
-			{inviting ? <InviteUserDialog onClose={() => setInviting(false)} /> : null}
-			<ConfirmDialog
-				open={confirming !== null}
-				destructive={confirming?.kind === "ban" && confirming.banned}
-				title={copy?.title ?? ""}
-				description={copy?.body ?? ""}
-				confirmLabel={copy?.label ?? ""}
-				onConfirm={() => {
-					if (confirming) act.mutate(confirming);
-					setConfirming(null);
-				}}
-				onCancel={() => setConfirming(null)}
-			/>
+			<Suspense>
+				{editing && actor ? (
+					<UserRolesDialog user={editing} roles={roles} actor={actor} onClose={() => setEditing(null)} />
+				) : null}
+				{inviting ? <InviteUserDialog onClose={() => setInviting(false)} /> : null}
+			</Suspense>
 		</Page>
 	);
 }

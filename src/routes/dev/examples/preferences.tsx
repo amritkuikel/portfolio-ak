@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useId } from "react";
+import { DescriptionList } from "@/components/data-display/description-list";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
@@ -80,8 +81,8 @@ function PreferencesExample() {
 				</div>
 			</Demo>
 			<Demo title={m.examples_preferences_state()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{ label: m.examples_preferences_theme(), value: THEME_LABELS[theme](), testId: "pref-theme" },
 						{
 							label: m.examples_preferences_sidebar(),

@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
+import { ConfirmProvider } from "@/components/dialogs/confirm";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader, type SiteHeaderLink } from "@/components/layout/site-header";
 import { staticCrumb } from "@/lib/breadcrumbs";
@@ -34,12 +35,12 @@ const DEV_LINKS: ReadonlyArray<SiteHeaderLink> = [
 
 function DevLayout() {
 	return (
-		<>
+		<ConfirmProvider>
 			<SiteHeader links={DEV_LINKS} />
 			<div className="flex-1">
 				<Outlet />
 			</div>
 			<SiteFooter />
-		</>
+		</ConfirmProvider>
 	);
 }

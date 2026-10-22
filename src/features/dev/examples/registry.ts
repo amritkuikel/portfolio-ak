@@ -54,6 +54,20 @@ export const EXAMPLES = [
 		guide: "docs/guides/conventions.md",
 	},
 	{
+		slug: "components",
+		title: m.examples_components_title,
+		description: m.examples_components_description,
+		source: "src/features/dev/examples/kit-components.tsx",
+		guide: "docs/guides/design-system.md",
+	},
+	{
+		slug: "fields",
+		title: m.examples_fields_title,
+		description: m.examples_fields_description,
+		source: "src/features/dev/examples/kit-fields.tsx",
+		guide: "docs/guides/forms.md",
+	},
+	{
 		slug: "data-table",
 		title: m.examples_table_title,
 		description: m.examples_table_description,

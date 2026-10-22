@@ -168,19 +168,22 @@ export const CreatesItem: Story = {
 		await userEvent.type(canvas.getByLabelText(new RegExp(`^${m.test_crud_field_tags()}`)), "food{Enter}");
 		await userEvent.click(canvas.getByRole("button", { name: m.test_crud_create() }));
 
-		// One JSON request: the fields, and images as attachment ids (none here).
-		await waitFor(() =>
-			expect(createTestCrud).toHaveBeenCalledWith({
-				data: expect.objectContaining({
-					title: "Momo Kitchen Deluxe",
-					slug: "momo-kitchen-deluxe",
-					summary: "Dumplings.",
-					status: "published",
-					price: 1250.5,
-					tags: ["food"],
-					images: [],
+		// One JSON request: the fields, and images as attachment ids (none here). The slug's
+		// server check runs first (debounced), so this can take a moment.
+		await waitFor(
+			() =>
+				expect(createTestCrud).toHaveBeenCalledWith({
+					data: expect.objectContaining({
+						title: "Momo Kitchen Deluxe",
+						slug: "momo-kitchen-deluxe",
+						summary: "Dumplings.",
+						status: "published",
+						price: 1250.5,
+						tags: ["food"],
+						images: [],
+					}),
 				}),
-			}),
+			{ timeout: 3000 },
 		);
 	},
 };

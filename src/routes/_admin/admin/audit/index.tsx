@@ -1,5 +1,5 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
+import { DataTable, DataTableSkeleton } from "@/components/data-table";
 import { ClearFiltersButton } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
 import { Pagination } from "@/components/navigation/pagination";
@@ -43,16 +43,6 @@ function AuditPage() {
 	return (
 		<Page width="admin">
 			<PageHeader title={m.audit_title()} description={m.audit_description()} />
-			<div className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-end justify-between gap-3">
-					<FilterBar values={search} preserve={["sort", "pageSize"]}>
-						<AuditFilterControls search={search} />
-					</FilterBar>
-					<DataTableColumnsMenu tableId={AUDIT_TABLE_ID} columns={columns} />
-				</div>
-				<AuditActiveFilters search={search} />
-			</div>
-
 			{page && pagination ? (
 				<>
 					<DataTable
@@ -64,10 +54,19 @@ function AuditPage() {
 						sort={search.sort}
 						busy={busy}
 						data-testid="audit-table"
+						toolbar={
+							<FilterBar values={search} preserve={["sort", "pageSize"]}>
+								<AuditFilterControls search={search} />
+							</FilterBar>
+						}
+						activeFilters={<AuditActiveFilters search={search} />}
+						exportName="audit"
+						savedViews
 						empty={
 							<EmptyState
+								variant={filtered ? "no-matches" : "empty"}
 								description={m.audit_empty()}
-								action={filtered ? <ClearFiltersButton clearAll={AUDIT_CLEAR_FILTERS} /> : null}
+								primaryAction={filtered ? <ClearFiltersButton clearAll={AUDIT_CLEAR_FILTERS} /> : null}
 							/>
 						}
 					/>

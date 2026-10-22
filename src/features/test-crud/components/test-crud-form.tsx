@@ -10,16 +10,17 @@ import {
 	UnsavedChangesGuard,
 	useAppForm,
 } from "@/components/forms";
+import { SlugField, slugValidators } from "@/components/forms/fields/slug-field";
+import { StickyFormBar } from "@/components/page/form-layout";
 import { Button } from "@/components/ui/button";
-import { AttachmentsField } from "@/features/attachments/components/attachments-field";
+import { ImageGalleryField } from "@/features/attachments/components/image-gallery-field";
 import { TEST_CRUD_MAX_IMAGES } from "@/features/attachments/constants";
-import { createTestCrud, updateTestCrud } from "@/functions/test-crud";
+import { createTestCrud, isTestCrudSlugFree, updateTestCrud } from "@/functions/test-crud";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { STATUS_LABELS } from "../labels";
 import { invalidateTestCrudLists, testCrudDetailQueryOptions, testCrudKeys } from "../queries";
 import {
-	slugify,
 	TEST_CRUD_STATUSES,
 	type TestCrudDetail,
 	type TestCrudFormValues,
@@ -69,8 +70,6 @@ export function TestCrudForm({
 	const saved = useRef(false);
 	/** Image uploads in progress (submitting waits for them). */
 	const uploading = useRef(false);
-	// New items: the slug follows the title until the user edits it themselves.
-	const slugEdited = useRef(Boolean(item));
 	const [stale, setStale] = useState(false);
 	// The newer item replaces this one in the cache; the parent's key remounts the form with it.
 	const reload = () =>
@@ -105,29 +104,24 @@ export function TestCrudForm({
 			<form.Form className={cn("flex max-w-3xl flex-col gap-6", className)} data-testid="test-crud-form">
 				{stale ? <StaleVersionAlert onReload={reload} /> : null}
 				<form.FormErrorSummary />
-				<form.AppField
-					name="title"
-					listeners={{
-						onChange: ({ value }) => {
-							if (!slugEdited.current) form.setFieldValue("slug", slugify(value));
-						},
-					}}
-				>
+				<form.AppField name="title">
 					{(field) => <field.TextField label={m.test_crud_field_title()} maxLength={120} />}
 				</form.AppField>
+				{/* New items: the slug follows the title until the user edits it; a taken slug shows as you type. */}
 				<form.AppField
 					name="slug"
-					listeners={{
-						onChange: ({ value }) => {
-							slugEdited.current = value !== slugify(form.getFieldValue("title"));
-						},
-					}}
+					validators={slugValidators({
+						from: "title",
+						isAvailable: (slug) => isTestCrudSlugFree({ data: { slug, ...(item ? { id: item.id } : {}) } }),
+					})}
 				>
-					{(field) => (
-						<field.TextField
+					{() => (
+						<SlugField
 							label={m.test_crud_field_slug()}
 							description={m.test_crud_field_slug_description()}
-							autoComplete="off"
+							from="title"
+							fromLabel={m.test_crud_field_title()}
+							linked={!item}
 						/>
 					)}
 				</form.AppField>
@@ -158,7 +152,7 @@ export function TestCrudForm({
 					validators={{ onSubmit: () => (uploading.current ? m.attachments_field_wait() : undefined) }}
 				>
 					{() => (
-						<AttachmentsField
+						<ImageGalleryField
 							label={m.test_crud_field_image()}
 							scope="test-crud"
 							max={TEST_CRUD_MAX_IMAGES}
@@ -168,20 +162,21 @@ export function TestCrudForm({
 						/>
 					)}
 				</form.AppField>
-				<div className="flex flex-wrap items-center gap-3">
-					<form.SubmitButton pendingLabel={m.test_crud_saving()}>
-						{item ? m.test_crud_save() : m.test_crud_create()}
-					</form.SubmitButton>
-					{onCancel ? (
-						<Button type="button" variant="ghost" onClick={onCancel}>
-							{m.common_cancel()}
-						</Button>
-					) : (
-						<Button variant="ghost" asChild>
-							<Link to="/admin/test-crud">{m.test_crud_back()}</Link>
-						</Button>
-					)}
-				</div>
+				<StickyFormBar
+					submitLabel={item ? m.test_crud_save() : m.test_crud_create()}
+					pendingLabel={m.test_crud_saving()}
+					cancel={
+						onCancel ? (
+							<Button type="button" variant="ghost" onClick={onCancel}>
+								{m.common_cancel()}
+							</Button>
+						) : (
+							<Button variant="ghost" asChild>
+								<Link to="/admin/test-crud">{m.test_crud_back()}</Link>
+							</Button>
+						)
+					}
+				/>
 			</form.Form>
 		</form.AppForm>
 	);

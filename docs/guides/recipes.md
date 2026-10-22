@@ -11,6 +11,7 @@ Things many projects need but the base doesn't ship in every app (Part 3 rule: w
 | [Contact form](#contact-form) | `/dev/examples/contact` |
 | [Avatar upload](#avatar-upload) | `/dev/examples/attachments` (the same flow) |
 | [CSV export, undo, saved views](#csv-export-delete-with-undo-saved-views) | `/dev/examples/list-extras`, `src/lib/csv.ts` |
+| [Resizable columns and expandable rows](#resizable-columns-and-expandable-rows) | `components/data-table/data-table.tsx` |
 | [Offline development](#offline-development) | `pnpm dev:offline` (`scripts/dev-offline.ts`) |
 | [Preview deploys with a Neon branch](#preview-deploys-with-a-neon-branch-per-pr) | `docs/recipes/preview-neon.yml` |
 | [Changelog](#changelog) | `scripts/check-commit-msg.ts` |
@@ -84,16 +85,23 @@ For the portfolio's `/contact` the page already exists; add the form below its e
 Use the attachments flow (decision 0098, [attachments.md](attachments.md)); `/dev/examples/attachments` is the same upload, sign and confirm sequence.
 
 1. A scope `avatar` in `src/features/attachments/constants.ts` with its limits (one image, square crop on delivery).
-2. On the account page, an `AttachmentsField`-like single picker (`max={1}`) in a new `AvatarSection` (`features/auth/components/`), saving through a new `setMyAvatar({ attachmentId })` function with `requireAccountOwnerMiddleware` that links the attachment to the user (`syncEntityAttachments` with entity `user`) and stores its delivery URL in Better Auth's `user.image`.
+2. On the account page, an `ImageGalleryField`-like single picker (`max={1}`) in a new `AvatarSection` (`features/auth/components/`), saving through a new `setMyAvatar({ attachmentId })` function with `requireAccountOwnerMiddleware` that links the attachment to the user (`syncEntityAttachments` with entity `user`) and stores its delivery URL in Better Auth's `user.image`.
 3. Render with `CloudImage` (`variant="thumb"`), with the initials as the fallback; delete the old asset when replaced (`purge`), and in account deletion (0129) as today.
 
 ## CSV export, delete with undo, saved views
 
-`/dev/examples/list-extras` shows all three on one list:
+`/dev/examples/list-extras` shows all three on one list. CSV export and saved views are DataTable toolbar features since Task 37 (`exportName`, `savedViews`, [tables-filters.md](tables-filters.md)); undo stays a recipe.
 
-- **CSV export:** `toCsv(rows, columns)` and `downloadCsv(name, csv)` in `src/lib/csv.ts`: RFC 4180 quoting, a BOM so Excel reads Devanagari, and formula-looking cells prefixed with `'` (CSV injection). Export the rows on screen, or add a server function that streams every row of the current filter for large exports (same list input, no `pageSize`, a hard cap).
+- **CSV export:** `DataTable`'s `exportName` exports the rows on screen through the columns' `csv` values, with `toCsv(rows, columns)` and `downloadCsv(name, csv)` in `src/lib/csv.ts`: RFC 4180 quoting, a BOM so Excel reads Devanagari, and formula-looking cells prefixed with `'` (CSV injection). Export the rows on screen, or add a server function that streams every row of the current filter for large exports (same list input, no `pageSize`, a hard cap).
 - **Delete with undo:** the row hides at once and a toast offers "Undo"; the delete request goes out only when the toast closes. Nothing to restore on the server, but the delete is lost if the tab closes first. For undo after the request, soft delete: a `deletedAt` column, lists filtering `isNull(deletedAt)`, a `restore` function behind the same permission, and a cron (like `/api/cron/attachments`) that removes rows older than N days.
-- **Saved views:** the URL is the list's state (golden rule 3), so a view is a name plus the search string. The example keeps them in `localStorage`; to follow the user across devices store them in a `saved_view` table (user id, table id, name, search) and list them next to `FilterBar`.
+- **Saved views:** the URL is the list's state (golden rule 3), so a view is a name plus the search string. `SavedViewsMenu` (`components/data-table/saved-views.tsx`) keeps them in `localStorage` under `views:<tableId>`; to follow the user across devices, store them in a `saved_view` table (user id, table id, name, search) and read them in the menu instead.
+
+## Resizable columns and expandable rows
+
+`DataTable` runs on TanStack Table v9 (0169), so both are a feature away rather than a rewrite:
+
+- **Resizing:** add `columnSizingFeature` to the `features` in `data-table.tsx`, keep `columnSizing` in the table's preferences (next to `hiddenColumns`, so SSR renders the saved widths), give the table `table-layout: fixed` with each `<th>` at `header.getSize()`, and render `header.getResizeHandler()` on a handle that also takes ← / → from the keyboard. Cap the number of tables kept in the cookie.
+- **Expansion:** add `rowExpandingFeature` with an `expanded` state, a column with a disclosure button (`aria-expanded`, `aria-controls`), and after each expanded row a `<tr>` with one cell spanning every visible column (`colSpan={row.getVisibleCells().length}`) for the detail. Load the detail with its own query when it opens, not with the page.
 
 ## Offline development
 

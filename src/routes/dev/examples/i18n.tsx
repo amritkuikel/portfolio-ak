@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { DescriptionList } from "@/components/data-display/description-list";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import {
 	formatBytes,
@@ -33,8 +34,8 @@ function I18nExample() {
 	return (
 		<ExamplePage slug="i18n">
 			<Demo title={m.examples_i18n_messages()} note={m.examples_i18n_messages_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{ label: m.examples_i18n_locale(), value: getLocale(), testId: "i18n-locale" },
 						{
 							label: m.examples_i18n_parameters(),
@@ -44,8 +45,8 @@ function I18nExample() {
 				/>
 			</Demo>
 			<Demo title={m.examples_i18n_formats()} note={m.examples_i18n_formats_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{ label: m.intl_date(), value: formatDate(SAMPLE_DATE, { dateStyle: "full" }) },
 						{ label: m.examples_i18n_date_time(), value: formatDateTime(SAMPLE_DATE) },
 						{ label: m.intl_number(), value: formatNumber(1234567.89), testId: "i18n-number" },

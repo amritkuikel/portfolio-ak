@@ -1,7 +1,7 @@
 import { useStore } from "@tanstack/react-form";
-import { Loader2Icon } from "lucide-react";
 import { type ComponentProps, type ReactNode, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useFormContext } from "./contexts";
@@ -13,6 +13,11 @@ import { FormMetaProvider, useFormMeta } from "./form-meta";
  * disables browser validation bubbles (our messages are localized) and gives
  * fields a unique id prefix. method="post": a submit before hydration reloads the
  * page with the values in the request body, never in the URL (history, logs).
+ *
+ * A submit while an async validator runs (a slug's server check, debounced) waits for
+ * it: TanStack Form's handleSubmit ignores a first attempt while `canSubmit` is false,
+ * and `canSubmit` is false while any field validates, so a quick "type, then Save"
+ * would otherwise do nothing.
  */
 export function Form({ children, className, ...props }: Omit<ComponentProps<"form">, "onSubmit">) {
 	const form = useFormContext();
@@ -25,7 +30,7 @@ export function Form({ children, className, ...props }: Omit<ComponentProps<"for
 				onSubmit={(event) => {
 					event.preventDefault();
 					event.stopPropagation();
-					void form.handleSubmit();
+					void afterValidation(form).then(() => form.handleSubmit());
 				}}
 				{...props}
 			>
@@ -34,6 +39,18 @@ export function Form({ children, className, ...props }: Omit<ComponentProps<"for
 		</FormMetaProvider>
 	);
 }
+
+/** Resolves once neither the form nor a field is validating (at once when none is). */
+const afterValidation = (form: ReturnType<typeof useFormContext>) =>
+	new Promise<void>((resolve) => {
+		const validating = () => form.state.isValidating || form.state.isFieldsValidating;
+		if (!validating()) return resolve();
+		const subscription = form.store.subscribe(() => {
+			if (validating()) return;
+			subscription.unsubscribe();
+			resolve();
+		});
+	});
 
 /**
  * Submit button with a pending state. It stays enabled when the form is invalid,
@@ -54,7 +71,7 @@ export function SubmitButton({
 		<Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting || undefined} className={className}>
 			{isSubmitting ? (
 				<>
-					<Loader2Icon className="animate-spin" aria-hidden />
+					<Spinner aria-hidden />
 					{pendingLabel ?? m.form_submitting()}
 				</>
 			) : (
@@ -104,9 +121,9 @@ export function FormErrorSummary({ title }: { title?: string }) {
 			role="alert"
 			aria-labelledby={titleId}
 			data-testid="form-error-summary"
-			className="rounded-md border border-destructive/40 bg-destructive/5 p-4 outline-none focus-visible:ring-[3px] focus-visible:ring-destructive/30"
+			className="rounded-lg border border-danger/30 bg-danger-subtle p-4 outline-none focus-visible:ring-[3px] focus-visible:ring-danger/30"
 		>
-			<p id={titleId} className="font-medium text-destructive">
+			<p id={titleId} className="font-medium text-danger">
 				{title ?? m.form_error_summary_title()}
 			</p>
 			<ul className="mt-2 list-disc ps-5 text-sm">

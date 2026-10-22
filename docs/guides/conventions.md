@@ -10,11 +10,14 @@ src/
     _public/ _auth/ _authed/ _admin/   Layouts by audience. A folder's route.tsx is a section layout (names its breadcrumb).
   components/             Generic UI, no feature knowledge.
     ui/                   shadcn primitives (Button, Table, Dialog…). Generated; adjust sparingly.
-    page/                 Page, PageHeader, Breadcrumbs, EmptyState, PageHeaderSkeleton, ListSkeleton
-    data-table/           DataTable, DataTableColumnsMenu, DataTableSkeleton
+    page/                 Page, PageHeader (tabs slot), PageTabs, Breadcrumbs, EmptyState, DetailLayout, SettingsLayout,
+                          FormSection, FormCard, StickyFormBar, PageHeaderSkeleton, ListSkeleton
+    data-table/           DataTable (TanStack Table: toolbar, row actions, CSV, saved views), DataTableSkeleton
+    data-display/         StatCard, StatusBadge/StatusOf, DescriptionList, UserCell, UserAvatar, RelativeTime, CopyButton, Timeline/ActivityFeed
+    charts/               AreaChart, BarChart, DonutChart (Recharts, lazy), Sparkline (SVG)
     navigation/           Pagination, SearchLink, useCloseOverlay (masked dialogs)
     filters/              FilterBar + Search/Select/MultiSelect/Boolean/NumberRange/DateRange filters, ActiveFilters chips
-    dialogs/              ConfirmDialog
+    dialogs/              ConfirmProvider + useConfirm, FormDialog, FormSheet
     forms/                useAppForm + the field library (see the forms showcase at /dev/forms)
     admin-shell/          The admin frame: AdminShell, AppSidebar, Topbar, UserMenu, CommandMenu (design-system.md)
     auth-shell/           The sign-in pages' split screen (AuthShell)
@@ -81,19 +84,19 @@ const { page, busy, pagination } = useListPage({ tableId: PROJECT_TABLE_ID, sear
 
 <Page width="admin">
 	<PageHeader title={m.projects_title()} description={…} actions={<NewProjectButton />} />
-	<FilterBar values={search} preserve={["sort", "pageSize"]}>{/* filter controls */}</FilterBar>
-	<ActiveFilters chips={projectFilterChips(search)} clearAll={CLEAR_FILTERS} />
-	<DataTableColumnsMenu tableId={PROJECT_TABLE_ID} columns={projectColumns} />
 	<DataTable
 		tableId={PROJECT_TABLE_ID} rows={rows} columns={projectColumns}
 		getRowId={(row) => row.id} getRowLabel={(row) => row.title} sort={search.sort}
-		bulkActions={({ ids, clear }) => …} rowActions={(row) => <DropdownMenuItem …/>}
+		toolbar={<FilterBar values={search} preserve={["sort", "pageSize"]}>{/* filter controls */}</FilterBar>}
+		activeFilters={<ActiveFilters chips={projectFilterChips(search)} clearAll={CLEAR_FILTERS} />}
+		exportName="projects"
+		bulkActions={({ ids, clear }) => …} rowActions={(row) => [{ id: "edit", label: …, permission: "projects:update", render: … }]}
 		busy={busy}
-		empty={<EmptyState description={…} action={filtered ? <ClearFiltersButton clearAll={CLEAR_FILTERS} /> : <NewProjectButton />} />}
+		empty={<EmptyState variant={filtered ? "no-matches" : "empty"} description={…} primaryAction={filtered ? <ClearFiltersButton clearAll={CLEAR_FILTERS} /> : <NewProjectButton />} />}
 	/>
 	<Pagination {...pagination} />   {/* render both only once `page` and `pagination` exist; DataTableSkeleton before */}
-	<ConfirmDialog open={…} destructive title={…} description={…} onConfirm={…} onCancel={…} />
 </Page>
+// Deletes ask through `const confirm = useConfirm()`: `if (await confirm({ title, description, destructive: true })) remove(ids)`.
 ```
 
 On the server, the repository uses the same contract:

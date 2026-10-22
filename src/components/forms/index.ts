@@ -32,7 +32,7 @@ import { RichTextField } from "./fields/rich-text-field";
 import { EmailField, PasswordField, TextareaField, TextField, UrlField } from "./fields/text-fields";
 import { Form, FormErrorSummary, SubmitButton } from "./form-components";
 
-export const { useAppForm, withForm } = createFormHook({
+export const { useAppForm, withForm, withFieldGroup } = createFormHook({
 	fieldContext,
 	formContext,
 	fieldComponents: {

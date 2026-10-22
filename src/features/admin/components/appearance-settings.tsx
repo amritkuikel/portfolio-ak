@@ -1,7 +1,9 @@
 import type { LucideIcon } from "lucide-react";
+import { PaletteIcon, UserIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/data-display/status-badge";
 import { THEME_ICONS, THEME_LABELS } from "@/components/layout/theme";
+import { SettingsLayout, SettingsNavLink } from "@/components/page/layouts";
 import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,56 +56,74 @@ export function AppearanceSettings() {
 	return (
 		<Page width="admin">
 			<PageHeader title={m.admin_nav_appearance()} description={m.appearance_description()} />
-			<div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-				<div className="flex flex-col gap-8">
-					<Choice
-						legend={m.theme_label()}
-						name="theme"
-						options={THEMES}
-						value={appearance.theme}
-						onChange={appearance.setTheme}
-						label={(theme) => THEME_LABELS[theme]()}
-						preview={(theme) => <OptionIcon icon={THEME_ICONS[theme]} />}
-					/>
-					<Choice
-						legend={m.appearance_accent()}
-						name="accent"
-						options={ACCENTS}
-						value={appearance.accent}
-						onChange={appearance.setAccent}
-						label={(accent) => ACCENT_LABELS[accent]()}
-						preview={(accent) => <span data-accent={accent} className="size-5 rounded-full bg-primary shadow-xs" />}
-					/>
-					<Choice
-						legend={m.appearance_radius()}
-						name="radius"
-						options={RADII}
-						value={appearance.radius}
-						onChange={appearance.setRadius}
-						label={(radius) => RADIUS_LABELS[radius]()}
-						preview={(radius) => (
-							<span className={cn("size-6 border-s-2 border-t-2 border-foreground/60", RADIUS_PREVIEW[radius])} />
-						)}
-					/>
-					<Choice
-						legend={m.appearance_density()}
-						name="density"
-						options={DENSITIES}
-						value={appearance.density}
-						onChange={appearance.setDensity}
-						label={(density) => DENSITY_LABELS[density]()}
-						preview={(density) => (
-							<span className={cn("flex w-8 flex-col", density === "compact" ? "gap-0.5" : "gap-1.5")}>
-								{[0, 1, 2].map((line) => (
-									<span key={line} className="h-1 rounded-full bg-foreground/50" />
-								))}
-							</span>
-						)}
-					/>
+			<SettingsLayout label={m.settings_nav()} nav={<SettingsNav />}>
+				<div className="grid items-start gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+					<div className="flex flex-col gap-8">
+						<Choice
+							legend={m.theme_label()}
+							name="theme"
+							options={THEMES}
+							value={appearance.theme}
+							onChange={appearance.setTheme}
+							label={(theme) => THEME_LABELS[theme]()}
+							preview={(theme) => <OptionIcon icon={THEME_ICONS[theme]} />}
+						/>
+						<Choice
+							legend={m.appearance_accent()}
+							name="accent"
+							options={ACCENTS}
+							value={appearance.accent}
+							onChange={appearance.setAccent}
+							label={(accent) => ACCENT_LABELS[accent]()}
+							preview={(accent) => <span data-accent={accent} className="size-5 rounded-full bg-primary shadow-xs" />}
+						/>
+						<Choice
+							legend={m.appearance_radius()}
+							name="radius"
+							options={RADII}
+							value={appearance.radius}
+							onChange={appearance.setRadius}
+							label={(radius) => RADIUS_LABELS[radius]()}
+							preview={(radius) => (
+								<span className={cn("size-6 border-s-2 border-t-2 border-foreground/60", RADIUS_PREVIEW[radius])} />
+							)}
+						/>
+						<Choice
+							legend={m.appearance_density()}
+							name="density"
+							options={DENSITIES}
+							value={appearance.density}
+							onChange={appearance.setDensity}
+							label={(density) => DENSITY_LABELS[density]()}
+							preview={(density) => (
+								<span className={cn("flex w-8 flex-col", density === "compact" ? "gap-0.5" : "gap-1.5")}>
+									{[0, 1, 2].map((line) => (
+										<span key={line} className="h-1 rounded-full bg-foreground/50" />
+									))}
+								</span>
+							)}
+						/>
+					</div>
+					<Preview />
 				</div>
-				<Preview />
-			</div>
+			</SettingsLayout>
 		</Page>
+	);
+}
+
+/** The settings pages: this browser's appearance, and the account (its own page, outside the admin area). */
+function SettingsNav() {
+	return (
+		<>
+			<SettingsNavLink to="/admin/settings/appearance">
+				<PaletteIcon aria-hidden />
+				{m.admin_nav_appearance()}
+			</SettingsNavLink>
+			<SettingsNavLink to="/account">
+				<UserIcon aria-hidden />
+				{m.nav_account()}
+			</SettingsNavLink>
+		</>
 	);
 }
 

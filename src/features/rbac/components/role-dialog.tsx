@@ -1,15 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	clearServerErrorOnChange,
-	formValidators,
-	handleSaveError,
-	StaleVersionAlert,
-	useAppForm,
-} from "@/components/forms";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/dialogs/form-dialog";
+import { clearServerErrorOnChange, formValidators, handleSaveError, useAppForm } from "@/components/forms";
 import { createRole, updateRole } from "@/functions/rbac";
 import { m } from "@/paraglide/messages";
 import { refreshRbac, rolesQueryOptions } from "../queries";
@@ -54,31 +47,22 @@ export function RoleDialog({ role: opened, onClose }: { role?: RoleSummary; onCl
 		},
 	});
 	return (
-		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent data-testid="role-dialog">
-				<DialogHeader>
-					<DialogTitle>{role ? m.roles_dialog_edit_title() : m.roles_dialog_new_title()}</DialogTitle>
-					<DialogDescription>{m.roles_dialog_description()}</DialogDescription>
-				</DialogHeader>
-				<form.AppForm>
-					<form.Form className="flex flex-col gap-6">
-						{stale ? <StaleVersionAlert onReload={reload} /> : null}
-						<form.FormErrorSummary />
-						<form.AppField name="name">
-							{(field) => <field.TextField label={m.roles_field_name()} maxLength={ROLE_NAME_MAX} />}
-						</form.AppField>
-						<form.AppField name="description">
-							{(field) => <field.TextareaField label={m.roles_field_description()} optional rows={3} />}
-						</form.AppField>
-						<div className="flex flex-wrap gap-3">
-							<form.SubmitButton>{role ? m.roles_save() : m.roles_create()}</form.SubmitButton>
-							<Button type="button" variant="ghost" onClick={onClose}>
-								{m.common_cancel()}
-							</Button>
-						</div>
-					</form.Form>
-				</form.AppForm>
-			</DialogContent>
-		</Dialog>
+		<form.AppForm>
+			<FormDialog
+				title={role ? m.roles_dialog_edit_title() : m.roles_dialog_new_title()}
+				description={m.roles_dialog_description()}
+				submitLabel={role ? m.roles_save() : m.roles_create()}
+				onClose={onClose}
+				stale={stale ? reload : undefined}
+				data-testid="role-dialog"
+			>
+				<form.AppField name="name">
+					{(field) => <field.TextField label={m.roles_field_name()} maxLength={ROLE_NAME_MAX} />}
+				</form.AppField>
+				<form.AppField name="description">
+					{(field) => <field.TextareaField label={m.roles_field_description()} optional rows={3} />}
+				</form.AppField>
+			</FormDialog>
+		</form.AppForm>
 	);
 }

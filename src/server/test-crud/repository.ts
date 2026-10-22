@@ -153,6 +153,12 @@ export async function getTestCrud(db: Db, id: string, store: ImageStore | null):
 	return detail ?? null;
 }
 
+/** Whether no item but `exceptId` (the one being edited) uses `slug`: the form's check while typing. */
+export async function isSlugFree(db: Db, slug: string, exceptId?: string): Promise<boolean> {
+	const [row] = await db.select({ id: testCrud.id }).from(testCrud).where(eq(testCrud.slug, slug)).limit(1);
+	return !row || row.id === exceptId;
+}
+
 const notFound = () => new AppError("NOT_FOUND", "Test CRUD item not found");
 
 /** Unique-violation on the slug becomes a field error the form can show. */

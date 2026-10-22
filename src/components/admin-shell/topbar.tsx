@@ -1,6 +1,6 @@
 import { Link, useMatches } from "@tanstack/react-router";
 import { SearchIcon } from "lucide-react";
-import { Fragment, useSyncExternalStore } from "react";
+import { Fragment } from "react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ThemeToggle } from "@/components/layout/theme";
 import {
@@ -15,22 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useHotkeyLabel } from "@/hooks/use-hotkeys";
 import { crumbsFromMatches } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { UserMenu } from "./user-menu";
-
-const noSubscribe = () => () => {};
-const isApple = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-
-/** "⌘" on Apple devices, "Ctrl" elsewhere (and on the server, so hydration matches). */
-function useModifierKey() {
-	return useSyncExternalStore(
-		noSubscribe,
-		() => (isApple() ? "⌘" : "Ctrl"),
-		() => "Ctrl",
-	);
-}
 
 /** The route's breadcrumb trail (each match's staticData.breadcrumb). Phones show the current page only. */
 function TopbarBreadcrumbs() {
@@ -70,7 +59,7 @@ function TopbarBreadcrumbs() {
  * user menu.
  */
 export function Topbar({ onOpenCommandMenu }: { onOpenCommandMenu: () => void }) {
-	const modifier = useModifierKey();
+	const shortcut = useHotkeyLabel("mod+k");
 	return (
 		<header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-4">
 			<SidebarTrigger className="-ms-1" />
@@ -90,7 +79,7 @@ export function Topbar({ onOpenCommandMenu }: { onOpenCommandMenu: () => void })
 					<span className="max-lg:sr-only">{m.command_open()}</span>
 					{/* Fixed width: swapping "Ctrl" for "⌘" after hydration never moves anything. */}
 					<Kbd className="ms-auto w-12 max-lg:hidden" aria-hidden>
-						{modifier} K
+						{shortcut}
 					</Kbd>
 				</Button>
 				<LanguageSwitcher className="max-sm:hidden" />

@@ -54,6 +54,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/dev/examples/filters" },
 	{ route: "/dev/examples/masking" },
 	{ route: "/dev/examples/forms" },
+	{ route: "/dev/examples/components" },
+	{ route: "/dev/examples/fields" },
 	{ route: "/dev/examples/data-table" },
 	{ route: "/dev/examples/optimistic" },
 	{ route: "/dev/examples/preferences" },

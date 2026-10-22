@@ -1,10 +1,10 @@
 import { useDbClient, useLiveQuery } from "@tanstack/react-db";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
-import { DataTable, DataTableColumnsMenu, DataTableSkeleton } from "@/components/data-table";
-import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { DataTable, DataTableSkeleton, type RowAction } from "@/components/data-table";
+import { useConfirm } from "@/components/dialogs/confirm";
 import { errorMessage } from "@/components/errors/error-page";
 import { ClearFiltersButton } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
@@ -12,9 +12,7 @@ import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { useCan, usePermissions } from "@/features/rbac/can";
-import type { Permission } from "@/features/rbac/permissions";
+import { useCan } from "@/features/rbac/can";
 import { useListPage } from "@/hooks/use-list-page";
 import { useListQuery } from "@/hooks/use-list-query";
 import { formatNumber } from "@/lib/i18n/intl";
@@ -39,9 +37,6 @@ import { EditItemLink } from "./masked-links";
  * confirmation and the masked edit dialog. The route file only loads data and
  * passes the search in.
  */
-
-/** What the user asked to delete: one row (named in the dialog) or a selection. */
-type DeleteRequest = { ids: string[]; title?: string; done?: () => void };
 
 /** A component, not a constant: messages must be read at render time (per request locale). Needs test-crud:create. */
 function NewItemButton() {
@@ -85,15 +80,20 @@ export function TestCrudAdminList({ search }: { search: TestCrudAdminRouteSearch
 		});
 	}, [busy, live.isReady, live.state, items]);
 
-	const [pendingDelete, setPendingDelete] = useState<DeleteRequest | null>(null);
-
+	const confirm = useConfirm();
 	const reportFailure = (failure: unknown) =>
 		toast.error(m.test_crud_toast_failed(), { description: errorMessage(failure) });
 
-	const confirmDelete = () => {
-		if (!pendingDelete) return;
-		const { ids, done } = pendingDelete;
-		setPendingDelete(null);
+	/** One row (named in the dialog) or a selection; `done` clears the selection once confirmed. */
+	const deleteItems = async (ids: string[], title?: string, done?: () => void) => {
+		const single = ids.length === 1 && title !== undefined;
+		const confirmed = await confirm({
+			destructive: true,
+			title: single ? m.test_crud_delete_title() : m.test_crud_bulk_delete_title({ count: formatNumber(ids.length) }),
+			description: single ? m.test_crud_delete_body({ title }) : m.test_crud_bulk_delete_body(),
+			confirmLabel: m.test_crud_confirm_delete(),
+		});
+		if (!confirmed) return;
 		done?.();
 		const tx = collection.delete(ids);
 		tx.isPersisted.promise.then(
@@ -117,13 +117,43 @@ export function TestCrudAdminList({ search }: { search: TestCrudAdminRouteSearch
 		);
 	};
 
-	// What this user may do (the server checks each action again).
-	const permissions = usePermissions();
-	const can = (permission: Permission) => permissions.includes(permission);
-	const canChangeRows = can("test-crud:update") || can("test-crud:publish") || can("test-crud:delete");
+	// What this user may do (the server checks each action again); row actions carry their own permission.
+	const canDelete = useCan("test-crud:delete");
+	const canEdit = useCan("test-crud:update");
+	const rowActions = (row: TestCrudListItem): RowAction[] => [
+		{
+			id: "edit-dialog",
+			label: m.test_crud_edit_in_dialog(),
+			permission: "test-crud:update",
+			render: (label) => <EditItemLink id={row.id}>{label}</EditItemLink>,
+		},
+		{
+			id: "edit",
+			label: m.test_crud_edit(),
+			permission: "test-crud:update",
+			render: (label) => (
+				<Link to="/admin/test-crud/$id" params={{ id: row.id }}>
+					{label}
+				</Link>
+			),
+		},
+		{
+			id: "publish",
+			label: row.status === "published" ? m.test_crud_unpublish() : m.test_crud_publish(),
+			permission: "test-crud:publish",
+			onSelect: () => setStatus(row, row.status === "published" ? "draft" : "published"),
+		},
+		{
+			id: "delete",
+			label: m.test_crud_delete(),
+			permission: "test-crud:delete",
+			destructive: true,
+			separated: true,
+			onSelect: () => void deleteItems([row.id], row.title),
+		},
+	];
 
 	const filtered = testCrudFilterChips(search).length > 0;
-	const single = pendingDelete?.ids.length === 1 && pendingDelete.title !== undefined;
 
 	return (
 		<Page width="admin">
@@ -132,16 +162,6 @@ export function TestCrudAdminList({ search }: { search: TestCrudAdminRouteSearch
 				description={m.test_crud_admin_description()}
 				actions={<NewItemButton />}
 			/>
-
-			<div className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-end justify-between gap-3">
-					<FilterBar values={search} preserve={["sort", "pageSize"]}>
-						<TestCrudFilterControls search={search} tags={tags} />
-					</FilterBar>
-					<DataTableColumnsMenu tableId={TEST_CRUD_TABLE_ID} columns={testCrudColumns} />
-				</div>
-				<TestCrudActiveFilters search={search} />
-			</div>
 
 			{page && pagination ? (
 				<>
@@ -154,58 +174,30 @@ export function TestCrudAdminList({ search }: { search: TestCrudAdminRouteSearch
 						sort={search.sort}
 						busy={busy}
 						data-testid="test-crud-table"
+						toolbar={
+							<FilterBar values={search} preserve={["sort", "pageSize"]}>
+								<TestCrudFilterControls search={search} tags={tags} />
+							</FilterBar>
+						}
+						activeFilters={<TestCrudActiveFilters search={search} />}
+						exportName="test-crud"
+						savedViews
 						bulkActions={
-							can("test-crud:delete")
+							canDelete
 								? ({ ids, clear }) => (
-										<Button variant="destructive" size="sm" onClick={() => setPendingDelete({ ids, done: clear })}>
+										<Button variant="destructive" size="sm" onClick={() => void deleteItems(ids, undefined, clear)}>
 											{m.test_crud_delete_selected()}
 										</Button>
 									)
 								: undefined
 						}
-						rowActions={
-							canChangeRows
-								? (row) => (
-										<>
-											{can("test-crud:update") ? (
-												<>
-													<DropdownMenuItem asChild>
-														<EditItemLink id={row.id}>{m.test_crud_edit_in_dialog()}</EditItemLink>
-													</DropdownMenuItem>
-													<DropdownMenuItem asChild>
-														<Link to="/admin/test-crud/$id" params={{ id: row.id }}>
-															{m.test_crud_edit()}
-														</Link>
-													</DropdownMenuItem>
-												</>
-											) : null}
-											{can("test-crud:publish") ? (
-												<DropdownMenuItem
-													onSelect={() => setStatus(row, row.status === "published" ? "draft" : "published")}
-												>
-													{row.status === "published" ? m.test_crud_unpublish() : m.test_crud_publish()}
-												</DropdownMenuItem>
-											) : null}
-											{can("test-crud:delete") ? (
-												<>
-													<DropdownMenuSeparator />
-													<DropdownMenuItem
-														variant="destructive"
-														onSelect={() => setPendingDelete({ ids: [row.id], title: row.title })}
-													>
-														{m.test_crud_delete()}
-													</DropdownMenuItem>
-												</>
-											) : null}
-										</>
-									)
-								: undefined
-						}
+						rowActions={rowActions}
 						empty={
 							<EmptyState
 								data-testid="empty"
+								variant={filtered ? "no-matches" : "empty"}
 								description={filtered ? m.test_crud_empty_filtered() : m.test_crud_empty()}
-								action={filtered ? <ClearFiltersButton clearAll={TEST_CRUD_CLEAR_FILTERS} /> : <NewItemButton />}
+								primaryAction={filtered ? <ClearFiltersButton clearAll={TEST_CRUD_CLEAR_FILTERS} /> : <NewItemButton />}
 							/>
 						}
 					/>
@@ -215,23 +207,7 @@ export function TestCrudAdminList({ search }: { search: TestCrudAdminRouteSearch
 				<DataTableSkeleton columns={5} rows={8} />
 			)}
 
-			<ConfirmDialog
-				open={pendingDelete !== null}
-				destructive
-				title={
-					single
-						? m.test_crud_delete_title()
-						: m.test_crud_bulk_delete_title({ count: formatNumber(pendingDelete?.ids.length ?? 0) })
-				}
-				description={
-					single ? m.test_crud_delete_body({ title: pendingDelete?.title ?? "" }) : m.test_crud_bulk_delete_body()
-				}
-				confirmLabel={m.test_crud_confirm_delete()}
-				onConfirm={confirmDelete}
-				onCancel={() => setPendingDelete(null)}
-			/>
-
-			{edit && can("test-crud:update") ? <TestCrudEditDialog id={edit} /> : null}
+			{edit && canEdit ? <TestCrudEditDialog id={edit} /> : null}
 		</Page>
 	);
 }

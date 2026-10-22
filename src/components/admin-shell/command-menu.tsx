@@ -47,20 +47,6 @@ const rememberRecent = (path: string) => {
 
 const LANGUAGE_NAMES: Record<Locale, () => string> = { en: m.language_en, ne: m.language_ne };
 
-/** Opens the palette on Ctrl/⌘ K, from anywhere in the admin area. */
-export function useCommandMenuShortcut(toggle: () => void) {
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey) && !event.altKey) {
-				event.preventDefault();
-				toggle();
-			}
-		};
-		document.addEventListener("keydown", onKeyDown);
-		return () => document.removeEventListener("keydown", onKeyDown);
-	}, [toggle]);
-}
-
 /**
  * The admin command palette (cmdk; decision 0165, which replaced the 0140 recipe):
  * recent pages, every section and feature action the user may open (the same

@@ -4,10 +4,8 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { Pagination } from "@/components/navigation/pagination";
 import { EmptyState } from "@/components/page/empty-state";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { DataTableColumnsMenu } from "./columns-menu";
 import { DataTable, type DataTableColumn } from "./data-table";
 import { DataTableSkeleton } from "./data-table-skeleton";
 
@@ -20,8 +18,8 @@ const people: Person[] = [
 ];
 
 const columns: ReadonlyArray<DataTableColumn<Person>> = [
-	{ id: "name", header: () => "Name", sort: "name", cell: (row) => row.name },
-	{ id: "city", header: () => "City", hideable: true, cell: (row) => row.city },
+	{ id: "name", header: () => "Name", sort: "name", cell: (row) => row.name, csv: (row) => row.name },
+	{ id: "city", header: () => "City", hideable: true, cell: (row) => row.city, csv: (row) => row.city },
 	{
 		id: "age",
 		header: () => "Age",
@@ -29,18 +27,26 @@ const columns: ReadonlyArray<DataTableColumn<Person>> = [
 		hideable: true,
 		cellClassName: "tabular-nums",
 		cell: (row) => row.age,
+		csv: (row) => row.age,
 	},
 ];
 
+const many: Person[] = Array.from({ length: 24 }, (_, index) => ({
+	id: String(index + 1),
+	name: `Person ${index + 1}`,
+	city: ["Kathmandu", "Pokhara", "Lalitpur", "Biratnagar"][index % 4] ?? "",
+	age: 20 + ((index * 7) % 40),
+}));
+
 const onBulkDelete = fn();
 const onEdit = fn();
+const onPromote = fn();
 
 /** Reads `?sort=` from the story router's URL, like a real route's validateSearch would. */
 function PeopleTable({ rows = people }: { rows?: Person[] }) {
 	const { sort } = useSearch({ strict: false });
 	return (
 		<div className="flex flex-col gap-3">
-			<DataTableColumnsMenu tableId="story-people" columns={columns} className="self-end" />
 			<DataTable
 				tableId="story-people"
 				rows={rows}
@@ -60,8 +66,15 @@ function PeopleTable({ rows = people }: { rows?: Person[] }) {
 						Delete selected
 					</Button>
 				)}
-				rowActions={(row) => <DropdownMenuItem onSelect={() => onEdit(row.id)}>Edit</DropdownMenuItem>}
-				empty={<EmptyState description="No people match." data-testid="empty" />}
+				rowActions={(row) => [
+					{ id: "edit", label: "Edit", onSelect: () => onEdit(row.id) },
+					// Needs a permission the story's visitor doesn't hold: never offered.
+					{ id: "promote", label: "Make admin", permission: "users:update", onSelect: () => onPromote(row.id) },
+					{ id: "delete", label: "Delete", destructive: true, separated: true, onSelect: () => onBulkDelete([row.id]) },
+				]}
+				exportName="people"
+				savedViews
+				empty={<EmptyState variant="no-matches" description="No people match." data-testid="empty" />}
 			/>
 		</div>
 	);
@@ -99,14 +112,55 @@ export const Sorting: Story = {
 	},
 };
 
+/** The "…" menu lists the actions this user may run: "Make admin" needs users:update, so it isn't there. */
 export const RowActions: Story = {
 	play: async ({ canvas, userEvent, canvasElement }) => {
 		await userEvent.click(canvas.getByRole("button", { name: m.table_row_actions({ label: "Gita" }) }));
 		const menu = within(canvasElement.ownerDocument.body);
+		await expect(menu.queryByRole("menuitem", { name: "Make admin" })).toBeNull();
 		await userEvent.click(await menu.findByRole("menuitem", { name: "Edit" }));
 		await expect(onEdit).toHaveBeenCalledWith("3");
 	},
 };
+
+/** Right-clicking a row opens the same actions. */
+export const ContextMenu: Story = {
+	play: async ({ canvas, userEvent, canvasElement }) => {
+		await userEvent.pointer({ keys: "[MouseRight]", target: canvas.getByRole("cell", { name: "Sita" }) });
+		const menu = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await menu.findByRole("menuitem", { name: "Edit" }));
+		await expect(onEdit).toHaveBeenCalledWith("1");
+	},
+};
+
+/** The toolbar's Columns menu hides a column (saved per table in the preferences cookie). */
+export const ColumnsMenu: Story = {
+	play: async ({ canvas, userEvent, canvasElement }) => {
+		await userEvent.click(canvas.getByRole("button", { name: m.table_columns() }));
+		const menu = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await menu.findByRole("menuitemcheckbox", { name: "City" }));
+		await waitFor(() => expect(canvas.queryByRole("columnheader", { name: "City" })).toBeNull());
+		await userEvent.keyboard("{Escape}");
+	},
+};
+
+/** Saved views: the current search string under a name, kept in this browser. */
+export const SavedViews: Story = {
+	parameters: { app: { route: "/admin/people?sort=-age" } },
+	play: async ({ canvas, userEvent, canvasElement }) => {
+		window.localStorage.removeItem("views:story-people");
+		await userEvent.click(canvas.getByTestId("saved-views"));
+		const popover = within(canvasElement.ownerDocument.body);
+		await userEvent.type(await popover.findByLabelText(m.table_view_name()), "Oldest first");
+		await userEvent.click(popover.getByRole("button", { name: m.table_view_save() }));
+		await expect(await popover.findByRole("button", { name: "Oldest first" })).toHaveAttribute("aria-current", "true");
+		await userEvent.keyboard("{Escape}");
+		window.localStorage.removeItem("views:story-people");
+	},
+};
+
+/** Long pages scroll inside the frame under a sticky header; phones keep the first column pinned. */
+export const LongPage: Story = { args: { rows: many } };
 
 /** Hidden columns come from the saved table preferences (server-rendered the same way). */
 export const HiddenColumn: Story = {

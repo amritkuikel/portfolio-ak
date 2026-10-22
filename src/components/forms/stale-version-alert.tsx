@@ -1,5 +1,6 @@
-import { RefreshCwIcon } from "lucide-react";
+import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 
@@ -19,19 +20,16 @@ export function StaleVersionAlert({ onReload }: { onReload: () => Promise<unknow
 		}
 	};
 	return (
-		<div
-			role="alert"
-			data-testid="stale-version-alert"
-			className="flex flex-col items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4"
-		>
-			<div className="flex flex-col gap-1">
-				<p className="font-medium text-destructive">{m.form_stale_title()}</p>
-				<p className="text-sm">{m.form_stale_description()}</p>
-			</div>
-			<Button type="button" variant="outline" size="sm" onClick={reload} disabled={reloading}>
-				<RefreshCwIcon className={reloading ? "animate-spin" : undefined} aria-hidden />
-				{m.form_stale_reload()}
-			</Button>
-		</div>
+		<Alert variant="destructive" data-testid="stale-version-alert">
+			<TriangleAlertIcon aria-hidden />
+			<AlertTitle>{m.form_stale_title()}</AlertTitle>
+			<AlertDescription>
+				<p>{m.form_stale_description()}</p>
+				<Button type="button" variant="outline" size="sm" className="mt-2" onClick={reload} disabled={reloading}>
+					<RefreshCwIcon className={reloading ? "animate-spin" : undefined} aria-hidden />
+					{m.form_stale_reload()}
+				</Button>
+			</AlertDescription>
+		</Alert>
 	);
 }

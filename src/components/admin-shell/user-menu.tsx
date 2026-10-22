@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronsUpDownIcon, LayoutDashboardIcon, LogOutIcon, PaletteIcon, UserIcon } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/data-display/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -15,29 +15,7 @@ import {
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { canEnterAdmin } from "@/features/rbac/permissions";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-
-/** Up to two initials from a name ("Sita Rai" -> "SR"), or the email's first letter. */
-export const initials = (name: string, email: string) => {
-	const words = name.trim().split(/\s+/).filter(Boolean);
-	const letters = words.length > 1 ? `${words[0]?.[0] ?? ""}${words.at(-1)?.[0] ?? ""}` : (words[0]?.slice(0, 2) ?? "");
-	return (letters || email.slice(0, 1)).toUpperCase();
-};
-
-export function UserAvatar({ name, email, className }: { name: string; email: string; className?: string }) {
-	return (
-		<Avatar className={cn("size-7 rounded-md", className)}>
-			{/* Hidden from screen readers: the button around it names the user in words. */}
-			<AvatarFallback
-				className="rounded-md bg-accent-subtle font-medium text-caption text-foreground"
-				aria-hidden="true"
-			>
-				{initials(name, email)}
-			</AvatarFallback>
-		</Avatar>
-	);
-}
 
 /**
  * The signed-in user's menu: account, the admin area and appearance (when they may

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getExampleSnapshot, getExampleTask, listExampleMessages, listExampleTasks } from "@/functions/examples";
-import type { ExampleTaskSearch } from "./schema";
+import { EXAMPLE_SEARCH_DEFAULTS, type ExampleTaskSearch } from "./schema";
 
 export const exampleKeys = {
 	all: ["examples"] as const,
@@ -27,6 +27,9 @@ export const exampleTasksQueryOptions = (search: ExampleTaskSearch) =>
 		queryKey: exampleKeys.taskList(search),
 		queryFn: () => listExampleTasks({ data: search }),
 	});
+
+/** The components example's data: the first page of example tasks. */
+export const kitComponentsQueryOptions = () => exampleTasksQueryOptions(EXAMPLE_SEARCH_DEFAULTS);
 
 export const exampleTaskQueryOptions = (id: string) =>
 	queryOptions({

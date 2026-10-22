@@ -10,6 +10,7 @@ import {
 	resolvedPageSize,
 	searchParam,
 } from "@/lib/list/params";
+import { SLUG_PATTERN } from "@/lib/slug";
 import { TEST_CRUD_STATUSES } from "./constants";
 
 /**
@@ -18,8 +19,6 @@ import { TEST_CRUD_STATUSES } from "./constants";
  * options (validateSearch, params, loader) stay in the entry chunk, and the form
  * schemas there pull in rich-text and phone validation (decision 0151).
  */
-
-export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 // ---------------------------------------------------------------------------
 // Admin list: URL search params == listTestCrud input

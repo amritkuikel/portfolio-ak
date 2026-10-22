@@ -29,8 +29,8 @@ export function Page({
 
 /**
  * The page's <h1>, an optional description and actions (top right on wide screens,
- * below the title on narrow ones), plus optional extra content such as a search
- * form. One per page. Breadcrumbs belong to the section's frame: the admin topbar
+ * below the title on narrow ones), optional extra content such as a search form,
+ * and a `tabs` slot along the bottom edge (`PageTabs`: sub-pages of a section). One per page. Breadcrumbs belong to the section's frame: the admin topbar
  * shows them; other pages render <Breadcrumbs /> above this header.
  */
 export function PageHeader({
@@ -38,6 +38,7 @@ export function PageHeader({
 	description,
 	actions,
 	size = "default",
+	tabs,
 	children,
 	className,
 }: {
@@ -46,6 +47,8 @@ export function PageHeader({
 	actions?: ReactNode;
 	/** "display" is the large public-page heading. */
 	size?: "default" | "display";
+	/** `<PageTabs>` for the section's sub-pages. */
+	tabs?: ReactNode;
 	children?: ReactNode;
 	className?: string;
 }) {
@@ -69,6 +72,7 @@ export function PageHeader({
 				{actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
 			</div>
 			{children}
+			{tabs}
 		</header>
 	);
 }

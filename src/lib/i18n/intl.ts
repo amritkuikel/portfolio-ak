@@ -28,7 +28,7 @@ export const APP_TIME_ZONE = "Asia/Kathmandu";
 
 export const DEFAULT_CURRENCY = "NPR";
 
-type DateInput = Date | number | string;
+export type DateInput = Date | number | string;
 
 /** A deliberately small, portable subset of Intl.DateTimeFormatOptions. */
 export type DateFormatOptions = {

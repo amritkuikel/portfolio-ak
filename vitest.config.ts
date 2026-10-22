@@ -10,6 +10,17 @@ import { zodAlias } from "./vite/zod-alias.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** Libraries stories load lazily (React.lazy, dynamic imports). */
+const STORY_DEPS = [
+	"@tiptap/react",
+	"@tiptap/starter-kit",
+	"recharts",
+	"@dnd-kit/react",
+	"@dnd-kit/react/sortable",
+	"@dnd-kit/dom",
+	"@tanstack/react-table",
+];
+
 /** Storybook env for story tests; `variant` selects the locale/theme pass (see .storybook/preview.tsx). */
 const storybookDefines = (variant: "default" | "dark-ne") =>
 	Object.fromEntries([
@@ -64,6 +75,9 @@ export default defineConfig({
 				extends: true,
 				plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") }), tailwindcss()],
 				resolve: { alias: storybookAliases },
+				// Pre-bundled: found mid-run (charts and sortables load on demand), Vite would
+				// re-optimize and reload the page under a running story.
+				optimizeDeps: { include: STORY_DEPS },
 				define: storybookDefines("default"),
 				test: {
 					name: "storybook",
@@ -83,6 +97,9 @@ export default defineConfig({
 				extends: true,
 				plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") }), tailwindcss()],
 				resolve: { alias: storybookAliases },
+				// Pre-bundled: found mid-run (charts and sortables load on demand), Vite would
+				// re-optimize and reload the page under a running story.
+				optimizeDeps: { include: STORY_DEPS },
 				define: storybookDefines("dark-ne"),
 				test: {
 					name: "storybook-dark-ne",

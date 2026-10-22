@@ -121,8 +121,9 @@ function StackPage() {
 
 			{data.items.length === 0 ? (
 				<EmptyState
+					variant="no-matches"
 					description={m.stack_empty({ query: search.q })}
-					action={
+					primaryAction={
 						<Button asChild variant="outline">
 							<Link from={Route.fullPath} search={(prev) => ({ ...prev, q: "", page: 1 })}>
 								{m.stack_clear_search()}

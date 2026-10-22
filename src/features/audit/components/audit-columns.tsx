@@ -1,3 +1,5 @@
+import { CopyButton } from "@/components/data-display/copy-button";
+import { UserCell } from "@/components/data-display/user-avatar";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/i18n/intl";
@@ -52,34 +54,39 @@ export const auditColumns = (): ReadonlyArray<DataTableColumn<AuditEventItem>> =
 		sort: "time",
 		cellClassName: "whitespace-nowrap text-muted-foreground text-sm",
 		cell: (row) => formatDate(row.createdAt, { dateStyle: "medium", timeStyle: "medium" }),
+		csv: (row) => row.createdAt,
 	},
 	{
 		id: "actor",
 		header: m.audit_col_actor,
 		cellClassName: "max-w-60",
+		csv: (row) => row.actor.email,
 		cell: (row) => (
-			<div className="flex min-w-0 flex-col">
-				<span className="truncate font-medium">{row.actor.name || row.actor.email}</span>
-				<span className="truncate text-muted-foreground text-xs">
-					{row.actor.id === null ? m.audit_deleted_account() : row.actor.email}
-				</span>
-				{row.impersonator ? (
-					<span className="truncate text-muted-foreground text-xs">
-						{m.audit_impersonated_by({ email: row.impersonator })}
-					</span>
-				) : null}
-			</div>
+			<UserCell
+				name={row.actor.name || row.actor.email}
+				email={row.actor.email}
+				detail={
+					<>
+						{row.actor.id === null ? m.audit_deleted_account() : row.actor.email}
+						{row.impersonator ? (
+							<span className="block truncate">{m.audit_impersonated_by({ email: row.impersonator })}</span>
+						) : null}
+					</>
+				}
+			/>
 		),
 	},
 	{
 		id: "action",
 		header: m.audit_col_action,
 		cell: (row) => <Badge variant="secondary">{AUDIT_ACTION_LABELS[row.action]?.() ?? row.action}</Badge>,
+		csv: (row) => AUDIT_ACTION_LABELS[row.action]?.() ?? row.action,
 	},
 	{
 		id: "target",
 		header: m.audit_col_target,
 		cellClassName: "max-w-60",
+		csv: (row) => row.target.label || row.target.id,
 		cell: (row) => (
 			<div className="flex min-w-0 flex-col">
 				<span className="truncate">{row.target.label || row.target.id}</span>
@@ -100,13 +107,21 @@ export const auditColumns = (): ReadonlyArray<DataTableColumn<AuditEventItem>> =
 		header: m.audit_col_request,
 		hideable: true,
 		cellClassName: "font-mono text-muted-foreground text-xs",
-		cell: (row) => row.requestId,
+		csv: (row) => row.requestId,
+		cell: (row) =>
+			row.requestId ? (
+				<span className="inline-flex items-center gap-1">
+					{row.requestId}
+					<CopyButton value={row.requestId} label={m.audit_copy_request()} />
+				</span>
+			) : null,
 	},
 	{
 		id: "ip",
 		header: m.audit_col_ip,
 		hideable: true,
 		cellClassName: "font-mono text-muted-foreground text-xs",
+		csv: (row) => row.ip,
 		cell: (row) => row.ip,
 	},
 ];

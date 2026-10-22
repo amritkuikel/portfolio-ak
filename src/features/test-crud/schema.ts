@@ -6,10 +6,10 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { bulkIdsSchema, type Paged } from "@/lib/list/paging";
 import { phone } from "@/lib/phone";
 import type { SafeHtml } from "@/lib/safe-html";
+import { SLUG_PATTERN } from "@/lib/slug";
 import { currency, optionalText, required, richText, tags } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { TEST_CRUD_STATUSES, type TestCrudStatus } from "./constants";
-import { SLUG_PATTERN } from "./search";
 
 export * from "./constants";
 
@@ -65,20 +65,14 @@ export const toTestCrudInput = (values: z.output<typeof testCrudFormSchema>): Te
 	images: values.images.map(({ id, alt }) => ({ id, alt })),
 });
 
-/** Lowercase ASCII slug from a title ("Hello, World!" -> "hello-world"); "" for non-Latin titles. */
-export const slugify = (title: string) =>
-	title
-		.normalize("NFKD")
-		.replace(/[̀-ͯ]/g, "")
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.slice(0, 80)
-		.replace(/-+$/g, "");
-
 // Server function inputs (the URL contract, list input included, is in ./search.ts).
 export const testCrudIdsSchema = bulkIdsSchema(100);
 export const testCrudIdSchema = z.object({ id: z.uuid() });
+/** The slug check while typing: is `slug` free for the item `id` (absent for a new one)? */
+export const testCrudSlugCheckSchema = z.object({
+	slug: z.string().max(80).regex(SLUG_PATTERN),
+	id: z.uuid().optional(),
+});
 export const testCrudStatusUpdateSchema = z.object({ id: z.uuid(), status: z.enum(TEST_CRUD_STATUSES) });
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRightIcon, DatabaseIcon, ScrollTextIcon, ShieldCheckIcon, UsersIcon } from "lucide-react";
+import { DonutChart } from "@/components/charts";
+import { ActivityFeed } from "@/components/data-display/activity-feed";
 import { StatCard } from "@/components/data-display/stat-card";
 import { EmptyState } from "@/components/page/empty-state";
+import { FormCard } from "@/components/page/form-layout";
 import { Page, PageHeader } from "@/components/page/page";
 import { Button } from "@/components/ui/button";
 import { permittedCommands } from "@/features/admin/commands";
@@ -10,7 +13,8 @@ import type { Dashboard as DashboardData } from "@/features/admin/dashboard";
 import { dashboardQueryOptions } from "@/features/admin/queries";
 import { AUDIT_ACTION_LABELS } from "@/features/audit/labels";
 import { usePermissions } from "@/features/rbac/can";
-import { formatDateTime, formatNumber, formatRelativeTimeFrom } from "@/lib/i18n/intl";
+import { TEST_CRUD_STATUS } from "@/features/test-crud/labels";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -37,35 +41,50 @@ export function Dashboard() {
 			) : null}
 			<div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
 				{data.activity ? <Activity events={data.activity} now={data.generatedAt} /> : null}
-				<section
-					aria-labelledby="dashboard-actions"
-					className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4 shadow-xs"
-				>
-					<h2 id="dashboard-actions" className="text-heading">
-						{m.dashboard_actions_title()}
-					</h2>
-					<ul className="flex flex-col gap-1">
-						{commands.map((command) => (
-							<li key={command.id}>
+				<div className="flex min-w-0 flex-col gap-4">
+					{data.testCrud ? (
+						<FormCard title={m.dashboard_status_title()} description={m.dashboard_status_description()}>
+							<DonutChart
+								label={m.dashboard_status_title()}
+								index="status"
+								series={[{ key: "count", label: m.dashboard_status_count() }]}
+								data={[
+									{ status: TEST_CRUD_STATUS.published.label(), count: data.testCrud.published },
+									{ status: TEST_CRUD_STATUS.draft.label(), count: data.testCrud.draft },
+								]}
+							/>
+						</FormCard>
+					) : null}
+					<section
+						aria-labelledby="dashboard-actions"
+						className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4 shadow-xs"
+					>
+						<h2 id="dashboard-actions" className="text-heading">
+							{m.dashboard_actions_title()}
+						</h2>
+						<ul className="flex flex-col gap-1">
+							{commands.map((command) => (
+								<li key={command.id}>
+									<Button asChild variant="ghost" className="w-full justify-start">
+										<Link to={command.to}>
+											<command.icon aria-hidden className="text-primary" />
+											{command.label()}
+										</Link>
+									</Button>
+								</li>
+							))}
+							<li>
 								<Button asChild variant="ghost" className="w-full justify-start">
-									<Link to={command.to}>
-										<command.icon aria-hidden className="text-primary" />
-										{command.label()}
+									<Link to="/admin/settings/appearance">
+										<ArrowRightIcon aria-hidden className="text-muted-foreground rtl:rotate-180" />
+										{m.dashboard_action_appearance()}
 									</Link>
 								</Button>
 							</li>
-						))}
-						<li>
-							<Button asChild variant="ghost" className="w-full justify-start">
-								<Link to="/admin/settings/appearance">
-									<ArrowRightIcon aria-hidden className="text-muted-foreground rtl:rotate-180" />
-									{m.dashboard_action_appearance()}
-								</Link>
-							</Button>
-						</li>
-					</ul>
-					<p className="text-caption text-muted-foreground">{m.dashboard_palette_hint()}</p>
-				</section>
+						</ul>
+						<p className="text-caption text-muted-foreground">{m.dashboard_palette_hint()}</p>
+					</section>
+				</div>
 			</div>
 		</Page>
 	);
@@ -107,37 +126,28 @@ function Stats({ data }: { data: DashboardData }) {
 
 function Activity({ events, now }: { events: NonNullable<DashboardData["activity"]>; now: string }) {
 	return (
-		<section aria-labelledby="dashboard-activity" className="min-w-0 rounded-lg border bg-card shadow-xs">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-4 py-3">
-				<h2 id="dashboard-activity" className="text-heading">
-					{m.dashboard_activity_title()}
-				</h2>
+		<FormCard
+			title={m.dashboard_activity_title()}
+			action={
 				<Button asChild variant="link" size="sm" className="h-auto min-h-6 p-0">
 					<Link to="/admin/audit">{m.dashboard_activity_all()}</Link>
 				</Button>
-			</div>
+			}
+		>
 			{events.length === 0 ? (
-				<EmptyState icon={ScrollTextIcon} description={m.dashboard_activity_empty()} className="border-0" />
+				<EmptyState icon={ScrollTextIcon} description={m.dashboard_activity_empty()} className="border-0 py-6" />
 			) : (
-				<ol className="divide-y">
-					{events.map((event) => (
-						<li key={event.id} className="flex min-w-0 items-baseline gap-3 px-4 py-(--row-padding) text-body">
-							<p className="min-w-0 flex-1 truncate">
-								<span className="font-medium">{event.actor.name || event.actor.email}</span>{" "}
-								<span className="text-muted-foreground">{AUDIT_ACTION_LABELS[event.action]()}</span>{" "}
-								{event.target.label ?? event.target.id}
-							</p>
-							<time
-								dateTime={event.createdAt}
-								title={formatDateTime(event.createdAt)}
-								className="shrink-0 text-caption text-muted-foreground"
-							>
-								{formatRelativeTimeFrom(event.createdAt, now)}
-							</time>
-						</li>
-					))}
-				</ol>
+				<ActivityFeed
+					now={now}
+					events={events.map((event) => ({
+						id: event.id,
+						actor: event.actor,
+						action: AUDIT_ACTION_LABELS[event.action](),
+						target: event.target.label ?? event.target.id,
+						at: event.createdAt,
+					}))}
+				/>
 			)}
-		</section>
+		</FormCard>
 	);
 }

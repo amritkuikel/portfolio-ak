@@ -9,6 +9,9 @@ export const listTestCrud = fn(
 export const listTestCrudTags = fn(async (): Promise<string[]> => ["drink", "food", "nepal"]).mockName(
 	"listTestCrudTags",
 );
+export const isTestCrudSlugFree = fn(
+	async (options: { data: { slug: string } }): Promise<boolean> => options.data.slug !== "taken",
+).mockName("isTestCrudSlugFree");
 export const getTestCrud = fn(async (): Promise<TestCrudDetail> => sampleDetail).mockName("getTestCrud");
 export const createTestCrud = fn(async (_options: { data: unknown }): Promise<TestCrudDetail> => sampleDetail).mockName(
 	"createTestCrud",

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { DescriptionList } from "@/components/data-display/description-list";
 import { Button } from "@/components/ui/button";
-import { Demo, ExamplePage, Facts } from "@/features/dev/examples/example-page";
+import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { publicCache } from "@/lib/http/cache-control";
 import { privateHead } from "@/lib/seo";
@@ -31,8 +32,8 @@ function CachingExample() {
 	return (
 		<ExamplePage slug="caching">
 			<Demo title={m.examples_caching_title()} note={m.examples_caching_note()}>
-				<Facts
-					rows={[
+				<DescriptionList
+					items={[
 						{ label: m.examples_caching_set(), value: <code className="text-xs">{CACHE_CONTROL}</code> },
 						{
 							label: m.examples_caching_received(),

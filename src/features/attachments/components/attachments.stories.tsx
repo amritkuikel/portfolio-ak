@@ -5,9 +5,9 @@ import { FieldStory } from "@/components/forms/story-harness";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin, sampleImageAsset } from "../../../../.storybook/mocks/data";
-import type { FieldImage } from "./attachments-field";
-import { AttachmentsField } from "./attachments-field";
 import { CloudImage } from "./cloud-image";
+import type { FieldImage } from "./image-gallery-field";
+import { ImageGalleryField } from "./image-gallery-field";
 
 const image = (n: number, alt = ""): FieldImage => {
 	const id = `6f1c0a52-0b6c-4c43-9a55-1f4a6f0d0${String(n).padStart(3, "0")}`;
@@ -17,7 +17,7 @@ const image = (n: number, alt = ""): FieldImage => {
 function Editor({ initial }: { initial: FieldImage[] }) {
 	return (
 		<FieldStory schema={z.array(z.custom<FieldImage>())} defaultValue={initial} onSubmit={fn()}>
-			<AttachmentsField label={m.test_crud_field_image()} scope="test-crud" max={8} />
+			<ImageGalleryField label={m.test_crud_field_image()} scope="test-crud" max={8} />
 		</FieldStory>
 	);
 }
@@ -32,11 +32,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Ordered images: the first is the cover; each has alt text, move and remove buttons. */
+/** Ordered images: the first is the cover; each has alt text, a drag handle (Alt + ↑/↓ moves it too) and remove. */
 export const WithImages: Story = {
 	play: async ({ canvas, userEvent }) => {
 		await expect(canvas.getByText(m.attachments_field_cover())).toBeVisible();
-		await userEvent.click(canvas.getByRole("button", { name: m.attachments_field_move_up({ n: formatNumber(2) }) }));
+		canvas
+			.getByRole("button", { name: m.sortable_handle({ item: m.attachments_field_image_n({ n: formatNumber(2) }) }) })
+			.focus();
+		await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
 		await expect(canvas.getByRole("textbox", { name: m.attachments_field_alt({ n: formatNumber(2) }) })).toHaveValue(
 			"A plate of momo",
 		);

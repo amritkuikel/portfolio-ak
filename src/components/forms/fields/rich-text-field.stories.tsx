@@ -10,9 +10,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** Tiptap loads in the browser (the server renders a same-size placeholder). Its first, cold load in a
- * parallel story run can take well over 10s, hence the generous wait. */
+ * parallel story run can take well over 20s, so the loader imports it before the story renders. */
 export const RichText: Story = {
 	args: { label: "" },
+	loaders: [async () => ({ editor: await import("./rich-text-editor") })],
 	render: () => (
 		<FieldStory schema={richText({ max: 2000 })} defaultValue="<p>Hello <strong>Kathmandu</strong></p>">
 			<RichTextField label={m.showcase_body()} />

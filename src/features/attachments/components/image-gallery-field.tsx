@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownIcon, ArrowUpIcon, ImagePlusIcon, Trash2Icon, XIcon } from "lucide-react";
+import { ImagePlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import { useFieldContext } from "@/components/forms/contexts";
 import { FieldLabelText, FieldMessages, useFieldA11y } from "@/components/forms/field-shell";
+import { moveItem, SortableList } from "@/components/forms/fields/sortable-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useCan } from "@/features/rbac/can";
 import { discardImageUpload, getUploadSettings } from "@/functions/attachments";
 import { formatNumber } from "@/lib/i18n/intl";
@@ -28,16 +30,17 @@ export const uploadSettingsQueryOptions = () => ({
 });
 
 /**
- * Images for a form: upload (pick or drop, several at once, with progress and
- * cancel), reorder (buttons, or drag and drop), alt text, remove. The first image
- * is the cover. The value is FieldImage[]; the form sends ids + alt text, and the
- * item's save links them (uploads stay "pending" until then).
+ * A gallery of images for a form: upload (pick or drop files, several at once, with
+ * progress and cancel), reorder (the kit's SortableList: drag, keyboard drag or
+ * Alt + ↑/↓ on the handle), alt text, remove. The first image is the cover. The value
+ * is FieldImage[]; the form sends ids + alt text, and the item's save links them
+ * (uploads stay "pending" until then).
  *
  * `onBusyChange` reports whether uploads are in progress (the form refuses to
  * submit meanwhile). Without attachments:upload the existing images can still be
  * ordered, described and removed, but not added.
  */
-export function AttachmentsField({
+export function ImageGalleryField({
 	label,
 	scope,
 	max,
@@ -54,7 +57,6 @@ export function AttachmentsField({
 	const settings = useQuery({ ...uploadSettingsQueryOptions(), enabled: canUpload });
 	const [uploads, setUploads] = useState<Upload[]>([]);
 	const [announcement, setAnnouncement] = useState("");
-	const [dragging, setDragging] = useState<number | null>(null);
 	const [dropActive, setDropActive] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	/** Uploads made in this form session: removing one before saving deletes it at once. */
@@ -112,15 +114,8 @@ export function AttachmentsField({
 		}
 	};
 
-	const move = (from: number, to: number) => {
-		if (to < 0 || to >= images.length || from === to) return;
-		const next = [...images];
-		const [item] = next.splice(from, 1);
-		if (!item) return;
-		next.splice(to, 0, item);
-		setImages(next);
-		setAnnouncement(m.attachments_field_moved({ n: formatNumber(to + 1) }));
-	};
+	// SortableList announces the move itself.
+	const move = (from: number, to: number) => setImages(moveItem(images, from, to));
 	const remove = (index: number) => {
 		const image = images[index];
 		if (!image) return;
@@ -149,36 +144,25 @@ export function AttachmentsField({
 			</legend>
 
 			{images.length === 0 ? <p className="text-muted-foreground text-sm">{m.attachments_field_empty()}</p> : null}
-			<ol className="grid gap-3 sm:grid-cols-2">
-				{images.map((image, index) => {
+			<SortableList
+				items={images}
+				layout="grid"
+				getId={(image) => image.id}
+				getLabel={(_, index) => m.attachments_field_image_n({ n: formatNumber(index + 1) })}
+				onMove={move}
+				renderItem={(image, index, handle) => {
 					const n = formatNumber(index + 1);
 					return (
-						<li
-							key={image.id}
-							className={cn("flex gap-3 rounded-md border bg-card p-2", dragging === index && "opacity-50")}
-							draggable
-							onDragStart={(event) => {
-								setDragging(index);
-								event.dataTransfer.effectAllowed = "move";
-							}}
-							onDragEnd={() => setDragging(null)}
-							onDragOver={(event) => {
-								if (dragging !== null) event.preventDefault();
-							}}
-							onDrop={(event) => {
-								if (dragging === null) return;
-								event.preventDefault();
-								event.stopPropagation();
-								move(dragging, index);
-								setDragging(null);
-							}}
-						>
-							<CloudImage
-								image={image.preview}
-								variant="thumb"
-								alt=""
-								className="size-20 shrink-0 rounded border object-cover"
-							/>
+						<div className="flex h-full gap-3 rounded-md border bg-card p-2">
+							<div className="flex flex-col items-center gap-1">
+								<CloudImage
+									image={image.preview}
+									variant="thumb"
+									alt=""
+									className="size-20 shrink-0 rounded border object-cover"
+								/>
+								{handle}
+							</div>
 							<div className="flex min-w-0 flex-1 flex-col gap-2">
 								<div className="flex items-center justify-between gap-2">
 									<span className="font-medium text-sm">{m.attachments_field_image_n({ n })}</span>
@@ -195,43 +179,21 @@ export function AttachmentsField({
 									onChange={(event) => setAlt(index, event.target.value)}
 									onBlur={field.handleBlur}
 								/>
-								<div className="flex gap-1">
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon"
-										aria-label={m.attachments_field_move_up({ n })}
-										disabled={index === 0}
-										onClick={() => move(index, index - 1)}
-									>
-										<ArrowUpIcon aria-hidden />
-									</Button>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon"
-										aria-label={m.attachments_field_move_down({ n })}
-										disabled={index === images.length - 1}
-										onClick={() => move(index, index + 1)}
-									>
-										<ArrowDownIcon aria-hidden />
-									</Button>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon"
-										className="ms-auto"
-										aria-label={m.attachments_field_remove({ n })}
-										onClick={() => remove(index)}
-									>
-										<Trash2Icon aria-hidden />
-									</Button>
-								</div>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="ms-auto"
+									aria-label={m.attachments_field_remove({ n })}
+									onClick={() => remove(index)}
+								>
+									<Trash2Icon aria-hidden />
+								</Button>
 							</div>
-						</li>
+						</div>
 					);
-				})}
-			</ol>
+				}}
+			/>
 
 			{uploads.length > 0 ? (
 				<ul className="flex flex-col gap-2" data-testid="uploads">
@@ -245,10 +207,9 @@ export function AttachmentsField({
 								)}
 							</span>
 							{upload.error ? null : (
-								<progress
-									className="h-2 w-24 accent-primary"
+								<Progress
+									className="w-24"
 									value={Math.round(upload.progress * 100)}
-									max={100}
 									aria-label={m.attachments_field_uploading({ name: upload.name })}
 								/>
 							)}
@@ -284,7 +245,8 @@ export function AttachmentsField({
 							dropActive && "border-primary bg-accent/50",
 						)}
 						onDragOver={(event) => {
-							if (dragging !== null || !enabled) return;
+							// Files only: dragging an image inside the gallery is SortableList's.
+							if (!enabled || !event.dataTransfer.types.includes("Files")) return;
 							event.preventDefault();
 							setDropActive(true);
 						}}

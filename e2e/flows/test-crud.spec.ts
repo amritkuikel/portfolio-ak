@@ -20,7 +20,7 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 	const edited = `${title} edited`;
 
 	await open(page, "/admin/test-crud/new");
-	await page.getByLabel("Title").fill(title);
+	await page.getByLabel("Title", { exact: true }).fill(title);
 	const slug = await page.getByLabel("Slug").inputValue();
 	expect(slug).not.toBe("");
 	await page.getByRole("button", { name: "Create item" }).click();
@@ -32,7 +32,7 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 
 	await rowAction(page, title, "Edit");
 	await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
-	await page.getByLabel("Title").fill(edited);
+	await page.getByLabel("Title", { exact: true }).fill(edited);
 	await page.getByRole("button", { name: "Save changes" }).click();
 	await expect(page.getByText("Changes saved.")).toBeVisible();
 

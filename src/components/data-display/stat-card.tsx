@@ -1,14 +1,16 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { Sparkline } from "@/components/charts/sparkline";
 import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 
 /**
- * One number with its label: the dashboard's building block (Task 37 grows the kit
- * around it). `delta` is a change over a period ("+4 this week"), green when it
- * grows, red when it shrinks; `hint` is a line of context under the value. With `to`,
- * the whole card is one link to the section it counts.
+ * One number with its label: the dashboard's building block. `delta` is a change
+ * over a period ("+4 this week"), green when it grows, red when it shrinks; `hint` is
+ * a line of context under the value; `trend` draws the recent values as a sparkline
+ * (decorative: say the trend in `delta` or `hint`). With `to`, the whole card is
+ * one link to the section it counts.
  */
 export function StatCard({
 	label,
@@ -16,6 +18,7 @@ export function StatCard({
 	icon: Icon,
 	delta,
 	hint,
+	trend,
 	to,
 	className,
 }: {
@@ -24,6 +27,8 @@ export function StatCard({
 	icon?: LucideIcon;
 	delta?: { value: number; label: string };
 	hint?: ReactNode;
+	/** Recent values, oldest first (at least two). */
+	trend?: ReadonlyArray<number>;
 	to?: LinkProps["to"];
 	className?: string;
 }) {
@@ -60,6 +65,12 @@ export function StatCard({
 					) : null}
 					{hint ? <span className="text-muted-foreground">{hint}</span> : null}
 				</div>
+			) : null}
+			{trend ? (
+				<Sparkline
+					values={trend}
+					tone={!delta || delta.value === 0 ? "muted" : delta.value > 0 ? "success" : "danger"}
+				/>
 			) : null}
 		</div>
 	);

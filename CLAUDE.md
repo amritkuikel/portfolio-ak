@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34, 35 and 36 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–37 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
@@ -16,11 +16,11 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | --- | --- |
 | [architecture.md](docs/guides/architecture.md) | Layers, a request end to end, where to start for each task |
 | [conventions.md](docs/guides/conventions.md) | File map, building blocks, list-page recipe, breadcrumbs, command palette, rules |
-| [design-system.md](docs/guides/design-system.md) | Graphite tokens, accent/radius/density presets, contrast test, the shells, theming a project |
+| [design-system.md](docs/guides/design-system.md) | Graphite tokens, accent/radius/density presets, contrast test, the shells, the component kit, theming a project |
 | [routing-data.md](docs/guides/routing-data.md) | Routes, loaders (SSR, no refetch), streaming, server functions, errors, server-only code |
 | [search-filters-masking.md](docs/guides/search-filters-masking.md) | URL search params, the list contract, filters, route masking, path params |
 | [tables-filters.md](docs/guides/tables-filters.md) | DataTable, FilterBar and chips, Pagination, bulk and row actions |
-| [forms.md](docs/guides/forms.md) | useAppForm, fields, validation, server field errors, rich text |
+| [forms.md](docs/guides/forms.md) | useAppForm, fields, composite fields (lists, blocks, slug, localized, relations), validation, server field errors, rich text |
 | [state.md](docs/guides/state.md) | Query vs DB vs Store vs Form vs URL; optimistic updates |
 | [rbac.md](docs/guides/rbac.md) | Roles, permissions, guarding functions/routes/UI, escalation rules |
 | [attachments.md](docs/guides/attachments.md) | Cloudinary uploads (signed, direct, verified), showing images |
@@ -38,7 +38,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 
 - **App:** TanStack Start 1.168 + Router 1.170 (file routes, server functions), Nitro 3 beta, deployed to Vercel; React 19.3, TypeScript 6 strict.
 - **TanStack libraries:** Query 5, DB 0.5, Form 1.33, Store 0.11.
-- **UI:** Tailwind 4.3 + shadcn/ui (Radix), lucide icons.
+- **UI:** Tailwind 4.3 + shadcn/ui (Radix), lucide icons; TanStack Table 9, Recharts 3 (lazy), dnd-kit (`@dnd-kit/react`).
 - **Validation, i18n, env:** Zod 4.6 (aliased, jitless), Paraglide 2.25, T3 Env.
 - **Data and auth:** Better Auth 1.7, Drizzle 0.45 + Neon Postgres (PGlite in tests).
 - **Services:** Cloudinary (REST, no SDK), React Email 6 + Resend, Sentry 11, PostHog.
@@ -79,9 +79,9 @@ src/functions/         server functions: middleware + validator + one call into 
 src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL), auth, email, rbac, attachments, seo,
                        <feature>/repository.ts + service.ts, Nitro routes (cron, manifest)
 src/middleware/        security headers + CSP, CSRF, logging, errors, auth/permissions, dev-only
-src/components/        shared UI: admin-shell/, auth-shell/, app-header/, brand/, data-display/, page/, data-table/, filters/,
+src/components/        shared UI: admin-shell/, auth-shell/, app-header/, brand/, data-display/, charts/, page/, data-table/, filters/,
                        navigation/, dialogs/, forms/, layout/, errors/, ui/ (shadcn)
-src/hooks/             React hooks: useListPage, useListQuery
+src/hooks/             React hooks: useListPage, useListQuery, useHotkeys, useDebouncedValue, useMediaQuery
 src/lib/               isomorphic helpers by area: list/ (URL params, paging, serialization), env/, i18n/, http/,
                        observability/, start/ (Start runtime: routes and server only); query, seo, validation, errors, zod
 messages/              en.json, ne.json        drizzle/   SQL migrations        public/   icons, og-default.png
@@ -95,7 +95,7 @@ docs/                  PLAN.md, decisions.md, guides/, history/ (past reviews)
 ## Golden rules
 
 1. **Server-render everything.** The loader awaits `ensureQuery(queryClient, opts)` (`src/lib/query.ts`; Query 5.104 deprecated `ensureQueryData`, 0111) and the component calls `useSuspenseQuery(opts)`. No first-paint fetching in effects. Loaders return only what `head`/`staticData` need.
-2. **Reuse before writing.** Pages are built from `src/components/page`, `data-table`, `filters`, `navigation`, `dialogs` and `forms`. Feature code supplies columns, filters, fields and actions. A pattern used twice becomes shared.
+2. **Reuse before writing.** Pages are built from `src/components/page`, `data-table`, `data-display`, `charts`, `filters`, `navigation`, `dialogs` and `forms` (the kit: design-system.md, "Components"). Feature code supplies columns, filters, fields and actions. A pattern used twice becomes shared.
 3. **The URL is the state** for lists (`q`, filters, `sort`, `page`, `pageSize`). These come from the shared list contract: `src/lib/list/` (params, paging, URL serialization) on both sides, plus `src/server/db/list.ts` for SQL. Filters go in `<FilterBar>`, which works without JS. List pages call `tableListInput` + `loadList` in the loader and `useListPage` in the component, which also wires `<Pagination>` (0116).
 4. **The server is the authority.** Every protected server function runs `requirePermission("<resource>:<action>")` (`tests/server/guarded-functions.test.ts` makes every file in `src/functions` declare its guards), validates input with the feature's Zod schema, and calls into `src/server/**`. Routes add `assertRoutePermission` in `beforeLoad`; the UI only hides (`useCan`, `<Can>`) what the server would refuse.
 5. **Server-only code stays server-only:** `src/server/**` and `*.server.ts`, enforced by Start import protection and tests.
@@ -144,6 +144,8 @@ Start with `pnpm new:feature <name>` (an admin section in this shape that passes
 - **Route options are in every page's JavaScript** (0151): only `component`, `pendingComponent`, `errorComponent` and `notFoundComponent` are split out, and only when written inline in `createFileRoute("…")({ … })` (not spread or returned by a helper). Route files import a feature's `search.ts` (URL contract), never `schema.ts` (form schemas). `node scripts/check-bundle.ts` after a build shows the cost.
 - **No static Sentry import in browser code** (0152): `start.ts`, function middleware and components run in the browser too, and one static `@sentry/tanstackstart-react` import puts the whole SDK in every page. Use `src/lib/observability/sentry-client.ts`, or import the SDK inside `.server()`.
 - **Server-only imports in middleware go inside `.server()`** (`await import("@/server/…")`). A dynamic import in an exported helper is still in the client graph, and import protection warns in dev.
+- **Heavy fields aren't on `useAppForm`** (0168): every page with a form loads the registered fields. The composite fields (sortable lists, blocks, slug, localized, relations, the image gallery) are imported where used and rendered inside `form.AppField`. Dialogs that open on click are `React.lazy`, or their forms load with the page.
+- **Confirms are `await useConfirm()(…)`** (0168): the shells mount `ConfirmProvider` (`AdminShell`, the `/dev` layout). A new shell that asks for confirmation mounts one too; there is no `ConfirmDialog` any more.
 - **Moving or renaming files:** `src/lib` is grouped by area and Biome enforces the boundaries (0158). Update `knip.json` entries and path mentions in docs with the move.
 
 ### Per area
@@ -152,7 +154,7 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 
 - [routing-data.md](docs/guides/routing-data.md): The root `beforeLoad` and `matches`; Nitro routes.
 - [attachments.md](docs/guides/attachments.md): Images are Cloudinary attachments.
-- [forms.md](docs/guides/forms.md): Form arrays updated from async callbacks; Edits without a version.
+- [forms.md](docs/guides/forms.md): Form arrays updated from async callbacks; A submit while an async validator runs did nothing; Edits without a version.
 - [search-filters-masking.md](docs/guides/search-filters-masking.md): Masked routes need `unmaskOnReload: true`.
 - [rbac.md](docs/guides/rbac.md): Admin guard; Better Auth's `/api/auth/admin/*` endpoints are disabled; Admin actions are audited in their transaction; Impersonated sessions.
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
@@ -162,4 +164,4 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
 - [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.
-- [design-system.md](docs/guides/design-system.md): shadcn's sidebar cookie and `<main>`; No `isMobile` state after hydration; `CommandDialog`'s hidden title; English in shadcn primitives; `aria-label` hiding visible text; platform text after hydration.
+- [design-system.md](docs/guides/design-system.md): shadcn's sidebar cookie and `<main>`; No `isMobile` state after hydration; `CommandDialog`'s hidden title; English in shadcn primitives; `aria-label` hiding visible text; shadcn's chart `<style>` and `Progress` value; Recharts' pie tab stop; non-modal or named Radix overlays; platform text after hydration.

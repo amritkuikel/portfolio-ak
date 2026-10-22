@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
+import { StatusOf } from "@/components/data-display/status-badge";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { CloudImage } from "@/features/attachments/components/cloud-image";
 import { useCan } from "@/features/rbac/can";
 import { formatCurrency, formatDateTime } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { STATUS_LABELS } from "../labels";
+import { STATUS_LABELS, TEST_CRUD_STATUS } from "../labels";
 import type { TestCrudListItem } from "../schema";
 
 /** The title, linking to the edit page for users who may edit. */
@@ -62,16 +63,14 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		sort: "title",
 		cellClassName: "max-w-72",
 		cell: (row) => <TitleCell row={row} />,
+		csv: (row) => row.title,
 	},
 	{
 		id: "status",
 		header: m.test_crud_col_status,
 		hideable: true,
-		cell: (row) => (
-			<Badge variant={row.status === "published" ? "default" : "secondary"} data-testid="status">
-				{STATUS_LABELS[row.status]()}
-			</Badge>
-		),
+		cell: (row) => <StatusOf status={row.status} map={TEST_CRUD_STATUS} />,
+		csv: (row) => STATUS_LABELS[row.status](),
 	},
 	{
 		id: "price",
@@ -80,11 +79,13 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		hideable: true,
 		cellClassName: "whitespace-nowrap tabular-nums",
 		cell: (row) => formatCurrency(row.price),
+		csv: (row) => row.price,
 	},
 	{
 		id: "tags",
 		header: m.test_crud_col_tags,
 		hideable: true,
+		csv: (row) => row.tags.join(", "),
 		cell: (row) => (
 			<div className="flex max-w-56 flex-wrap gap-1">
 				{row.tags.map((tag) => (
@@ -102,5 +103,6 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		hideable: true,
 		cellClassName: "whitespace-nowrap text-muted-foreground text-sm",
 		cell: (row) => formatDateTime(row.updatedAt),
+		csv: (row) => row.updatedAt,
 	},
 ];

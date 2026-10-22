@@ -928,7 +928,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 34 | Foundation: performance, dev speed, i18n tooling, structure, DX | high | Done (decisions 0151–0160) |
 | 35 | Route restructure: portfolio at `/`, demo at `/dev`, a header per section, strip-demo layers | high | Done (decisions 0161–0163) |
 | 36 | "Graphite" design system, admin shell, auth shell, dashboard | high | Done (decisions 0164–0166) |
-| 37 | Admin component kit | high | |
+| 37 | Admin component kit | high | Done (decisions 0168–0172) |
 | 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | |
 | 39 | The dynamic portfolio: tables, admin, media library, public reads | high | |
 | 40 | "Himal" portfolio redesign at `/` | xhigh | |
@@ -1146,41 +1146,26 @@ The owner runs one task per session and clears the context between tasks. A sess
   - **The palette's cmdk quirk:** after filtering, `aria-activedescendant` can briefly name a removed item (axe flags it while the dialog is open); the review never opens the palette, and its story closes it before the check (0165).
   - **Translations** were written by hand in both languages (then `pnpm i18n:check`), not machine-translated first.
 
-### Task 37: Admin component kit
+### Task 37: Admin component kit (done)
 
-**Goal:** everything an admin page needs, as shared, storied, accessible components, so features only supply data, columns, fields and actions.
-
-**Steps:**
-1. **Remaining shadcn primitives**, restyled to Graphite: tabs, scroll-area, hover-card, accordion, collapsible, toggle, toggle-group, chart, progress, alert, spinner, button-group, context-menu.
-2. **`components/page/`:** `PageHeader` v2 (title, description, actions, a tabs slot), `DetailLayout` (main plus aside), `SettingsLayout` (side navigation), `PageTabs` (route-based tabs from `linkOptions`), `StickyFormBar` (save and cancel on long forms), `FormSection` and `FormCard`.
-3. **`components/data-display/`:** `StatCard` (from Task 36, plus a sparkline), `DescriptionList`, `StatusBadge` (a per-feature map from status to tone), `UserCell` and `Avatar`, `RelativeTime` (Intl, both locales, hydration-safe), `CopyButton`, `Timeline`/`ActivityFeed` (audit events), and `EmptyState` v2 (icon, title, text, a primary and a secondary action, "nothing yet" vs "no matches").
-4. **`components/charts/`:**
-   - shadcn `chart.tsx` on Recharts 3 (check the shadcn docs' v3 notes: `var(--chart-1)`, not `hsl(...)`).
-   - `AreaChart`, `BarChart`, `DonutChart` and `Sparkline` wrappers, loaded with `React.lazy`.
-   - `ChartContainer` has a fixed aspect ratio and renders a same-size skeleton on the server, so there is no layout shift.
-5. **`components/dialogs/`:** `ConfirmProvider` plus `useConfirm()` (a promise API, mounted once in the shells), replacing every per-page confirm state. `FormDialog` and `FormSheet` wrap `AppForm` with submit and cancel, `StaleVersionAlert`, `UnsavedChangesGuard` and the server-error helpers.
-6. **`components/data-table/` v2 on TanStack Table** (`@tanstack/react-table`, in manual sorting and pagination mode):
-   - Keep the public API (`DataTableColumn<Row>`, `DataTableProps`, `BulkSelection` in `data-table.tsx`) or migrate its callers (Test CRUD, users, audit, `/dev/examples/data-table`, the scaffolder templates) in this task.
-   - Keep the no-JS sort links (`SearchLink`) and the URL contract.
-   - Add column visibility (merge `DataTableColumnsMenu`), selection across the page with a bulk bar, `RowActions` (items with `permission`, hidden unless `can()`), a sticky header, density from preferences, and a pinned first column on narrow screens.
-   - CSV export (`src/lib/csv.ts`) and saved views (`localStorage`) move from `/dev/examples/list-extras` into the toolbar. Column resizing and row expansion become a recipe.
-7. **`components/forms/fields/`:**
-   - **`AsyncComboboxField`:** server search, debounced, built on Command.
-   - **`RelationField`:** picks records of another feature.
-   - **`SortableListField`:** dnd-kit, with the keyboard sensor and localized screen-reader announcements. Decide between `@dnd-kit/react` (new) and `@dnd-kit/core` + `@dnd-kit/sortable`, check React 19 support, and record it.
-   - **`ImageGalleryField`:** attachments, sortable, alt text; it extends `features/attachments/components/attachments-field.tsx`.
-   - **`LocalizedField` and `LocalizedRichTextField`:** value `{ en, ne }`, en/ne tabs, a "Nepali missing" badge; use `withFieldGroup`.
-   - **`BlocksField`:** a typed discriminated union, add, remove and reorder, and a subform per block type through a render prop.
-   - **`SlugField`:** generated from a title through a linked field (`onChangeListenTo`), editable, with an async uniqueness validator (a passed server function, debounced).
-   - **`KeyValueField`.**
-8. **`src/hooks/`:** `useHotkeys` (with `Kbd` hints), `useDebouncedValue`, `useMediaQuery`.
-9. **Bundle:** the users and roles routes add about 90–104 kB today (10.4). Find what pulls the form fields into the page chunk (dialogs imported at module level) and lazy-load dialogs that open on click.
-10. **Wiring and docs:**
-    - Rebuild `/dev/examples` on the kit; delete superseded internals.
-    - Stories for every component (both projects, a11y passes) and jsdom tests for the interactive ones (sortable via keyboard, async combobox, confirm).
-    - The `design-system.md` guide gets a "Components" section.
-
-**Acceptance:** every kit component has a story passing in both Storybook projects and is used somewhere (knip clean); `/dev/examples` uses only kit components; the entry chunk doesn't grow; all gates are green.
+- **Primitives:** tabs, scroll-area, hover-card, accordion, collapsible, toggle, toggle-group, chart, progress, alert, spinner, button-group, context-menu (shadcn CLI and registry; its `cn` package imports reverted again). Restyled: alert has `info`/`success`/`warning`/`destructive` in the status tones; tabs and toggles use `--control-height`; inactive tabs use `text-muted-foreground` (4.49:1 before); the spinner's label is a message; `Progress` passes `value` to Radix (shadcn's copy had no `aria-valuenow`); `ScrollArea` takes `label` for a focusable viewport; `chart.tsx` sets `--color-<key>` inline instead of injecting a `<style>`, and prints numbers with `formatNumber`. Story: `UI/Primitives`.
+- **Page (`components/page/`):** `PageHeader` gains a `tabs` slot; `PageTabs`/`PageTab` (`createLink`, spread `linkOptions`: the roles section's Roles | Permissions tabs replaced its button); `DetailLayout`; `SettingsLayout`/`SettingsNavLink` (the Appearance page); `FormSection`, `FormCard`, `StickyFormBar` (`form-layout.tsx`; Test CRUD's form uses the bar); `EmptyState` v2 (`variant` `empty`/`no-matches`, `primaryAction`, `secondaryAction`; callers migrated).
+- **Data display:** `StatCard` `trend` (a `Sparkline`); `DescriptionList`; `StatusOf` + `defineStatuses` (`TEST_CRUD_STATUS`; users and the examples use status badges); `UserAvatar`/`UserCell` (moved from the user menu; users and audit columns); `RelativeTime` (server `now`, then one shared minute clock); `CopyButton` (audit request ids); `Timeline`/`ActivityFeed` (the dashboard's activity).
+- **Charts (0171):** `AreaChart`, `BarChart`, `DonutChart` (Recharts 3.10, `React.lazy` + `ClientOnly` into a fixed-aspect `ChartFrame` with a server skeleton and a visually hidden data table; the drawing `aria-hidden`, the pie's `rootTabIndex={-1}`); `Sparkline` in SVG. The dashboard shows Test CRUD by status as a donut.
+- **Dialogs:** `ConfirmProvider` + `useConfirm()` (a promise; mounted in `AdminShell`, the `/dev` layout and Storybook) replaced `ConfirmDialog` and every per-page confirm state (Test CRUD, users, roles, the data-table example, the scaffolder template). `FormDialog`/`FormSheet` (inside `form.AppForm`: error summary, stale alert, Submit/Cancel, a discard confirm, the unsaved guard); the three RBAC dialogs use `FormDialog`.
+- **DataTable v2 (0169):** on `@tanstack/react-table` 9.3 in manual mode, same column API plus `csv`; `toolbar`/`activeFilters` slots; a button group with saved views (`savedViews`), CSV (`exportName`) and the Columns menu (`DataTableColumnsMenu` merged in and deleted); `rowActions` returns `RowAction` data with `permission`/`hidden`/`destructive`/`separated`, also on right-click (non-modal); no actions column when no row has actions; a sticky header in a focusable frame past 15 rows; the first column pinned on phones. Callers migrated: Test CRUD, users, roles, audit, `/dev/examples/data-table` and `list-extras`, the scaffolder templates.
+- **Fields (0168, 0170, 0172):** `AsyncComboboxField` and `RelationField` (Query + Command, debounced, `shouldFilter={false}`); `SortableList` (`@dnd-kit/react` 0.5.1 exact: Space/arrows/Space, Alt + ↑/↓, localized announcements) with `SortableListField`, `BlocksField` (typed union, collapsible blocks kept mounted), `KeyValueField`; `ImageGalleryField` (renamed from `AttachmentsField`, sortable via `SortableList`, the kit's `Progress`); `LocalizedField`/`LocalizedRichTextField` (`withFieldGroup`, en/ne tabs, "Nepali missing", a failed submit opens the tab with the error); `SlugField` + `slugValidators` (linked to a dotted source path, debounced server check re-run through `onChangeListenTo`; Test CRUD uses a new guarded `isTestCrudSlugFree`). None is registered on `useAppForm`. `slugify`/`SLUG_PATTERN` moved to `src/lib/slug.ts`.
+- **Hooks:** `useHotkeys` + `useHotkeyLabel` (the palette's Ctrl/⌘ K and the topbar hint use them), `useDebouncedValue`, `useMediaQuery`.
+- **Bundle (0168):** the users and roles pages lazy-load their dialogs: users 100.3 → 50.5 kB, roles 86.9 → 37.7 kB gzip on top of the root.
+- **`/dev/examples`:** the frame uses `FormCard` and `DescriptionList` (`Facts` deleted); new `components` and `fields` pages (21 examples); list-extras uses the table's own CSV and views.
+- **Found on the way:** a submit pressed while an async validator ran was silently dropped by TanStack Form (`canSubmit` is false while `isFieldsValidating`, already during the debounce); the shared `Form` now waits for validation (0172, jsdom test). Storybook pre-bundles the lazily loaded libraries (`optimizeDeps.include`), and the chart and rich-text stories preload their chunks in a loader.
+- **Tests:** jsdom: confirm promise, async combobox (debounce), sortable list and image gallery from the keyboard, key-value, slug linking, the async submit; unit: `matchesHotkey`; PGlite: `isSlugFree`. `pnpm test`: 86 files, 656 tests. Storybook: 354 story tests (both passes; new: `UI/Primitives`, `Data display/Kit`, `Data display/Charts`, `Dialogs/Kit`, `Page/Layouts`, `Forms/Composite fields`, and the DataTable's context menu, columns menu, saved views and long page). `pnpm test:e2e`: 700 passed (the two new example pages in the review). The review caught the table frame without `relative` (an `sr-only` span widened phone pages) and `StickyFormBar`'s negative-margin bleed (wider than the `/dev` page padding at 768); both fixed. The flows now match the Title field exactly (the slug field's "Follow the Title" button) and the conflict flow waits for the save's POST (the slug check is a GET).
+- **Docs:** design-system.md "Components" and five pitfalls; tables-filters.md (DataTable v2); forms.md (composite fields, the submit pitfall); recipes.md (resizable columns and expandable rows; CSV and views are built in); conventions, attachments, README, CLAUDE.md; decisions 0168–0172.
+- **Deviations:**
+  - **Entry JS grew 1.7 kB gzip** (236.3 → 238.0, within the 240 kB budget): the two new example routes and longer preload lists of shared chunks in the entry; no kit code is in it (a loader importing the components page module had pulled 150 kB in, now fixed by importing its query from `queries.ts`).
+  - **`Sparkline` is SVG,** not a lazy Recharts wrapper; **pagination isn't a TanStack Table feature** (rows are one server page, `Pagination` stays links).
+  - **`EmptyState` stays in `components/page/`** (the plan listed it under data display).
+  - **Decision numbers start at 0168:** 0167 was taken by an uncommitted e2e change that left the working tree during this task.
 
 ### Task 38: The CRUD standard
 

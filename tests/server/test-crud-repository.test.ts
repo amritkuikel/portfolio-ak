@@ -10,6 +10,7 @@ import {
 	deleteTestCrud,
 	getPublishedTestCrud,
 	getTestCrud,
+	isSlugFree,
 	listPublishedTestCrud,
 	listTestCrud,
 	listTestCrudTags,
@@ -76,6 +77,16 @@ const pending = async (ownerId = USER_ID) => {
 };
 const liveAttachments = async () =>
 	(await db.select({ total: count() }).from(schema.attachment).where(isNull(schema.attachment.deletedAt)))[0]?.total;
+
+describe("isSlugFree", () => {
+	it("is free when no item has the slug, or only the item being edited", async () => {
+		expect(await isSlugFree(db, "first-item")).toBe(true);
+		const created = await createTestCrud(db, input(), opts());
+		expect(await isSlugFree(db, "first-item")).toBe(false);
+		expect(await isSlugFree(db, "first-item", created.id)).toBe(true);
+		expect(await isSlugFree(db, "another-item")).toBe(true);
+	});
+});
 
 describe("create and read", () => {
 	it("stores every column, sanitizes the body and links the creator and images in order", async () => {
