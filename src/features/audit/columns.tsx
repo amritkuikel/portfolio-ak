@@ -4,8 +4,8 @@ import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { AUDIT_ACTION_LABELS, AUDIT_FIELD_LABELS, AUDIT_TARGET_LABELS } from "../labels";
-import type { AuditEventItem, AuditValue, AuditValues } from "../schema";
+import { AUDIT_ACTION_LABELS, AUDIT_FIELD_LABELS, AUDIT_TARGET_LABELS } from "./labels";
+import type { AuditEventItem, AuditValue, AuditValues } from "./schema";
 
 /** A summarized value as text: booleans and empty lists localized, lists comma-separated. */
 const valueText = (value: AuditValue | undefined): string => {
@@ -47,7 +47,7 @@ export function AuditChanges({ before, after }: { before: AuditValues | null; af
 }
 
 /** Columns of /admin/audit. */
-export const auditColumns = (): ReadonlyArray<DataTableColumn<AuditEventItem>> => [
+export const auditColumns: ReadonlyArray<DataTableColumn<AuditEventItem>> = [
 	{
 		id: "time",
 		header: m.audit_col_time,

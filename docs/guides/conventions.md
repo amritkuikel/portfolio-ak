@@ -9,6 +9,7 @@ src/
   routes/                 File routes (TanStack Router). Thin: loader, head, staticData, and a page that composes components.
     _public/ _auth/ _authed/ _admin/   Layouts by audience. A folder's route.tsx is a section layout (names its breadcrumb).
   components/             Generic UI, no feature knowledge.
+    crud/                 CrudListPage, useCrudMutation, useCrudForm + CrudForm, NewButton, RecordLink (crud.md)
     ui/                   shadcn primitives (Button, Table, Dialog…). Generated; adjust sparingly.
     page/                 Page, PageHeader (tabs slot), PageTabs, Breadcrumbs, EmptyState, DetailLayout, SettingsLayout,
                           FormSection, FormCard, StickyFormBar, PageHeaderSkeleton, ListSkeleton
@@ -17,7 +18,7 @@ src/
     charts/               AreaChart, BarChart, DonutChart (Recharts, lazy), Sparkline (SVG)
     navigation/           Pagination, SearchLink, useCloseOverlay (masked dialogs)
     filters/              FilterBar + Search/Select/MultiSelect/Boolean/NumberRange/DateRange filters, ActiveFilters chips
-    dialogs/              ConfirmProvider + useConfirm, FormDialog, FormSheet
+    dialogs/              ConfirmProvider + useConfirm, FormDialog, FormSheet, QueryDialog
     forms/                useAppForm + the field library (see the forms showcase at /dev/forms)
     admin-shell/          The admin frame: AdminShell, AppSidebar, Topbar, UserMenu, CommandMenu (design-system.md)
     auth-shell/           The sign-in pages' split screen (AuthShell)
@@ -29,18 +30,19 @@ src/
   features/rbac/          Permission catalog + labels, useCan/<Can>/assertRoutePermission, users and roles UI
   features/admin/         Admin sections and groups, commands (the palette's actions), dashboard, appearance page
   features/dev/examples/  The /dev/examples pages' registry, page frame, schema and in-memory data (development only)
-  features/<name>/        Everything specific to one feature, shared by client and server:
-    search.ts             The URL contract: search and path param schemas, list input (src/lib/list/params.ts). Route files import this
-    schema.ts             Zod input schemas and DTO types (src/lib/validation.ts); never imported by route options (0151)
-    constants.ts labels.ts  Enum values and their localized labels
-    queries.ts            Query keys + queryOptions
-    collection.ts         TanStack DB collection (optimistic list edits)
-    filters.tsx           The list's filter controls + chips (features/test-crud/filters.tsx)
-    components/           Feature components: columns (admin-columns.tsx), form, cards, masked links, dialogs
+  features/<name>/        Everything specific to one feature, shared by client and server (the CRUD standard, crud.md):
+    search.ts             The URL contract (listSchema: search, list input, defaults, filter keys). Route files import this
+    schema.ts             Strict input schemas, DTO schemas (isoDateTime), form values; never imported by route options (0151)
+    keys.ts queries.ts    Query keys (createCrudKeys); queryOptions for reads and mutationOptions for writes
+    columns.tsx filters.tsx  DataTable columns; the filter controls and chip specs (defineFilters)
+    constants.ts labels.ts commands.ts  Enum values, their localized labels, palette actions
+    components/           <name>-list, <name>-form, <name>-detail, <name>-pending, dialogs, cards
   functions/<name>.ts     Server functions: middleware + validator + a one-line call into src/server
   server/                 SERVER-ONLY (import protection + tests enforce it)
     db/                   client, schema/, types.ts (Db, Tx), list.ts (SQL list helpers)
-    <name>/               repository.ts (Drizzle over an injected Db) and service.ts (logic, I/O)
+    db/crud.ts            listPage, findOrThrow, updateVersioned, uniqueViolation, withAudit (crud.md)
+    services.ts           Services: what a handler hands to its service (db, actor, imageStore)
+    <name>/               repository.ts (Drizzle over an injected Db) and service.ts (rules, audit, I/O)
   middleware/             Start middleware (security headers, CSRF, auth, logging, errors)
   hooks/                  React hooks: useListPage, useListQuery
   lib/                    Isomorphic helpers, grouped by area (0158):
@@ -48,6 +50,7 @@ src/
     env/ i18n/ http/      client env schema; intl, Nepali digits, calendar days; CSP, cache-control, redirects
     observability/        Sentry (sentry-client.ts in the browser), PostHog, Web Vitals, log lines
     start/                Needs the Start runtime: routes and server code only, never components (Biome enforces it)
+    crud/                 keys, schema (listSchema, idSchema, isoDateTime), filters (defineFilters), route (routes only)
     *.ts                  query (loadList, ensureQuery), seo, breadcrumbs, validation, phone, errors, tanstack-db, zod, utils
 ```
 
@@ -59,62 +62,17 @@ src/
 
 ## Building a list page
 
-A list page is assembled from the shared pieces. The feature supplies its columns, filters and actions. See `src/routes/_admin/admin/test-crud/index.tsx`.
-
-```tsx
-// features/<name>/schema.ts: the URL is the source of truth, and the same schema is the server function's input.
-export const projectSearchSchema = z.object({
-	q: searchParam(),
-	status: enumParam(PROJECT_STATUS_FILTERS, "all"),
-	sort: enumParam(PROJECT_SORTS, "-updated"),   // "field" ascending, "-field" descending
-	page: pageParam(),
-	pageSize: pageSizeParam(),                     // optional: falls back to the saved table preference
-});
-export type ProjectPage = Paged<ProjectListItem>;
-
-// features/<name>/components/admin-columns.tsx
-export const projectColumns: ReadonlyArray<DataTableColumn<ProjectListItem>> = [
-	{ id: "title", header: m.project_col_title, sort: "title", cell: (row) => <Link …>{row.title}</Link> },
-	{ id: "updated", header: m.project_col_updated, sort: "updated", hideable: true, cell: (row) => formatDateTime(row.updatedAt) },
-];
-
-// routes/_admin/admin/projects/index.tsx
-// loader: loadList(context.queryClient, projectListQueryOptions(tableListInput(deps, context.preferences.state, PROJECT_TABLE_ID)), cause)
-const { page, busy, pagination } = useListPage({ tableId: PROJECT_TABLE_ID, search, query: projectListQueryOptions });
-
-<Page width="admin">
-	<PageHeader title={m.projects_title()} description={…} actions={<NewProjectButton />} />
-	<DataTable
-		tableId={PROJECT_TABLE_ID} rows={rows} columns={projectColumns}
-		getRowId={(row) => row.id} getRowLabel={(row) => row.title} sort={search.sort}
-		toolbar={<FilterBar values={search} preserve={["sort", "pageSize"]}>{/* filter controls */}</FilterBar>}
-		activeFilters={<ActiveFilters chips={projectFilterChips(search)} clearAll={CLEAR_FILTERS} />}
-		exportName="projects"
-		bulkActions={({ ids, clear }) => …} rowActions={(row) => [{ id: "edit", label: …, permission: "projects:update", render: … }]}
-		busy={busy}
-		empty={<EmptyState variant={filtered ? "no-matches" : "empty"} description={…} primaryAction={filtered ? <ClearFiltersButton clearAll={CLEAR_FILTERS} /> : <NewProjectButton />} />}
-	/>
-	<Pagination {...pagination} />   {/* render both only once `page` and `pagination` exist; DataTableSkeleton before */}
-</Page>
-// Deletes ask through `const confirm = useConfirm()`: `if (await confirm({ title, description, destructive: true })) remove(ids)`.
-```
-
-On the server, the repository uses the same contract:
+Admin lists follow the CRUD standard: [crud.md](crud.md) has the whole recipe (URL contract, loader, `CrudListPage`, filters, writes, forms) and `pnpm new:feature` generates it. On the server, a list is `listPage(db, table, { input, where, sort, map })` with `where` built from `src/server/db/list.ts`:
 
 ```ts
-// server/<name>/repository.ts
 const SORT_COLUMNS = { title: projects.title, updated: projects.updatedAt };
-export async function listProjects(db: Db, input: ProjectListInput): Promise<ProjectPage> {
-	const where = allOf(
-		input.status === "all" ? undefined : eq(projects.status, input.status),
-		textSearch(input.q, [projects.title, projects.summary]),
-	);
-	const order = orderBySort(input.sort, SORT_COLUMNS, { tiebreaker: projects.id, fallback: "updated" });
-	return paginate(input, {
-		count: () => countRows(db, projects, where),
-		rows: ({ limit, offset }) => db.select().from(projects).where(where).orderBy(...order).limit(limit).offset(offset),
-	}, toListItem);
-}
+export const listProjects = (db: Db, input: ProjectListInput): Promise<ProjectPage> =>
+	listPage(db, projects, {
+		input,
+		where: allOf(input.status === "all" ? undefined : eq(projects.status, input.status), textSearch(input.q, [projects.title])),
+		sort: { columns: SORT_COLUMNS, fallback: "updated" },
+		map: (rows) => rows.map((row) => projectListItem.parse(row)),
+	});
 ```
 
 Filters, the loader (`loadList` + `useListQuery`) and record dialogs (route masking) are covered step by step in [search-filters-masking.md](search-filters-masking.md).
@@ -144,8 +102,8 @@ In the admin area the topbar renders the trail (`components/admin-shell/topbar.t
 - **The URL is the state** for search, filters, sort and page. Change it with `<SearchLink patch>`, `<Link search>` or `navigate({ search })`, never with local state. Defaults are stripped with `stripSearchParams`.
 - **Read messages at render time.** Never put `m.foo()` (or JSX containing it) in a module-level constant. On the server it would freeze the first request's locale. Use a component or a function, or pass the message function itself (`header: m.foo`).
 - **Return little from loaders.** Data already travels in the Query cache; return only what `head` or `staticData` need.
-- **Server functions are thin.** Middleware (auth), `.validator(zodInput(schema))`, one call. Logic goes in `src/server/<name>/` over an injected `Db`, so it can be tested on PGlite.
-- **Edits carry their version.** An update sends the record's `updatedAt` (`versionSchema()`), the repository checks it with `sameVersion` and throws `staleError()`, and the form shows `StaleVersionAlert` ([forms.md](forms.md), 0122). Whole-record edits only: single-field toggles and deletes don't need it.
+- **Server functions are thin.** `requirePermission(…)` then `withServices`, `.validator(zodInput(schema))`, one call into the service with `context` (crud.md). Logic goes in `src/server/<name>/` over the call's services, so it can be tested on PGlite.
+- **Edits carry their version.** An update sends the record's `updatedAt` (`versionSchema()`), the repository saves with `updateVersioned` (the check is in the UPDATE's WHERE; a stale save is a CONFLICT), and `useCrudForm` shows `StaleVersionAlert` ([forms.md](forms.md), 0122). Whole-record edits only: single-field toggles and deletes don't need it.
 - **Import Zod as `zod`.** It resolves to `src/lib/zod.ts` (jitless, CSP-safe). Never import `zod/v4` directly in app code.
 - **Every string goes through Paraglide** in en and ne. Delete keys when their UI goes away; `tests/i18n/message-usage.test.ts` enforces it.
 - **No layout shift:** fixed image aspect boxes, skeletons with the page's footprint, and preferences read from cookies on the server.
@@ -172,7 +130,7 @@ The others are linked from their guides: filters and masking ([search-filters-ma
 
 ## Generating a feature
 
-`pnpm new:feature <name>` (decision 0141) writes the admin half of the Test CRUD shape from `scripts/templates/feature/` and adds the entries shared lists need at their `// @new-feature:<slot>` lines. The generated routes are thin (`index.tsx` loads the list and renders `<Name>AdminList` from `features/<name>/components/admin-list.tsx`), like Test CRUD's own (`TestCrudAdminList`, `AccountPage`). Change the templates when a convention changes, so new features follow it. Full checklist: [new-project.md](new-project.md).
+`pnpm new:feature <name> [--public] [--localized]` (decision 0175) writes a feature in the CRUD standard's shape ([crud.md](crud.md)) from `scripts/templates/feature/` and adds the entries shared lists need at their `// @new-feature:<slot>` lines. It refuses a tree with uncommitted changes and puts it back if anything fails. Change the templates when a convention changes, so new features follow it. Full checklist: [new-project.md](new-project.md).
 
 ## Import boundaries
 

@@ -1,7 +1,9 @@
 import { asc, eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { AUDIT_SEARCH_DEFAULTS, type AuditListInput } from "@/features/audit/schema";
+import { type AuditListInput, auditList } from "@/features/audit/search";
+import type { Actor } from "@/features/rbac/types";
 import { AppError } from "@/lib/errors";
+import type { AuditActor } from "@/server/audit/record";
 import { recordAudit } from "@/server/audit/record";
 import { listAuditEvents } from "@/server/audit/repository";
 import * as schema from "@/server/db/schema";
@@ -17,6 +19,21 @@ import { createTestDb } from "../utils/test-db";
  */
 let env: Awaited<ReturnType<typeof createTestDb>>;
 const db = () => env.db;
+
+/** A call's services, acting as `actor` (any actor-like object: the rules read only what they need). */
+const svc = (actor: AuditActor & Partial<Actor>) => ({
+	db: db(),
+	actor: { isAdmin: false, permissions: [], ...actor },
+	imageStore: null,
+});
+/** setUserRoles' input with the user's current version, as the roles dialog sends it. */
+const versioned = async <T extends { userId: string }>(input: T) => {
+	const [row] = await db()
+		.select({ updatedAt: schema.user.updatedAt })
+		.from(schema.user)
+		.where(eq(schema.user.id, input.userId));
+	return { ...input, updatedAt: (row?.updatedAt ?? new Date()).toISOString() };
+};
 
 beforeAll(async () => {
 	env = await createTestDb("admin-1");
@@ -48,7 +65,7 @@ const addSession = (userId: string, n: number) =>
 			updatedAt: new Date(),
 		});
 
-const actorFor = async (id: string, extra: Partial<rbac.Actor> = {}): Promise<rbac.Actor> => {
+const actorFor = async (id: string, extra: Partial<Actor> = {}): Promise<Actor> => {
 	const [row] = await db().select().from(schema.user).where(eq(schema.user.id, id));
 	const permissions = await permissionsForUser(db(), { id, role: row?.role ?? null, banned: row?.banned ?? null });
 	return { id, isAdmin: row?.role === "admin", permissions, requestId: `req-${id}`, ip: "198.51.100.1", ...extra };
@@ -57,7 +74,7 @@ const ADMIN = () => actorFor("admin-1");
 
 const rows = () => db().select().from(schema.auditEvent).orderBy(asc(schema.auditEvent.createdAt));
 const list = (input: Partial<AuditListInput> = {}) =>
-	listAuditEvents(db(), { ...AUDIT_SEARCH_DEFAULTS, pageSize: 50, ...input });
+	listAuditEvents(db(), { ...auditList.defaults, pageSize: 50, ...input });
 
 const rejection = async (run: () => Promise<unknown>) => {
 	const error = await run().catch((caught: unknown) => caught);
@@ -68,19 +85,18 @@ const rejection = async (run: () => Promise<unknown>) => {
 describe("every admin action leaves a row", () => {
 	it("roles: create, rename, permissions, delete", async () => {
 		const admin = await ADMIN();
-		const { id } = await rbac.createRole(db(), admin, { name: "Editor", description: "Writes" });
+		const { id } = await rbac.createRole(svc(admin), { name: "Editor", description: "Writes" });
 		const [created] = await db().select().from(schema.role).where(eq(schema.role.id, id));
-		await rbac.updateRole(
-			db(),
-			admin,
-			id,
-			{ name: "Writer", description: "Writes" },
-			created?.updatedAt.toISOString() ?? "",
-		);
-		await rbac.updateRolePermissions(db(), admin, { roleId: id, grant: ["test-crud:read"], revoke: [] });
+		await rbac.updateRole(svc(admin), {
+			name: "Writer",
+			description: "Writes",
+			id: id,
+			updatedAt: created?.updatedAt.toISOString() ?? "",
+		});
+		await rbac.updateRolePermissions(svc(admin), { roleId: id, grant: ["test-crud:read"], revoke: [] });
 		// Granting what the role already has changes nothing: no row.
-		await rbac.updateRolePermissions(db(), admin, { roleId: id, grant: ["test-crud:read"], revoke: [] });
-		await rbac.deleteRole(db(), admin, id);
+		await rbac.updateRolePermissions(svc(admin), { roleId: id, grant: ["test-crud:read"], revoke: [] });
+		await rbac.deleteRole(svc(admin), id);
 
 		expect(await rows()).toMatchObject([
 			{ action: "role.create", targetType: "role", targetId: id, after: { name: "Editor", description: "Writes" } },
@@ -102,15 +118,15 @@ describe("every admin action leaves a row", () => {
 	it("users: roles, ban, unban, sign out everywhere", async () => {
 		const admin = await ADMIN();
 		await addUser("u1");
-		const { id: editor } = await rbac.createRole(db(), admin, { name: "Editor", description: "" });
+		const { id: editor } = await rbac.createRole(svc(admin), { name: "Editor", description: "" });
 		await db().delete(schema.auditEvent);
 
-		await rbac.setUserRoles(db(), admin, { userId: "u1", admin: false, roleIds: [editor] });
-		await rbac.setUserBanned(db(), admin, "u1", true);
-		await rbac.setUserBanned(db(), admin, "u1", false);
+		await rbac.setUserRoles(svc(admin), await versioned({ userId: "u1", admin: false, roleIds: [editor] }));
+		await rbac.setUserBanned(svc(admin), { userId: "u1", banned: true });
+		await rbac.setUserBanned(svc(admin), { userId: "u1", banned: false });
 		await addSession("u1", 1);
 		await addSession("u1", 2);
-		expect(await rbac.revokeUserSessions(db(), admin, "u1")).toEqual({ revoked: 2 });
+		expect(await rbac.revokeUserSessions(svc(admin), "u1")).toEqual({ revoked: 2 });
 
 		expect(await rows()).toMatchObject([
 			{
@@ -118,8 +134,9 @@ describe("every admin action leaves a row", () => {
 				targetType: "user",
 				targetId: "u1",
 				targetLabel: "u1@example.com",
-				before: { admin: false, roles: [] },
-				after: { admin: false, roles: ["Editor"] },
+				// Only what changed: the admin flag stayed.
+				before: { roles: [] },
+				after: { roles: ["Editor"] },
 			},
 			{ action: "user.ban", before: { banned: false }, after: { banned: true } },
 			{ action: "user.unban", before: { banned: true }, after: { banned: false } },
@@ -130,10 +147,9 @@ describe("every admin action leaves a row", () => {
 
 	it("a refused action leaves no row (same transaction)", async () => {
 		// The last admin can't be demoted: the change and its row roll back together.
-		await rejection(() => rbac.setUserBanned(db(), { ...ADMIN_STUB, id: "other" }, "admin-1", true));
-		await rejection(() =>
-			rbac.setUserRoles(db(), { ...ADMIN_STUB, id: "other" }, { userId: "admin-1", admin: false, roleIds: [] }),
-		);
+		await rejection(() => rbac.setUserBanned(svc({ ...ADMIN_STUB, id: "other" }), { userId: "admin-1", banned: true }));
+		const demote = await versioned({ userId: "admin-1", admin: false, roleIds: [] });
+		await rejection(() => rbac.setUserRoles(svc({ ...ADMIN_STUB, id: "other" }), demote));
 		expect(await rows()).toEqual([]);
 	});
 
@@ -151,15 +167,15 @@ describe("every admin action leaves a row", () => {
 });
 
 /** An admin actor that isn't in the database (rule checks only need the flag). */
-const ADMIN_STUB: rbac.Actor = { id: "stub", isAdmin: true, permissions: [] };
+const ADMIN_STUB: Actor = { id: "stub", isAdmin: true, permissions: [] };
 
 describe("sign out everywhere", () => {
 	it("refuses your own sessions and a non-admin acting on an admin", async () => {
 		await addUser("manager");
 		await addUser("a2", "admin");
-		await rejection(() => rbac.revokeUserSessions(db(), ADMIN_STUB, "stub"));
+		await rejection(() => rbac.revokeUserSessions(svc(ADMIN_STUB), "stub"));
 		const manager = await actorFor("manager", { permissions: ["users:read", "users:ban"] });
-		expect((await rejection(() => rbac.revokeUserSessions(db(), manager, "a2"))).code).toBe("FORBIDDEN");
+		expect((await rejection(() => rbac.revokeUserSessions(svc(manager), "a2"))).code).toBe("FORBIDDEN");
 		expect(await rows()).toEqual([]);
 	});
 });
@@ -168,8 +184,7 @@ describe("invitations", () => {
 	it("creates an unverified baseline account, records it, then sends the invitation", async () => {
 		const send = vi.fn(async () => {});
 		const { id } = await rbac.inviteUser(
-			db(),
-			await ADMIN(),
+			svc(await ADMIN()),
 			{ name: "Sita", email: "Sita@Example.com", locale: "ne" },
 			send,
 		);
@@ -185,7 +200,7 @@ describe("invitations", () => {
 		await addUser("u1");
 		const send = vi.fn(async () => {});
 		const error = await rejection(() =>
-			rbac.inviteUser(db(), ADMIN_STUB, { name: "Again", email: "U1@example.com", locale: "en" }, send),
+			rbac.inviteUser(svc(ADMIN_STUB), { name: "Again", email: "U1@example.com", locale: "en" }, send),
 		);
 		expect(error.code).toBe("CONFLICT");
 		expect(error.fieldErrors?.email).toHaveLength(1);
@@ -197,11 +212,14 @@ describe("impersonation", () => {
 	it("an admin starts and stops it; both are recorded with the admin as actor", async () => {
 		await addUser("u1");
 		const start = vi.fn(async () => {});
-		await rbac.impersonateUser(db(), await ADMIN(), "u1", start);
+		await rbac.impersonateUser(svc(await ADMIN()), "u1", start);
 		expect(start).toHaveBeenCalledOnce();
 		// The impersonated session acts as u1, with the admin behind it.
 		const stop = vi.fn(async () => {});
-		await rbac.stopImpersonating(db(), { id: "u1", impersonatorId: "admin-1", requestId: "req-stop" }, stop);
+		await rbac.stopImpersonating(
+			{ db: db(), actor: { id: "u1", impersonatorId: "admin-1", requestId: "req-stop" } },
+			stop,
+		);
 		expect(stop).toHaveBeenCalledOnce();
 		expect(await rows()).toMatchObject([
 			{ action: "user.impersonate", actorId: "admin-1", targetId: "u1" },
@@ -228,21 +246,23 @@ describe("impersonation", () => {
 		const start = vi.fn(async () => {});
 		const manager = await actorFor("u1", { permissions: ["users:read", "users:update"] });
 
-		expect((await rejection(() => rbac.impersonateUser(db(), manager, "banned", start))).code).toBe("FORBIDDEN");
-		expect((await rejection(() => rbac.impersonateUser(db(), ADMIN_STUB, "a2", start))).code).toBe("FORBIDDEN");
-		expect((await rejection(() => rbac.impersonateUser(db(), ADMIN_STUB, "banned", start))).code).toBe("CONFLICT");
-		expect((await rejection(() => rbac.impersonateUser(db(), ADMIN_STUB, "stub", start))).code).toBe("FORBIDDEN");
+		expect((await rejection(() => rbac.impersonateUser(svc(manager), "banned", start))).code).toBe("FORBIDDEN");
+		expect((await rejection(() => rbac.impersonateUser(svc(ADMIN_STUB), "a2", start))).code).toBe("FORBIDDEN");
+		expect((await rejection(() => rbac.impersonateUser(svc(ADMIN_STUB), "banned", start))).code).toBe("CONFLICT");
+		expect((await rejection(() => rbac.impersonateUser(svc(ADMIN_STUB), "stub", start))).code).toBe("FORBIDDEN");
 		const nested = { ...ADMIN_STUB, impersonatorId: "someone" };
-		expect((await rejection(() => rbac.impersonateUser(db(), nested, "u1", start))).code).toBe("FORBIDDEN");
+		expect((await rejection(() => rbac.impersonateUser(svc(nested), "u1", start))).code).toBe("FORBIDDEN");
 		expect(start).not.toHaveBeenCalled();
 
 		const failing = vi.fn(async () => {
 			throw new AppError("INTERNAL", "Better Auth refused");
 		});
-		await rejection(() => rbac.impersonateUser(db(), ADMIN_STUB, "u1", failing));
+		await rejection(() => rbac.impersonateUser(svc(ADMIN_STUB), "u1", failing));
 		expect(await rows()).toEqual([]);
 		// Stopping needs an impersonated session.
-		expect((await rejection(() => rbac.stopImpersonating(db(), { id: "u1" }, start))).code).toBe("BAD_REQUEST");
+		expect((await rejection(() => rbac.stopImpersonating({ db: db(), actor: { id: "u1" } }, start))).code).toBe(
+			"BAD_REQUEST",
+		);
 	});
 });
 

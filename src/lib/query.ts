@@ -2,7 +2,7 @@ import { noop, QueryClient, type QueryExecuteOptions, type QueryKey } from "@tan
 import { isAppError } from "./errors";
 
 /** What `queryOptions(...)` produces, as `queryClient.query()` accepts it. */
-type LoaderQueryOptions<TData, TKey extends QueryKey> = QueryExecuteOptions<TData, Error, TData, TData, TKey>;
+export type LoaderQueryOptions<TData, TKey extends QueryKey> = QueryExecuteOptions<TData, Error, TData, TData, TKey>;
 
 /**
  * One QueryClient per request on the server (created in getRouter), one per tab

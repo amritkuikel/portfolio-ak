@@ -1,59 +1,42 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
+import { formOptions } from "@tanstack/react-form";
+import { useCrudForm } from "@/components/crud/use-crud-form";
 import { FormDialog } from "@/components/dialogs/form-dialog";
-import { clearServerErrorOnChange, formValidators, handleSaveError, useAppForm } from "@/components/forms";
-import { createRole, updateRole } from "@/functions/rbac";
+import { formValidators, useAppForm } from "@/components/forms";
 import { m } from "@/paraglide/messages";
-import { refreshRbac, rolesQueryOptions } from "../queries";
+import { RBAC_REFRESH, roleKeys } from "../keys";
+import { roleMutations } from "../queries";
 import { ROLE_NAME_MAX, type RoleFormValues, type RoleSummary, roleInputSchema } from "../schema";
+
+const roleFormOptions = (role?: RoleSummary) =>
+	formOptions({
+		defaultValues: { name: role?.name ?? "", description: role?.description ?? "" } as RoleFormValues,
+		validators: formValidators(roleInputSchema),
+	});
 
 /**
  * Create a custom role, or rename one (`role` given). Permissions are set in the
  * matrix. A rename sends the role's `updatedAt`; if someone renamed it since,
- * StaleVersionAlert offers to reload it into the form.
+ * "Reload" refetches the roles and the list re-keys this dialog with the newer one.
  */
-export function RoleDialog({ role: opened, onClose }: { role?: RoleSummary; onClose: () => void }) {
-	const queryClient = useQueryClient();
-	const [role, setRole] = useState(opened);
-	const [stale, setStale] = useState(false);
-	const reload = async () => {
-		if (!role) return;
-		const roles = await queryClient.fetchQuery({ ...rolesQueryOptions(), staleTime: 0 });
-		const latest = roles.find((each) => each.id === role.id);
-		if (!latest) {
-			toast.error(m.error_not_found());
-			onClose();
-			return;
-		}
-		setRole(latest);
-		setStale(false);
-		form.reset({ name: latest.name, description: latest.description });
-	};
-	const form = useAppForm({
-		defaultValues: { name: role?.name ?? "", description: role?.description ?? "" } satisfies RoleFormValues,
-		validators: formValidators(roleInputSchema),
-		listeners: { onChange: clearServerErrorOnChange },
-		onSubmit: async ({ value, formApi }) => {
-			try {
-				if (role) await updateRole({ data: { id: role.id, updatedAt: role.updatedAt, ...value } });
-				else await createRole({ data: value });
-				await refreshRbac(queryClient);
-				toast.success(role ? m.roles_toast_saved() : m.roles_toast_created());
-				onClose();
-			} catch (error) {
-				handleSaveError(formApi, error, () => setStale(true));
-			}
-		},
+export function RoleDialog({ role, onClose }: { role?: RoleSummary | undefined; onClose: () => void }) {
+	const crud = useCrudForm({
+		item: role,
+		toInput: (values: RoleFormValues) => roleInputSchema.parse(values),
+		create: roleMutations.create(),
+		update: roleMutations.update(),
+		invalidate: RBAC_REFRESH,
+		reload: roleKeys.lists(),
+		onSaved: onClose,
 	});
+	const form = useAppForm({ ...roleFormOptions(role), ...crud.formProps });
 	return (
 		<form.AppForm>
 			<FormDialog
 				title={role ? m.roles_dialog_edit_title() : m.roles_dialog_new_title()}
 				description={m.roles_dialog_description()}
-				submitLabel={role ? m.roles_save() : m.roles_create()}
+				submitLabel={role ? m.crud_save() : m.crud_create()}
 				onClose={onClose}
-				stale={stale ? reload : undefined}
+				stale={crud.stale}
 				data-testid="role-dialog"
 			>
 				<form.AppField name="name">

@@ -136,6 +136,7 @@ export const sampleBannedUser: UserListItem = {
 	roles: [],
 	banned: true,
 	createdAt: "2026-09-20T08:00:00.000Z",
+	updatedAt: "2026-09-21T08:00:00.000Z",
 };
 
 export const sampleUsers: UserListItem[] = [
@@ -147,6 +148,7 @@ export const sampleUsers: UserListItem[] = [
 		roles: [],
 		banned: false,
 		createdAt: "2026-09-01T08:00:00.000Z",
+		updatedAt: "2026-09-01T08:00:00.000Z",
 	},
 	{
 		id: "editor-1",
@@ -156,6 +158,7 @@ export const sampleUsers: UserListItem[] = [
 		roles: [{ id: "role-editor", key: "editor", name: "Editor" }],
 		banned: false,
 		createdAt: "2026-09-10T08:00:00.000Z",
+		updatedAt: "2026-09-12T08:00:00.000Z",
 	},
 	sampleBannedUser,
 ];

@@ -30,8 +30,12 @@ import type { Db } from "./types";
 /** Escapes LIKE wildcards so a search for "100%" means the literal text. */
 export const likePattern = (text: string) => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 
-/** Case-insensitive "contains" over any of `columns`; undefined (no filter) for an empty search. */
-export function textSearch(q: string, columns: ReadonlyArray<AnyColumn>): SQL | undefined {
+/**
+ * Case-insensitive "contains" over any of `columns`; undefined (no filter) for an
+ * empty search. A column can be an expression too: one language of a localized
+ * jsonb column (`sql`${table.title}->>'en'``).
+ */
+export function textSearch(q: string, columns: ReadonlyArray<AnyColumn | SQL>): SQL | undefined {
 	if (!q || columns.length === 0) return undefined;
 	const pattern = likePattern(q);
 	return or(...columns.map((column) => ilike(column, pattern)));
@@ -72,7 +76,7 @@ export const overlapsAny = (column: AnyColumn, values: ReadonlyArray<string>) =>
  */
 export function orderBySort<Field extends string>(
 	sort: string,
-	columns: Readonly<Record<Field, AnyColumn>>,
+	columns: Readonly<Record<Field, AnyColumn | SQL>>,
 	options: { tiebreaker: AnyColumn; fallback: NoInfer<Field> },
 ): SQL[] {
 	const { field, direction } = parseSort(sort);

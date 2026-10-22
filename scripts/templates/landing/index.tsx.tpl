@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_public/")({
 function Landing() {
 	return (
 		<Page width="narrow" className="gap-8">
-			<PageHeader size="display" title={m.landing_title()} description={m.landing_intro()} breadcrumbs={false} />
+			<PageHeader size="display" title={m.landing_title()} description={m.landing_intro()} />
 			<div>
 				<Button asChild>
 					<Link to="/account">{m.landing_cta()}</Link>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { testCrudFormSchema, testCrudInputSchema, toTestCrudInput } from "@/features/test-crud/schema";
-import { TEST_CRUD_SEARCH_DEFAULTS, testCrudListInputSchema, testCrudSearchSchema } from "@/features/test-crud/search";
+import { testCrudList } from "@/features/test-crud/search";
 import { slugify } from "@/lib/slug";
 import { overwriteGetLocale } from "@/paraglide/runtime";
 
@@ -76,7 +76,8 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 			thumb: "x",
 			og: "x",
 		};
-		const form = testCrudFormSchema.parse({ ...valid, images: [{ id, alt: " Momo ", preview }] });
+		const form = { ...valid, status: "draft" as const, tags: [], images: [{ id, alt: " Momo ", preview }] };
+		expect(testCrudFormSchema.safeParse(form).success).toBe(true);
 		expect(toTestCrudInput(form).images).toEqual([{ id, alt: "Momo" }]);
 		expect(testCrudInputSchema.safeParse({ ...valid, images: [{ id: "nope", alt: "" }] }).success).toBe(false);
 		const nine = Array.from({ length: 9 }, () => ({ id, alt: "" }));
@@ -86,14 +87,17 @@ describe("testCrudInputSchema (shared by the form and the server)", () => {
 });
 
 describe("admin list search params", () => {
+	const { search, input, defaults } = testCrudList;
+
 	it("fills defaults and corrects invalid values instead of failing", () => {
-		expect(testCrudSearchSchema.parse({})).toEqual({ ...TEST_CRUD_SEARCH_DEFAULTS, pageSize: undefined });
-		expect(
-			testCrudSearchSchema.parse({ status: "archived", sort: "drop table", page: "-3", pageSize: "7", q: "  hi " }),
-		).toEqual({ ...TEST_CRUD_SEARCH_DEFAULTS, q: "hi", pageSize: undefined });
-		expect(
-			testCrudSearchSchema.parse({ status: "published", sort: "-price", page: "4", pageSize: "50" }),
-		).toMatchObject({
+		expect(defaults).toMatchObject({ q: "", status: "all", tags: [], sort: "-updated", page: 1 });
+		expect(search.parse({ status: "archived", sort: "drop table", page: "-3", pageSize: "7", q: "  hi " })).toEqual({
+			...defaults,
+			q: "hi",
+		});
+		// Links carry params the page doesn't know (utm tags): they are dropped, never an error.
+		expect(search.parse({ utm_source: "mail" })).toEqual(defaults);
+		expect(search.parse({ status: "published", sort: "-price", page: "4", pageSize: "50" })).toMatchObject({
 			status: "published",
 			sort: "-price",
 			page: 4,
@@ -101,8 +105,9 @@ describe("admin list search params", () => {
 		});
 	});
 
-	it("the server function input requires an allowed page size", () => {
-		expect(testCrudListInputSchema.safeParse({ ...TEST_CRUD_SEARCH_DEFAULTS, pageSize: 20 }).success).toBe(true);
-		expect(testCrudListInputSchema.safeParse({ ...TEST_CRUD_SEARCH_DEFAULTS, pageSize: 1000 }).success).toBe(false);
+	it("the server function input requires an allowed page size and nothing else", () => {
+		expect(input.safeParse({ ...defaults, pageSize: 20 }).success).toBe(true);
+		expect(input.safeParse({ ...defaults, pageSize: 1000 }).success).toBe(false);
+		expect(input.safeParse({ ...defaults, pageSize: 20, edit: "x" }).success).toBe(false);
 	});
 });

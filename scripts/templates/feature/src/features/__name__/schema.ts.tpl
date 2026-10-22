@@ -1,58 +1,74 @@
 import { z } from "zod";
 import { versionSchema } from "@/lib/concurrency";
-import { bulkIdsSchema, type Paged } from "@/lib/list/paging";
-import { enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
-import { optionalText, required } from "@/lib/validation";
-
-/** preferences table id (page size, hidden columns) of the admin list. */
-export const __UPPER___TABLE_ID = "__name__";
+import { isoDateTime } from "@/lib/crud/schema";
+import type { Paged } from "@/lib/list/paging";
+{{#public}}
+import { SLUG_PATTERN } from "@/lib/slug";
+{{/public}}
+import { {{#localized}}localizedText{{/localized}}{{^localized}}optionalText, required{{/localized}}{{#public}}, slug{{/public}} } from "@/lib/validation";
 
 // ---------------------------------------------------------------------------
 // Create / update: ONE schema shared by the form (client) and the server functions
 // ---------------------------------------------------------------------------
 
-export const __camel__InputSchema = z.object({
+export const __camel__InputSchema = z.strictObject({
+{{#localized}}
+	title: localizedText({ max: 120 }),
+	notes: localizedText({ max: 2000, optional: true }),
+{{/localized}}
+{{^localized}}
 	title: required({ max: 120 }),
 	notes: optionalText({ max: 2000 }),
+{{/localized}}
+{{#public}}
+	slug: slug(),
+	published: z.boolean(),
+{{/public}}
 });
 export type __Pascal__Input = z.output<typeof __camel__InputSchema>;
 export type __Pascal__FormValues = z.input<typeof __camel__InputSchema>;
 
 /** Update: the same fields plus which row and the version the edit started from (its `updatedAt`). */
 export const __camel__UpdateSchema = __camel__InputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
+{{#public}}
 
-// ---------------------------------------------------------------------------
-// Admin list: URL search params == the list server function's input
-// ---------------------------------------------------------------------------
-
-export const __UPPER___SORTS = ["-updated", "updated", "title", "-title"] as const;
-
-export const __UPPER___SEARCH_DEFAULTS = { q: "", sort: "-updated", page: 1 } as const satisfies {
-	q: string;
-	sort: (typeof __UPPER___SORTS)[number];
-	page: number;
-};
-
-/** /admin/__name__ search params. Invalid values are corrected (.catch) rather than rejected. */
-export const __camel__SearchSchema = z.object({
-	q: searchParam(),
-	sort: enumParam(__UPPER___SORTS, __UPPER___SEARCH_DEFAULTS.sort),
-	page: pageParam(),
-	pageSize: pageSizeParam(),
+/** The slug check while typing: is `slug` free for the row `id` (absent for a new one)? */
+export const __camel__SlugCheckSchema = z.strictObject({
+	slug: z.string().max(80).regex(SLUG_PATTERN),
+	id: z.uuid().optional(),
 });
-export type __Pascal__Search = z.output<typeof __camel__SearchSchema>;
-
-/** What the list server function receives: the search with a resolved page size. */
-export const __camel__ListInputSchema = __camel__SearchSchema.extend({ pageSize: resolvedPageSize() });
-export type __Pascal__ListInput = z.output<typeof __camel__ListInputSchema>;
-
-export const __camel__IdSchema = z.object({ id: z.uuid() });
-export const __camel__IdsSchema = bulkIdsSchema(100);
+{{/public}}
 
 // ---------------------------------------------------------------------------
-// DTOs (what crosses the wire; dates as ISO strings)
+// DTOs: what crosses the wire. The repository parses its rows with these (dates
+// become ISO strings, other columns are left out).
 // ---------------------------------------------------------------------------
 
-export type __Pascal__ListItem = { id: string; title: string; updatedAt: string };
+{{#localized}}
+const text = z.object({ en: z.string(), ne: z.string() });
+{{/localized}}
+{{^localized}}
+const text = z.string();
+{{/localized}}
+
+export const __camel__ListItem = z.object({
+	id: z.string(),
+	title: text,
+{{#public}}
+	slug: z.string(),
+	published: z.boolean(),
+{{/public}}
+	updatedAt: isoDateTime(),
+});
+export type __Pascal__ListItem = z.output<typeof __camel__ListItem>;
 export type __Pascal__Page = Paged<__Pascal__ListItem>;
-export type __Pascal__Detail = __Pascal__ListItem & { notes: string; createdAt: string };
+
+export const __camel__Detail = __camel__ListItem.extend({ notes: text, createdAt: isoDateTime() });
+export type __Pascal__Detail = z.output<typeof __camel__Detail>;
+{{#public}}
+
+/** A published row as the public pages show it (no admin-only fields). */
+export const __camel__PublicItem = z.object({ slug: z.string(), title: text, notes: text, updatedAt: isoDateTime() });
+export type __Pascal__PublicItem = z.output<typeof __camel__PublicItem>;
+export type __Pascal__PublicPage = Paged<__Pascal__PublicItem>;
+{{/public}}

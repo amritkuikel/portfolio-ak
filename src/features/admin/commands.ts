@@ -20,7 +20,10 @@ export type AdminCommand = {
 	keywords?: () => string;
 };
 
-export const ADMIN_COMMANDS: ReadonlyArray<AdminCommand> = [...testCrudCommands];
+export const ADMIN_COMMANDS: ReadonlyArray<AdminCommand> = [
+	...testCrudCommands,
+	// @new-feature:commands
+];
 
 /** The commands a user holding `permissions` may run. */
 export const permittedCommands = (permissions: ReadonlyArray<Permission>) =>

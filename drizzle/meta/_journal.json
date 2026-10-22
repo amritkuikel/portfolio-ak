@@ -71,6 +71,13 @@
 			"when": 1792571666556,
 			"tag": "0009_drop_legacy_test_crud_image",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1792640440015,
+			"tag": "0010_role_name_unique",
+			"breakpoints": true
 		}
 	]
 }

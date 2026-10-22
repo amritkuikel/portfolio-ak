@@ -37,17 +37,10 @@ function ThingForm() {
 - **One schema:** the server function validates with the same schema (`validator(zodInput(schema))`), so the rules can't drift. Build schemas from `src/lib/validation.ts`: its helpers return localized messages and parse what the fields store.
 - **When errors show:** after a field is left or a submit is tried. A failed submit shows `FormErrorSummary`, which takes focus and links to each field.
 - **Server errors:** a refusal with `fieldErrors` (e.g. `CONFLICT` on `slug`) appears on that field. Editing the field clears it. Other errors go to a toast (`handleSaveError`).
-- **Edits of an existing record send its version** (optimistic concurrency, 0122). The update schema adds `updatedAt: versionSchema()`, the form sends `item.updatedAt`, and the repository writes only while the row still has it (`sameVersion`), else `staleError()`. In the form:
-
-  ```tsx
-  const [stale, setStale] = useState(false);
-  // onSubmit: await updateThing({ data: { ...value, id: item.id, updatedAt: item.updatedAt } });
-  // catch:    handleSaveError(formApi, error, () => setStale(true));
-  {stale ? <StaleVersionAlert onReload={reload} /> : null}   // first thing inside form.Form
-  ```
-
-  `reload` refetches the record (`queryClient.fetchQuery({ ...detailOptions(id), staleTime: 0 })`). Key the form by id and version (`testCrudFormKey(item)`) so the newer record remounts it with fresh defaults, or call `form.reset(latest)` as the role dialog does. Examples: `features/test-crud/components/test-crud-form.tsx`, `features/rbac/components/role-dialog.tsx`.
-- **Unsaved changes:** `<UnsavedChangesGuard when={() => !saved.current && !form.state.isDefaultValue} />` blocks navigation and asks first.
+- **Create and edit forms of a feature use `useCrudForm`** ([crud.md](crud.md), "Forms"): it saves through the feature's mutations, puts server field errors on their fields, handles the version check below, toasts and refreshes the lists. The form stays `useAppForm({ ...thingFormOptions(item), ...crud.formProps })`, so its type is exact and `withForm` sections of it type-check; `CrudForm` (a page) or `FormDialog` (a dialog) renders the guard, the stale alert and the error summary around the fields.
+- **Edits of an existing record send its version** (optimistic concurrency, 0122). The update schema adds `updatedAt: versionSchema()`, `useCrudForm` sends `item.updatedAt`, and the repository saves with `updateVersioned` (the check is in the UPDATE's WHERE), else a stale CONFLICT. The form then shows `StaleVersionAlert`; its "Reload" refetches the record's query (`reload: thingKeys.detail(id)`), and the newer version changes `crudFormKey(item)`, the form's React key, which remounts it with fresh defaults. Dialogs read their record from the list's cache by id, so the same works there (`features/rbac/components/role-dialog.tsx`).
+- **Checks while typing:** `slugValidators` (a slug that follows its source) and `availabilityValidators` (`components/forms/async-validators.ts`: "is this email free?") run a debounced server check; saving checks again and lands its CONFLICT on the same field.
+- **Unsaved changes:** `CrudForm` and `FormDialog` block navigation away from a changed form and ask first (`UnsavedChangesGuard`).
 - **Form arrays updated from async work** (uploads): use the field's atomic helpers (`field.pushValue`), never a value read earlier (0099).
 - **`method="post"`:** `form.Form` sets it, and every hand-written `<form>` must too (a test checks). A submit before hydration then posts the values instead of putting them in the URL (0104).
 
@@ -95,4 +88,4 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 
 - **Form arrays updated from async callbacks:** use the field's atomic helpers (`field.pushValue`), not a value read earlier; concurrent uploads lost images that way (0099).
 - **A submit while an async validator runs did nothing:** TanStack Form's `handleSubmit` ignores a first attempt while `canSubmit` is false, and it is false while any field validates (`isFieldsValidating`, already during the debounce). So "type a title, press Save" within a slug check's debounce was silently dropped. The shared `Form` waits for validation to settle, then submits (0172); don't call `form.handleSubmit()` from your own `<form>`.
-- **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. Forms catch the stale `CONFLICT` with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert` (0122).
+- **Edits without a version:** an update schema without `updatedAt: versionSchema()` lets the second of two editors overwrite the first. `useCrudForm` catches the stale `CONFLICT` and shows `StaleVersionAlert` (0122).

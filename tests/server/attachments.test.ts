@@ -17,7 +17,7 @@ beforeAll(async () => {
 	testDb = await createTestDb("admin-1", (db) =>
 		db.insert(schema.user).values({ id: "other", name: "O", email: "o@example.com" }),
 	);
-});
+}, 60_000);
 afterAll(() => testDb.close());
 beforeEach(async () => {
 	await testDb.reset();

@@ -48,6 +48,10 @@ export function getRouter() {
 		stringifySearch,
 		scrollRestoration: true,
 		defaultPreload: "intent",
+		// Selected router state (useSearch, useLoaderData…) keeps its identity while unchanged, so
+		// components reading the same search after a navigation don't re-render (and the
+		// React Compiler's memoization holds). Selected values must be JSON-like (TypeScript checks).
+		defaultStructuralSharing: true,
 		// Let TanStack Query decide freshness for preloaded data.
 		defaultPreloadStaleTime: 0,
 		defaultErrorComponent: ErrorPage,

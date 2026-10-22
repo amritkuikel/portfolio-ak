@@ -929,7 +929,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 35 | Route restructure: portfolio at `/`, demo at `/dev`, a header per section, strip-demo layers | high | Done (decisions 0161–0163) |
 | 36 | "Graphite" design system, admin shell, auth shell, dashboard | high | Done (decisions 0164–0166) |
 | 37 | Admin component kit | high | Done (decisions 0168–0172) |
-| 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | |
+| 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | Done (decisions 0173–0175) |
 | 39 | The dynamic portfolio: tables, admin, media library, public reads | high | |
 | 40 | "Himal" portfolio redesign at `/` | xhigh | |
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | |
@@ -1167,73 +1167,26 @@ The owner runs one task per session and clears the context between tasks. A sess
   - **`EmptyState` stays in `components/page/`** (the plan listed it under data display).
   - **Decision numbers start at 0168:** 0167 was taken by an uncommitted e2e change that left the working tree during this task.
 
-### Task 38: The CRUD standard
+### Task 38: The CRUD standard (done)
 
-**Goal:** one way to build a feature, documented once, used by every admin section and emitted by the scaffolder. Read "Admin sections today" in 10.4 first: it lists every inconsistency this task removes.
-
-**The shape** (`docs/guides/crud.md` becomes the only "add a feature" text; CLAUDE.md, the README, `conventions.md` and `new-project.md` link to it):
-
-```
-src/features/<name>/             search.ts (URL contract), schema.ts (inputs, DTOs), keys.ts, queries.ts (queryOptions + mutationOptions),
-                                 columns.tsx, filters.tsx, labels.ts, commands.ts, components/ (list, form, detail, <name>-pending.tsx)
-src/functions/<name>.ts          createServerFn({ method }).middleware([requirePermission("<name>:<action>"), withServices]).validator(zodInput(schema)).handler(→ service)
-src/server/<name>/               repository.ts (Drizzle over an injected Db) + service.ts (rules, audit, versions)
-src/routes/_admin/admin/<name>/  route.tsx, index.tsx, new.tsx, $id.tsx: literal createFileRoute objects; helpers only for loader/search/head values
-```
-
-**Steps:**
-1. **Client helpers** (`src/lib/crud/`, unit-tested):
-   - `createCrudKeys(name)`: `{ all, lists(), list(input), details(), detail(id) }`.
-   - `listSearch({ schema, defaults })`: `validateSearch` plus `search.middlewares` (`stripSearchParams`).
-   - `listLoader({ tableId, query })`: `tableListInput` plus `loadList`.
-   - `loadDetailOr404(queryClient, options)`: `ensureQuery`; `NOT_FOUND` → `notFound()` plus `setErrorStatus`.
-   - **`useCrudMutation(mutationOptions, { optimistic?, invalidate })`:** cancel the in-flight list queries; snapshot and patch every cached list page (`queryClient.getQueriesData({ queryKey: keys.lists() })`); roll back on error; invalidate `keys.all`; show the shared `common_toast_failed` toast; turn a stale `CONFLICT` into the reload prompt.
-   - `useCrudForm({ schema, item, save, onSaved })`: default values, server field errors, stale handling and reload, the unsaved guard, success toasts.
-   - **`<CrudListPage>`:** header, `FilterBar`, `ActiveFilters`, DataTable v2, `Pagination`, `EmptyState` (filtered or empty), and confirm.
-   - `defineFilters({ keys, chips })`.
-2. **Server helpers** (`src/server/db/crud.ts`, tested on PGlite), one rule each:
-   - `listPage(db, table, { where, order, input, map })`.
-   - `findOrThrow` / `notFound(what)`.
-   - `updateVersioned`: the version is checked in the `UPDATE … WHERE`; zero rows → `staleError()`; no separate lock.
-   - `uniqueViolation(error, constraint)` → a field error: insert, then map, instead of check-then-insert.
-   - `uniqueSlug`.
-   - `withAudit(db, actor, fn)`: the transaction plus the audit row, for admin and content changes (supersedes 0132's scope: create and update are audited too).
-   - **`withServices` function middleware:** `context.db`, `context.actor`, `context.imageStore`. Import the server modules inside `.server()` (dynamic import), never at the top of the file.
-3. **Shared schema pieces** (`src/lib/validation.ts` or `src/lib/crud/schema.ts`):
-   - `idSchema`; `slugSchema` and `slugify` (moved from test-crud; replaces the portfolio and rbac copies); a `listSchema({ sorts, filters, defaults })` factory.
-   - `z.codec` for DTO dates (ISO string ↔ Date) in place of hand-written `toISOString`.
-   - `z.strictObject` for server-function inputs only, never for `validateSearch`: unknown search params such as utm tags must still pass.
-4. **TanStack Form:** `formOptions` per feature, `withForm` for split form sections, `withFieldGroup` for reusable groups (localized text, links, metrics), async validators (slug, email), and linked fields.
-5. **Router:** feature components use `getRouteApi("<id>")` instead of importing route files; nav items use `linkOptions`; turn `defaultStructuralSharing` on in `src/router.tsx`.
-6. **RBAC:**
-   - One isomorphic `Actor` type in `src/features/rbac/types.ts` (delete the four copies).
-   - `useCan` and `<Can>` are the only UI checks.
-   - Server functions are named `listX`, `getX`, `createX`, `updateX`, `deleteX`, `setXStatus`, with explicit return types.
-   - The permission matrix groups resources by `ADMIN_SECTIONS` group.
-7. **Migrate in this order, running the gates after each:**
-   1. **Test CRUD:** keep its public pages under `/dev`. Admin edits move off the TanStack DB collection: delete `features/test-crud/collection.ts` and its LRU; keep TanStack DB for `/dev/examples/optimistic` and the apps.
-   2. Users, roles, the permission matrix and audit, with thin routes (UI in `features/<name>/components`). Delete the duplicates listed in 10.4.
-   3. The functions call services only.
-8. **Mutation-style decision** (a new decision superseding 0064/0068): admin CRUD uses Query mutations. TanStack DB is for client-first apps (Kanban, Habits, Notes), where live queries and optimistic transactions pay off.
-9. **Scaffolder v2** (`scripts/new-feature.ts`; rewrite `scripts/templates/feature/` to this shape):
-   - Flags: `--public` (public list and detail pages under `_public`, `seo()` and the sitemap) and `--localized` (`{ en, ne }` fields with `LocalizedField`).
-   - It refuses to run on a dirty git tree and, on failure, restores with `git checkout -- . && git clean -fd` on the files it created (supersedes 0141).
-   - It keeps the `@new-feature` markers.
-   - Its own test generates a feature into a temp worktree in CI (the template job already runs it).
-10. **Count lines** before and after (features, functions, server, routes) for Test CRUD and record them in the decision.
-
-**Pitfalls:**
-- `tests/server/guarded-functions.test.ts` checks each definition with a regex: `= createServerFn({ method: "GET"|"POST" }).middleware([requirePermission("…")`. Keep `requirePermission` first in the array, or update the regex to allow `withServices` after it.
-- Start extracts server functions statically: keep `createServerFn(...)` literal in each functions file, with no factory around it.
-- Removing Test CRUD's collection: `useDbClient` is still used by `features/dev/examples` and `.storybook/app-providers.tsx`.
-- `useCrudMutation` must patch every cached page, or another page shows stale rows after a delete.
-
-**Acceptance:**
-- Test CRUD's admin code is about 40% smaller (counted).
-- Every section follows the shape, and the guide matches the code.
-- `pnpm new:feature x --public --localized` passes every gate unchanged (the CI template job).
-- The existing flows (Test CRUD create, edit, publish and delete; conflict; permissions; user management) pass.
-- All gates are green.
+- **The standard (0173):** `docs/guides/crud.md` is the only "add a feature" text; CLAUDE.md, the README, `conventions.md`, `new-project.md` and the other guides point to it. Test CRUD, users, roles, the permission matrix and the audit log follow it: thin literal routes, UI in `features/<name>/components` reading the URL with `getRouteApi`, `search.ts`/`schema.ts`/`keys.ts`/`queries.ts`/`columns.tsx`/`filters.tsx` at the feature root.
+- **Client helpers:** `src/lib/crud/` (`createCrudKeys`, `listSchema`, `idSchema`, `isoDateTime` codec, `defineFilters` with chip specs, and route helpers `listSearch`, `listLoader`, `loadDetailOr404`, `titleHead`); `src/components/crud/` (`CrudListPage`/`CrudListPending`, `useCrudMutation` with `patchRow`/`withoutRows`/`onRows`, `useCrudForm` + `CrudForm` + `crudFormKey`, `NewButton`, `RecordLink`); `QueryDialog` (dialogs that load a record: Test CRUD's edit dialog and quick view) and `availabilityValidators` (the invite form's email check).
+- **Server helpers:** `src/server/db/crud.ts` (`listPage`, `findOrThrow`/`notFound`, `updateVersioned`, `uniqueViolation`, `isValueFree`, `uniqueSlug`, `withAudit`); `withServices`/`withPublicServices` (`src/middleware/services.ts`) and `Services` (`src/server/services.ts`); `changes()` for edit summaries; `sameVersion` handles Better Auth's `timestamp` columns (UTC). Functions call services only; the guard test allows `withServices` after `requirePermission`.
+- **Writes (0174):** Query mutations through `useCrudMutation` (optimistic on every cached page, rollback, invalidation, shared failure toast, stale reload); Test CRUD's TanStack DB collection and LRU are deleted (DB stays for `/dev/examples/optimistic` and the apps).
+- **Behaviour:** Test CRUD creates and edits are audited (0132's scope widened); role names are unique ignoring case (index `role_name_lower_unique`, **migration `0010_role_name_unique`**) and emails by their constraint, mapped to field errors; a user's roles save against their version (stale check and Reload in the dialog); the invite form checks the address as you type (`isUserEmailFree`, `users:invite`); one `Actor` type and `canGrant` rule; the matrix groups resources under the sidebar groups; shared messages for delete, save, failure and search (`crud_*`, `common_toast_failed`; 30 feature copies removed); `defaultStructuralSharing` on; the sidebar's sections are `linkOptions`; the sitemap takes the database and a list of feature sources.
+- **Scaffolder v2 (0175):** `scripts/new-feature.ts` with `--public` and `--localized`, 28 templates in the standard's shape, a clean-tree check and rollback, new marker slots (`commands`, `sitemap`, `indexable`, `content-titled`, `unguarded-functions`). CI's template job commits the strip, then generates a plain feature and a `--public --localized` one.
+- **Numbers:** Test CRUD's admin code 1,895 → 1,462 lines (−23%; the shared helpers are 1,191 lines); the roles, users and audit routes 495 → 91 lines. Entry JS 238.0 → 232.5 kB gzip. `pnpm test`: 86 files, 657 tests. Storybook: 354 story tests (both passes). `pnpm test:e2e`: 700 checks, 699 passed and 1 flaky (a load-time layout shift on the permissions page, passed on retry; see the deviations).
+- **Checked in a scratch worktree:** `pnpm new:feature ci-pages --public --localized`, then typecheck, check, knip, test (664), test:storybook (364), i18n:check, the migration check and the full e2e (735 passed, the generated admin and public pages reviewed); and CI's flow: `strip-demo`, a plain feature and a `--public --localized` one, then typecheck, check, knip, test and the migration check.
+- **Deviations:**
+  - **A pre-existing flake on the permissions page:** at 390 px its first column wraps, and on a cold server a late font re-flows the rows (CLS 0.016–0.049 in about 1 of 50 reviews). The same happens with the matrix drawn without the new group rows, so the grouping isn't the cause; the local retry (Task 34) covers it.
+  - **Fixed on the way:** the landing page `strip-demo` writes still passed `breadcrumbs={false}` to `PageHeader` (removed in Task 36), so CI's template job would have failed typecheck.
+  - **Test CRUD shrank 23%, not ~40%:** it keeps its public pages, images, masked dialog and analytics, and gained audited creates and edits; the repeated wiring is what moved into the helpers (0173).
+  - **React helpers live in `src/components/crud/`,** not `src/lib/crud/` (the plan's place for all of them): `lib` stays free of components.
+  - **`listLoader(route, options)`** is called inside the loader instead of being the loader: a loader value typed outside the route lost its deps' type.
+  - **`defineFilters` takes chip specs** (`textChip`, `choiceChip`, …) rather than `{ keys, chips }`: the keys come from the specs, and the chips stopped being per-feature code.
+  - **The users and audit lists keep the default pending page** (only Test CRUD's list had its own).
+  - **Found on the way:** the invite flow's e2e test took the first server-function response as the invite's (the new email check answers first); it now waits for the POST. Two PGlite tests lacked the 60 s setup timeout and timed out under load.
+- **Left for the owner:** run `pnpm db:migrate` against Neon (migration `0010_role_name_unique`). Scratch copies to delete: `C:\tw6` (this task's git worktree: `git worktree remove --force C:/tw6`), `C:\tw5` (a half-deleted earlier copy, now a plain folder) and, from Task 35, `C:\tw` and `C:\tw2`.
 
 ### Task 39: The dynamic portfolio (data, admin, media)
 

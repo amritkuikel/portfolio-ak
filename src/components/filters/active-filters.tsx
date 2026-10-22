@@ -1,6 +1,8 @@
 import { XIcon } from "lucide-react";
 import { SearchLink, type SearchPatch } from "@/components/navigation/search-link";
 import { Button } from "@/components/ui/button";
+import { isoDateInstant } from "@/lib/i18n/date-only";
+import { formatDate } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 
 /** One applied filter: its readable label ("Status: Draft") and the search change that removes it. */
@@ -16,6 +18,10 @@ export function rangeValue(from: string | undefined, to: string | undefined): st
 	if (to !== undefined) return m.filters_range_to({ value: to });
 	return undefined;
 }
+
+/** A calendar day from the URL ("2026-09-01") as a chip shows it ("1 Sep 2026"); undefined when unset. */
+export const dayValue = (value: string | undefined) =>
+	value === undefined ? undefined : formatDate(isoDateInstant(value), { dateStyle: "medium" });
 
 const chipClass =
 	"inline-flex h-7 items-center gap-1 rounded-full border bg-muted/50 ps-3 pe-2 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50";

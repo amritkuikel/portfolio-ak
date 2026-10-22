@@ -19,7 +19,7 @@ export const createTestCrud = fn(async (_options: { data: unknown }): Promise<Te
 export const updateTestCrud = fn(async (_options: { data: unknown }): Promise<TestCrudDetail> => sampleDetail).mockName(
 	"updateTestCrud",
 );
-export const setTestCrudStatusFn = fn(
-	async (): Promise<TestCrudListItem> => sampleItems[0] as TestCrudListItem,
-).mockName("setTestCrudStatusFn");
-export const deleteTestCrudFn = fn(async () => ({ deleted: 1 })).mockName("deleteTestCrudFn");
+export const setTestCrudStatus = fn(async (): Promise<TestCrudListItem> => sampleItems[0] as TestCrudListItem).mockName(
+	"setTestCrudStatus",
+);
+export const deleteTestCrud = fn(async () => ({ deleted: 1 })).mockName("deleteTestCrud");

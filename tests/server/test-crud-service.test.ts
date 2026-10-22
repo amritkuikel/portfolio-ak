@@ -1,17 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Actor } from "@/features/rbac/types";
 import type { TestCrudInput } from "@/features/test-crud/schema";
 import { isStaleError } from "@/lib/concurrency";
 import { confirmUpload } from "@/server/attachments/service";
 import * as schema from "@/server/db/schema";
-import {
-	createItem,
-	deleteItems,
-	getItemOrThrow,
-	getPublishedOrThrow,
-	setItemStatus,
-	updateItem,
-} from "@/server/test-crud/service";
+import * as testCrud from "@/server/test-crud/service";
 import { createFakeCloudinary } from "../utils/fake-cloudinary";
 import { createTestDb } from "../utils/test-db";
 
@@ -36,8 +30,10 @@ beforeEach(async () => {
 	captureServerEvent.mockClear();
 });
 
-/** The audit actor of the calls below: the test database's admin (createTestDb's default id). */
-const ADMIN = { id: "admin-1" };
+/** Who acts in the calls below: the test database's admin (createTestDb's default id). */
+const ADMIN: Actor = { id: "admin-1", isAdmin: true, permissions: [] };
+/** A call's services (src/server/services.ts), with this test's fake Cloudinary. */
+const services = (actor: Actor = ADMIN) => ({ db: testDb.db, actor, imageStore: cloud.store });
 
 const input = (overrides: Partial<TestCrudInput> = {}): TestCrudInput => ({
 	title: "Momo Kitchen",
@@ -70,7 +66,7 @@ const VERSION = "2026-01-01T00:00:00.000Z";
 describe("create", () => {
 	it("saves the item with its uploaded images and records the event", async () => {
 		const image = await upload();
-		const created = await createItem(testDb.db, cloud.store, input({ images: [image] }), testDb.adminId);
+		const created = await testCrud.create(services(), input({ images: [image] }));
 		expect(created.images.map((item) => item.id)).toEqual([image.id]);
 		expect(captureServerEvent).toHaveBeenCalledWith("test_crud_created", testDb.adminId, {
 			item_id: created.id,
@@ -79,20 +75,19 @@ describe("create", () => {
 	});
 
 	it("reports NOT_FOUND for unknown items", async () => {
-		await expect(getItemOrThrow(testDb.db, cloud.store, MISSING)).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(testCrud.get(services(), MISSING)).rejects.toMatchObject({ code: "NOT_FOUND" });
 	});
 });
 
 describe("update", () => {
 	it("updates fields, and deletes the assets of images it dropped from Cloudinary at once", async () => {
 		const [kept, dropped] = [await upload(), await upload()];
-		const created = await createItem(testDb.db, cloud.store, input({ images: [kept, dropped] }), testDb.adminId);
-		const updated = await updateItem(
-			testDb.db,
-			cloud.store,
-			{ ...input({ title: "Renamed", images: [kept] }), id: created.id, updatedAt: created.updatedAt },
-			testDb.adminId,
-		);
+		const created = await testCrud.create(services(), input({ images: [kept, dropped] }));
+		const updated = await testCrud.update(services(), {
+			...input({ title: "Renamed", images: [kept] }),
+			id: created.id,
+			updatedAt: created.updatedAt,
+		});
 		expect(updated).toMatchObject({ title: "Renamed" });
 		expect(updated.images.map((image) => image.id)).toEqual([kept.id]);
 		expect(cloud.destroyed).toEqual([dropped.publicId]);
@@ -106,58 +101,83 @@ describe("update", () => {
 
 	it("keeps the removed row for the scheduled cleanup when Cloudinary is unreachable", async () => {
 		const image = await upload();
-		const created = await createItem(testDb.db, cloud.store, input({ images: [image] }), testDb.adminId);
+		const created = await testCrud.create(services(), input({ images: [image] }));
 		cloud.failDestroy();
-		await updateItem(
-			testDb.db,
-			cloud.store,
-			{ ...input(), id: created.id, updatedAt: created.updatedAt },
-			testDb.adminId,
-		);
+		await testCrud.update(services(), { ...input(), id: created.id, updatedAt: created.updatedAt });
 		const [row] = await testDb.db.select().from(schema.attachment).where(eq(schema.attachment.id, image.id));
 		expect(row?.deletedAt).toBeInstanceOf(Date);
 	});
 
 	it("reports NOT_FOUND for an unknown id and records nothing", async () => {
-		await expect(
-			updateItem(testDb.db, cloud.store, { ...input(), id: MISSING, updatedAt: VERSION }, testDb.adminId),
-		).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(testCrud.update(services(), { ...input(), id: MISSING, updatedAt: VERSION })).rejects.toMatchObject({
+			code: "NOT_FOUND",
+		});
 		expect(captureServerEvent).not.toHaveBeenCalled();
+	});
+
+	it("records the create and each edit with the fields it changed; an unchanged save records nothing", async () => {
+		const created = await testCrud.create(services(), input());
+		const edited = await testCrud.update(services(), {
+			...input({ title: "Momo Palace", price: 150, body: "<p>New</p>" }),
+			id: created.id,
+			updatedAt: created.updatedAt,
+		});
+		const unchanged = await testCrud.update(services(), {
+			...input({ title: "Momo Palace", price: 150, body: "<p>New</p>" }),
+			id: created.id,
+			updatedAt: edited.updatedAt,
+		});
+		// The body is compared but too long for the row: an edit of it alone is recorded, without values.
+		await testCrud.update(services(), {
+			...input({ title: "Momo Palace", price: 150, body: "<p>Newer</p>" }),
+			id: created.id,
+			updatedAt: unchanged.updatedAt,
+		});
+		const rows = await testDb.db
+			.select()
+			.from(schema.auditEvent)
+			.where(eq(schema.auditEvent.targetId, created.id))
+			.orderBy(asc(schema.auditEvent.createdAt));
+		expect(rows).toMatchObject([
+			{ action: "test-crud.create", targetLabel: "Momo Kitchen", after: { title: "Momo Kitchen", status: "draft" } },
+			{
+				action: "test-crud.update",
+				targetLabel: "Momo Palace",
+				before: { title: "Momo Kitchen", price: 100 },
+				after: { title: "Momo Palace", price: 150 },
+			},
+			{ action: "test-crud.update", before: {}, after: {} },
+		]);
 	});
 
 	it("refuses a save started from an older version, keeps the other save and its images, records nothing", async () => {
 		const image = await upload();
-		const created = await createItem(testDb.db, cloud.store, input({ images: [image] }), testDb.adminId);
+		const created = await testCrud.create(services(), input({ images: [image] }));
 		// Two sessions open the same version; the first saves.
-		const first = await updateItem(
-			testDb.db,
-			cloud.store,
-			{ ...input({ title: "First session", images: [image] }), id: created.id, updatedAt: created.updatedAt },
-			testDb.adminId,
-		);
+		const first = await testCrud.update(services(), {
+			...input({ title: "First session", images: [image] }),
+			id: created.id,
+			updatedAt: created.updatedAt,
+		});
 		captureServerEvent.mockClear();
 		// The second, still on the old version, drops the image: refused, nothing changes or is deleted.
-		const error = await updateItem(
-			testDb.db,
-			cloud.store,
-			{ ...input({ title: "Second session" }), id: created.id, updatedAt: created.updatedAt },
-			testDb.adminId,
-		).catch((caught: unknown) => caught);
+		const error = await testCrud
+			.update(services(), { ...input({ title: "Second session" }), id: created.id, updatedAt: created.updatedAt })
+			.catch((caught: unknown) => caught);
 		expect(isStaleError(error)).toBe(true);
 		expect(error).toMatchObject({ code: "CONFLICT", status: 409 });
-		const current = await getItemOrThrow(testDb.db, cloud.store, created.id);
+		const current = await testCrud.get(services(), created.id);
 		expect(current).toMatchObject({ title: "First session", updatedAt: first.updatedAt });
 		expect(current.images.map((each) => each.id)).toEqual([image.id]);
 		expect(cloud.destroyed).toEqual([]);
 		expect(captureServerEvent).not.toHaveBeenCalled();
 		// Starting again from the latest version works.
 		await expect(
-			updateItem(
-				testDb.db,
-				cloud.store,
-				{ ...input({ title: "Second session" }), id: created.id, updatedAt: current.updatedAt },
-				testDb.adminId,
-			),
+			testCrud.update(services(), {
+				...input({ title: "Second session" }),
+				id: created.id,
+				updatedAt: current.updatedAt,
+			}),
 		).resolves.toMatchObject({ title: "Second session" });
 	});
 });
@@ -172,18 +192,16 @@ describe("status, delete and reads", () => {
 			.orderBy(asc(schema.auditEvent.createdAt));
 
 	it("publishes, records the status change and makes the item public", async () => {
-		const created = await createItem(testDb.db, cloud.store, input(), testDb.adminId);
-		await expect(getPublishedOrThrow(testDb.db, cloud.store, "momo-kitchen")).rejects.toMatchObject({
+		const created = await testCrud.create(services(), input());
+		await expect(testCrud.getPublished(services(), "momo-kitchen")).rejects.toMatchObject({
 			code: "NOT_FOUND",
 		});
-		const published = await setItemStatus(
-			testDb.db,
-			cloud.store,
-			{ id: created.id, status: "published" },
-			{ id: testDb.adminId, requestId: "req-publish", ip: "203.0.113.7" },
-		);
+		const published = await testCrud.setStatus(services({ ...ADMIN, requestId: "req-publish", ip: "203.0.113.7" }), {
+			id: created.id,
+			status: "published",
+		});
 		expect(published.status).toBe("published");
-		expect(await auditOf(created.id)).toMatchObject([
+		expect((await auditOf(created.id)).slice(1)).toMatchObject([
 			{
 				action: "test-crud.publish",
 				actorId: testDb.adminId,
@@ -197,35 +215,39 @@ describe("status, delete and reads", () => {
 			},
 		]);
 		// Publishing again changes nothing, so nothing more is recorded.
-		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "published" }, ADMIN);
-		expect(await auditOf(created.id)).toHaveLength(1);
-		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "draft" }, ADMIN);
-		expect((await auditOf(created.id)).map((row) => row.action)).toEqual(["test-crud.publish", "test-crud.unpublish"]);
-		await setItemStatus(testDb.db, cloud.store, { id: created.id, status: "published" }, ADMIN);
+		await testCrud.setStatus(services(), { id: created.id, status: "published" });
+		expect(await auditOf(created.id)).toHaveLength(2);
+		await testCrud.setStatus(services(), { id: created.id, status: "draft" });
+		expect((await auditOf(created.id)).map((row) => row.action)).toEqual([
+			"test-crud.create",
+			"test-crud.publish",
+			"test-crud.unpublish",
+		]);
+		await testCrud.setStatus(services(), { id: created.id, status: "published" });
 		expect(captureServerEvent).toHaveBeenLastCalledWith("test_crud_updated", testDb.adminId, {
 			item_id: created.id,
 			change: "status",
 			status: "published",
 		});
-		expect((await getPublishedOrThrow(testDb.db, cloud.store, "momo-kitchen")).title).toBe("Momo Kitchen");
-		expect((await getItemOrThrow(testDb.db, cloud.store, created.id)).status).toBe("published");
+		expect((await testCrud.getPublished(services(), "momo-kitchen")).title).toBe("Momo Kitchen");
+		expect((await testCrud.get(services(), created.id)).status).toBe("published");
 	});
 
 	it("deletes items with their images' assets, records the count, and stays silent when nothing matched", async () => {
 		const image = await upload();
-		const a = await createItem(testDb.db, cloud.store, input({ slug: "a", images: [image] }), testDb.adminId);
-		const b = await createItem(testDb.db, cloud.store, input({ slug: "b" }), testDb.adminId);
+		const a = await testCrud.create(services(), input({ slug: "a", images: [image] }));
+		const b = await testCrud.create(services(), input({ slug: "b" }));
 		captureServerEvent.mockClear();
-		expect(await deleteItems(testDb.db, cloud.store, [a.id, b.id, MISSING], ADMIN)).toEqual({ deleted: 2 });
-		expect(await auditOf(a.id)).toMatchObject([
+		expect(await testCrud.remove(services(), [a.id, b.id, MISSING])).toEqual({ deleted: 2 });
+		expect((await auditOf(a.id)).slice(1)).toMatchObject([
 			{ action: "test-crud.delete", targetLabel: "Momo Kitchen", before: { title: "Momo Kitchen", status: "draft" } },
 		]);
-		expect(await auditOf(b.id)).toHaveLength(1);
+		expect(await auditOf(b.id)).toHaveLength(2);
 		expect(await auditOf(MISSING)).toEqual([]);
 		expect(cloud.destroyed).toEqual([image.publicId]);
 		expect(captureServerEvent).toHaveBeenCalledWith("test_crud_deleted", testDb.adminId, { count: 2 });
 		captureServerEvent.mockClear();
-		expect(await deleteItems(testDb.db, cloud.store, [MISSING], ADMIN)).toEqual({ deleted: 0 });
+		expect(await testCrud.remove(services(), [MISSING])).toEqual({ deleted: 0 });
 		expect(captureServerEvent).not.toHaveBeenCalled();
 	});
 });

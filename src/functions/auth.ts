@@ -8,6 +8,7 @@ import {
 	requireUserMiddleware,
 	sessionMiddleware,
 } from "@/middleware/auth";
+import { withServices } from "@/middleware/services";
 
 /** Current session or null. Used by the root route to fill the router context. */
 export const getSession = createServerFn({ method: "GET" })
@@ -121,18 +122,16 @@ export const setMyPassword = createServerFn({ method: "POST" })
  * Any signed-in user may call it; it refuses sessions that aren't impersonated.
  */
 export const stopImpersonating = createServerFn({ method: "POST" })
-	.middleware([requireUserMiddleware])
+	.middleware([requireUserMiddleware, withServices])
 	.handler(async ({ context }): Promise<void> => {
-		const [{ auth }, rbac, { auditActorFrom }, { db }, { getRequestHeaders }, { forgetSession }] = await Promise.all([
+		const [{ auth }, rbac, { getRequestHeaders }, { forgetSession }] = await Promise.all([
 			import("@/server/auth/auth"),
 			import("@/server/rbac/service"),
-			import("@/server/audit/actor"),
-			import("@/server/db/client"),
 			import("@tanstack/react-start/server"),
 			import("@/server/auth/session"),
 		]);
 		const headers = getRequestHeaders();
-		await rbac.stopImpersonating(db, auditActorFrom(context), async () => {
+		await rbac.stopImpersonating(context, async () => {
 			await auth.api.stopImpersonating({ headers });
 		});
 		// The rest of this request must not see the impersonated session.

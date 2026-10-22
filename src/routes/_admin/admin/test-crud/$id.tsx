@@ -1,47 +1,23 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { Page, PageHeader } from "@/components/page/page";
+import { createFileRoute } from "@tanstack/react-router";
 import { assertRoutePermission } from "@/features/rbac/route-guard";
-import { TestCrudForm, testCrudFormKey } from "@/features/test-crud/components/test-crud-form";
+import { TestCrudEditPage } from "@/features/test-crud/components/test-crud-detail";
 import { testCrudDetailQueryOptions } from "@/features/test-crud/queries";
-import { testCrudIdParamSchema } from "@/features/test-crud/search";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
-import { isAppError } from "@/lib/errors";
+import { loadDetailOr404, titleHead } from "@/lib/crud/route";
+import { idSchema } from "@/lib/crud/schema";
 import { parseParams } from "@/lib/list/params";
-import { ensureQuery } from "@/lib/query";
-import { pageTitle } from "@/lib/seo";
-import { setErrorStatus } from "@/lib/start/http-status";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_admin/admin/test-crud/$id")({
 	// Only UUIDs match this route; anything else falls through to the localized 404
 	// without a server round trip ("new" is its own route and matches first).
-	params: { parse: (raw) => parseParams(testCrudIdParamSchema, raw) },
+	params: { parse: (raw) => parseParams(idSchema, raw) },
 	beforeLoad: ({ context }) => assertRoutePermission(context.session, "test-crud:update"),
-	loader: async ({ context, params }) => {
-		try {
-			const item = await ensureQuery(context.queryClient, testCrudDetailQueryOptions(params.id));
-			// Only what the breadcrumb needs; the item itself travels in the Query cache.
-			return { title: item.title };
-		} catch (error) {
-			if (isAppError(error) && error.code === "NOT_FOUND") throw notFound();
-			await setErrorStatus(error);
-			throw error;
-		}
-	},
+	// Only what the breadcrumb needs; the item itself travels in the Query cache.
+	loader: async ({ context, params }) => ({
+		title: (await loadDetailOr404(context.queryClient, testCrudDetailQueryOptions(params.id))).title,
+	}),
 	staticData: { breadcrumb: loaderTitleCrumb },
-	head: () => ({ meta: [{ title: pageTitle(m.test_crud_edit_title()) }] }),
-	component: EditTestCrudPage,
+	head: titleHead(m.test_crud_edit_title),
+	component: TestCrudEditPage,
 });
-
-function EditTestCrudPage() {
-	const { id } = Route.useParams();
-	const { data: item } = useSuspenseQuery(testCrudDetailQueryOptions(id));
-	return (
-		<Page width="admin">
-			<PageHeader title={m.test_crud_edit_title()} />
-			{/* Another item, or a reloaded newer version, resets the form's defaults. */}
-			<TestCrudForm key={testCrudFormKey(item)} item={item} />
-		</Page>
-	);
-}

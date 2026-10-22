@@ -177,6 +177,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0170](#0170-sortable-lists-use-dnd-kitreact-pinned-exactly-plus-alt--arrows): Sortable lists use `@dnd-kit/react`, pinned exactly, plus Alt + arrows
 - [0171](#0171-charts-recharts-3-loaded-on-demand-into-a-fixed-size-frame-with-a-data-table-for-screen-readers): Charts: Recharts 3 loaded on demand into a fixed-size frame, with a data table for screen readers
 - [0172](#0172-slugs-are-linked-to-their-source-checked-as-you-type-and-a-submit-waits-for-async-validation): Slugs are linked to their source, checked as you type, and a submit waits for async validation
+- [0173](#0173-the-crud-standard-one-shape-shared-helpers-on-both-sides-every-section-on-it): The CRUD standard: one shape, shared helpers on both sides, every section on it
+- [0174](#0174-admin-crud-writes-use-query-mutations-tanstack-db-is-for-client-first-apps): Admin CRUD writes use Query mutations; TanStack DB is for client-first apps
+- [0175](#0175-pnpm-newfeature-v2-the-standards-shape---public-and---localized-and-a-clean-tree): `pnpm new:feature` v2: the standard's shape, `--public` and `--localized`, and a clean tree
 </details>
 
 ---
@@ -832,6 +835,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0064: When to use TanStack DB, Query or Store, and the rest
 
+*The "edit with instant feedback" row is superseded by 0174: admin CRUD uses Query mutations; TanStack DB is for client-first apps.*
+
 | State | Tool | Example in this app |
 | --- | --- | --- |
 | Server data you **read** (lists, details, stats) | **TanStack Query**, using `queryOptions` and `ensureQueryData` in loaders. It is SSR-dehydrated by the official integration. | `/stack` list and stats, session (`sessionQueryOptions`) |
@@ -903,6 +908,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - A URL text field: makes the reusable ImageField pointless.
 
 ## 0068: The admin list is URL-driven; Query owns SSR and a DB collection owns optimism
+
+*Superseded by 0174 (the list stays URL-driven; writes are Query mutations that patch every cached page).*
 
 - **What:**
   - Search, status, sort, page and page size are Zod-validated search params (`.catch()` corrects bad values) and are also the `listTestCrud` input.
@@ -1606,6 +1613,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0122: Edits carry the version they started from; a stale save is a CONFLICT
 
+*Since 0173 the version is checked one way everywhere: in the UPDATE's WHERE (`updateVersioned`), without a separate row lock.*
+
 - **What:** an edit sends the row's `updatedAt` as it received it (`versionSchema()`, `src/lib/concurrency.ts`). The repository writes only while the row still has that version (`sameVersion(column, version)`, `src/server/db/concurrency.ts`) and otherwise throws `staleError()`: a `CONFLICT` with `reason: "stale"`. Forms catch it with `handleSaveError(form, error, onStale)` and show `StaleVersionAlert`, whose "Reload" refetches the record and resets the form to it. Test CRUD's edit form and the role rename dialog use it.
 - **Choices:**
   - **`updatedAt` is the version.** Both tables already have it, maintained by Drizzle's `$onUpdate`, so no migration and no extra column. Postgres keeps microseconds (an insert's `defaultNow()`) and a JS Date milliseconds, so the comparison is `date_trunc('milliseconds', updated_at) = $version`.
@@ -1697,6 +1706,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0132: Admin actions are audited in the same transaction as the change
 
+*Its scope is widened by 0173: creates and edits of content are audited too, through `withAudit`.*
+
 - **What:** an `audit_event` table (migration `0008_audit_log`): actor, the admin behind an impersonated session, action, target type, id and label, a `before`/`after` summary of the changed fields, request id, client IP and time. Services write it with `recordAudit(tx, actor, entry)` (`src/server/audit/record.ts`) inside the transaction that makes the change: role create, rename, delete and permission edits; a user's roles, ban, unban, sign-out-everywhere and invitation; impersonation start and stop; Test CRUD publish, unpublish and delete. `/admin/audit` lists it through the list contract (search by target or request id, actor, action, target type, day range), guarded by a new `audit:read` permission (page and function).
 - **Choices:**
   - **Same transaction, not an event bus or an after-commit hook:** a change without its row (or a row without its change) can't happen, and the service is the one place that knows what changed. A refused or failed action leaves no row.
@@ -1780,6 +1791,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 *Superseded by 0165: the palette is part of the admin shell; view transitions stay opt-in.*
 
 ## 0141: `pnpm new:feature` generates an admin CRUD section from templates and marker lines
+
+*Superseded by 0175 (v2: the CRUD standard's shape, `--public`, `--localized`, a clean tree and rollback).*
 
 - **What:** `scripts/new-feature.mjs <name> [--title] [--title-ne] [--no-build]` copies `scripts/templates/feature/` (paths and contents use `__name__`, `__snake__`, `__camel__`, `__Pascal__`, `__UPPER__`, `__Title__`; `.tpl` files, so Biome, TypeScript and knip ignore them) and inserts entries above `// @new-feature:<slot>` lines in the shared lists: the schema index, the permission catalog and its labels, audit actions, targets and labels, `ADMIN_SECTIONS`, the guarded-functions test and the e2e page lists. It appends messages to both locales, runs `drizzle-kit generate --name <snake>`, Biome on what it touched (and `drizzle/`), the Paraglide compiler and a build (which regenerates the route tree). The generated feature is the admin half of Test CRUD: title and notes, search, sort, pagination, create, edit with the version check (0122), delete and bulk delete with an audit row each (0132), thin routes, a PGlite service test and stories with their server-function mocks. `AdminSection["to"]` is now derived from the route tree (every `/admin/…` path without a param), so a new section needs no type edit.
 - **Checked:** on a copy of the repo, `pnpm strip-demo` then `pnpm new:feature projects --title-ne "परियोजनाहरू"`, then typecheck, check, knip, test (564 tests), test:storybook, build-storybook and test:e2e, with no edits in between.
@@ -2039,3 +2052,46 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `SlugField` follows its source field (`from`, a dotted path) while linked: new records start linked, typing in the slug unlinks it, the link button re-links it. `slugValidators({ from, isAvailable })` puts a debounced async check on the AppField (`onChangeAsync`, re-run when the source changes through `onChangeListenTo`); Test CRUD's form uses it with a new `isTestCrudSlugFree` server function (`test-crud:read`, in the guard test; `isSlugFree` in the repository, tested on PGlite). The save still maps the unique violation to a field error. The shared `Form` now waits for validation to settle before calling `handleSubmit`.
 - **Why the wait:** TanStack Form's `handleSubmit` returns without submitting on a first attempt while `canSubmit` is false, and `canSubmit` is false while any field validates (`isFieldsValidating` is true already during the debounce). A user who typed a title and pressed Create within the slug check's 400 ms got nothing: Storybook's Test CRUD story caught it under load, a jsdom test now covers it.
 - **Alternatives considered:** checking on blur (the slug is usually never focused, as it follows the title); disabling Save while validating (the submit button stays enabled on purpose, so pressing it reveals every error; `SubmitButton`); `canSubmitWhenInvalid` (would submit invalid forms too).
+
+## 0173: The CRUD standard: one shape, shared helpers on both sides, every section on it
+
+- **What:** one way to build a feature, written once in `docs/guides/crud.md` and used by Test CRUD, users, roles, the permission matrix and the audit log (Task 38).
+  - **Shape:** `features/<name>/` holds `search.ts` (URL contract), `schema.ts` (strict inputs, DTO schemas), `keys.ts`, `queries.ts` (queryOptions and mutationOptions), `columns.tsx`, `filters.tsx`, `labels.ts`, `commands.ts` and `components/` (list, form, detail, pending). Functions are `createServerFn → requirePermission, withServices → validator → one service call`; `server/<name>/` has the repository and the service. Routes are literal `createFileRoute` objects whose components come from the feature and read the URL with `getRouteApi`.
+  - **Client helpers** (`src/lib/crud/`, `src/components/crud/`): `createCrudKeys`, `listSchema` (search, strict input, defaults, filter keys), `idSchema`, `isoDateTime()` (a `z.codec`: a row's Date to the wire's ISO string), `listSearch`, `listLoader`, `loadDetailOr404`, `titleHead`, `defineFilters` with chip specs (`textChip`, `choiceChip`, `eachChip`, `rangeChip`, `flagChip`), `CrudListPage`/`CrudListPending`, `useCrudMutation`, `useCrudForm` + `CrudForm` + `crudFormKey`, `NewButton`, `RecordLink`; also `QueryDialog` (a dialog that loads its record) and `availabilityValidators` (a debounced "is it free?" check).
+  - **Server helpers** (`src/server/db/crud.ts`): `listPage`, `findOrThrow`/`notFound`, `updateVersioned` (the version in the UPDATE's WHERE, no separate lock), `uniqueViolation` (insert, then map the constraint to a field error), `isValueFree`, `uniqueSlug`, `withAudit` (the transaction and the audit rows the change reports). `withServices` (`src/middleware/services.ts`, server modules imported inside `.server()`) adds `context.db`, `context.actor` and `context.imageStore`; services take them as their first argument (`Services`, `src/server/services.ts`), so tests pass their own.
+  - **RBAC:** one isomorphic `Actor` (`features/rbac/types.ts`) replaces the four copies; `canGrant` is the self-escalation rule on both sides; `useCan`/`<Can>` are the only UI checks; the matrix groups resources under the sidebar's groups; functions are named `listX`/`getX`/`createX`/`updateX`/`deleteX`/`setXStatus` with explicit return types.
+  - **Behaviour that changed:** creates and edits of Test CRUD items are audited (supersedes 0132's scope: every change of admin data and content is), recording only the fields that changed (`changes()`); role names are unique by a case-insensitive index (`role_name_lower_unique`, migration `0010`) and emails by Better Auth's constraint, both mapped to field errors instead of checked first; a user's roles are saved against their version (`updatedAt`), so the roles dialog has a stale check and "Reload"; the invite form checks the address as you type; the delete confirm and the save, delete and failure toasts use shared messages (`crud_*`, `common_toast_failed`); the router has `defaultStructuralSharing`; the sidebar's sections are `linkOptions`.
+  - **Removed duplicates:** the four `Actor` types, four `notFound`s, the role-key and portfolio slug copies (now `slugify(name, 40)` + `uniqueSlug`, `SLUG_PATTERN`), the two `day()` chip formatters (`dayValue`), `testCrudIdSchema`/`testCrudIdParamSchema` (`idSchema`), the hard-coded skeleton widths (from the columns), `refreshRbac` and the invalidation helpers (keys), the double row lock of a publish, the services the functions skipped.
+- **Numbers (wc -l):**
+  - Test CRUD's admin code (features, functions, server, admin routes; the public reads included both times): 1,895 → 1,462 lines (−23%). The shared code it now uses is 1,191 lines (`src/lib/crud`, `src/components/crud`, `server/db/crud.ts`, the services middleware and module, `QueryDialog`, `availabilityValidators`, `localizedValue`), written once for every section.
+  - The roles, users and audit routes: 495 → 91 lines (their UI moved to `features/*/components`).
+  - Every page's JavaScript: 238.0 → 232.5 kB gzip (the admin pages no longer pull Test CRUD's TanStack DB collection).
+- **Deviation:** the plan asked for about 40% less Test CRUD code. It came out at 23%: the reference keeps its public pages, image gallery, masked dialog and analytics events, its filters and columns are its own, and creates and edits gained audit rows. The repetitive half (list page wiring, filter chips, mutations, form plumbing, routes, server boilerplate) is what shrank; the rest is the feature.
+- **Choices:**
+  - **Client helpers are split by what they need:** pure ones in `src/lib/crud/`, React ones in `src/components/crud/` (the plan put both in `lib`), and the route helpers in `src/lib/crud/route.ts`, kept out of components by Biome (it needs the Start runtime for the 404 status).
+  - **`listLoader(route, options)`, not `loader: listLoader(options)`:** a non-inline loader is typed before the route's loader deps are, and its deps came out as `{}`.
+  - **DTO schemas over types:** `dto.parse(row)` checks what leaves the server and picks the fields; a few parses per page cost nothing measurable.
+  - **Reload by key:** "Reload" refetches the record's query, and its new `updatedAt` re-keys the form (`crudFormKey`); dialogs read their record from the list's cache by id. One way instead of Test CRUD's remount and roles' `form.reset()`.
+- **Alternatives considered:** a generic `<ResourcePage resource={…}>` that renders everything from a config (hides too much: every feature differs in actions, dialogs and fields); keeping the four write styles and documenting them (the next six features would copy whichever they found first).
+
+## 0174: Admin CRUD writes use Query mutations; TanStack DB is for client-first apps
+
+*Supersedes 0068 and 0064's "edit with instant feedback" row.*
+
+- **What:** admin writes go through `useCrudMutation` (Query's `useMutation` over the feature's `mutationOptions`): optimistic updates patch every cached page of the list (`queryClient.getQueriesData({ queryKey: keys.lists() })`) and roll back from the snapshot; after the write, the feature's keys are invalidated. Test CRUD's per-page TanStack DB collections and their LRU (`features/test-crud/collection.ts`) are gone. TanStack DB stays for `/dev/examples/optimistic` and the apps (Kanban, Habits, Notes; Task 41), where live queries over client state and optimistic transactions are the point.
+- **Why:** an admin list is a server-paginated, server-sorted window: the collection held one page, needed a descriptor per search (and a cap on how many), and every feature would have repeated it. Query's cache already holds every page, so one helper patches them all and rolls back. The permission matrix's hand-written `onMutate` became the same helper.
+- **Trade-offs:** no live queries in the admin (nothing there needs them); the DB runtime's 100.6 kB still loads with every page until Task 41 moves its provider (0066).
+- **Alternatives considered:** keeping collections for admin lists (one per page and search, rebuilt as the URL changes); optimistic updates by hand per feature (what roles and the matrix did).
+
+## 0175: `pnpm new:feature` v2: the standard's shape, `--public` and `--localized`, and a clean tree
+
+*Supersedes 0141.*
+
+- **What:** `scripts/new-feature.ts` (TypeScript, run by Node) writes a feature in 0173's shape from `scripts/templates/feature/` (28 templates): the table and migration, search/schema/keys/queries/columns/filters/commands, list, form, detail and pending components, functions on `withServices`, an audited repository and service, thin routes, messages, stories and mocks, a PGlite test. Shared lists get entries at their `// @new-feature:<slot>` lines (new slots: `commands`, `sitemap`, `indexable`, `content-titled`, `unguarded-functions`); imports go at the top of the file and Biome sorts them.
+  - `--public`: a slug (with the as-you-type check) and a "published" switch; public list and detail pages under `_public` with `listSeo()`/`seo()`, unguarded read functions on `withPublicServices` (declared in the guard test), sitemap entries from the database (`SITEMAP_SOURCES`), route-SEO test entries.
+  - `--localized`: the title and notes are `{ en, ne }` jsonb columns, `LocalizedField` in the form, searched in both languages and shown with `localizedValue()`.
+  - Templates use `{{#flag}}…{{/flag}}` and `{{^flag}}…{{/flag}}` sections; `*.public.tpl` files exist only with `--public`.
+- **Safety:** it refuses to run with uncommitted changes to tracked files; any failure runs `git checkout -- .` and `git clean` on the files it created (and drizzle's new migration), so a half-generated feature never stays.
+- **Checked:** in a scratch worktree, `pnpm new:feature ci-pages --public --localized` then typecheck, check, knip, test (664 tests), test:storybook (364), i18n:check, the migration check and the full e2e review (735 passed, the generated admin and public pages included). CI's template job generates a plain feature and a `--public --localized` one after `strip-demo`, committing in between.
+- **Why:** the generator now emits the standard, so the six apps and every new project start from it; the flags cover the two variants the portfolio needs (public pages, bilingual content). The clean-tree rule is what makes the rollback safe.
+- **Alternatives considered:** separate templates per flag combination (four copies to keep in step); a template engine dependency (sections are a 15-line function).

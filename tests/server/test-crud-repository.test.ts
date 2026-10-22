@@ -4,9 +4,9 @@ import type { TestCrudInput } from "@/features/test-crud/schema";
 import { AppError, FORM_ERROR_KEY } from "@/lib/errors";
 import { insertPending } from "@/server/attachments/repository";
 import * as schema from "@/server/db/schema";
+import type { Db } from "@/server/db/types";
 import {
 	createTestCrud,
-	type Db,
 	deleteTestCrud,
 	getPublishedTestCrud,
 	getTestCrud,
@@ -31,7 +31,7 @@ const USER_ID = "admin-1";
 beforeAll(async () => {
 	testDb = await createTestDb(USER_ID);
 	db = testDb.db;
-});
+}, 60_000);
 afterAll(() => testDb.close());
 beforeEach(() => testDb.reset());
 
@@ -56,6 +56,14 @@ const opts = (extra: { now?: Date; userId?: string; version?: string } = {}) => 
 	version: "",
 	...extra,
 });
+/** The writes run inside the service's transaction (withAudit). */
+const create = (data: TestCrudInput, options: Parameters<typeof createTestCrud>[2]) =>
+	db.transaction((tx) => createTestCrud(tx, data, options));
+const update = (id: string, data: TestCrudInput, options: Parameters<typeof updateTestCrud>[3]) =>
+	db.transaction((tx) => updateTestCrud(tx, id, data, options));
+const status = (id: string, value: TestCrudInput["status"], now?: Date) =>
+	db.transaction((tx) => setTestCrudStatus(tx, id, value, store, now));
+const remove = (ids: string[]) => db.transaction((tx) => deleteTestCrud(tx, ids));
 let uploads = 0;
 /** A verified pending upload by `ownerId` (what confirmUpload records). */
 const pending = async (ownerId = USER_ID) => {
@@ -81,7 +89,7 @@ const liveAttachments = async () =>
 describe("isSlugFree", () => {
 	it("is free when no item has the slug, or only the item being edited", async () => {
 		expect(await isSlugFree(db, "first-item")).toBe(true);
-		const created = await createTestCrud(db, input(), opts());
+		const created = await create(input(), opts());
 		expect(await isSlugFree(db, "first-item")).toBe(false);
 		expect(await isSlugFree(db, "first-item", created.id)).toBe(true);
 		expect(await isSlugFree(db, "another-item")).toBe(true);
@@ -91,8 +99,7 @@ describe("isSlugFree", () => {
 describe("create and read", () => {
 	it("stores every column, sanitizes the body and links the creator and images in order", async () => {
 		const [one, two] = [await pending(), await pending()];
-		const created = await createTestCrud(
-			db,
+		const created = await create(
 			input({
 				body: '<p onclick="x()">Hi<script>alert(1)</script></p>',
 				images: [
@@ -132,16 +139,14 @@ describe("create and read", () => {
 
 	it("sets published_at when created as published", async () => {
 		const now = new Date("2026-10-01T10:00:00Z");
-		const created = await createTestCrud(db, input({ status: "published" }), opts({ now }));
+		const created = await create(input({ status: "published" }), opts({ now }));
 		expect(created.publishedAt).toBe(now.toISOString());
 	});
 
 	it("rejects a duplicate slug with a CONFLICT field error", async () => {
-		await createTestCrud(db, input(), opts());
+		await create(input(), opts());
 		const upload = await pending();
-		const error = await createTestCrud(db, input({ title: "Other", images: [upload] }), opts()).catch(
-			(caught: unknown) => caught,
-		);
+		const error = await create(input({ title: "Other", images: [upload] }), opts()).catch((caught: unknown) => caught);
 		expect(error).toBeInstanceOf(AppError);
 		expect(error).toMatchObject({ code: "CONFLICT", fieldErrors: { slug: ["Another item already uses this slug."] } });
 		// The failed transaction linked nothing: the upload is still pending.
@@ -149,8 +154,10 @@ describe("create and read", () => {
 		expect(row?.entityType).toBeNull();
 	});
 
-	it("returns null for unknown ids", async () => {
-		expect(await getTestCrud(db, "00000000-0000-4000-8000-000000000000", store)).toBeNull();
+	it("reports NOT_FOUND for unknown ids", async () => {
+		await expect(getTestCrud(db, "00000000-0000-4000-8000-000000000000", store)).rejects.toMatchObject({
+			code: "NOT_FOUND",
+		});
 	});
 
 	it("refuses images that aren't the user's own pending uploads or already this item's", async () => {
@@ -159,17 +166,15 @@ describe("create and read", () => {
 			.values({ id: "someone-else", name: "S", email: "s@example.com" })
 			.onConflictDoNothing();
 		const someoneElses = await pending("someone-else");
-		const error = await createTestCrud(db, input({ images: [someoneElses] }), opts()).catch(
-			(caught: unknown) => caught,
-		);
+		const error = await create(input({ images: [someoneElses] }), opts()).catch((caught: unknown) => caught);
 		expect(error).toMatchObject({ code: "BAD_REQUEST" });
 		expect((error as AppError).fieldErrors?.[FORM_ERROR_KEY]?.[0]).toBe(
 			"One of the images can't be used here. Remove it and upload it again.",
 		);
 		const mine = await pending();
-		const first = await createTestCrud(db, input({ slug: "first", images: [mine] }), opts());
+		const first = await create(input({ slug: "first", images: [mine] }), opts());
 		// Another item can't take an image that belongs to the first one.
-		await expect(createTestCrud(db, input({ slug: "second", images: [mine] }), opts())).rejects.toMatchObject({
+		await expect(create(input({ slug: "second", images: [mine] }), opts())).rejects.toMatchObject({
 			code: "BAD_REQUEST",
 		});
 		expect((await getTestCrud(db, first.id, store))?.images).toHaveLength(1);
@@ -186,7 +191,7 @@ describe("listTestCrud", () => {
 			["Epsilon eggplant", "published", 400],
 		];
 		for (const [index, [title, status, price]] of items.entries()) {
-			await createTestCrud(db, input({ title, slug: `item-${index}`, status, price, summary: "" }), {
+			await create(input({ title, slug: `item-${index}`, status, price, summary: "" }), {
 				userId: USER_ID,
 				store,
 				now: new Date(Date.UTC(2026, 0, index + 1)),
@@ -232,8 +237,7 @@ describe("listTestCrud filters", () => {
 	];
 	beforeEach(async () => {
 		for (const [index, [title, tags, price, publishedAt, image]] of rows.entries()) {
-			const created = await createTestCrud(
-				db,
+			const created = await create(
 				input({
 					title,
 					slug: `row-${index}`,
@@ -303,10 +307,9 @@ describe("listTestCrud filters", () => {
 describe("update, status and delete", () => {
 	it("updates fields, reorders images, updates alt text and marks dropped images removed", async () => {
 		const [a, b] = [await pending(), await pending()];
-		const created = await createTestCrud(db, input({ images: [a, b] }), opts());
+		const created = await create(input({ images: [a, b] }), opts());
 		const c = await pending();
-		const { item, removed } = await updateTestCrud(
-			db,
+		const { item, removed } = await update(
 			created.id,
 			input({ title: "Renamed", tags: [], images: [c, { id: a.id, alt: "Now described" }] }),
 			opts({ version: created.updatedAt }),
@@ -318,70 +321,66 @@ describe("update, status and delete", () => {
 		]);
 		expect(removed.map((row) => row.id)).toEqual([b.id]);
 		expect(await liveAttachments()).toBe(2);
-		const cleared = await updateTestCrud(db, created.id, input(), opts({ version: item.updatedAt }));
+		const cleared = await update(created.id, input(), opts({ version: item.updatedAt }));
 		expect(cleared.item.image).toBeNull();
 		expect(await liveAttachments()).toBe(0);
 	});
 
 	it("keeps the first publish date while published and clears it on unpublish", async () => {
-		const created = await createTestCrud(db, input(), opts());
+		const created = await create(input(), opts());
 		const first = new Date("2026-02-01T00:00:00Z");
-		expect((await setTestCrudStatus(db, created.id, "published", store, first)).publishedAt).toBe(first.toISOString());
+		expect((await status(created.id, "published", first)).item.publishedAt).toBe(first.toISOString());
 		const published = await getTestCrud(db, created.id, store);
-		const edited = await updateTestCrud(
-			db,
+		const edited = await update(
 			created.id,
 			input({ status: "published" }),
 			opts({ now: new Date("2026-03-01T00:00:00Z"), version: published?.updatedAt ?? "" }),
 		);
 		expect(edited.item.publishedAt).toBe(first.toISOString());
-		expect((await setTestCrudStatus(db, created.id, "draft", store)).publishedAt).toBeNull();
+		expect((await status(created.id, "draft")).item.publishedAt).toBeNull();
 	});
 
 	it("reports NOT_FOUND for unknown ids", async () => {
 		const missing = "00000000-0000-4000-8000-000000000000";
-		await expect(setTestCrudStatus(db, missing, "published", store)).rejects.toMatchObject({ code: "NOT_FOUND" });
-		await expect(
-			updateTestCrud(db, missing, input(), opts({ version: new Date().toISOString() })),
-		).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(status(missing, "published")).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(update(missing, input(), opts({ version: new Date().toISOString() }))).rejects.toMatchObject({
+			code: "NOT_FOUND",
+		});
 	});
 
 	it("writes only while the row still has the version the edit started from", async () => {
-		const created = await createTestCrud(db, input(), opts());
+		const created = await create(input(), opts());
 		// Inserted rows carry microseconds (defaultNow()); the ISO version has milliseconds and still matches.
-		const first = await updateTestCrud(db, created.id, input({ title: "One" }), opts({ version: created.updatedAt }));
+		const first = await update(created.id, input({ title: "One" }), opts({ version: created.updatedAt }));
 		expect(first.item.updatedAt).not.toBe(created.updatedAt);
-		const stale = await updateTestCrud(
-			db,
-			created.id,
-			input({ title: "Two" }),
-			opts({ version: created.updatedAt }),
-		).catch((caught: unknown) => caught);
+		const stale = await update(created.id, input({ title: "Two" }), opts({ version: created.updatedAt })).catch(
+			(caught: unknown) => caught,
+		);
 		expect(stale).toMatchObject({ code: "CONFLICT", reason: "stale" });
 		expect(await getTestCrud(db, created.id, store)).toMatchObject({ title: "One" });
 		// A publish from the list is a change too.
-		await setTestCrudStatus(db, created.id, "published", store);
+		await status(created.id, "published");
 		await expect(
-			updateTestCrud(db, created.id, input({ title: "Three" }), opts({ version: first.item.updatedAt })),
+			update(created.id, input({ title: "Three" }), opts({ version: first.item.updatedAt })),
 		).rejects.toMatchObject({ reason: "stale" });
 	});
 
 	it("lets only one of two concurrent saves of the same version through", async () => {
-		const created = await createTestCrud(db, input(), opts());
+		const created = await create(input(), opts());
 		const results = await Promise.allSettled(
-			["A", "B"].map((title) => updateTestCrud(db, created.id, input({ title }), opts({ version: created.updatedAt }))),
+			["A", "B"].map((title) => update(created.id, input({ title }), opts({ version: created.updatedAt }))),
 		);
 		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
 		const [refused] = results.filter((result) => result.status === "rejected");
 		expect(refused?.reason).toMatchObject({ code: "CONFLICT", reason: "stale" });
 	});
 
-	it("deletes one or many rows, marks their images removed and reports the count", async () => {
-		const a = await createTestCrud(db, input({ slug: "a", images: [await pending()] }), opts());
-		const b = await createTestCrud(db, input({ slug: "b", images: [await pending()] }), opts());
-		const c = await createTestCrud(db, input({ slug: "c" }), opts());
-		const result = await deleteTestCrud(db, [a.id, b.id, "00000000-0000-4000-8000-000000000000"]);
-		expect(result.deleted).toBe(2);
+	it("deletes one or many rows, marks their images removed and returns the rows deleted", async () => {
+		const a = await create(input({ slug: "a", images: [await pending()] }), opts());
+		const b = await create(input({ slug: "b", images: [await pending()] }), opts());
+		const c = await create(input({ slug: "c" }), opts());
+		const result = await remove([a.id, b.id, "00000000-0000-4000-8000-000000000000"]);
+		expect(result.items.map((item) => item.title).sort()).toEqual(["First item", "First item"]);
 		expect(result.removed).toHaveLength(2);
 		expect(await liveAttachments()).toBe(0);
 		expect(await getTestCrud(db, c.id, store)).not.toBeNull();
@@ -396,8 +395,7 @@ describe("public queries (published only)", () => {
 			["Published new", "published", "2026-01-03T00:00:00Z"],
 		];
 		for (const [index, [title, status, at]] of rows.entries()) {
-			await createTestCrud(
-				db,
+			await create(
 				input({ title, slug: `p-${index}`, status, summary: title, body: "<p>Body</p><script>x()</script>" }),
 				opts({ now: new Date(at) }),
 			);

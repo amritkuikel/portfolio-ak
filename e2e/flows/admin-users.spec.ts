@@ -56,7 +56,10 @@ test.describe("as an admin", () => {
 		const dialog = page.getByTestId("invite-user-dialog");
 		await dialog.getByLabel("Name").fill("Invited Person");
 		await dialog.getByLabel("Email", { exact: true }).fill(email);
-		const sent = page.waitForResponse((response) => response.url().includes("/_serverFn/"));
+		// The save is the POST (the address check while typing is a GET).
+		const sent = page.waitForResponse(
+			(response) => response.url().includes("/_serverFn/") && response.request().method() === "POST",
+		);
 		await dialog.getByRole("button", { name: "Send invitation" }).click();
 		const requestId = (await sent).headers()["x-request-id"] ?? "";
 		expect(requestId).toMatch(/^[0-9a-f-]{36}$/);

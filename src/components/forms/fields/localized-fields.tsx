@@ -2,6 +2,7 @@ import { useStore } from "@tanstack/react-form";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Localized } from "@/lib/i18n/localized";
 import { m } from "@/paraglide/messages";
 import { withFieldGroup } from "../index";
 
@@ -17,7 +18,6 @@ import { withFieldGroup } from "../index";
  *   <LocalizedField form={form} fields="title" label={m.title()} />
  *   <LocalizedRichTextField form={form} fields="body" label={m.body()} optional />
  */
-export type Localized = { en: string; ne: string };
 
 const LOCALIZED_DEFAULTS: Localized = { en: "", ne: "" };
 const LANGUAGES = ["en", "ne"] as const;

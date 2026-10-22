@@ -14,6 +14,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"user.sessions-revoke": m.audit_action_user_sessions_revoke,
 	"user.impersonate": m.audit_action_user_impersonate,
 	"user.impersonate-stop": m.audit_action_user_impersonate_stop,
+	"test-crud.create": m.audit_action_test_crud_create,
+	"test-crud.update": m.audit_action_test_crud_update,
 	"test-crud.publish": m.audit_action_test_crud_publish,
 	"test-crud.unpublish": m.audit_action_test_crud_unpublish,
 	"test-crud.delete": m.audit_action_test_crud_delete,
@@ -40,4 +42,9 @@ export const AUDIT_FIELD_LABELS: Readonly<Record<string, () => string>> = {
 	language: m.audit_field_language,
 	status: m.audit_field_status,
 	title: m.audit_field_title,
+	slug: m.audit_field_slug,
+	summary: m.audit_field_summary,
+	price: m.audit_field_price,
+	phone: m.audit_field_phone,
+	tags: m.audit_field_tags,
 };

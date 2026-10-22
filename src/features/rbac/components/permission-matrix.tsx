@@ -1,17 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Fragment } from "react";
-import { toast } from "sonner";
-import { errorMessage } from "@/components/errors/error-page";
+import { useCrudMutation } from "@/components/crud/use-crud-mutation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { updateRolePermissions } from "@/functions/rbac";
+import { ADMIN_GROUP_LABELS, ADMIN_GROUPS, ADMIN_SECTIONS, type AdminGroup } from "@/features/admin/sections";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { RBAC_REFRESH, roleKeys } from "../keys";
 import { PERMISSION_LABELS, RESOURCE_LABELS, roleLabel } from "../labels";
-import { type Permission, permissionsOf, RESOURCES } from "../permissions";
-import { rbacKeys, refreshRbac } from "../queries";
+import { type Permission, permissionsOf, RESOURCES, type Resource } from "../permissions";
+import { roleMutations } from "../queries";
 import type { RolePermissionsUpdate, RoleSummary } from "../schema";
-
-type Actor = { isAdmin: boolean; permissions: ReadonlyArray<Permission> };
+import { type Actor, canGrant } from "../types";
 
 /** Applies a grant/revoke to the cached roles (the optimistic update). */
 const applyChange = (roles: RoleSummary[], change: RolePermissionsUpdate): RoleSummary[] =>
@@ -26,12 +24,23 @@ const applyChange = (roles: RoleSummary[], change: RolePermissionsUpdate): RoleS
 				},
 	);
 
+/** A resource's sidebar group: that of the first section its permissions open, "system" when none does (uploads). */
+const groupOf = (resource: Resource): AdminGroup =>
+	ADMIN_SECTIONS.find((section) => section.permission?.startsWith(`${resource}:`))?.group ?? "system";
+
+/** The resources under each sidebar group, in sidebar order (empty groups left out). */
+const GROUPS = ADMIN_GROUPS.map((group) => ({
+	group,
+	resources: RESOURCES.filter((resource) => groupOf(resource) === group),
+})).filter((entry) => entry.resources.length > 0);
+
 /**
- * Roles as columns, permissions grouped by resource as rows. Each change saves
- * at once: the box flips immediately (optimistic), and if the server refuses
- * (a rule, a lost connection) it flips back with a message. "All" boxes set a
- * whole resource for one role. Admin is always everything and can't be changed;
- * boxes the actor may not change (permissions they don't hold) are disabled.
+ * Roles as columns, permissions as rows, grouped by resource under the admin
+ * sidebar's groups (Overview, Access, System…). Each change saves at once: the box
+ * flips immediately (optimistic), and if the server refuses (a rule, a lost
+ * connection) it flips back with a message. "All" boxes set a whole resource for
+ * one role. Admin is always everything and can't be changed; boxes the actor may
+ * not change (permissions they don't hold) are disabled.
  */
 export function PermissionMatrix({
 	roles,
@@ -39,27 +48,16 @@ export function PermissionMatrix({
 	canEdit,
 }: {
 	roles: ReadonlyArray<RoleSummary>;
-	actor: Actor;
+	actor: Pick<Actor, "isAdmin" | "permissions">;
 	canEdit: boolean;
 }) {
-	const queryClient = useQueryClient();
-	const mutation = useMutation({
-		mutationFn: (change: RolePermissionsUpdate) => updateRolePermissions({ data: change }),
-		onMutate: async (change) => {
-			await queryClient.cancelQueries({ queryKey: rbacKeys.roles() });
-			const previous = queryClient.getQueryData<RoleSummary[]>(rbacKeys.roles());
-			if (previous) queryClient.setQueryData(rbacKeys.roles(), applyChange(previous, change));
-			return { previous };
-		},
-		onError: (failure, _change, context) => {
-			if (context?.previous) queryClient.setQueryData(rbacKeys.roles(), context.previous);
-			toast.error(m.matrix_toast_failed(), { description: errorMessage(failure) });
-		},
-		onSettled: () => refreshRbac(queryClient),
+	const mutation = useCrudMutation(roleMutations.permissions(), {
+		invalidate: RBAC_REFRESH,
+		optimistic: { queryKey: roleKeys.lists(), update: applyChange },
 	});
 
 	const editable = (role: RoleSummary, permission: Permission) =>
-		canEdit && role.key !== "admin" && (actor.isAdmin || actor.permissions.includes(permission));
+		canEdit && role.key !== "admin" && canGrant(actor, [permission]);
 	const set = (role: RoleSummary, permissions: Permission[], on: boolean) => {
 		const changeable = permissions.filter((permission) => editable(role, permission));
 		const grant = on ? changeable.filter((permission) => !role.permissions.includes(permission)) : [];
@@ -83,56 +81,76 @@ export function PermissionMatrix({
 						))}
 					</tr>
 				</thead>
-				<tbody>
-					{RESOURCES.map((resource) => {
-						const permissions = permissionsOf(resource);
-						return (
-							<Fragment key={resource}>
-								<tr className="border-b bg-muted/20">
-									<th scope="rowgroup" className="sticky start-0 z-10 bg-muted px-3 py-2 text-start font-semibold">
-										{RESOURCE_LABELS[resource]()}
-									</th>
-									{roles.map((role) => {
-										const held = permissions.filter((permission) => role.permissions.includes(permission)).length;
-										const anyEditable = permissions.some((permission) => editable(role, permission));
-										return (
-											<td key={role.id} className="px-3 py-2 text-center">
-												<Checkbox
-													aria-label={m.matrix_all_of({ resource: RESOURCE_LABELS[resource](), role: roleLabel(role) })}
-													checked={held === permissions.length ? true : held > 0 ? "indeterminate" : false}
-													disabled={!anyEditable}
-													onCheckedChange={(checked) => set(role, permissions, checked === true)}
-												/>
-											</td>
-										);
-									})}
-								</tr>
-								{permissions.map((permission) => (
-									<tr key={permission} className="border-b last:border-b-0">
-										<th scope="row" className="sticky start-0 z-10 bg-background px-3 py-2 ps-6 text-start font-normal">
-											{PERMISSION_LABELS[permission]()}
+				{GROUPS.map(({ group, resources }) => (
+					<tbody key={group}>
+						<tr className="border-b bg-muted/60">
+							<th
+								scope="rowgroup"
+								colSpan={roles.length + 1}
+								className="px-3 py-1.5 text-start font-medium text-muted-foreground text-xs uppercase tracking-wide"
+							>
+								{ADMIN_GROUP_LABELS[group]()}
+							</th>
+						</tr>
+						{resources.map((resource) => {
+							const permissions = permissionsOf(resource);
+							return (
+								<Fragment key={resource}>
+									<tr className="border-b bg-muted/20">
+										<th scope="row" className="sticky start-0 z-10 bg-muted px-3 py-2 text-start font-semibold">
+											{RESOURCE_LABELS[resource]()}
 										</th>
-										{roles.map((role) => (
-											<td key={role.id} className={cn("px-3 py-2 text-center", role.key === "admin" && "bg-muted/20")}>
-												<Checkbox
-													aria-label={m.matrix_toggle({
-														role: roleLabel(role),
-														permission: PERMISSION_LABELS[permission](),
-													})}
-													checked={role.permissions.includes(permission)}
-													disabled={!editable(role, permission)}
-													onCheckedChange={(checked) => set(role, [permission], checked === true)}
-													data-permission={permission}
-													data-role={role.key}
-												/>
-											</td>
-										))}
+										{roles.map((role) => {
+											const held = permissions.filter((permission) => role.permissions.includes(permission)).length;
+											const anyEditable = permissions.some((permission) => editable(role, permission));
+											return (
+												<td key={role.id} className="px-3 py-2 text-center">
+													<Checkbox
+														aria-label={m.matrix_all_of({
+															resource: RESOURCE_LABELS[resource](),
+															role: roleLabel(role),
+														})}
+														checked={held === permissions.length ? true : held > 0 ? "indeterminate" : false}
+														disabled={!anyEditable}
+														onCheckedChange={(checked) => set(role, permissions, checked === true)}
+													/>
+												</td>
+											);
+										})}
 									</tr>
-								))}
-							</Fragment>
-						);
-					})}
-				</tbody>
+									{permissions.map((permission) => (
+										<tr key={permission} className="border-b last:border-b-0">
+											<th
+												scope="row"
+												className="sticky start-0 z-10 bg-background px-3 py-2 ps-6 text-start font-normal"
+											>
+												{PERMISSION_LABELS[permission]()}
+											</th>
+											{roles.map((role) => (
+												<td
+													key={role.id}
+													className={cn("px-3 py-2 text-center", role.key === "admin" && "bg-muted/20")}
+												>
+													<Checkbox
+														aria-label={m.matrix_toggle({
+															role: roleLabel(role),
+															permission: PERMISSION_LABELS[permission](),
+														})}
+														checked={role.permissions.includes(permission)}
+														disabled={!editable(role, permission)}
+														onCheckedChange={(checked) => set(role, [permission], checked === true)}
+														data-permission={permission}
+														data-role={role.key}
+													/>
+												</td>
+											))}
+										</tr>
+									))}
+								</Fragment>
+							);
+						})}
+					</tbody>
+				))}
 			</table>
 		</div>
 	);

@@ -2,14 +2,13 @@ import { z } from "zod";
 import { TEST_CRUD_MAX_IMAGES } from "@/features/attachments/constants";
 import { ALT_MAX, attachmentRefSchema, type ImageAsset } from "@/features/attachments/schema";
 import { versionSchema } from "@/lib/concurrency";
-import { formatNumber } from "@/lib/i18n/intl";
-import { bulkIdsSchema, type Paged } from "@/lib/list/paging";
+import { isoDateTime } from "@/lib/crud/schema";
+import type { Paged } from "@/lib/list/paging";
 import { phone } from "@/lib/phone";
 import type { SafeHtml } from "@/lib/safe-html";
 import { SLUG_PATTERN } from "@/lib/slug";
-import { currency, optionalText, required, richText, tags } from "@/lib/validation";
-import { m } from "@/paraglide/messages";
-import { TEST_CRUD_STATUSES, type TestCrudStatus } from "./constants";
+import { currency, optionalText, required, richText, slug, tags } from "@/lib/validation";
+import { TEST_CRUD_STATUSES } from "./constants";
 
 export * from "./constants";
 
@@ -17,19 +16,11 @@ export * from "./constants";
 // Create / update: ONE schema shared by the form (client) and the server functions
 // ---------------------------------------------------------------------------
 
-export const slug = () =>
-	z
-		.string()
-		.trim()
-		.min(1, { error: () => m.validation_required() })
-		.max(80, { error: () => m.validation_text_max({ max: formatNumber(80) }) })
-		.regex(SLUG_PATTERN, { error: () => m.validation_slug() });
-
 /**
  * Every editable field. `images` are attachments (uploaded beforehand, straight
  * to Cloudinary) in display order with their alt text; the first is the cover.
  */
-export const testCrudInputSchema = z.object({
+export const testCrudInputSchema = z.strictObject({
 	title: required({ max: 120 }),
 	slug: slug(),
 	summary: optionalText({ max: 280 }),
@@ -47,7 +38,7 @@ export type TestCrudInput = z.output<typeof testCrudInputSchema>;
 export const testCrudUpdateSchema = testCrudInputSchema.extend({ id: z.uuid(), updatedAt: versionSchema() });
 
 /** One image in the form: the attachment, its alt text, and its preview (not sent to the server). */
-export const formImageSchema = z.object({
+const formImageSchema = z.object({
 	id: z.uuid(),
 	alt: optionalText({ max: ALT_MAX }),
 	preview: z.custom<ImageAsset>(),
@@ -60,68 +51,68 @@ export const testCrudFormSchema = testCrudInputSchema.extend({
 export type TestCrudFormValues = z.input<typeof testCrudFormSchema>;
 
 /** Form values -> the server input (previews dropped). */
-export const toTestCrudInput = (values: z.output<typeof testCrudFormSchema>): TestCrudInput => ({
-	...values,
-	images: values.images.map(({ id, alt }) => ({ id, alt })),
-});
+export const toTestCrudInput = (values: TestCrudFormValues): TestCrudInput => {
+	const parsed = testCrudFormSchema.parse(values);
+	return { ...parsed, images: parsed.images.map(({ id, alt }) => ({ id, alt })) };
+};
 
-// Server function inputs (the URL contract, list input included, is in ./search.ts).
-export const testCrudIdsSchema = bulkIdsSchema(100);
-export const testCrudIdSchema = z.object({ id: z.uuid() });
 /** The slug check while typing: is `slug` free for the item `id` (absent for a new one)? */
-export const testCrudSlugCheckSchema = z.object({
+export const testCrudSlugCheckSchema = z.strictObject({
 	slug: z.string().max(80).regex(SLUG_PATTERN),
 	id: z.uuid().optional(),
 });
-export const testCrudStatusUpdateSchema = z.object({ id: z.uuid(), status: z.enum(TEST_CRUD_STATUSES) });
+export const testCrudStatusUpdateSchema = z.strictObject({ id: z.uuid(), status: z.enum(TEST_CRUD_STATUSES) });
 
 // ---------------------------------------------------------------------------
-// DTOs (what crosses the wire; dates as ISO strings)
+// DTOs: what crosses the wire. The repository parses its rows with these (dates
+// become ISO strings, other columns are left out).
 // ---------------------------------------------------------------------------
 
-export type TestCrudListItem = {
-	id: string;
-	slug: string;
-	title: string;
-	status: TestCrudStatus;
-	price: number;
-	tags: string[];
+const image = z.custom<ImageAsset>();
+
+export const testCrudListItem = z.object({
+	id: z.string(),
+	slug: z.string(),
+	title: z.string(),
+	status: z.enum(TEST_CRUD_STATUSES),
+	price: z.number(),
+	tags: z.array(z.string()),
 	/** The cover (first image), or null. */
-	image: ImageAsset | null;
-	publishedAt: string | null;
-	updatedAt: string;
-};
-
+	image: image.nullable(),
+	publishedAt: isoDateTime().nullable(),
+	updatedAt: isoDateTime(),
+});
+export type TestCrudListItem = z.output<typeof testCrudListItem>;
 export type TestCrudPage = Paged<TestCrudListItem>;
 
-export type TestCrudDetail = TestCrudListItem & {
+export const testCrudDetail = testCrudListItem.extend({
 	/** Every image, in order (the first is `image`). */
-	images: ImageAsset[];
-	summary: string;
-	body: string;
-	phone: string | null;
-	createdAt: string;
-};
+	images: z.array(image),
+	summary: z.string(),
+	body: z.string(),
+	phone: z.string().nullable(),
+	createdAt: isoDateTime(),
+});
+export type TestCrudDetail = z.output<typeof testCrudDetail>;
 
-// ---------------------------------------------------------------------------
-// Public side (/test-crud): published items only, no auth (search params in ./search.ts)
-// ---------------------------------------------------------------------------
+// Public side (/dev/test-crud): published items only, no auth (search params in ./search.ts).
 
-export type PublicTestCrudCard = {
-	slug: string;
-	title: string;
-	summary: string;
-	price: number;
-	tags: string[];
-	image: ImageAsset | null;
-	publishedAt: string;
-};
-
+export const publicTestCrudCard = z.object({
+	slug: z.string(),
+	title: z.string(),
+	summary: z.string(),
+	price: z.number(),
+	tags: z.array(z.string()),
+	image: image.nullable(),
+	publishedAt: isoDateTime(),
+});
+export type PublicTestCrudCard = z.output<typeof publicTestCrudCard>;
 export type PublicTestCrudPage = Paged<PublicTestCrudCard>;
 
-export type PublicTestCrudDetail = PublicTestCrudCard & {
-	images: ImageAsset[];
+export const publicTestCrudDetail = publicTestCrudCard.extend({
+	images: z.array(image),
 	/** Sanitized on the server (sanitizeRichText); render with <RichTextContent>. */
-	body: SafeHtml;
-	phone: string | null;
-};
+	body: z.custom<SafeHtml>(),
+	phone: z.string().nullable(),
+});
+export type PublicTestCrudDetail = z.output<typeof publicTestCrudDetail>;

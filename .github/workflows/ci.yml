@@ -114,9 +114,9 @@ jobs:
   template:
     name: Template (strip-demo ${{ matrix.keep || 'all layers' }}, new:feature, gates)
     runs-on: ubuntu-latest
-    # The promise of decisions 0141 and 0163: a fresh clone, stripped of any of its layers,
-    # plus a scaffolded feature, passes every gate with no manual edits. Runs the scripts
-    # the way a new project would.
+    # The promise of decisions 0163 and 0175: a fresh clone, stripped of any of its layers,
+    # plus scaffolded features (plain, and with --public --localized), passes every gate with
+    # no manual edits. Runs the scripts the way a new project would.
     strategy:
       fail-fast: false
       matrix:
@@ -130,7 +130,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm strip-demo --no-build ${{ matrix.keep }}
-      - run: pnpm new:feature ci-sample --title "Samples" --title-ne "नमूनाहरू"
+      # new:feature refuses uncommitted changes (it restores the tree with git when it fails).
+      - run: git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm "strip-demo"
+      - run: pnpm new:feature ci-sample --title "Samples" --title-ne "नमूनाहरू" --no-build
+      - run: git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm "new:feature ci-sample"
+      # Every flag: public pages (seo, sitemap) and fields in both languages (decision 0175).
+      - run: pnpm new:feature ci-pages --title "Pages" --title-ne "पृष्ठहरू" --public --localized
       - run: pnpm typecheck
       - run: pnpm check
       - run: pnpm knip

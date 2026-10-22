@@ -3,8 +3,8 @@ import { expect } from "storybook/test";
 import { DataTable } from "@/components/data-table";
 import { m } from "@/paraglide/messages";
 import { sampleAuditEvents } from "../../../../.storybook/mocks/data";
-import { AUDIT_TABLE_ID } from "../schema";
-import { AuditChanges, auditColumns } from "./audit-columns";
+import { AuditChanges, auditColumns } from "../columns";
+import { AUDIT_TABLE_ID } from "../search";
 
 /** The audit log's real columns in the shared DataTable, as on /admin/audit. */
 function AuditTable() {
@@ -12,7 +12,7 @@ function AuditTable() {
 		<DataTable
 			tableId={AUDIT_TABLE_ID}
 			rows={sampleAuditEvents}
-			columns={auditColumns()}
+			columns={auditColumns}
 			getRowId={(row) => row.id}
 			getRowLabel={(row) => row.target.label}
 			sort="-time"

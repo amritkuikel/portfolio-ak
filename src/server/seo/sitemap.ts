@@ -2,9 +2,15 @@ import "@tanstack/react-start/server-only";
 import { portfolioSource } from "@/features/portfolio/sources"; // @portfolio
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, locales } from "@/paraglide/runtime";
+import type { Services } from "@/server/services";
 
 /** One indexable page: its de-localized path (the canonical one) and when it last changed. */
 export type SitemapEntry = { path: string; lastmod?: Date | undefined };
+
+/** Features with public pages: each lists its own (`pnpm new:feature --public` adds one here). */
+const SITEMAP_SOURCES: ReadonlyArray<(services: Pick<Services, "db">) => Promise<SitemapEntry[]>> = [
+	// @new-feature:sitemap
+];
 
 const escapeXml = (value: string) =>
 	value.replace(/[<>&'"]/g, (char) => `&${{ "<": "lt", ">": "gt", "&": "amp", "'": "apos", '"': "quot" }[char]};`);
@@ -12,9 +18,10 @@ const escapeXml = (value: string) =>
 /**
  * Every indexable page: the same pages that seo() marks index (public, not a
  * search). Private pages (admin, auth, account, /dev, health, token links) never
- * appear here; they're noindex in their head.
+ * appear here; they're noindex in their head. Features with public pages add
+ * theirs from the database (SITEMAP_SOURCES).
  */
-export async function sitemapEntries(): Promise<SitemapEntry[]> {
+export async function sitemapEntries({ db }: Pick<Services, "db">): Promise<SitemapEntry[]> {
 	const entries: SitemapEntry[] = [{ path: "/" }];
 	// portfolio:start
 	// The portfolio (content from its PortfolioSource, decision 0106).
@@ -28,6 +35,7 @@ export async function sitemapEntries(): Promise<SitemapEntry[]> {
 		{ path: "/contact" },
 	);
 	// portfolio:end
+	for (const source of SITEMAP_SOURCES) entries.push(...(await source({ db })));
 	return entries;
 }
 

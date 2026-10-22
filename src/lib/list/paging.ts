@@ -33,5 +33,5 @@ export function paginateArray<T>(items: ReadonlyArray<T>, page: number, pageSize
 	};
 }
 
-/** Input of bulk actions (delete selected, publish selected…): 1–`max` UUIDs. */
-export const bulkIdsSchema = (max = 100) => z.object({ ids: z.array(z.uuid()).min(1).max(max) });
+/** Input of bulk actions (delete selected, publish selected…): 1–`max` UUIDs, nothing else. */
+export const bulkIdsSchema = (max = 100) => z.strictObject({ ids: z.array(z.uuid()).min(1).max(max) });

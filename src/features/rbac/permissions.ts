@@ -38,9 +38,6 @@ export const permissionsOf = (resource: Resource): Permission[] =>
 
 /** System roles: `admin` holds every permission and can't be edited; `user` is everyone's baseline. */
 export const SYSTEM_ROLE_KEYS = ["admin", "user"] as const;
-export type SystemRoleKey = (typeof SYSTEM_ROLE_KEYS)[number];
-export const isSystemRole = (key: string): key is SystemRoleKey =>
-	(SYSTEM_ROLE_KEYS as ReadonlyArray<string>).includes(key);
 
 /** True when `granted` contains every one of `required`. */
 export const hasAll = (granted: ReadonlyArray<string>, required: ReadonlyArray<Permission>) =>

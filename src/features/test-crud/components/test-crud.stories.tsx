@@ -5,8 +5,8 @@ import { DataTable } from "@/components/data-table";
 import { createTestCrud } from "@/functions/test-crud";
 import { m } from "@/paraglide/messages";
 import { sampleDetail, sampleItems, samplePublicCard } from "../../../../.storybook/mocks/data";
+import { testCrudColumns } from "../columns";
 import { TEST_CRUD_TABLE_ID } from "../schema";
-import { testCrudColumns } from "./admin-columns";
 import { TestCrudEditDialog } from "./edit-dialog";
 import { PublicCard, PublicCardSkeleton } from "./public-card";
 import { TestCrudQuickView } from "./quick-view";
@@ -143,7 +143,7 @@ export const EditItem: Story = {
 export const NewItemValidation: Story = {
 	parameters: { app: { route: "/admin/test-crud/new" } },
 	play: async ({ canvas, userEvent }) => {
-		await userEvent.click(canvas.getByRole("button", { name: m.test_crud_create() }));
+		await userEvent.click(canvas.getByRole("button", { name: m.crud_create() }));
 		const summary = await canvas.findByTestId("form-error-summary");
 		await expect(summary).toHaveFocus();
 		await expect(canvas.getByRole("textbox", { name: m.test_crud_field_title() })).toHaveAttribute(
@@ -166,7 +166,7 @@ export const CreatesItem: Story = {
 		await userEvent.clear(price);
 		await userEvent.type(price, "1250.5");
 		await userEvent.type(canvas.getByLabelText(new RegExp(`^${m.test_crud_field_tags()}`)), "food{Enter}");
-		await userEvent.click(canvas.getByRole("button", { name: m.test_crud_create() }));
+		await userEvent.click(canvas.getByRole("button", { name: m.crud_create() }));
 
 		// One JSON request: the fields, and images as attachment ids (none here). The slug's
 		// server check runs first (debounced), so this can take a moment.

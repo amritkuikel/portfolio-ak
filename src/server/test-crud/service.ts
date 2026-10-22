@@ -1,52 +1,74 @@
 import "@tanstack/react-start/server-only";
 import type {
 	PublicTestCrudDetail,
+	PublicTestCrudPage,
 	TestCrudDetail,
 	TestCrudInput,
 	TestCrudListItem,
+	TestCrudPage,
 	TestCrudStatus,
 } from "@/features/test-crud/schema";
-import { AppError } from "@/lib/errors";
+import type { TestCrudListInput } from "@/features/test-crud/search";
 import { captureServerEvent } from "@/server/analytics/posthog";
-import type { ImageStore } from "@/server/attachments/cloudinary";
 import { purge } from "@/server/attachments/service";
-import { type AuditActor, recordAudit } from "@/server/audit/record";
-import {
-	createTestCrud,
-	type Db,
-	deleteTestCrud,
-	getPublishedTestCrud,
-	getTestCrud,
-	lockTestCrudStatus,
-	setTestCrudStatus,
-	updateTestCrud,
-} from "./repository";
+import { changes } from "@/server/audit/record";
+import { notFound, withAudit } from "@/server/db/crud";
+import type { Services } from "@/server/services";
+import * as repo from "./repository";
 
 /**
- * What the Test CRUD server functions do once auth and input validation have
- * passed (src/functions/test-crud*.ts are thin wrappers around these). Kept as
- * plain functions over an injected db and image store so they're tested directly.
- * Publishing, unpublishing and deleting write an audit row in the same
- * transaction (src/server/audit, decisions.md 0132).
+ * What the Test CRUD server functions do once the permission check and input
+ * validation have passed (src/functions/test-crud*.ts call these and nothing
+ * else). Plain functions over the call's services, tested on PGlite. Every
+ * change is audited in its own transaction (withAudit, decisions 0132 and 0173).
  */
 
-const notFound = () => new AppError("NOT_FOUND", "Test CRUD item not found");
+type Reads = Pick<Services, "db" | "imageStore">;
 
-export async function getItemOrThrow(db: Db, store: ImageStore | null, id: string): Promise<TestCrudDetail> {
-	const row = await getTestCrud(db, id, store);
-	if (!row) throw notFound();
-	return row;
-}
+const target = (item: { id: string; title: string }) => ({
+	type: "test-crud" as const,
+	id: item.id,
+	label: item.title,
+});
 
-export async function createItem(
-	db: Db,
-	store: ImageStore | null,
-	input: TestCrudInput,
-	userId: string,
-): Promise<TestCrudDetail> {
-	const created = await createTestCrud(db, input, { userId, store });
-	await captureServerEvent("test_crud_created", userId, { item_id: created.id, status: created.status });
-	return created;
+/** What an edit compares, and what its audit row shows: the body and the image ids count, but are left out of the row (long). */
+const SUMMARIZED = ["title", "slug", "summary", "status", "price", "phone", "tags"] as const;
+const COMPARED = [...SUMMARIZED, "body", "images"] as const;
+const summary = (item: Omit<TestCrudDetail, "images"> & { images: ReadonlyArray<{ id: string }> }) => ({
+	title: item.title,
+	slug: item.slug,
+	summary: item.summary,
+	status: item.status,
+	price: item.price,
+	phone: item.phone || null,
+	tags: item.tags,
+	body: item.body,
+	images: item.images.map((image) => image.id),
+});
+
+export const list = ({ db, imageStore }: Reads, input: TestCrudListInput): Promise<TestCrudPage> =>
+	repo.listTestCrud(db, input, imageStore);
+
+export const listTags = ({ db }: Pick<Services, "db">): Promise<string[]> => repo.listTestCrudTags(db);
+
+export const get = ({ db, imageStore }: Reads, id: string): Promise<TestCrudDetail> =>
+	repo.getTestCrud(db, id, imageStore);
+
+export const isSlugFree = ({ db }: Pick<Services, "db">, input: { slug: string; id?: string | undefined }) =>
+	repo.isSlugFree(db, input.slug, input.id);
+
+export async function create({ db, actor, imageStore }: Services, input: TestCrudInput): Promise<TestCrudDetail> {
+	const item = await withAudit(db, actor, async (tx, audit) => {
+		const created = await repo.createTestCrud(tx, input, { userId: actor.id, store: imageStore });
+		audit({
+			action: "test-crud.create",
+			target: target(created),
+			after: { title: created.title, status: created.status },
+		});
+		return created;
+	});
+	await captureServerEvent("test_crud_created", actor.id, { item_id: item.id, status: item.status });
+	return item;
 }
 
 /**
@@ -54,80 +76,74 @@ export async function createItem(
  * stale CONFLICT). Images it no longer uses are deleted from Cloudinary right
  * away; if that fails, the scheduled cleanup retries.
  */
-export async function updateItem(
-	db: Db,
-	store: ImageStore | null,
-	data: TestCrudInput & { id: string; updatedAt: string },
-	userId: string,
+export async function update(
+	{ db, actor, imageStore }: Services,
+	{ id, updatedAt, ...input }: TestCrudInput & { id: string; updatedAt: string },
 ): Promise<TestCrudDetail> {
-	const { id, updatedAt, ...input } = data;
-	const { item, removed } = await updateTestCrud(db, id, input, { userId, store, version: updatedAt });
-	await purge(db, store, removed);
-	await captureServerEvent("test_crud_updated", userId, { item_id: item.id, change: "edit" });
+	const { item, removed } = await withAudit(db, actor, async (tx, audit) => {
+		const saved = await repo.updateTestCrud(tx, id, input, { userId: actor.id, store: imageStore, version: updatedAt });
+		const changed = changes(summary(saved.before), summary(saved.item), COMPARED, SUMMARIZED);
+		if (changed) audit({ action: "test-crud.update", target: target(saved.item), ...changed });
+		return saved;
+	});
+	await purge(db, imageStore, removed);
+	await captureServerEvent("test_crud_updated", actor.id, { item_id: item.id, change: "edit" });
 	return item;
 }
 
-export async function setItemStatus(
-	db: Db,
-	store: ImageStore | null,
-	data: { id: string; status: TestCrudStatus },
-	actor: AuditActor,
+/** Publish / unpublish; setting the status it already has records nothing. */
+export async function setStatus(
+	{ db, actor, imageStore }: Services,
+	{ id, status }: { id: string; status: TestCrudStatus },
 ): Promise<TestCrudListItem> {
-	const updated = await db.transaction(async (tx) => {
-		const before = await lockTestCrudStatus(tx, data.id);
-		if (!before) throw notFound();
-		const item = await setTestCrudStatus(tx, data.id, data.status, store);
-		// Setting the status it already has changes nothing, so it isn't recorded.
-		if (before.status !== data.status) {
-			await recordAudit(tx, actor, {
-				action: data.status === "published" ? "test-crud.publish" : "test-crud.unpublish",
-				target: { type: "test-crud", id: item.id, label: item.title },
-				before: { status: before.status },
-				after: { status: item.status },
+	const item = await withAudit(db, actor, async (tx, audit) => {
+		const result = await repo.setTestCrudStatus(tx, id, status, imageStore);
+		if (result.changed) {
+			audit({
+				action: status === "published" ? "test-crud.publish" : "test-crud.unpublish",
+				target: target(result.item),
+				before: { status: status === "published" ? "draft" : "published" },
+				after: { status },
 			});
 		}
-		return item;
+		return result.item;
 	});
-	await captureServerEvent("test_crud_updated", actor.id, {
-		item_id: updated.id,
-		change: "status",
-		status: updated.status,
-	});
-	return updated;
+	await captureServerEvent("test_crud_updated", actor.id, { item_id: item.id, change: "status", status: item.status });
+	return item;
 }
 
 /** Deletes one or many (and their images), one audit row each; missing ids are ignored. */
-export async function deleteItems(
-	db: Db,
-	store: ImageStore | null,
+export async function remove(
+	{ db, actor, imageStore }: Services,
 	ids: ReadonlyArray<string>,
-	actor: AuditActor,
 ): Promise<{ deleted: number }> {
-	const { deleted, removed } = await db.transaction(async (tx) => {
-		const result = await deleteTestCrud(tx, ids);
-		await recordAudit(
-			tx,
-			actor,
-			result.items.map((item) => ({
+	const { items, removed } = await withAudit(db, actor, async (tx, audit) => {
+		const result = await repo.deleteTestCrud(tx, ids);
+		audit(
+			...result.items.map((item) => ({
 				action: "test-crud.delete" as const,
-				target: { type: "test-crud" as const, id: item.id, label: item.title },
+				target: target(item),
 				before: { title: item.title, status: item.status },
 			})),
 		);
 		return result;
 	});
-	await purge(db, store, removed);
-	if (deleted > 0) await captureServerEvent("test_crud_deleted", actor.id, { count: deleted });
-	return { deleted };
+	await purge(db, imageStore, removed);
+	if (items.length > 0) await captureServerEvent("test_crud_deleted", actor.id, { count: items.length });
+	return { deleted: items.length };
 }
 
-/** Public read: missing and draft slugs are both NOT_FOUND. */
-export async function getPublishedOrThrow(
-	db: Db,
-	store: ImageStore | null,
-	slug: string,
-): Promise<PublicTestCrudDetail> {
-	const item = await getPublishedTestCrud(db, slug, store);
-	if (!item) throw notFound();
+// Public reads (/dev/test-crud): no actor, published rows only.
+
+export const listPublished = (
+	{ db, imageStore }: Reads,
+	input: { q: string; page: number },
+	pageSize: number,
+): Promise<PublicTestCrudPage> => repo.listPublishedTestCrud(db, input, pageSize, imageStore);
+
+/** Missing and draft slugs are both NOT_FOUND. */
+export async function getPublished({ db, imageStore }: Reads, slug: string): Promise<PublicTestCrudDetail> {
+	const item = await repo.getPublishedTestCrud(db, slug, imageStore);
+	if (!item) throw notFound("Test CRUD item");
 	return item;
 }

@@ -1,11 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 import { listAuditEvents } from "@/functions/audit";
-import type { AuditListInput } from "./schema";
+import { auditKeys } from "./keys";
+import type { AuditListInput } from "./search";
 
-export const auditKeys = {
-	all: ["audit"] as const,
-	list: (input: AuditListInput) => [...auditKeys.all, "list", input] as const,
-};
-
+/** Read only: rows are written by the services, in the transaction of the change they record. */
 export const auditListQueryOptions = (input: AuditListInput) =>
 	queryOptions({ queryKey: auditKeys.list(input), queryFn: () => listAuditEvents({ data: input }) });

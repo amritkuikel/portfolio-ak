@@ -1,80 +1,14 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { DataTable, DataTableSkeleton } from "@/components/data-table";
-import { ClearFiltersButton } from "@/components/filters/active-filters";
-import { FilterBar } from "@/components/filters/filter-bar";
-import { Pagination } from "@/components/navigation/pagination";
-import { EmptyState } from "@/components/page/empty-state";
-import { Page, PageHeader } from "@/components/page/page";
-import { auditColumns } from "@/features/audit/components/audit-columns";
-import {
-	AUDIT_CLEAR_FILTERS,
-	AuditActiveFilters,
-	AuditFilterControls,
-	auditFilterChips,
-} from "@/features/audit/filters";
+import { createFileRoute } from "@tanstack/react-router";
+import { AuditList } from "@/features/audit/components/audit-list";
 import { auditListQueryOptions } from "@/features/audit/queries";
-import { AUDIT_SEARCH_DEFAULTS, AUDIT_TABLE_ID, auditSearchSchema } from "@/features/audit/schema";
-import { tableListInput, useListPage } from "@/hooks/use-list-page";
-import { loadList } from "@/lib/query";
-import { pageTitle } from "@/lib/seo";
+import { AUDIT_TABLE_ID, auditList } from "@/features/audit/search";
+import { listLoader, listSearch, titleHead } from "@/lib/crud/route";
 import { m } from "@/paraglide/messages";
 
-/** The audit log: read only, newest first, filtered from the URL (decisions.md 0132). */
 export const Route = createFileRoute("/_admin/admin/audit/")({
-	validateSearch: auditSearchSchema,
-	search: { middlewares: [stripSearchParams(AUDIT_SEARCH_DEFAULTS)] },
+	...listSearch(auditList.search, auditList.defaults),
 	loaderDeps: ({ search }) => search,
-	loader: ({ context, deps, cause }) =>
-		loadList(
-			context.queryClient,
-			auditListQueryOptions(tableListInput(deps, context.preferences.state, AUDIT_TABLE_ID)),
-			cause,
-		),
-	head: () => ({ meta: [{ title: pageTitle(m.audit_title()) }] }),
-	component: AuditPage,
+	loader: (route) => listLoader(route, { tableId: AUDIT_TABLE_ID, query: auditListQueryOptions }),
+	head: titleHead(m.audit_title),
+	component: AuditList,
 });
-
-function AuditPage() {
-	const search = Route.useSearch();
-	const { page, busy, pagination } = useListPage({ tableId: AUDIT_TABLE_ID, search, query: auditListQueryOptions });
-	const columns = auditColumns();
-	const filtered = auditFilterChips(search).length > 0;
-
-	return (
-		<Page width="admin">
-			<PageHeader title={m.audit_title()} description={m.audit_description()} />
-			{page && pagination ? (
-				<>
-					<DataTable
-						tableId={AUDIT_TABLE_ID}
-						rows={page.items}
-						columns={columns}
-						getRowId={(row) => row.id}
-						getRowLabel={(row) => row.target.label || row.target.id}
-						sort={search.sort}
-						busy={busy}
-						data-testid="audit-table"
-						toolbar={
-							<FilterBar values={search} preserve={["sort", "pageSize"]}>
-								<AuditFilterControls search={search} />
-							</FilterBar>
-						}
-						activeFilters={<AuditActiveFilters search={search} />}
-						exportName="audit"
-						savedViews
-						empty={
-							<EmptyState
-								variant={filtered ? "no-matches" : "empty"}
-								description={m.audit_empty()}
-								primaryAction={filtered ? <ClearFiltersButton clearAll={AUDIT_CLEAR_FILTERS} /> : null}
-							/>
-						}
-					/>
-					<Pagination {...pagination} />
-				</>
-			) : (
-				<DataTableSkeleton columns={5} rows={8} />
-			)}
-		</Page>
-	);
-}

@@ -18,8 +18,8 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["isTestCrudSlugFree", "test-crud:read"],
 		["createTestCrud", "test-crud:create"],
 		["updateTestCrud", "test-crud:update"],
-		["setTestCrudStatusFn", "test-crud:publish"],
-		["deleteTestCrudFn", "test-crud:delete"],
+		["setTestCrudStatus", "test-crud:publish"],
+		["deleteTestCrud", "test-crud:delete"],
 	],
 	"rbac.ts": [
 		["listRoles", "roles:read"],
@@ -32,6 +32,7 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["setUserRoles", "users:update"],
 		["setUserBanned", "users:ban"],
 		["revokeUserSessions", "users:ban"],
+		["isUserEmailFree", "users:invite"],
 		["inviteUser", "users:invite"],
 		// Admins only on top: the service refuses everyone else (decisions.md 0134).
 		["impersonateUser", "users:update"],
@@ -102,6 +103,7 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"runExampleJobFn",
 		],
 	},
+	// @new-feature:unguarded-functions
 };
 
 const DIR = "src/functions";
@@ -137,6 +139,7 @@ describe("guarded server functions", () => {
 	// The middleware itself is tested in auth-middleware.test.ts (anonymous -> UNAUTHORIZED,
 	// missing permission -> FORBIDDEN). This guards that no function skips it or checks
 	// the wrong permission. The live 403 replay is recorded in docs/decisions.md 0095.
+	// `withServices` may follow it (decision 0173): it builds nothing for a refused call.
 	for (const [file, expected] of Object.entries(GUARDED_FUNCTIONS)) {
 		it(`every function in ${file} runs requirePermission with its permission first`, () => {
 			const functions = serverFunctions(file);
@@ -145,7 +148,7 @@ describe("guarded server functions", () => {
 				const permission = expected[index]?.[1];
 				expect(definition).toMatch(
 					new RegExp(
-						`= createServerFn\\(\\{ method: "(GET|POST)" \\}\\)\\s*\\.middleware\\(\\[requirePermission\\("${permission}"\\)\\]\\)`,
+						`= createServerFn\\(\\{ method: "(GET|POST)" \\}\\)\\s*\\.middleware\\(\\[requirePermission\\("${permission}"\\)(, withServices)?\\]\\)`,
 					),
 				);
 			}

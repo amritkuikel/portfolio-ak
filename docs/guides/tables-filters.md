@@ -1,6 +1,6 @@
 # Tables, filters and pagination
 
-The shared list UI: `DataTable`, `FilterBar` with filter controls and chips, and `Pagination`. Feature code supplies only columns, filters and actions. Examples: `/dev/examples/data-table`, `/dev/examples/filters`; the full admin version is `src/routes/_admin/admin/test-crud/index.tsx`. The URL contract behind them is in [search-filters-masking.md](search-filters-masking.md).
+The shared list UI: `DataTable`, `FilterBar` with filter controls and chips, and `Pagination`. Feature code supplies only columns, filters and actions. Examples: `/dev/examples/data-table`, `/dev/examples/filters`; the full admin version is `CrudListPage` in `src/features/test-crud/components/test-crud-list.tsx` ([crud.md](crud.md)). The URL contract behind them is in [search-filters-masking.md](search-filters-masking.md).
 
 ## DataTable
 
@@ -43,7 +43,8 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 - **Destructive actions** confirm with `useConfirm()` (`components/dialogs/confirm.tsx`; focus starts on Cancel).
 - **Column resizing and row expansion** aren't built in: see [recipes.md](recipes.md), "Resizable columns and expandable rows".
 - **Writes:** plain mutations followed by invalidating the list queries, or a TanStack DB collection for instant feedback with rollback ([state.md](state.md)).
-- **Columns in a feature file:** `features/<name>/components/admin-columns.tsx`. Don't build cells inline in the route.
+- **Columns in a feature file:** `features/<name>/columns.tsx`, a constant (a factory only when they depend on something, like the users list's signed-in user). The name column is a `RecordLink` (a link for users who may open it). Don't build cells inline in the route.
+- **A whole admin list** is `CrudListPage` ([crud.md](crud.md)): header, `FilterBar` and chips, the table, pagination, the empty states and confirmed deletes. Its chips come from chip specs (`defineFilters`, `src/lib/crud/filters.ts`): `textChip`, `choiceChip`, `eachChip`, `rangeChip`, `flagChip`.
 - **Loading:** `DataTableSkeleton` for the pending component, `busy` for a new search.
 
 ## Filters
@@ -57,11 +58,11 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 	<DateRangeFilter label={m.things_published()} names={["from", "to"]} value={[search.from, search.to]} />
 	<BooleanFilter name="hasImage" label={m.things_image()} value={search.hasImage} />
 </FilterBar>
-<ActiveFilters chips={thingFilterChips(search)} clearAll={{ q: undefined, status: undefined, … }} />
+<ActiveFilters {...thingFilters.applied(search)} />   // defineFilters([textChip("q", …), choiceChip("status", …), …])
 ```
 
 - **`FilterBar` is a GET form of native controls:** without JavaScript it submits to the URL. With JavaScript it updates the URL as you type (debounced) or change a control, resets the page, and keeps the params in `preserve`.
-- **Chips:** one per applied filter, each with the search change that removes it. Write them next to the controls (`features/<name>/filters.tsx`).
+- **Chips:** one per applied filter, each with the search change that removes it, from chip specs next to the controls (`features/<name>/filters.tsx`, `defineFilters`): `textChip`, `choiceChip` (none while "all"), `eachChip` (one per value), `rangeChip` (either end), `flagChip` (yes/no).
 - **Every filter value** is a search param parsed by the route's schema; invalid values are corrected, never errors.
 
 ## Pagination

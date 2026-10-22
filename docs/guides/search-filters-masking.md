@@ -31,20 +31,20 @@ keys by the router's `stringifySearch` (`src/lib/list/url.ts`, wired in
 
 ## Adding a filtered list
 
-1. **Schema** (`features/<name>/schema.ts`):
+1. **URL contract** (`features/<name>/search.ts`, [crud.md](crud.md)):
 
    ```ts
-   export const SEARCH_DEFAULTS = { q: "", status: "all", tags: [] as string[], sort: "-updated", page: 1 } as const;
-   export const projectSearchSchema = z.object({
-   	q: searchParam(),
-   	status: enumParam(STATUS_FILTERS, "all"),
-   	tags: arrayParam(z.string().max(32), { max: 10 }),
-   	budgetMin: numberParam(), budgetMax: numberParam(),
-   	from: dateParam(), to: dateParam(),
-   	sort: enumParam(SORTS, "-updated"), page: pageParam(), pageSize: pageSizeParam(),
+   export const projectList = listSchema({
+   	sorts: ["-updated", "updated", "title", "-title"],   // the first is the default
+   	filters: {
+   		status: enumParam(STATUS_FILTERS, "all"),
+   		tags: arrayParam(z.string().max(32), { max: 10 }),
+   		budgetMin: numberParam(), budgetMax: numberParam(),
+   		from: dateParam(), to: dateParam(),
+   	},
    });
-   export const projectListInputSchema = projectSearchSchema.extend({ pageSize: resolvedPageSize() }); // server input
-   export const FILTER_KEYS = ["q", "status", "tags", "budgetMin", "budgetMax", "from", "to"] as const; // "Clear all"
+   // projectList.search: validateSearch (adds q, sort, page, pageSize); .input: the server input (strict,
+   // page size resolved); .defaults: kept out of links; .filterKeys: what "Clear all" resets
    ```
 
 2. **Repository:** turn each param into SQL with the helpers in `src/server/db/list.ts`:
@@ -64,17 +64,17 @@ keys by the router's `stringifySearch` (`src/lib/list/url.ts`, wired in
 3. **Route:**
 
    ```ts
-   validateSearch: projectSearchSchema,
-   search: { middlewares: [stripSearchParams(SEARCH_DEFAULTS)] },  // defaults never appear in URLs
+   ...listSearch(projectRouteSearch, projectList.defaults),     // validateSearch, and defaults never appear in URLs
    loaderDeps: ({ search: { edit: _edit, ...list } }) => list,    // dialog params don't reload the list
-   loader: ({ context, deps, cause }) =>
-   	loadList(context.queryClient, projectListQueryOptions(tableListInput(deps, context.preferences.state, PROJECTS_TABLE_ID)), cause),
+   loader: (route) => listLoader(route, { tableId: PROJECTS_TABLE_ID, query: projectListQueryOptions }),
    ```
+
+   `listLoader` (`src/lib/crud/route.ts`) is `loadList` over `tableListInput`: awaited when entering, prefetched when the search changes on the page.
 
    In the component, `useListPage` (`src/hooks/use-list-page.ts`) does the rest: it resolves the page size the same way as the loader (URL, then the user's saved choice for this table, then 20), reads the list, and returns the props for `<Pagination>`:
 
    ```tsx
-   const { edit, ...listSearch } = Route.useSearch();   // UI-only params stay out of the list input
+   const { edit, ...listSearch } = getRouteApi("/_admin/admin/projects/").useSearch();   // UI-only params stay out of the list input
    const { input, page, busy, pagination } = useListPage({ tableId: PROJECTS_TABLE_ID, search: listSearch, query: projectListQueryOptions });
    …
    {page && pagination ? (
@@ -82,12 +82,12 @@ keys by the router's `stringifySearch` (`src/lib/list/url.ts`, wired in
    		<DataTable tableId={PROJECTS_TABLE_ID} rows={page.items} busy={busy} … />
    		<Pagination {...pagination} />
    	</>
-   ) : <DataTableSkeleton columns={5} rows={8} />}
+   ) : <DataTableSkeleton columns={projectColumns.length} rows={8} />}
    ```
 
-   Lists without a table (public card grids) read with `useListQuery(options)` directly and pass `busy` as `aria-busy`.
+   An admin list renders all of that with `CrudListPage` (crud.md). Lists without a table (public card grids) read with `useListQuery(options)` directly and pass `busy` as `aria-busy`.
 
-4. **Filters UI:** put the controls in `<FilterBar values={search} preserve={["sort", "pageSize"]}>` (see `features/test-crud/filters.tsx`). Build the chips with `chipLabel`/`rangeValue` and render them with `<ActiveFilters chips={…} clearAll={…}>`. When filters hide every row, the empty state's action is `<ClearFiltersButton clearAll={…} />`. Labels are messages, called at render time.
+4. **Filters UI:** put the controls in `<FilterBar values={search} preserve={["sort", "pageSize"]}>` (see `features/test-crud/filters.tsx`). The chips come from chip specs: `defineFilters<ProjectSearch>([textChip("q", m.crud_search), choiceChip("status", …), eachChip("tags", …), rangeChip(["budgetMin", "budgetMax"], …), rangeChip(["from", "to"], …, dayValue)])`; `applied(search)` gives `<ActiveFilters>` and the empty state's `<ClearFiltersButton>` their chips and "Clear all". Labels are messages, called at render time.
 
 **What you get without extra work:**
 - server rendering;

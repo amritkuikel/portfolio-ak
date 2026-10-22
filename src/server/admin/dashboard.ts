@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { count, eq, gte, type SQL, sql } from "drizzle-orm";
 import { DASHBOARD_ACTIVITY_SIZE, DASHBOARD_RECENT_DAYS, type Dashboard } from "@/features/admin/dashboard";
-import { AUDIT_SEARCH_DEFAULTS } from "@/features/audit/schema";
+import { auditList } from "@/features/audit/search";
 import type { Permission } from "@/features/rbac/permissions";
 import { listAuditEvents } from "@/server/audit/repository";
 import { role, testCrud, user } from "@/server/db/schema";
@@ -54,7 +54,7 @@ export async function getDashboard(
 					.then(([row]) => row)
 			: null,
 		can("audit:read")
-			? listAuditEvents(db, { ...AUDIT_SEARCH_DEFAULTS, page: 1, pageSize: DASHBOARD_ACTIVITY_SIZE }).then(
+			? listAuditEvents(db, { ...auditList.defaults, page: 1, pageSize: DASHBOARD_ACTIVITY_SIZE }).then(
 					(page) => page.items,
 				)
 			: null,

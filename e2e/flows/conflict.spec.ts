@@ -14,8 +14,8 @@ test("the second of two edits from the same version is refused, and no data is l
 	const title = `E2E conflict ${Date.now()}`;
 	await open(page, "/admin/test-crud/new");
 	await page.getByLabel("Title", { exact: true }).fill(title);
-	await page.getByRole("button", { name: "Create item" }).click();
-	await expect(page.getByText("Item created.")).toBeVisible();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(page.getByText("Created.", { exact: true })).toBeVisible();
 	await open(page, `/admin/test-crud?q=${encodeURIComponent(title)}`);
 	await page.getByRole("button", { name: `Actions for ${title}` }).click();
 	await page.getByRole("menuitem", { name: "Edit", exact: true }).click();

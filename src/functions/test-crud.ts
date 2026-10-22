@@ -3,73 +3,64 @@ import {
 	type TestCrudDetail,
 	type TestCrudListItem,
 	type TestCrudPage,
-	testCrudIdSchema,
-	testCrudIdsSchema,
 	testCrudInputSchema,
 	testCrudSlugCheckSchema,
 	testCrudStatusUpdateSchema,
 	testCrudUpdateSchema,
 } from "@/features/test-crud/schema";
-import { testCrudListInputSchema } from "@/features/test-crud/search";
+import { testCrudList } from "@/features/test-crud/search";
 import { zodInput } from "@/functions/_lib/validator";
+import { idSchema } from "@/lib/crud/schema";
+import { bulkIdsSchema } from "@/lib/list/paging";
 import { requirePermission } from "@/middleware/auth";
-import { imageStore } from "@/server/attachments/store";
-import { auditActorFrom } from "@/server/audit/actor";
-import { db } from "@/server/db/client";
-import { isSlugFree, listTestCrud as listRows, listTestCrudTags as listTags } from "@/server/test-crud/repository";
-import { createItem, deleteItems, getItemOrThrow, setItemStatus, updateItem } from "@/server/test-crud/service";
+import { withServices } from "@/middleware/services";
+import * as testCrud from "@/server/test-crud/service";
 
 /**
- * Test CRUD admin server functions. EVERY one runs requirePermission first, so
- * anonymous calls get UNAUTHORIZED and users without that permission FORBIDDEN on
- * the server, whatever the UI shows. Input is validated with the shared Zod schemas before
- * the handler runs. The work itself lives in src/server/test-crud/service.ts
- * (tested directly); these are thin wrappers.
+ * Test CRUD admin server functions: the permission check first (anonymous calls
+ * get UNAUTHORIZED, users without it FORBIDDEN, whatever the UI shows), the
+ * input validated with the shared schema, then one call into the service.
+ * Images are attachment ids (uploaded beforehand, straight to Cloudinary).
  */
 
 export const listTestCrud = createServerFn({ method: "GET" })
-	.middleware([requirePermission("test-crud:read")])
-	.validator(zodInput(testCrudListInputSchema))
-	.handler(({ data }): Promise<TestCrudPage> => listRows(db, data, imageStore));
+	.middleware([requirePermission("test-crud:read"), withServices])
+	.validator(zodInput(testCrudList.input))
+	.handler(({ data, context }): Promise<TestCrudPage> => testCrud.list(context, data));
 
 /** Tags in use, for the list's tag filter. */
 export const listTestCrudTags = createServerFn({ method: "GET" })
-	.middleware([requirePermission("test-crud:read")])
-	.handler((): Promise<string[]> => listTags(db));
+	.middleware([requirePermission("test-crud:read"), withServices])
+	.handler(({ context }): Promise<string[]> => testCrud.listTags(context));
 
 export const getTestCrud = createServerFn({ method: "GET" })
-	.middleware([requirePermission("test-crud:read")])
-	.validator(zodInput(testCrudIdSchema))
-	.handler(({ data }): Promise<TestCrudDetail> => getItemOrThrow(db, imageStore, data.id));
+	.middleware([requirePermission("test-crud:read"), withServices])
+	.validator(zodInput(idSchema))
+	.handler(({ data, context }): Promise<TestCrudDetail> => testCrud.get(context, data.id));
 
 /** Whether a slug is free (the form's SlugField checks while typing; saving checks again). */
 export const isTestCrudSlugFree = createServerFn({ method: "GET" })
-	.middleware([requirePermission("test-crud:read")])
+	.middleware([requirePermission("test-crud:read"), withServices])
 	.validator(zodInput(testCrudSlugCheckSchema))
-	.handler(({ data }): Promise<boolean> => isSlugFree(db, data.slug, data.id));
+	.handler(({ data, context }): Promise<boolean> => testCrud.isSlugFree(context, data));
 
-/** Images are attachment ids (uploaded beforehand, straight to Cloudinary; see functions/attachments.ts). */
 export const createTestCrud = createServerFn({ method: "POST" })
-	.middleware([requirePermission("test-crud:create")])
+	.middleware([requirePermission("test-crud:create"), withServices])
 	.validator(zodInput(testCrudInputSchema))
-	.handler(({ data, context }): Promise<TestCrudDetail> => createItem(db, imageStore, data, context.user.id));
+	.handler(({ data, context }): Promise<TestCrudDetail> => testCrud.create(context, data));
 
 export const updateTestCrud = createServerFn({ method: "POST" })
-	.middleware([requirePermission("test-crud:update")])
+	.middleware([requirePermission("test-crud:update"), withServices])
 	.validator(zodInput(testCrudUpdateSchema))
-	.handler(({ data, context }): Promise<TestCrudDetail> => updateItem(db, imageStore, data, context.user.id));
+	.handler(({ data, context }): Promise<TestCrudDetail> => testCrud.update(context, data));
 
-export const setTestCrudStatusFn = createServerFn({ method: "POST" })
-	.middleware([requirePermission("test-crud:publish")])
+export const setTestCrudStatus = createServerFn({ method: "POST" })
+	.middleware([requirePermission("test-crud:publish"), withServices])
 	.validator(zodInput(testCrudStatusUpdateSchema))
-	.handler(
-		({ data, context }): Promise<TestCrudListItem> => setItemStatus(db, imageStore, data, auditActorFrom(context)),
-	);
+	.handler(({ data, context }): Promise<TestCrudListItem> => testCrud.setStatus(context, data));
 
 /** Deletes one or many (bulk delete). Missing ids are ignored; returns how many were deleted. */
-export const deleteTestCrudFn = createServerFn({ method: "POST" })
-	.middleware([requirePermission("test-crud:delete")])
-	.validator(zodInput(testCrudIdsSchema))
-	.handler(
-		({ data, context }): Promise<{ deleted: number }> => deleteItems(db, imageStore, data.ids, auditActorFrom(context)),
-	);
+export const deleteTestCrud = createServerFn({ method: "POST" })
+	.middleware([requirePermission("test-crud:delete"), withServices])
+	.validator(zodInput(bulkIdsSchema()))
+	.handler(({ data, context }): Promise<{ deleted: number }> => testCrud.remove(context, data.ids));

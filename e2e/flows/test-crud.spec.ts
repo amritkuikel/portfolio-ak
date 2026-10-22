@@ -23,8 +23,8 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 	await page.getByLabel("Title", { exact: true }).fill(title);
 	const slug = await page.getByLabel("Slug").inputValue();
 	expect(slug).not.toBe("");
-	await page.getByRole("button", { name: "Create item" }).click();
-	await expect(page.getByText("Item created.")).toBeVisible();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(page.getByText("Created.", { exact: true })).toBeVisible();
 	await expect(page).toHaveURL(/\/admin\/test-crud$/);
 
 	// A draft isn't public.
@@ -45,7 +45,7 @@ test("create, edit, publish and delete an item", async ({ page, guard }) => {
 	const dialog = page.getByRole("alertdialog");
 	await expect(dialog).toContainText(edited);
 	await dialog.getByRole("button", { name: "Delete" }).click();
-	await expect(page.getByText("Item deleted.")).toBeVisible();
+	await expect(page.getByText(`“${edited}” deleted.`)).toBeVisible();
 	const gone = await page.goto(`/dev/test-crud/${slug}`);
 	expect(gone?.status()).toBe(404);
 });

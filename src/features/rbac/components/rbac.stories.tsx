@@ -90,7 +90,7 @@ export const NewRole: Story = {
 	play: async ({ canvasElement, userEvent }) => {
 		const dialog = within(canvasElement.ownerDocument.body);
 		await userEvent.type(await dialog.findByRole("textbox", { name: m.roles_field_name() }), "Reviewer");
-		await userEvent.click(dialog.getByRole("button", { name: m.roles_create() }));
+		await userEvent.click(dialog.getByRole("button", { name: m.crud_create() }));
 		await waitFor(() => expect(createRole).toHaveBeenCalledWith({ data: { name: "Reviewer", description: "" } }));
 	},
 };
@@ -112,7 +112,9 @@ export const UserRolesAsAdmin: Story = {
 		await userEvent.click(await dialog.findByRole("checkbox", { name: "Editor" }));
 		await userEvent.click(dialog.getByRole("button", { name: m.users_roles_save() }));
 		await waitFor(() =>
-			expect(setUserRoles).toHaveBeenCalledWith({ data: { userId: "user-1", admin: false, roleIds: ["role-editor"] } }),
+			expect(setUserRoles).toHaveBeenCalledWith({
+				data: { userId: "user-1", admin: false, roleIds: ["role-editor"], updatedAt: sampleBannedUser.updatedAt },
+			}),
 		);
 	},
 };

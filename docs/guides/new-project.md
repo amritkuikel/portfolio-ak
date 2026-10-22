@@ -1,6 +1,6 @@
 # Starting a new project from the template
 
-From a fresh clone to your own app with its first feature, every gate green. Decisions 0141 and 0163.
+From a fresh clone to your own app with its first feature, every gate green. Decisions 0175 and 0163.
 
 ## 1. Clone and install
 
@@ -37,10 +37,11 @@ How it works: each layer's files, package scripts, crons, knip entries and table
 ## 5. Your first feature
 
 - [ ] `pnpm new:feature <name>` (kebab-case, e.g. `projects`), with `--title "Projects"` and `--title-ne "परियोजनाहरू"` for the section's names. Without `--title-ne` the Nepali name is the English one plus "(अनुवाद गर्नुहोस्)" ("translate"), so it can't ship unnoticed.
-- [ ] It generates the Test CRUD shape for an admin section: table and migration, shared schema, repository and service with a PGlite test, permissions (`<name>:read|create|update|delete`, with labels), guarded server functions and their guarded-functions entry, queries, thin admin routes (list, new, edit) with the UI in `src/features/<name>/components`, messages in both languages, an `ADMIN_SECTIONS` entry (sidebar, command palette), the audit action for deletes, stories and their server-function mocks, and the browser-review entries. It runs the migration generator, Biome and a build.
+- [ ] Add `--public` for public list and detail pages (a slug and a "published" switch, `seo()`/`listSeo()`, the sitemap) and `--localized` for a title and notes typed in both languages. Commit first: it refuses uncommitted changes, and puts the tree back if it fails.
+- [ ] It generates a feature in the CRUD standard's shape ([crud.md](crud.md)): table and migration, URL contract, schemas and DTOs, keys, queries and mutations, columns, filters, a palette command, list, form, detail and pending components, guarded server functions on `withServices` and their guarded-functions entry, repository and service with audited creates, edits and deletes and a PGlite test, permissions (`<name>:read|create|update|delete`, with labels), thin routes, messages in both languages, an `ADMIN_SECTIONS` entry (sidebar, command palette), stories with their server-function mocks, and the browser-review entries. It runs the migration generator, Biome and a build.
 - [ ] `pnpm db:migrate`, then grant the new permissions to roles in `/admin/roles/permissions` (admins hold them already).
 - [ ] Add your columns: the table (`src/server/db/schema/<name>.ts`, then `pnpm db:generate`), the input schema and DTOs, the repository's mapping, the form fields, the columns and their messages. The edit page (`/admin/<name>/$id`) is listed in `NOT_REVIEWED` until a seeded row exists; seed one and review it like `/admin/test-crud/$id`.
-- [ ] Public pages, filters beyond search, optimistic edits, attachments: copy them from Test CRUD (`docs/guides/conventions.md`, "Building a list page"). Its public pages are a dev reference under `/dev/test-crud`; yours go under `src/routes/_public/` with `seo()`/`listSeo()` and a sitemap entry.
+- [ ] Filters beyond search (a param in `listSchema`, a control, a chip spec), optimistic edits (`useCrudMutation`'s `optimistic`), attachments: copy them from Test CRUD ([crud.md](crud.md)).
 
 ## 6. Gates
 

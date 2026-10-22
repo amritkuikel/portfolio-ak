@@ -19,5 +19,8 @@ export const setUserBanned = fn(async (_options: { data: unknown }) => {}).mockN
 export const revokeUserSessions = fn(async (_options: { data: unknown }) => ({ revoked: 2 })).mockName(
 	"revokeUserSessions",
 );
+export const isUserEmailFree = fn(
+	async (options: { data: { email: string } }): Promise<boolean> => options.data.email !== "taken@example.com",
+).mockName("isUserEmailFree");
 export const inviteUser = fn(async (_options: { data: unknown }) => ({ id: "user-new" })).mockName("inviteUser");
 export const impersonateUser = fn(async (_options: { data: unknown }) => {}).mockName("impersonateUser");

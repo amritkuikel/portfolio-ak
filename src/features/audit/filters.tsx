@@ -1,12 +1,12 @@
-import { ActiveFilters, chipLabel, type FilterChip, rangeValue } from "@/components/filters/active-filters";
+import { dayValue } from "@/components/filters/active-filters";
 import { DateRangeFilter, SearchFilter, SelectFilter } from "@/components/filters/filters";
-import { isoDateInstant } from "@/lib/i18n/date-only";
-import { formatDate } from "@/lib/i18n/intl";
+import { choiceChip, defineFilters, rangeChip, textChip } from "@/lib/crud/filters";
 import { m } from "@/paraglide/messages";
 import { AUDIT_ACTION_LABELS, AUDIT_TARGET_LABELS } from "./labels";
-import { AUDIT_ACTIONS, AUDIT_FILTER_KEYS, AUDIT_TARGETS, type AuditSearch } from "./schema";
+import { AUDIT_ACTIONS, AUDIT_TARGETS, type AuditAction, type AuditTarget } from "./schema";
+import type { AuditSearch } from "./search";
 
-/** The audit log's filters (inside <FilterBar>) and their chips. Keys match auditSearchSchema. */
+/** The audit log's filters (inside <FilterBar>). Names match auditList's params. */
 export function AuditFilterControls({ search }: { search: AuditSearch }) {
 	return (
 		<>
@@ -40,49 +40,11 @@ export function AuditFilterControls({ search }: { search: AuditSearch }) {
 	);
 }
 
-const day = (value: string | undefined) =>
-	value === undefined ? undefined : formatDate(isoDateInstant(value), { dateStyle: "medium" });
-
-export function auditFilterChips(search: AuditSearch): FilterChip[] {
-	const chips: FilterChip[] = [];
-	if (search.q) {
-		chips.push({ id: "q", label: chipLabel(m.audit_search_label(), `“${search.q}”`), remove: { q: undefined } });
-	}
-	if (search.actor) {
-		chips.push({
-			id: "actor",
-			label: chipLabel(m.audit_filter_actor(), `“${search.actor}”`),
-			remove: { actor: undefined },
-		});
-	}
-	if (search.action !== "all") {
-		chips.push({
-			id: "action",
-			label: chipLabel(m.audit_filter_action(), AUDIT_ACTION_LABELS[search.action]()),
-			remove: { action: undefined },
-		});
-	}
-	if (search.target !== "all") {
-		chips.push({
-			id: "target",
-			label: chipLabel(m.audit_filter_target(), AUDIT_TARGET_LABELS[search.target]()),
-			remove: { target: undefined },
-		});
-	}
-	const dates = rangeValue(day(search.from), day(search.to));
-	if (dates) {
-		chips.push({
-			id: "date",
-			label: chipLabel(m.audit_filter_date(), dates),
-			remove: { from: undefined, to: undefined },
-		});
-	}
-	return chips;
-}
-
-/** "Clear all": every filter back to its default (sort and page size stay). */
-export const AUDIT_CLEAR_FILTERS = Object.fromEntries(AUDIT_FILTER_KEYS.map((key) => [key, undefined]));
-
-export function AuditActiveFilters({ search }: { search: AuditSearch }) {
-	return <ActiveFilters chips={auditFilterChips(search)} clearAll={AUDIT_CLEAR_FILTERS} />;
-}
+/** One chip per applied filter, each removable; their keys are what "Clear all" resets. */
+export const auditFilters = defineFilters<AuditSearch>([
+	textChip("q", m.audit_search_label),
+	textChip("actor", m.audit_filter_actor),
+	choiceChip("action", m.audit_filter_action, (action: AuditAction) => AUDIT_ACTION_LABELS[action]()),
+	choiceChip("target", m.audit_filter_target, (target: AuditTarget) => AUDIT_TARGET_LABELS[target]()),
+	rangeChip(["from", "to"], m.audit_filter_date, dayValue),
+]);

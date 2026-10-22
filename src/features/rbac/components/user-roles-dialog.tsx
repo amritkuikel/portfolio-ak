@@ -1,23 +1,29 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { formOptions } from "@tanstack/react-form";
 import { z } from "zod";
+import { useCrudForm } from "@/components/crud/use-crud-form";
 import { FormDialog } from "@/components/dialogs/form-dialog";
-import { formValidators, handleSaveError, useAppForm } from "@/components/forms";
-import { setUserRoles } from "@/functions/rbac";
+import { formValidators, useAppForm } from "@/components/forms";
 import { m } from "@/paraglide/messages";
+import { RBAC_REFRESH, userKeys } from "../keys";
 import { roleDescription, roleLabel } from "../labels";
-import { hasAll, type Permission } from "../permissions";
-import { refreshRbac } from "../queries";
+import { userMutations } from "../queries";
 import type { RoleSummary, UserListItem } from "../schema";
+import { type Actor, canGrant } from "../types";
 
 const formSchema = z.object({ admin: z.boolean(), roleIds: z.array(z.string()) });
+type UserRolesValues = z.input<typeof formSchema>;
 
-export type Actor = { id: string; isAdmin: boolean; permissions: ReadonlyArray<Permission> };
+const userRolesFormOptions = (user: UserListItem) =>
+	formOptions({
+		defaultValues: { admin: user.isAdmin, roleIds: user.roles.map((role) => role.id) } as UserRolesValues,
+		validators: formValidators(formSchema),
+	});
 
 /**
  * A user's roles: the Admin flag and custom roles. Options the actor may not
  * hand out are shown disabled (the same rules the server enforces: only admins
- * make admins; others only hand out roles within their own permissions).
+ * make admins; others only hand out roles within their own permissions). The
+ * save sends the user's version: if someone changed them since, "Reload".
  */
 export function UserRolesDialog({
 	user,
@@ -27,26 +33,21 @@ export function UserRolesDialog({
 }: {
 	user: UserListItem;
 	roles: ReadonlyArray<RoleSummary>;
-	actor: Actor;
+	actor: Pick<Actor, "id" | "isAdmin" | "permissions">;
 	onClose: () => void;
 }) {
-	const queryClient = useQueryClient();
+	const crud = useCrudForm({
+		item: user,
+		toInput: (values: UserRolesValues) => formSchema.parse(values),
+		update: userMutations.roles(),
+		invalidate: RBAC_REFRESH,
+		reload: userKeys.lists(),
+		onSaved: onClose,
+		messages: { saved: m.users_toast_roles_saved },
+	});
+	const form = useAppForm({ ...userRolesFormOptions(user), ...crud.formProps });
 	const self = user.id === actor.id;
 	const custom = roles.filter((role) => !role.system);
-	const form = useAppForm({
-		defaultValues: { admin: user.isAdmin, roleIds: user.roles.map((role) => role.id) },
-		validators: formValidators(formSchema),
-		onSubmit: async ({ value, formApi }) => {
-			try {
-				await setUserRoles({ data: { userId: user.id, admin: value.admin, roleIds: value.roleIds } });
-				await refreshRbac(queryClient);
-				toast.success(m.users_toast_roles_saved());
-				onClose();
-			} catch (error) {
-				handleSaveError(formApi, error);
-			}
-		},
-	});
 	const locked = self || (user.isAdmin && !actor.isAdmin);
 	return (
 		<form.AppForm>
@@ -56,6 +57,7 @@ export function UserRolesDialog({
 				submitLabel={m.users_roles_save()}
 				readOnly={locked}
 				onClose={onClose}
+				stale={crud.stale}
 				data-testid="user-roles-dialog"
 			>
 				<form.AppField name="admin">
@@ -77,7 +79,7 @@ export function UserRolesDialog({
 									value: role.id,
 									label: roleLabel(role),
 									description: roleDescription(role) || undefined,
-									disabled: locked || (!actor.isAdmin && !hasAll(actor.permissions, role.permissions)),
+									disabled: locked || !canGrant(actor, role.permissions),
 								}))}
 							/>
 						)}

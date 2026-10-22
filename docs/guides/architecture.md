@@ -28,14 +28,14 @@ How the app is put together and how a request flows through it. The file-by-file
 2. **Request middleware** (`src/start.ts`): Sentry, security headers with a per-request CSP nonce, CSRF (server functions only).
 3. **Router**: `/ne/…` is mapped onto the same routes. The root `beforeLoad` loads the session into the Query cache (unless the section skips it: the portfolio at `/`). Layout guards run next: `_authed` needs a session; `_admin` asks the server on entry; `/dev` is a 404 outside development; section routes run `assertRoutePermission`. Each layout renders its own header.
 4. **Loader**: `ensureQuery(queryClient, options)`, or `loadList(...)` for search-driven lists. The query function calls a **server function**.
-5. **Server function**: function middleware (locale header, the request's id and logging, error normalisation, then `requirePermission(…)`), the Zod validator, then the handler. The handler calls a service or repository, which talks to Postgres through Drizzle.
+5. **Server function**: function middleware (locale header, the request's id and logging, error normalisation, then `requirePermission(…)` and `withServices`, which hands the handler the database, the actor and the image store), the Zod validator, then the handler. The handler calls one service, which applies the rules, audits the change and talks to Postgres through its repository (Drizzle).
 6. **Response**: the page streams as HTML with the Query cache dehydrated into it, and hydrates without refetching (`staleTime` 60 s). Errors arrive as `AppError` with a code; the page shows a localized message, and SSR responses carry the matching status.
 
 ## Where to start for…
 
 | Task | Read |
 | --- | --- |
-| A new feature (list, form, detail, public page) | README "Test CRUD", [conventions.md](conventions.md) |
+| A new feature (list, form, detail, public page) | [crud.md](crud.md) (`pnpm new:feature`), [conventions.md](conventions.md) |
 | Loaders, server functions, errors | [routing-data.md](routing-data.md) |
 | Lists: URL params, filters, masking | [search-filters-masking.md](search-filters-masking.md), [tables-filters.md](tables-filters.md) |
 | Forms | [forms.md](forms.md) |

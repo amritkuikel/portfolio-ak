@@ -22,7 +22,7 @@ Vitest for logic, server code and components; Storybook for every component in a
 
 ## Patterns
 
-- **Database:** `createTestDb()` (`tests/utils/test-db.ts`) is an in-process Postgres (PGlite) with the committed migrations and one admin user. Repositories and services take a `db`, so tests call them directly.
+- **Database:** `createTestDb()` (`tests/utils/test-db.ts`) is an in-process Postgres (PGlite) with the committed migrations and one admin user. Repositories take a `db` and services the call's services (`{ db, actor, imageStore }`), so tests call them directly with their own (`{ db, actor: { id, isAdmin, permissions }, imageStore: null }`).
   - It loads a migrated data directory that the unit project's global setup (`tests/setup/pglite.ts`) builds once per run and caches in `node_modules/.cache/vitest-pglite/`, rebuilt when `drizzle/` changes. Don't create `new PGlite()` and migrate in a test file: that costs initdb plus the migrations again (0159).
   - `reset()` truncates every table, then adds the admin back. Fixtures a file needs in every test (another user, a role) go in the second argument, `createTestDb("admin-1", (db) => db.insert(…))`, which runs again after each reset.
 - **DOM setup:** `tests/setup/dom.ts` loads Testing Library only in jsdom files, so server tests don't pay for it.

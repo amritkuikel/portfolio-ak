@@ -2,9 +2,47 @@ import { StatusBadge } from "@/components/data-display/status-badge";
 import { UserCell } from "@/components/data-display/user-avatar";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/i18n/intl";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import type { UserListItem } from "../schema";
+import { roleDescription, roleLabel } from "./labels";
+import { ALL_PERMISSIONS } from "./permissions";
+import type { RoleSummary, UserListItem } from "./schema";
+
+/** Columns of /admin/roles. */
+export const roleColumns: ReadonlyArray<DataTableColumn<RoleSummary>> = [
+	{
+		id: "role",
+		header: m.roles_col_role,
+		cellClassName: "max-w-96",
+		csv: (role) => roleLabel(role),
+		cell: (role) => (
+			<div className="flex min-w-0 flex-col gap-0.5">
+				<span className="flex items-center gap-2 font-medium">
+					{roleLabel(role)}
+					{role.system ? <Badge variant="outline">{m.roles_system()}</Badge> : null}
+				</span>
+				{roleDescription(role) ? <span className="text-muted-foreground text-xs">{roleDescription(role)}</span> : null}
+			</div>
+		),
+	},
+	{
+		id: "users",
+		header: m.roles_col_users,
+		cellClassName: "tabular-nums",
+		cell: (role) => formatNumber(role.userCount),
+		csv: (role) => role.userCount,
+	},
+	{
+		id: "permissions",
+		header: m.roles_col_permissions,
+		cellClassName: "tabular-nums whitespace-nowrap",
+		cell: (role) =>
+			m.roles_permission_count({
+				count: formatNumber(role.permissions.length),
+				total: formatNumber(ALL_PERMISSIONS.length),
+			}),
+	},
+];
 
 /** Columns of /admin/users. `currentUserId` marks the signed-in user's own row. */
 export const userColumns = (currentUserId: string | undefined): ReadonlyArray<DataTableColumn<UserListItem>> => [

@@ -75,12 +75,13 @@ A request goes through the server entry (Sentry, locale), request middleware (he
 | Guide | Covers |
 | --- | --- |
 | [Architecture](docs/guides/architecture.md) | Layers and a request end to end |
+| [CRUD](docs/guides/crud.md) | The one way to build a feature: its files, list page, writes, forms, server helpers, the generator |
 | [Conventions](docs/guides/conventions.md) | File map, building blocks, list-page recipe, live examples |
 | [Routing, data, server functions](docs/guides/routing-data.md) | Loaders, SSR without refetching, streaming, server functions, errors |
 | [Search params, filters, masking](docs/guides/search-filters-masking.md) | The URL list contract, filters, route masking, path params |
 | [Tables and filters](docs/guides/tables-filters.md) | DataTable, FilterBar, chips, Pagination, bulk actions |
 | [Forms](docs/guides/forms.md) | useAppForm, fields, validation, server field errors, rich text |
-| [State](docs/guides/state.md) | Query, DB (optimistic updates), Store (preferences), URL |
+| [State](docs/guides/state.md) | Query (reads and mutations), DB (client-first apps), Store (preferences), URL |
 | [RBAC](docs/guides/rbac.md) | Roles, permissions, guards, the permission matrix |
 | [Attachments](docs/guides/attachments.md) | Cloudinary uploads and images |
 | [SEO](docs/guides/seo.md) | Head tags, JSON-LD, sitemap, robots, manifest, icons |
@@ -121,7 +122,7 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
-| `pnpm new:feature <name>` | Generate an admin CRUD feature in the Test CRUD shape (table, migration, permissions, functions, routes, messages, tests, stories); see [docs/guides/new-project.md](docs/guides/new-project.md). |
+| `pnpm new:feature <name> [--public] [--localized]` | Generate a feature in the CRUD standard (table, migration, permissions, functions, routes, messages, tests, stories; public pages, text in both languages); see [docs/guides/crud.md](docs/guides/crud.md). Needs a committed tree. |
 | `pnpm strip-demo` | Remove the portfolio (and later the apps) for a neutral landing page; `--keep-portfolio`, `--keep-apps`; it deletes itself once nothing is left. <!-- @portfolio --> |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
@@ -152,31 +153,22 @@ Build forms with `useAppForm` and the field library (`src/components/forms`), va
 
 ## State: Query, DB and Store
 
-Query for server data you read, a TanStack DB collection for server data you edit with instant feedback and rollback, the Store (cookies) for UI preferences, the URL for view state. See [docs/guides/state.md](docs/guides/state.md).
+Query for server data you read and its mutations for what you change (optimistic, rolled back on refusal), TanStack DB collections for client-first apps, the Store (cookies) for UI preferences, the URL for view state. See [docs/guides/state.md](docs/guides/state.md).
 
-## Test CRUD: the template for new features
+## Building a feature (the CRUD standard)
 
-`/admin/test-crud` (admin) and `/test-crud` (public) make up the reference feature. `pnpm new:feature projects` generates steps 1–8 below for an admin section (title and notes columns, search, sort, pagination, create, edit with the version check, delete with an audit row), passing every gate as generated; start there and add what your feature needs. Starting a whole new project (strip the demo first): [docs/guides/new-project.md](docs/guides/new-project.md). By hand, say "projects":
+Every admin section is built one way: [docs/guides/crud.md](docs/guides/crud.md) is the only "add a feature" text, and `pnpm new:feature projects [--public] [--localized]` generates it, passing every gate as generated (an admin section with search, sort, pagination, create, edit with the version check, delete, an audit row for each change; `--public` adds public list and detail pages, `--localized` text in both languages). Starting a whole new project (strip the demo first): [docs/guides/new-project.md](docs/guides/new-project.md).
 
-1. **Table:** add `src/server/db/schema/projects.ts`, export it from `schema/index.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
-2. **Shared schema:** `src/features/projects/schema.ts`, with one Zod input schema built from the helpers in `src/lib/validation.ts` (localized messages), the list search params (in `search.ts`, the URL contract route files import) built from `src/lib/list/params.ts` (`searchParam`, `enumParam`, `pageParam`, `pageSizeParam`), and the DTO types (`Paged<T>` for lists).
-3. **Data access:** `src/server/projects/repository.ts` (Drizzle queries over an injected `Db` from `src/server/db/types.ts`; lists use `allOf`, `textSearch`, `orderBySort` and `paginate` from `src/server/db/list.ts`) and `service.ts` (the server functions' logic). Updates take the version the edit started from (`updatedAt`) and refuse a stale one (`sameVersion`, `staleError()`; see [docs/guides/forms.md](docs/guides/forms.md)). Test both with `createTestDb()` (PGlite), including a stale save.
-4. **Permissions and server functions:** add the resource to the permission catalog (`src/features/rbac/permissions.ts`, labels in `labels.ts`). Then `src/functions/projects.ts`, with `.middleware([requirePermission("projects:<action>")])` on every function, `.validator(zodInput(schema))`, and a one-line handler that calls the service. Add each function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts` (see [docs/guides/rbac.md](docs/guides/rbac.md)).
-5. **Queries and collection:** `queries.ts` (query keys and `queryOptions`) and, for admin lists, `collection.ts` (TanStack DB optimistic updates).
-6. **Routes and UI:** admin routes under `src/routes/_admin/admin/projects/`, public ones under `src/routes/_public/projects/` (use `seo()` in `head`, and add them to the sitemap). Add a `route.tsx` per section with `staticData: { breadcrumb: staticCrumb(m.…) }`; detail routes use `loaderTitleCrumb`. Pages use `Page` + `PageHeader`; lists use `tableListInput` + `loadList` in the loader and `useListPage` in the component, `DataTable` with column definitions in `features/projects/components/admin-columns.tsx`, plus `<Pagination {...pagination} />`, `EmptyState` (with `ClearFiltersButton`) and `useConfirm()` (see [conventions](docs/guides/conventions.md)). Forms use only `useAppForm` and the field library. Add the section to `ADMIN_SECTIONS` (`src/features/admin/sections.ts`, with its `group`): the sidebar and the command palette list it; actions such as "New project" go in `features/projects/commands.ts`.
-7. **Text:** every string goes in `messages/en.json` and `messages/ne.json`; the parity test fails if a key is missing.
-8. **Stories and tests:** add `*.stories.tsx` with play functions, then run `pnpm test` and `pnpm test:storybook`. List any new route in `e2e/support/pages.ts` and run `pnpm test:e2e`.
-
-The Test CRUD files for each layer:
+`/admin/test-crud` (admin) and `/dev/test-crud` (public, a dev reference) make up the reference feature. The Test CRUD files for each layer:
 
 | Layer | File | What it shows |
 | --- | --- | --- |
 | Table | `src/server/db/schema/test-crud.ts` | Drizzle table. Then run `pnpm db:generate` and `pnpm db:migrate`. |
-| Shared schema | `src/features/test-crud/schema.ts` | One Zod schema for the form and the server, plus list search params and DTOs |
-| Data access | `src/server/test-crud/repository.ts` | Plain functions over an injected `db`, tested on PGlite (`tests/server/test-crud-repository.test.ts`) |
-| Server functions | `src/functions/test-crud.ts` | `requirePermission("test-crud:<action>")` on every function, `.validator(zodInput(schema))` input, and images as attachment ids (JSON) |
-| Queries + DB | `src/features/test-crud/queries.ts`, `collection.ts` | Loader `ensureQuery` for SSR, and a TanStack DB collection for optimistic changes with rollback |
-| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `filters.tsx` | The shared `DataTable` with Test CRUD's columns, `FilterBar` filters (status, tags, price, dates, image) with chips, URL sorting and paging, bulk actions, a "Quick edit" dialog via route masking, `useConfirm()`, forms built from the reusable fields, toasts and the unsaved-changes guard |
+| URL contract and schemas | `src/features/test-crud/search.ts`, `schema.ts` | `listSchema` (search params, the list's input, defaults), one strict Zod schema for the form and the server, DTO schemas |
+| Data access | `src/server/test-crud/repository.ts`, `service.ts` | `listPage`, `updateVersioned`, `uniqueViolation`, audited changes (`withAudit`), tested on PGlite (`tests/server/test-crud-*.test.ts`) |
+| Server functions | `src/functions/test-crud.ts` | `requirePermission("test-crud:<action>")` then `withServices` on every function, `.validator(zodInput(schema))`, one service call; images as attachment ids |
+| Keys and queries | `src/features/test-crud/keys.ts`, `queries.ts` | Loader `ensureQuery` for SSR; `mutationOptions` run by `useCrudMutation` (publish and delete show at once on every cached page and roll back) and `useCrudForm` |
+| UI | `src/routes/_admin/admin/test-crud/*`, `src/features/test-crud/components/*`, `columns.tsx`, `filters.tsx` | `CrudListPage` with Test CRUD's columns, filters (status, tags, price, dates, image) and chip specs, URL sorting and paging, bulk delete, a "Quick edit" dialog via route masking (`QueryDialog`), a form split with `withForm`, toasts and the unsaved-changes guard |
 | Public pages (a dev reference) | `src/routes/dev/test-crud/*`, `src/functions/test-crud-public.ts` | SSR card grid and detail page that work without JavaScript, a masked "Quick view" dialog, published items only, localized 404 for drafts and invalid slugs. They live under `/dev` (dev builds only), so their heads are private; a real public page uses `seo()`/`listSeo()` instead |
 
 Images are Cloudinary attachments: uploaded straight from the browser with a server signature, verified, and linked when the item is saved ([docs/guides/attachments.md](docs/guides/attachments.md), decision 0098).

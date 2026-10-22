@@ -1,38 +1,16 @@
-import { Link } from "@tanstack/react-router";
 import { ImageIcon } from "lucide-react";
+import { RecordLink } from "@/components/crud/record-link";
 import { StatusOf } from "@/components/data-display/status-badge";
 import type { DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { CloudImage } from "@/features/attachments/components/cloud-image";
-import { useCan } from "@/features/rbac/can";
 import { formatCurrency, formatDateTime } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { STATUS_LABELS, TEST_CRUD_STATUS } from "../labels";
-import type { TestCrudListItem } from "../schema";
-
-/** The title, linking to the edit page for users who may edit. */
-function TitleCell({ row }: { row: TestCrudListItem }) {
-	const canEdit = useCan("test-crud:update");
-	return (
-		<>
-			{canEdit ? (
-				<Link
-					to="/admin/test-crud/$id"
-					params={{ id: row.id }}
-					className="font-medium underline-offset-4 hover:underline"
-				>
-					{row.title}
-				</Link>
-			) : (
-				<span className="font-medium">{row.title}</span>
-			)}
-			<div className="truncate font-mono text-muted-foreground text-xs">{row.slug}</div>
-		</>
-	);
-}
+import { STATUS_LABELS, TEST_CRUD_STATUS } from "./labels";
+import type { TestCrudListItem } from "./schema";
 
 /**
- * The admin list's columns. `sort` values match TEST_CRUD_SORTS; `hideable`
+ * The admin list's columns. `sort` values match testCrudList's sorts; `hideable`
  * columns appear in the Columns menu. Title, selection and actions always show.
  */
 export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> = [
@@ -62,7 +40,16 @@ export const testCrudColumns: ReadonlyArray<DataTableColumn<TestCrudListItem>> =
 		header: m.test_crud_col_title,
 		sort: "title",
 		cellClassName: "max-w-72",
-		cell: (row) => <TitleCell row={row} />,
+		// The edit page for users who may edit; the slug under it.
+		cell: (row) => (
+			<RecordLink
+				link={{ to: "/admin/test-crud/$id", params: { id: row.id } }}
+				permission="test-crud:update"
+				detail={row.slug}
+			>
+				{row.title}
+			</RecordLink>
+		),
 		csv: (row) => row.title,
 	},
 	{

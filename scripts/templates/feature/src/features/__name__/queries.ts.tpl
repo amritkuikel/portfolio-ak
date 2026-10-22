@@ -1,24 +1,17 @@
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import { get__Pascal__, list__Pascal__ } from "@/functions/__name__";
-import type { __Pascal__ListInput } from "./schema";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import type { Versioned } from "@/components/crud/use-crud-form";
+import { create__Pascal__, delete__Pascal__, get__Pascal__, list__Pascal__, update__Pascal__ } from "@/functions/__name__";
+{{#public}}
+import { getPublic__Pascal__, listPublic__Pascal__ } from "@/functions/__name__-public";
+{{/public}}
+import { __camel__Keys } from "./keys";
+import type { __Pascal__Input } from "./schema";
+import type { __Pascal__ListInput{{#public}}, __Pascal__PublicSearch{{/public}} } from "./search";
 
-/** Query keys: lists under ["__name__", "list", input], so one invalidation refreshes every page. */
-export const __camel__Keys = {
-	all: ["__name__"] as const,
-	lists: () => [...__camel__Keys.all, "list"] as const,
-	list: (input: __Pascal__ListInput) => [...__camel__Keys.lists(), input] as const,
-	detail: (id: string) => [...__camel__Keys.all, "detail", id] as const,
-};
-
-/** After a write: every list page (totals and page membership change). */
-export const invalidate__Pascal__Lists = (queryClient: QueryClient) =>
-	queryClient.invalidateQueries({ queryKey: __camel__Keys.lists() });
+/** Reads: loaders `ensureQuery` these, components read them with useSuspenseQuery / useListPage. */
 
 export const __camel__ListQueryOptions = (input: __Pascal__ListInput) =>
-	queryOptions({
-		queryKey: __camel__Keys.list(input),
-		queryFn: () => list__Pascal__({ data: input }),
-	});
+	queryOptions({ queryKey: __camel__Keys.list(input), queryFn: () => list__Pascal__({ data: input }) });
 
 export const __camel__DetailQueryOptions = (id: string) =>
 	queryOptions({
@@ -27,3 +20,30 @@ export const __camel__DetailQueryOptions = (id: string) =>
 		// The edit form's defaults must not change under the user while editing.
 		staleTime: Number.POSITIVE_INFINITY,
 	});
+{{#public}}
+
+export const public__Pascal__ListQueryOptions = (search: __Pascal__PublicSearch) =>
+	queryOptions({ queryKey: __camel__Keys.publicList(search), queryFn: () => listPublic__Pascal__({ data: search }) });
+
+export const public__Pascal__DetailQueryOptions = (slug: string) =>
+	queryOptions({ queryKey: __camel__Keys.publicDetail(slug), queryFn: () => getPublic__Pascal__({ data: { slug } }) });
+{{/public}}
+
+/** Writes, keyed (useMutationState can find them). useCrudMutation and useCrudForm add the rest. */
+export const __camel__Mutations = {
+	create: () =>
+		mutationOptions({
+			mutationKey: [...__camel__Keys.all, "create"],
+			mutationFn: (input: __Pascal__Input) => create__Pascal__({ data: input }),
+		}),
+	update: () =>
+		mutationOptions({
+			mutationKey: [...__camel__Keys.all, "update"],
+			mutationFn: (input: __Pascal__Input & Versioned) => update__Pascal__({ data: input }),
+		}),
+	delete: () =>
+		mutationOptions({
+			mutationKey: [...__camel__Keys.all, "delete"],
+			mutationFn: (ids: string[]) => delete__Pascal__({ data: { ids } }),
+		}),
+};

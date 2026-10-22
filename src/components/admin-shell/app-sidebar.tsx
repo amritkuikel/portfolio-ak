@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, linkOptions } from "@tanstack/react-router";
 import { LayoutDashboardIcon } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand";
 import {
@@ -21,9 +21,13 @@ import { clientEnv } from "@/lib/env/client";
 import { m } from "@/paraglide/messages";
 import { UserMenu } from "./user-menu";
 
-type NavItem = Pick<AdminSection, "to" | "label" | "icon" | "exact"> | typeof DASHBOARD;
+type NavItem = Pick<AdminSection, "to" | "activeOptions" | "label" | "icon"> | typeof DASHBOARD;
 
-const DASHBOARD = { to: "/admin", label: m.admin_nav_dashboard, icon: LayoutDashboardIcon, exact: true } as const;
+const DASHBOARD = {
+	...linkOptions({ to: "/admin", activeOptions: { exact: true } }),
+	label: m.admin_nav_dashboard,
+	icon: LayoutDashboardIcon,
+};
 
 /**
  * The admin sidebar: the sections the user may open (each route and server function
@@ -86,7 +90,7 @@ function NavLink({ item }: { item: NavItem }) {
 				{/* The router marks the current section (data-active); on phones the sheet closes once a page is picked. */}
 				<Link
 					to={item.to}
-					activeOptions={{ exact: item.exact ?? false }}
+					activeOptions={item.activeOptions}
 					activeProps={{ "data-active": true }}
 					onClick={() => setOpenMobile(false)}
 				>

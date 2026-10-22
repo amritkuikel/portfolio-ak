@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { hasAll, type Permission } from "./permissions";
+import type { Actor } from "./types";
 
 /**
  * Permissions in the UI. These only decide what to SHOW: every server function
@@ -33,7 +34,7 @@ export function Can({
 }
 
 /** The signed-in user as an actor (who is changing things), or null when signed out. */
-export function useActor(): { id: string; isAdmin: boolean; permissions: ReadonlyArray<Permission> } | null {
+export function useActor(): Actor | null {
 	const { data } = useQuery(sessionQueryOptions());
 	return data ? { id: data.user.id, isAdmin: data.user.role === "admin", permissions: data.permissions } : null;
 }

@@ -45,9 +45,9 @@ function PublicListPage() {
 		<Page width="wide" className="gap-8">
 			<Breadcrumbs />
 			<PageHeader size="display" title={m.test_crud_public_title()} description={m.test_crud_public_description()}>
-				<FilterBar values={search} label={m.test_crud_search_label()} submitLabel={m.test_crud_search_submit()}>
+				<FilterBar values={search} label={m.crud_search()} submitLabel={m.crud_search()}>
 					<SearchFilter
-						label={m.test_crud_search_label()}
+						label={m.crud_search()}
 						hideLabel
 						value={search.q}
 						placeholder={m.test_crud_public_search_placeholder()}

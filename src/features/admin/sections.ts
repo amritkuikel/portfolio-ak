@@ -1,3 +1,4 @@
+import { type ActiveOptions, linkOptions } from "@tanstack/react-router";
 import {
 	DatabaseIcon,
 	KeyRoundIcon,
@@ -33,7 +34,9 @@ export const ADMIN_GROUP_LABELS: Record<AdminGroup, () => string> = {
  * its own.
  */
 export type AdminSection = {
+	/** The link (a typed `linkOptions` object, spread in): where it goes and when it counts as current. */
 	to: AdminPath;
+	activeOptions?: ActiveOptions;
 	label: () => string;
 	description: () => string;
 	icon: LucideIcon;
@@ -42,13 +45,11 @@ export type AdminSection = {
 	group: AdminGroup;
 	/** Extra words the command palette matches (space-separated, localized). */
 	keywords?: () => string;
-	/** Highlight only on this exact path (a parent of another section). */
-	exact?: boolean;
 };
 
 export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 	{
-		to: "/admin/test-crud",
+		...linkOptions({ to: "/admin/test-crud" }),
 		label: m.admin_nav_test_crud,
 		description: m.test_crud_admin_description,
 		icon: DatabaseIcon,
@@ -57,7 +58,7 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_test_crud,
 	},
 	{
-		to: "/admin/users",
+		...linkOptions({ to: "/admin/users" }),
 		label: m.admin_nav_users,
 		description: m.users_description,
 		icon: UsersIcon,
@@ -66,16 +67,16 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_users,
 	},
 	{
-		to: "/admin/roles",
+		// Only on this exact path: Permissions is under it.
+		...linkOptions({ to: "/admin/roles", activeOptions: { exact: true } }),
 		label: m.admin_nav_roles,
 		description: m.roles_description,
 		icon: ShieldCheckIcon,
 		permission: "roles:read",
 		group: "access",
-		exact: true,
 	},
 	{
-		to: "/admin/roles/permissions",
+		...linkOptions({ to: "/admin/roles/permissions" }),
 		label: m.admin_nav_permissions,
 		description: m.matrix_description,
 		icon: KeyRoundIcon,
@@ -83,7 +84,7 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		group: "access",
 	},
 	{
-		to: "/admin/audit",
+		...linkOptions({ to: "/admin/audit" }),
 		label: m.admin_nav_audit,
 		description: m.audit_description,
 		icon: ScrollTextIcon,
@@ -92,7 +93,7 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_audit,
 	},
 	{
-		to: "/admin/settings/appearance",
+		...linkOptions({ to: "/admin/settings/appearance" }),
 		label: m.admin_nav_appearance,
 		description: m.appearance_description,
 		icon: PaletteIcon,

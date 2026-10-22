@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { isoDateTime } from "@/lib/crud/schema";
 import type { Paged } from "@/lib/list/paging";
-import { dateParam, enumParam, pageParam, pageSizeParam, resolvedPageSize, searchParam } from "@/lib/list/params";
 
 /**
- * The audit log (docs/decisions.md 0132): what is recorded, and the list
- * contract of /admin/audit. Rows are written by the services
+ * The audit log (docs/decisions.md 0132): what is recorded, and what the list
+ * shows (its URL contract is ./search.ts). Rows are written by the services
  * (src/server/audit/record.ts); this file is shared with the browser.
  */
 
@@ -21,6 +21,8 @@ export const AUDIT_ACTIONS = [
 	"user.sessions-revoke",
 	"user.impersonate",
 	"user.impersonate-stop",
+	"test-crud.create",
+	"test-crud.update",
 	"test-crud.publish",
 	"test-crud.unpublish",
 	"test-crud.delete",
@@ -40,58 +42,20 @@ export type AuditTarget = (typeof AUDIT_TARGETS)[number];
 export type AuditValue = string | number | boolean | null | string[];
 export type AuditValues = Record<string, AuditValue>;
 
-// ---------------------------------------------------------------------------
-// List: URL search params == listAuditEvents input
-// ---------------------------------------------------------------------------
-
-export const AUDIT_ACTION_FILTERS = ["all", ...AUDIT_ACTIONS] as const;
-export const AUDIT_TARGET_FILTERS = ["all", ...AUDIT_TARGETS] as const;
-export const AUDIT_SORTS = ["-time", "time"] as const;
-export const AUDIT_TABLE_ID = "admin-audit";
-
-export const AUDIT_SEARCH_DEFAULTS = {
-	q: "",
-	actor: "",
-	action: "all",
-	target: "all",
-	sort: "-time",
-	page: 1,
-} as const;
-
-/**
- * Filters: `q` (the target's name or id, or a request id), `actor` (name or
- * email), the action, the target type and the day range (app time zone).
- */
-export const auditSearchSchema = z.object({
-	q: searchParam(),
-	actor: searchParam(),
-	action: enumParam(AUDIT_ACTION_FILTERS, AUDIT_SEARCH_DEFAULTS.action),
-	target: enumParam(AUDIT_TARGET_FILTERS, AUDIT_SEARCH_DEFAULTS.target),
-	from: dateParam(),
-	to: dateParam(),
-	sort: enumParam(AUDIT_SORTS, AUDIT_SEARCH_DEFAULTS.sort),
-	page: pageParam(),
-	pageSize: pageSizeParam(),
-});
-export type AuditSearch = z.output<typeof auditSearchSchema>;
-export const auditListInputSchema = auditSearchSchema.extend({ pageSize: resolvedPageSize() });
-export type AuditListInput = z.output<typeof auditListInputSchema>;
-
-/** The filter keys (what "Clear all" resets; sort and page size are kept). */
-export const AUDIT_FILTER_KEYS = ["q", "actor", "action", "target", "from", "to"] as const;
-
-export type AuditEventItem = {
-	id: string;
-	action: AuditAction;
+/** One row of the log as the list shows it (the list's URL contract is in ./search.ts). */
+export const auditEventItem = z.object({
+	id: z.string(),
+	action: z.custom<AuditAction>(),
 	/** The account that acted; `id` is null once it was deleted (name and email are then from the time). */
-	actor: { id: string | null; name: string; email: string };
+	actor: z.object({ id: z.string().nullable(), name: z.string(), email: z.string() }),
 	/** The admin behind an impersonated session, when there was one. */
-	impersonator: string | null;
-	target: { type: AuditTarget; id: string; label: string };
-	before: AuditValues | null;
-	after: AuditValues | null;
-	requestId: string | null;
-	ip: string | null;
-	createdAt: string;
-};
+	impersonator: z.string().nullable(),
+	target: z.object({ type: z.custom<AuditTarget>(), id: z.string(), label: z.string() }),
+	before: z.custom<AuditValues>().nullable(),
+	after: z.custom<AuditValues>().nullable(),
+	requestId: z.string().nullable(),
+	ip: z.string().nullable(),
+	createdAt: isoDateTime(),
+});
+export type AuditEventItem = z.output<typeof auditEventItem>;
 export type AuditPage = Paged<AuditEventItem>;

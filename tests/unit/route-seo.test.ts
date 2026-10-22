@@ -74,10 +74,16 @@ const INDEXABLE: ReadonlyArray<{ to: string; label: string; context: Partial<Hea
 	{ to: "/contact", label: "contact", context: {}, path: "/contact" },
 	// portfolio:end
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
+	// @new-feature:indexable
 ];
 
 /** Pages titled by their content (loader data), not by a message: the samples aren't translated. */
-const CONTENT_TITLED = new Set(["home", "case study", "article"]);
+const CONTENT_TITLED = new Set([
+	"home",
+	"case study",
+	"article",
+	// @new-feature:content-titled
+]);
 
 // Building a router resolves every route's full id ("/_site/work/$slug") and path.
 // Nothing loads, so the context is never read.

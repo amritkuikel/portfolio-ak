@@ -65,21 +65,21 @@ Removing a permission from the catalog makes stored grants of it inert: resoluti
 - Only admins impersonate, never another admin or a banned user, and never from an impersonated session (0134).
 - System roles can't be renamed or deleted, and role names are unique.
 
-Each violation is a `ruleError` with a localized message (`fieldErrors._form`), shown by `errorMessage()`. The UI disables what the actor can't change, using the same rules (`UserRolesDialog`, `PermissionMatrix`).
+Each violation is a `ruleError` with a localized message (`fieldErrors._form`), shown by `errorMessage()`. The UI disables what the actor can't change, using the same rule (`canGrant(actor, permissions)`, `features/rbac/types.ts`: `UserRolesDialog`, `PermissionMatrix`). The actor is one type on both sides (`Actor`): the server builds it for every call (`context.actor`, from `withServices`), the browser reads it from the session (`useActor()`). Elsewhere the UI checks only with `useCan` and `<Can>`.
 
 These rules only hold because every change goes through `src/functions/rbac.ts`: Better Auth's own `/api/auth/admin/*` endpoints are disabled (0112). Don't use `authClient.admin.*`.
 
 ## The audit log (0132)
 
-Every change above writes an `audit_event` row **in the same transaction** as the change, so a refused or failed change leaves none. A new admin action follows the same shape:
+Every change above, and every create, edit and delete of content (0173), writes an `audit_event` row **in the same transaction** as the change, so a refused or failed change leaves none. A new admin action follows the same shape:
 
 ```ts
-// src/server/<feature>/service.ts: the actor comes from auditActorFrom(context) in the server function
-export async function archiveProject(db: Db, actor: AuditActor, id: string) {
-	await db.transaction(async (tx) => {
-		const before = await repo.lockProject(tx, id);
+// src/server/<feature>/service.ts: the call's services come from withServices (context.db, context.actor)
+export function archiveProject({ db, actor }: Services, id: string) {
+	return withAudit(db, actor, async (tx, audit) => {
+		const before = await repo.getProject(tx, id);
 		await repo.archive(tx, id);
-		await recordAudit(tx, actor, {
+		audit({
 			action: "project.archive", // add it to AUDIT_ACTIONS and AUDIT_ACTION_LABELS
 			target: { type: "project", id, label: before.name }, // a new type goes in AUDIT_TARGETS
 			before: { status: before.status },
@@ -88,6 +88,8 @@ export async function archiveProject(db: Db, actor: AuditActor, id: string) {
 	});
 }
 ```
+
+An edit records only what changed: `changes(before, after, compared, recorded)` (`src/server/audit/record.ts`) returns null when nothing did (no row), and long fields count without being copied.
 
 - **What's recorded:** the actor (and the admin behind an impersonated session), the action, the target and its name at the time, the fields that changed (summaries, never secrets), the request id (the same as the response's `x-request-id`, the logs and Sentry) and the client IP.
 - **Reading it:** `/admin/audit` (`audit:read`) filters by target name, id or request id, by actor, action, target type and day. Paste a request id from an error page or a log line into the search to find what that request changed.
@@ -146,5 +148,5 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 
 - **Admin guard:** `_admin` checks the server on entering the area and on SSR (any permission opens it); inner navigations reuse the session (0090). Never rely on it for data safety: every server function has its own `requirePermission`.
 - **Better Auth's `/api/auth/admin/*` endpoints are disabled** (0112). Manage users, roles and bans through `src/functions/rbac.ts`, never `authClient.admin.*`; a Better Auth upgrade that adds an admin endpoint fails `auth-disabled-paths.test.ts` until it's listed.
-- **Admin actions are audited in their transaction** (0132): a service that changes roles, users or publishes/deletes takes an `AuditActor` (built by `auditActorFrom(context)` in the server function) and calls `recordAudit(tx, actor, …)` with the same `tx` as the change. Writing it after the transaction, or with `db` instead of `tx`, can leave a change without its row. A new action goes in `AUDIT_ACTIONS` and its label. Never await a Better Auth call (or anything using the shared `db`) inside a transaction: it runs on another connection and waits for the transaction; write the row first and delete it if the call fails (`withAuditRow`, 0134).
+- **Admin actions are audited in their transaction** (0132, 0173): a service that changes anything runs it in `withAudit(db, actor, (tx, audit) => …)` and reports its rows with `audit(…)`; the actor is `context.actor` from `withServices`. Writing the row after the transaction, or with `db` instead of `tx`, can leave a change without its row. A new action goes in `AUDIT_ACTIONS` and its label. Never await a Better Auth call (or anything using the shared `db`) inside a transaction: it runs on another connection and waits for the transaction; write the row first and delete it if the call fails (`withAuditRow`, 0134).
 - **Impersonated sessions** (0134) carry `impersonatedBy`. Account changes are refused for them: a new Better Auth account endpoint goes in `OWNER_ONLY_PATHS`, a new app function that changes the account uses `requireAccountOwnerMiddleware`. Impersonation is checked on `user.role === "admin"` (the superuser flag, 0135), not a permission.

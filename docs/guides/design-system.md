@@ -90,7 +90,9 @@ The admin kit (Task 37, decision 0168): everything an admin page needs, so a fea
 
 **Charts** (`components/charts/`, decision 0171): `AreaChart`, `BarChart`, `DonutChart` take `label`, `data`, `index` (the category field) and `series` (`{ key, label, color? }`; colours default to `--chart-1…5`). Recharts loads with `React.lazy` in the browser only; the server renders a skeleton in a box of fixed aspect ratio, so nothing shifts, and a visually hidden table with the same numbers for screen readers (the drawing is `aria-hidden`). `Sparkline` is plain SVG, server-rendered.
 
-**Dialogs** (`components/dialogs/`): `useConfirm()` returns `confirm(options) => Promise<boolean>`; the shells mount its `ConfirmProvider` (`AdminShell`, the `/dev` layout; Storybook's providers too), so pages keep no confirm state. `FormDialog` and `FormSheet` hold a form ([forms.md](forms.md)).
+**Dialogs** (`components/dialogs/`): `useConfirm()` returns `confirm(options) => Promise<boolean>`; the shells mount its `ConfirmProvider` (`AdminShell`, the `/dev` layout; Storybook's providers too), so pages keep no confirm state. `FormDialog` and `FormSheet` hold a form ([forms.md](forms.md)). `QueryDialog` loads one record (a masked `?edit=`/`?view=`): placeholders, then the record or the error.
+
+**CRUD** (`components/crud/`, [crud.md](crud.md)): `CrudListPage` and `CrudListPending` (an admin list assembled), `useCrudMutation` (writes, optimistic on every cached page), `useCrudForm` + `CrudForm` (create and edit forms), `NewButton`, `RecordLink`.
 
 **Table** (`components/data-table/`, decision 0169): `DataTable` on TanStack Table v9 with its toolbar (saved views, CSV export, Columns), `RowAction`s with permissions and a context menu, a sticky header on long pages and a pinned first column on phones ([tables-filters.md](tables-filters.md)).
 

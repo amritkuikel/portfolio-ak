@@ -1,19 +1,23 @@
 import "@tanstack/react-start/server-only";
 import { inArray } from "drizzle-orm";
-import { hasAll, type Permission } from "@/features/rbac/permissions";
+import type { Permission } from "@/features/rbac/permissions";
 import type {
 	RoleInput,
 	RolePermissionsUpdate,
 	RoleSummary,
 	UserInviteInput,
+	UserPage,
 	UserRolesInput,
 } from "@/features/rbac/schema";
-import { staleError } from "@/lib/concurrency";
+import type { UserListInput } from "@/features/rbac/search";
+import { type Actor, canGrant } from "@/features/rbac/types";
 import { AppError, ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
-import { type AuditActor, type AuditEntry, recordAudit } from "@/server/audit/record";
+import { type AuditActor, type AuditEntry, changes, recordAudit } from "@/server/audit/record";
+import { notFound, withAudit } from "@/server/db/crud";
 import { auditEvent } from "@/server/db/schema";
-import type { Db } from "@/server/db/types";
+import type { Db, Tx } from "@/server/db/types";
+import type { Services } from "@/server/services";
 import * as repo from "./repository";
 
 /**
@@ -30,26 +34,23 @@ import * as repo from "./repository";
  *   and can't change, ban or sign out an admin.
  * - Only admins impersonate, never another admin, and never from an impersonated session.
  *
- * Every change writes its audit row in the same transaction (src/server/audit, 0132).
+ * Every change writes its audit row in the same transaction (withAudit, 0132).
  */
-export type Actor = AuditActor & { isAdmin: boolean; permissions: ReadonlyArray<Permission> };
 
-const notFound = (what: string) => new AppError("NOT_FOUND", `${what} not found`);
+type Reads = Pick<Services, "db">;
+
 const forbidden = (dev: string, user: string) => ruleError("FORBIDDEN", dev, user);
 
 /** A non-admin may only touch permissions they hold. */
 function assertWithinOwn(actor: Actor, permissions: ReadonlyArray<Permission>) {
-	if (actor.isAdmin) return;
-	if (!hasAll(actor.permissions, permissions)) {
-		throw forbidden("Permissions outside the actor's own", m.rbac_error_subset());
-	}
+	if (!canGrant(actor, permissions)) throw forbidden("Permissions outside the actor's own", m.rbac_error_subset());
 }
 
 // ---------------------------------------------------------------------------
 // Roles
 // ---------------------------------------------------------------------------
 
-export const listRoles = (db: Db): Promise<RoleSummary[]> => repo.listRoles(db);
+export const listRoles = ({ db }: Reads): Promise<RoleSummary[]> => repo.listRoles(db);
 
 async function customRoleOrThrow(db: Db, id: string) {
 	const role = await repo.getRole(db, id);
@@ -58,19 +59,12 @@ async function customRoleOrThrow(db: Db, id: string) {
 	return role;
 }
 
-async function assertNameFree(db: Db, name: string, exceptId?: string) {
-	if (await repo.roleNameTaken(db, name, exceptId)) {
-		throw new AppError("CONFLICT", "Role name taken", { fieldErrors: { name: [m.rbac_error_role_name_taken()] } });
-	}
-}
-
 const roleTarget = (role: { id: string; name: string }) => ({ type: "role" as const, id: role.id, label: role.name });
 
-export async function createRole(db: Db, actor: Actor, input: RoleInput) {
-	await assertNameFree(db, input.name);
-	return db.transaction(async (tx) => {
+export function createRole({ db, actor }: Services, input: RoleInput): Promise<{ id: string; key: string }> {
+	return withAudit(db, actor, async (tx, audit) => {
 		const role = await repo.createRole(tx, input);
-		await recordAudit(tx, actor, {
+		audit({
 			action: "role.create",
 			target: roleTarget(role),
 			after: { name: role.name, description: role.description },
@@ -80,65 +74,51 @@ export async function createRole(db: Db, actor: Actor, input: RoleInput) {
 }
 
 /** Renames a custom role, if nobody changed it since `version` (else a stale CONFLICT). */
-export async function updateRole(db: Db, actor: Actor, id: string, input: RoleInput, version: string) {
-	const before = await customRoleOrThrow(db, id);
-	await assertNameFree(db, input.name, id);
-	await db.transaction(async (tx) => {
-		if (!(await repo.updateRole(tx, id, input, version))) {
-			// Deleted in between: NOT_FOUND; otherwise someone renamed it first.
-			await customRoleOrThrow(tx, id);
-			throw staleError("Role");
-		}
-		await recordAudit(tx, actor, {
-			action: "role.update",
-			target: roleTarget({ id, name: input.name }),
-			before: { name: before.name, description: before.description },
-			after: { name: input.name, description: input.description },
-		});
+export function updateRole(
+	{ db, actor }: Services,
+	{ id, updatedAt, ...input }: RoleInput & { id: string; updatedAt: string },
+): Promise<void> {
+	return withAudit(db, actor, async (tx, audit) => {
+		const before = await customRoleOrThrow(tx, id);
+		const role = await repo.updateRole(tx, id, input, updatedAt);
+		const changed = changes(before, role, ["name", "description"]);
+		if (changed) audit({ action: "role.update", target: roleTarget(role), ...changed });
 	});
 }
 
-export async function deleteRole(db: Db, actor: Actor, id: string) {
-	const role = await customRoleOrThrow(db, id);
-	// Deleting a role removes its permissions from everyone holding it: same rule as revoking them.
-	const permissions = (await repo.rolePermissions(db, [role.id])).get(role.id) ?? [];
-	assertWithinOwn(actor, permissions);
-	await db.transaction(async (tx) => {
+export function deleteRole({ db, actor }: Services, id: string): Promise<void> {
+	return withAudit(db, actor, async (tx, audit) => {
+		const role = await customRoleOrThrow(tx, id);
+		// Deleting a role removes its permissions from everyone holding it: same rule as revoking them.
+		const permissions = (await repo.rolePermissions(tx, [role.id])).get(role.id) ?? [];
+		assertWithinOwn(actor, permissions);
 		await repo.deleteRole(tx, id);
-		await recordAudit(tx, actor, {
-			action: "role.delete",
-			target: roleTarget(role),
-			before: { name: role.name, permissions },
-		});
+		audit({ action: "role.delete", target: roleTarget(role), before: { name: role.name, permissions } });
 	});
 }
 
-export async function updateRolePermissions(db: Db, actor: Actor, input: RolePermissionsUpdate) {
-	const role = await repo.getRole(db, input.roleId);
-	if (!role) throw notFound("Role");
-	if (role.key === "admin") throw forbidden("The admin role is fixed", m.rbac_error_admin_role_fixed());
-	assertWithinOwn(actor, [...input.grant, ...input.revoke]);
-	await db.transaction(async (tx) => {
+export function updateRolePermissions({ db, actor }: Services, input: RolePermissionsUpdate): Promise<void> {
+	return withAudit(db, actor, async (tx, audit) => {
+		const role = await repo.getRole(tx, input.roleId);
+		if (!role) throw notFound("Role");
+		if (role.key === "admin") throw forbidden("The admin role is fixed", m.rbac_error_admin_role_fixed());
+		assertWithinOwn(actor, [...input.grant, ...input.revoke]);
 		const before = (await repo.rolePermissions(tx, [role.id])).get(role.id) ?? [];
 		await repo.updateRolePermissions(tx, role.id, input.grant, input.revoke);
 		const after = (await repo.rolePermissions(tx, [role.id])).get(role.id) ?? [];
-		if (sameSet(before, after)) return;
-		await recordAudit(tx, actor, {
-			action: "role.permissions",
-			target: roleTarget(role),
-			before: { permissions: sorted(before) },
-			after: { permissions: sorted(after) },
-		});
+		const changed = changes({ permissions: [...before].sort() }, { permissions: [...after].sort() }, ["permissions"]);
+		if (changed) audit({ action: "role.permissions", target: roleTarget(role), ...changed });
 	});
 }
-
-const sorted = (values: ReadonlyArray<string>) => [...values].sort();
-const sameSet = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
-	a.length === b.length && a.every((value) => b.includes(value));
 
 // ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------
+
+export const listUsers = ({ db }: Reads, input: UserListInput): Promise<UserPage> => repo.listUsers(db, input);
+
+/** Whether an address is free for an invitation (the form's check while typing; inviting checks again). */
+export const isEmailFree = ({ db }: Reads, email: string): Promise<boolean> => repo.isEmailFree(db, email);
 
 async function targetOrThrow(db: Db, userId: string) {
 	const target = await repo.getUserTarget(db, userId);
@@ -156,24 +136,20 @@ function assertMayActOn(actor: Actor, target: repo.UserTarget) {
 }
 
 /**
- * Runs `change` in a transaction. When it takes away an active admin
- * (`removesAdmin`), the active admins are locked and re-read first, and the change
- * is refused if `userId` is the last one. Concurrent demotions therefore run one
- * after the other, and the second sees the first's result.
+ * Refuses a change that takes away the last active admin. The active admins are
+ * locked and re-read first, so concurrent demotions run one after the other and
+ * the second sees the first's result. Call it inside the change's transaction.
  */
-async function guardLastAdmin(db: Db, userId: string, removesAdmin: boolean, change: (tx: Db) => Promise<void>) {
-	await db.transaction(async (tx) => {
-		if (removesAdmin) {
-			const active = await repo.lockActiveAdmins(tx);
-			if (active.includes(userId) && active.length <= 1) {
-				throw ruleError("CONFLICT", "Last active admin", m.rbac_error_last_admin());
-			}
-		}
-		await change(tx);
-	});
+async function keepAnAdmin(tx: Tx, userId: string) {
+	const active = await repo.lockActiveAdmins(tx);
+	if (active.includes(userId) && active.length <= 1) {
+		throw ruleError("CONFLICT", "Last active admin", m.rbac_error_last_admin());
+	}
 }
 
-export async function setUserRoles(db: Db, actor: Actor, input: UserRolesInput) {
+const sorted = (values: ReadonlyArray<string>) => [...values].sort();
+
+export async function setUserRoles({ db, actor }: Services, input: UserRolesInput): Promise<void> {
 	if (input.userId === actor.id) throw forbidden("Own roles", m.rbac_error_own_roles());
 	const target = await targetOrThrow(db, input.userId);
 	const wasAdmin = target.role === "admin";
@@ -195,25 +171,29 @@ export async function setUserRoles(db: Db, actor: Actor, input: UserRolesInput) 
 		...requested.filter((id) => !current.includes(id)),
 		...current.filter((id) => !requested.includes(id)),
 	];
-	const permissions = await repo.rolePermissions(db, changed);
-	assertWithinOwn(actor, [...permissions.values()].flat());
+	assertWithinOwn(actor, [...(await repo.rolePermissions(db, changed)).values()].flat());
 
 	const before = { admin: wasAdmin, roles: sorted((await repo.getRolesByIds(db, current)).map((role) => role.name)) };
 	const after = { admin: input.admin, roles: sorted(roles.map((role) => role.name)) };
-	await guardLastAdmin(db, input.userId, wasAdmin && !input.admin, async (tx) => {
-		await repo.setUserRoles(tx, input.userId, { admin: input.admin, roleIds: requested });
-		if (changed.length === 0 && wasAdmin === input.admin) return;
-		await recordAudit(tx, actor, { action: "user.roles", target: userTarget(target), before, after });
+	await withAudit(db, actor, async (tx, audit) => {
+		if (wasAdmin && !input.admin) await keepAnAdmin(tx, input.userId);
+		await repo.setUserRoles(tx, input.userId, { admin: input.admin, roleIds: requested, version: input.updatedAt });
+		const summary = changes(before, after, ["admin", "roles"]);
+		if (summary) audit({ action: "user.roles", target: userTarget(target), ...summary });
 	});
 }
 
-export async function setUserBanned(db: Db, actor: Actor, userId: string, banned: boolean) {
+export async function setUserBanned(
+	{ db, actor }: Services,
+	{ userId, banned }: { userId: string; banned: boolean },
+): Promise<void> {
 	if (userId === actor.id) throw forbidden("Ban self", m.rbac_error_ban_self());
 	const target = await targetOrThrow(db, userId);
 	assertMayActOn(actor, target);
-	await guardLastAdmin(db, userId, target.role === "admin" && banned, async (tx) => {
+	await withAudit(db, actor, async (tx, audit) => {
+		if (target.role === "admin" && banned) await keepAnAdmin(tx, userId);
 		await repo.setUserBanned(tx, userId, banned);
-		await recordAudit(tx, actor, {
+		audit({
 			action: banned ? "user.ban" : "user.unban",
 			target: userTarget(target),
 			before: { banned: target.banned === true },
@@ -223,17 +203,13 @@ export async function setUserBanned(db: Db, actor: Actor, userId: string, banned
 }
 
 /** Signs a user out everywhere (deletes their sessions); returns how many there were. */
-export async function revokeUserSessions(db: Db, actor: Actor, userId: string): Promise<{ revoked: number }> {
+export async function revokeUserSessions({ db, actor }: Services, userId: string): Promise<{ revoked: number }> {
 	if (userId === actor.id) throw forbidden("Own sessions", m.rbac_error_revoke_self());
 	const target = await targetOrThrow(db, userId);
 	assertMayActOn(actor, target);
-	return db.transaction(async (tx) => {
+	return withAudit(db, actor, async (tx, audit) => {
 		const revoked = await repo.deleteUserSessions(tx, userId);
-		await recordAudit(tx, actor, {
-			action: "user.sessions-revoke",
-			target: userTarget(target),
-			after: { sessions: revoked },
-		});
+		audit({ action: "user.sessions-revoke", target: userTarget(target), after: { sessions: revoked } });
 		return { revoked };
 	});
 }
@@ -242,21 +218,17 @@ export async function revokeUserSessions(db: Db, actor: Actor, userId: string): 
  * Invites someone: creates their account (the `user` baseline, address not yet
  * verified, no password), then `send` emails them a link to choose a password
  * (src/functions/rbac.ts issues a Better Auth reset token for it). Choosing the
- * password through that link verifies the address.
+ * password through that link verifies the address. A taken address is refused
+ * by the unique constraint, as a CONFLICT on the email field.
  */
 export async function inviteUser(
-	db: Db,
-	actor: Actor,
+	{ db, actor }: Services,
 	input: UserInviteInput,
 	send: (invited: { id: string; name: string; email: string }) => Promise<void>,
 ): Promise<{ id: string }> {
-	const email = input.email.toLowerCase();
-	if (await repo.emailTaken(db, email)) {
-		throw new AppError("CONFLICT", "Email taken", { fieldErrors: { email: [m.users_invite_email_taken()] } });
-	}
-	const invited = await db.transaction(async (tx) => {
-		const created = await repo.createInvitedUser(tx, { name: input.name, email });
-		await recordAudit(tx, actor, {
+	const invited = await withAudit(db, actor, async (tx, audit) => {
+		const created = await repo.createInvitedUser(tx, { name: input.name, email: input.email.toLowerCase() });
+		audit({
 			action: "user.invite",
 			target: userTarget(created),
 			after: { name: created.name, email: created.email, language: input.locale },
@@ -283,7 +255,7 @@ export async function inviteUser(
  * target's permissions, so this isn't a permission a custom role could hold.
  * Admins can't be impersonated, and nobody impersonates from an impersonated session.
  */
-export async function impersonateUser(db: Db, actor: Actor, userId: string, start: () => Promise<void>) {
+export async function impersonateUser({ db, actor }: Services, userId: string, start: () => Promise<void>) {
 	if (actor.impersonatorId) throw forbidden("Nested impersonation", m.rbac_error_impersonate_nested());
 	if (!actor.isAdmin) throw forbidden("Impersonation by a non-admin", m.rbac_error_impersonate_admin_only());
 	if (userId === actor.id) throw forbidden("Impersonate self", m.rbac_error_impersonate_self());
@@ -294,16 +266,19 @@ export async function impersonateUser(db: Db, actor: Actor, userId: string, star
 }
 
 /**
- * Ends an impersonated session (`session` is that session's actor: the target,
- * with the admin as impersonatorId). The audit row names the admin as the actor.
+ * Ends an impersonated session (`actor` is that session's: the target, with the
+ * admin as impersonatorId). The audit row names the admin as the actor.
  */
-export async function stopImpersonating(db: Db, session: AuditActor, stop: () => Promise<void>) {
-	const admin = session.impersonatorId;
+export async function stopImpersonating(
+	{ db, actor }: Pick<Services, "db"> & { actor: AuditActor },
+	stop: () => Promise<void>,
+) {
+	const admin = actor.impersonatorId;
 	if (!admin) throw new AppError("BAD_REQUEST", "Not an impersonated session");
-	const target = await targetOrThrow(db, session.id);
+	const target = await targetOrThrow(db, actor.id);
 	await withAuditRow(
 		db,
-		{ id: admin, requestId: session.requestId, ip: session.ip },
+		{ id: admin, requestId: actor.requestId, ip: actor.ip },
 		{ action: "user.impersonate-stop", target: userTarget(target) },
 		stop,
 	);

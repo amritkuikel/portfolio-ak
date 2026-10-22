@@ -48,6 +48,8 @@ function ThingPage() {
 The router splits `component`, `pendingComponent`, `errorComponent` and `notFoundComponent` into their own chunks (0151). Everything else in a route's options (`validateSearch`, `params`, `loader`, `beforeLoad`, `head`, `staticData`) and everything those import is part of the entry chunk, for every page. So:
 
 - **Route files import a feature's URL contract from `search.ts`**, never `schema.ts`: form schemas pull in rich-text and phone validation (Test CRUD's `search.ts` is the example).
+- **Route helpers** (`src/lib/crud/route.ts`, routes only): `listSearch`, `listLoader`, `loadDetailOr404` (the record or the localized 404) and `titleHead` fill a route's options; the object stays a literal `createFileRoute("…")({ … })` with its `component` in it ([crud.md](crud.md)). Feature components read their route's search and params with `getRouteApi("<route id>")`, never by importing the route file.
+- **Structural sharing is on** (`defaultStructuralSharing` in `src/router.tsx`): what `useSearch`, `useParams` and `useLoaderData` select keeps its identity while unchanged. A `select` must return JSON-like data (TypeScript checks).
 - **Keep route options inline** in `createFileRoute("…")({ … })`. The splitter only moves inline properties: a component or skeleton returned by a helper or spread in stays in the entry chunk.
 - **Load rarely used libraries on demand** (`await import("…")`), as the sign-out button does with the auth client.
 - `node scripts/check-bundle.ts` (after `pnpm build`, and in CI) prints what every page loads and fails over budget.

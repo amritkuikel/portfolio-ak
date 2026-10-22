@@ -10,6 +10,7 @@ import { z } from "zod";
 import { m } from "@/paraglide/messages";
 import { type IsoDate, isIsoDate, isoDateInstant } from "./i18n/date-only";
 import { formatBytes, formatDate, formatNumber } from "./i18n/intl";
+import { SLUG_MAX, SLUG_PATTERN } from "./slug";
 
 const n = (value: number) => formatNumber(value);
 
@@ -38,6 +39,25 @@ export const email = () =>
 		.trim()
 		.min(1, { error: () => m.validation_required() })
 		.pipe(z.email({ error: () => m.validation_email() }));
+
+/**
+ * Text typed in both languages, `{ en, ne }` (LocalizedField): English required
+ * unless `optional`, Nepali always optional (pages fall back to English).
+ * Generated features with `--localized` use it.
+ *
+ * @public
+ */
+export const localizedText = ({ max, optional = false }: { max?: number; optional?: boolean } = {}) =>
+	z.object({ en: optional ? optionalText({ max }) : required({ max }), ne: optionalText({ max }) });
+
+/** A URL slug ("hello-world", ./slug.ts): required, lowercase words joined by hyphens. */
+export const slug = ({ max = SLUG_MAX }: { max?: number } = {}) =>
+	z
+		.string()
+		.trim()
+		.min(1, { error: () => m.validation_required() })
+		.max(max, { error: () => m.validation_text_max({ max: n(max) }) })
+		.regex(SLUG_PATTERN, { error: () => m.validation_slug() });
 
 /** http(s) URL. Pass `{ optional: true }` to also accept an empty string. */
 export const url = (options: { optional?: boolean } = {}) => {

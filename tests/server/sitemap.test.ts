@@ -1,21 +1,30 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { portfolioSource } from "@/features/portfolio/sources"; // @portfolio
 import { overwriteGetLocale } from "@/paraglide/runtime";
 import { webManifest } from "@/server/seo/manifest";
 import { robotsTxt } from "@/server/seo/robots";
 import { sitemapEntries, sitemapXml } from "@/server/seo/sitemap";
+import { createTestDb } from "../utils/test-db";
+
+/** Features with public pages read their entries from the database (none published here). */
+let env: Awaited<ReturnType<typeof createTestDb>>;
+beforeAll(async () => {
+	env = await createTestDb();
+}, 60_000);
+afterAll(() => env.close());
+const entries = () => sitemapEntries({ db: env.db });
 
 afterEach(() => {
 	overwriteGetLocale(() => "en");
 });
 
 describe("sitemap", () => {
-	it("lists the home page and the portfolio's pages", async () => {
-		const entries = await sitemapEntries();
+	it("lists the home page and the portfolio's pages first", async () => {
+		const paths = (await entries()).map((entry) => entry.path);
 		// portfolio:start
 		const portfolio = await portfolioSource.listSlugs();
 		// portfolio:end
-		expect(entries.map((entry) => entry.path)).toEqual([
+		const expected = [
 			"/",
 			// portfolio:start
 			"/work",
@@ -25,7 +34,9 @@ describe("sitemap", () => {
 			...portfolio.posts.map((slug) => `/journal/${slug}`),
 			"/contact",
 			// portfolio:end
-		]);
+		];
+		// Generated features with public pages follow (pnpm new:feature --public).
+		expect(paths.slice(0, expected.length)).toEqual(expected);
 		// portfolio:start
 		expect(portfolio.projects).toHaveLength(7);
 		expect(portfolio.posts).toHaveLength(6);
@@ -33,7 +44,7 @@ describe("sitemap", () => {
 	});
 
 	it("never lists private pages", async () => {
-		const paths = (await sitemapEntries()).map((entry) => entry.path);
+		const paths = (await entries()).map((entry) => entry.path);
 		for (const path of paths) {
 			expect(path).not.toMatch(
 				/^\/(admin|login|register|sign-in-code|forgot-password|account|health|dev|reset-password|verify-email|api)/,

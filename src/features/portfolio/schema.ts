@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLUG_PATTERN } from "@/lib/slug";
 
 /**
  * Shapes of the portfolio content. The fixtures in ./data are typed with these
@@ -14,8 +15,7 @@ import { z } from "zod";
 export const localized = <T extends z.ZodType>(value: T) => z.object({ en: value, ne: value });
 const text = localized(z.string().trim().min(1));
 
-export const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const slug = z.string().regex(SLUG);
+const slug = z.string().regex(SLUG_PATTERN);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const yearMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const href = z.string().regex(/^(https:\/\/|mailto:)/);
