@@ -39,6 +39,8 @@ export type Profile = Lang & {
 	resume: string | null;
 	/** Search and social defaults for the home page (empty: the name and intro are used). */
 	seo: { title: string; description: string; image: ImageAsset | null };
+	/** When the server read this (ISO): the moment the sky and the clock are first drawn for (decision 0182). */
+	generatedAt: string;
 };
 
 /** Generated cover art (CoverArt) and, when uploaded, a real cover image. */

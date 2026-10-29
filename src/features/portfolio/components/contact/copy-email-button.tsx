@@ -32,12 +32,12 @@ export function CopyEmailButton({ email }: { email: string }) {
 			<button
 				type="button"
 				onClick={copy}
-				className="pf-focus pf-label inline-flex items-center gap-2 border-2 border-pf-line px-4 py-2 transition-colors hover:border-pf-ink"
+				className="hm-focus inline-flex min-h-11 items-center gap-2 bg-hm-action px-4 font-semibold text-hm-on-action transition-transform active:scale-[0.98]"
 			>
 				{copied ? <CheckIcon aria-hidden className="size-3.5" /> : <CopyIcon aria-hidden className="size-3.5" />}
 				{m.portfolio_contact_copy()}
 			</button>
-			<output aria-live="polite" className="pf-label text-pf-accent">
+			<output aria-live="polite" className="font-semibold">
 				{copied ? m.portfolio_contact_copied() : ""}
 			</output>
 		</div>

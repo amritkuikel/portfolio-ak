@@ -1,5 +1,5 @@
-import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
+import { cn } from "../../lib/cn";
 import { ARCHITECTURE_TIERS } from "../../schema";
 import type { CaseStudyBlock } from "../../types";
 
@@ -13,54 +13,68 @@ const TIER_LABELS: Record<Tier, () => string> = {
 	data: m.portfolio_architecture_data,
 };
 
+/** Each tier is a band of altitude, from the snow (client, where people are) down to the bedrock (data). */
+const STRATA: Record<Tier, string> = {
+	client: "bg-(--hm-alt-7)",
+	edge: "bg-(--hm-alt-5)",
+	service: "bg-(--hm-alt-2)",
+	data: "bg-(--hm-alt-0)",
+};
+const ON_STRATUM: Record<Tier, string> = {
+	client: "text-(--hm-on-high)",
+	edge: "text-(--hm-on-high)",
+	service: "text-(--hm-on-deep)",
+	data: "text-(--hm-on-deep)",
+};
+
 /**
- * A system diagram in HTML, not an image: the tiers are columns (rows on a
- * phone), the nodes are cards, and the data flows are a real list a screen
- * reader can follow ("Dashboard → Server functions").
+ * A system diagram in HTML, drawn as a cross-section of the mountain: each
+ * tier a stratum, top to bottom, its parts set in it; the data flows below as
+ * a real list a screen reader can follow ("Dashboard → Server functions").
  */
 export function ArchitectureDiagram({ block }: { block: ArchitectureBlock }) {
-	const tiers = ARCHITECTURE_TIERS.map((tier) => ({
+	const strata = ARCHITECTURE_TIERS.map((tier) => ({
 		tier,
 		nodes: block.nodes.filter((node) => node.tier === tier),
-	})).filter((column) => column.nodes.length > 0);
+	})).filter((stratum) => stratum.nodes.length > 0);
 	const labelOf = (id: string) => block.nodes.find((node) => node.id === id)?.label ?? id;
 
 	return (
-		<figure lang={block.lang} className="flex flex-col gap-8 border-2 border-pf-line p-5 md:p-8">
-			<div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
-				{tiers.map((column, position) => (
-					<div key={column.tier} className="contents">
-						{position > 0 ? (
-							<span aria-hidden className="flex justify-center text-pf-accent">
-								<ArrowDownIcon className="size-5 md:hidden" />
-								<ArrowRightIcon className="hidden size-5 md:block" />
-							</span>
-						) : null}
-						<div className="flex flex-1 flex-col gap-3">
-							<p className="pf-label text-pf-stone">{TIER_LABELS[column.tier]()}</p>
-							<ul className="flex flex-col gap-2">
-								{column.nodes.map((node) => (
-									<li key={node.id} className="border-pf-jade border-l-4 bg-pf-paper-2 px-4 py-3">
-										<span className="block font-medium">{node.label}</span>
-										<span className="font-pf-mono text-pf-small text-pf-ink-2">{node.detail}</span>
-									</li>
-								))}
-							</ul>
-						</div>
+		<figure lang={block.lang} className="flex flex-col gap-6">
+			<div className="flex flex-col">
+				{strata.map(({ tier, nodes }) => (
+					<div
+						key={tier}
+						className={cn(
+							"grid gap-x-6 gap-y-3 px-5 py-5 md:grid-cols-[9rem_1fr] md:px-7",
+							STRATA[tier],
+							ON_STRATUM[tier],
+						)}
+					>
+						<p className="font-semibold">{TIER_LABELS[tier]()}</p>
+						<ul className="flex flex-wrap gap-x-8 gap-y-3">
+							{nodes.map((node) => (
+								<li key={node.id} className="flex flex-col">
+									<span className="font-semibold">{node.label}</span>
+									<span className="text-hm-small">{node.detail}</span>
+								</li>
+							))}
+						</ul>
 					</div>
 				))}
 			</div>
-			<div className="border-pf-line border-t pt-5">
-				<p className="pf-label mb-3 text-pf-stone">{m.portfolio_architecture_flows()}</p>
-				<ul className="flex flex-wrap gap-x-6 gap-y-2 text-pf-small text-pf-ink-2">
+			<div>
+				<p className="font-semibold">{m.portfolio_architecture_flows()}</p>
+				<ul className="mt-2 flex flex-col gap-1 text-hm-body">
 					{block.edges.map(({ from, to }) => (
 						<li key={`${from}-${to}`}>
-							{labelOf(from)} <span className="text-pf-accent">→</span> {labelOf(to)}
+							{labelOf(from)} <span aria-hidden>→</span>
+							<span className="sr-only">,</span> {labelOf(to)}
 						</li>
 					))}
 				</ul>
 			</div>
-			<figcaption className="text-pf-small text-pf-ink-2">{block.caption}</figcaption>
+			{block.caption ? <figcaption className="hm-meta">{block.caption}</figcaption> : null}
 		</figure>
 	);
 }

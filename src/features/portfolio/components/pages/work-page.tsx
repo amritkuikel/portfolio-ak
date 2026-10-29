@@ -5,17 +5,17 @@ import { m } from "@/paraglide/messages";
 import { DISCIPLINES, type Discipline } from "../../constants";
 import { DISCIPLINE_LABELS } from "../../lib/labels";
 import { workQueryOptions } from "../../queries";
-import { Display } from "../primitives/display";
-import { Eyebrow } from "../primitives/eyebrow";
+import { PanoramaBoard } from "../art/panorama-board";
+import { SectionHeading } from "../primitives/section-heading";
 import { WorkRow } from "../work/work-row";
 
 const route = getRouteApi("/_site/work/");
 
 const filterLink =
-	"pf-focus pf-label inline-flex items-center gap-2 border-2 border-pf-line px-4 py-2 transition-colors " +
-	"hover:border-pf-ink aria-[current=page]:border-pf-ink aria-[current=page]:bg-pf-ink aria-[current=page]:text-pf-paper";
+	"hm-focus inline-flex min-h-11 items-center gap-2 px-4 font-medium transition-colors duration-(--hm-dur-1) " +
+	"bg-hm-ground-2 decoration-[0.06em] underline-offset-[0.2em] hover:underline aria-[current=page]:bg-hm-ink aria-[current=page]:text-hm-ground";
 
-/** /work: the archive, filterable by discipline (links, so it works without JavaScript). */
+/** /work: the panorama of every project, then the archive, filterable by discipline (links: it works without JavaScript). */
 export function WorkPage() {
 	const { discipline } = route.useSearch();
 	const { data: all } = useSuspenseQuery(workQueryOptions());
@@ -26,25 +26,27 @@ export function WorkPage() {
 
 	return (
 		<>
-			<header className="pf-container pf-grid gap-y-8 pt-[clamp(3rem,8vw,7rem)] pb-[clamp(3rem,6vw,5rem)]">
-				<Eyebrow className="col-span-4 md:col-span-12">{m.portfolio_work_title()}</Eyebrow>
-				<Display as="h1" size="h1" className="col-span-4 md:col-span-10">
-					{years.length > 0
-						? m.portfolio_work_heading_years({ from: year(Math.min(...years)), to: year(Math.max(...years)) })
-						: m.portfolio_work_title()}
-				</Display>
-				<p className="col-span-4 text-pf-lead text-pf-ink-2 md:col-span-6 md:col-start-7">
-					{m.portfolio_work_description()}
-				</p>
+			<header className="hm-container pt-[clamp(2.5rem,6vw,5rem)] pb-[clamp(2.5rem,5vw,4rem)]">
+				<SectionHeading
+					as="h1"
+					size="title"
+					id="work-title"
+					title={
+						years.length > 0
+							? m.portfolio_work_heading_years({ from: year(Math.min(...years)), to: year(Math.max(...years)) })
+							: m.portfolio_work_title()
+					}
+					intro={m.portfolio_work_description()}
+				/>
 			</header>
-
-			<div className="pf-container pb-[clamp(5rem,10vw,9rem)]">
-				<nav aria-label={m.portfolio_work_filter_label()} className="mb-10">
+			<PanoramaBoard projects={all} />
+			<div className="hm-container pt-[clamp(3rem,6vw,5rem)] pb-[clamp(5rem,10vw,9rem)]">
+				<nav aria-label={m.portfolio_work_filter_label()} className="mb-8">
 					<ul className="flex flex-wrap gap-2">
 						<li>
 							<Link to="/work" search={{}} className={filterLink} aria-current={discipline ? undefined : "page"}>
 								{m.portfolio_work_filter_all()}
-								<span className="opacity-70">{formatNumber(all.length)}</span>
+								<span>{formatNumber(all.length)}</span>
 							</Link>
 						</li>
 						{DISCIPLINES.map((value) => (
@@ -56,7 +58,7 @@ export function WorkPage() {
 									aria-current={discipline === value ? "page" : undefined}
 								>
 									{DISCIPLINE_LABELS[value]()}
-									<span className="opacity-70">{formatNumber(countOf(value))}</span>
+									<span>{formatNumber(countOf(value))}</span>
 								</Link>
 							</li>
 						))}
@@ -65,7 +67,7 @@ export function WorkPage() {
 				<p className="sr-only" aria-live="polite">
 					{m.portfolio_work_count({ count: formatNumber(projects.length) })}
 				</p>
-				<ul>
+				<ul className="flex flex-col gap-4">
 					{projects.map((project) => (
 						<WorkRow key={project.slug} project={project} />
 					))}

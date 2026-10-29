@@ -1,15 +1,16 @@
 /**
- * Preloads for the portfolio's faces (same approach as src/lib/fonts.ts).
- *
- * Anek renders the giant headlines and the body on first paint (and, on
- * Nepali pages, Anek Devanagari), so those files are preloaded by the
- * /portfolio layout only; the rest of the app never fetches them. The `?url`
- * imports resolve to the same hashed files portfolio.css references.
- * Production only: Vite's dev stylesheets make the browser fetch fonts twice
- * (decision 0026).
+ * Preloads for the portfolio's first paint (same approach as src/lib/fonts.ts):
+ * the hero name is Eczar and the sentence under it is Inter, so those two files
+ * are preloaded by the `_site` layout; Nepali pages add both faces' Devanagari
+ * files. Every file is under the bundle check's 150 kB budget (Eczar Latin
+ * 25.8 kB, Devanagari 85.8 kB). The `?url` imports resolve to the same hashed
+ * files the stylesheets reference. Production only: Vite's dev stylesheets make
+ * the browser fetch fonts twice (decision 0026).
  */
-import anekDevanagari from "@fontsource-variable/anek-devanagari/files/anek-devanagari-devanagari-wdth-normal.woff2?url";
-import anekLatin from "@fontsource-variable/anek-latin/files/anek-latin-latin-wdth-normal.woff2?url";
+import eczarDevanagari from "@fontsource-variable/eczar/files/eczar-devanagari-wght-normal.woff2?url";
+import eczarLatin from "@fontsource-variable/eczar/files/eczar-latin-wght-normal.woff2?url";
+import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import notoDevanagari from "@fontsource-variable/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-wght-normal.woff2?url";
 import type { Locale } from "@/paraglide/runtime";
 
 const preload = (href: string) =>
@@ -23,5 +24,6 @@ const preload = (href: string) =>
 
 export const portfolioFontPreloads = (locale: Locale) => {
 	if (import.meta.env.DEV) return [];
-	return locale === "ne" ? [preload(anekLatin), preload(anekDevanagari)] : [preload(anekLatin)];
+	const latin = [preload(eczarLatin), preload(interLatin)];
+	return locale === "ne" ? [...latin, preload(eczarDevanagari), preload(notoDevanagari)] : latin;
 };

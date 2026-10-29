@@ -22,9 +22,12 @@ import type { Experience, Post, Profile, Project, ProjectSummary, Skill } from "
  * render time. Stories render synchronously, so they skip the server.
  */
 
-/** Wraps a story in `.portfolio` (tokens, canvas) like the portfolio's layout does. */
+/** Dawn in Kathmandu (06:12 on 23 October 2026, UTC+5:45): stories render the alpenglow, the same every run. */
+export const STORY_NOW = "2026-10-23T00:27:00.000Z";
+
+/** Wraps a story in `.himal` (tokens, canvas) like the portfolio's layout does. */
 export const withPortfolioCanvas: Decorator = (Story) => (
-	<div className="portfolio pf-canvas">
+	<div className="himal hm-canvas">
 		<Story />
 	</div>
 );
@@ -64,6 +67,8 @@ export function demo() {
 		portrait: null,
 		resume: null,
 		seo: { title: "", description: "", image: null },
+		// Dawn in Kathmandu (06:12 NPT), so stories show the alpenglow; Portfolio/Art shows every phase.
+		generatedAt: STORY_NOW,
 	};
 	return {
 		profile: resolved,

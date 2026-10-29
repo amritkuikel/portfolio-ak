@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ArticlePage } from "@/features/portfolio/components/pages/article-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { articleJsonLd } from "@/features/portfolio/lib/structured-data";
 import { postQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema, previewSearchSchema } from "@/features/portfolio/search";
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/_site/journal/$slug")({
 			type: "article",
 			// A preview may show a draft: never indexed.
 			noindex: loaderData.preview,
-			image: loaderData.image ? { url: loaderData.image.og, width: 1200, height: 630, alt: loaderData.title } : null,
+			image: loaderData.image
+				? { url: loaderData.image.og, width: 1200, height: 630, alt: loaderData.title }
+				: himalOgImage(loaderData.title),
 			jsonLd: articleJsonLd(loaderData),
 		});
 		return {

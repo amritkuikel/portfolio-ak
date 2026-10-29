@@ -45,7 +45,12 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/routes/_site.tsx",
 			"src/routes/_site",
 			"src/features/portfolio",
-			"src/styles/portfolio.css",
+			// The "Himal" design system, its archival pictures and its design records (Task 40, decisions 0179–0184).
+			"src/styles/himal.css",
+			"public/himal",
+			"PRODUCT.md",
+			"DESIGN.md",
+			".impeccable",
 			// The portfolio admin, its media library and its contact inbox (Task 39, decision 0176).
 			"src/routes/_admin/admin/portfolio",
 			"src/routes/_admin/admin/media.tsx",
@@ -64,6 +69,8 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/components/portfolio",
 			"tests/unit/portfolio-data.test.ts",
 			"tests/unit/portfolio-lib.test.ts",
+			"tests/unit/himal-tokens.test.ts",
+			"tests/unit/terrain.test.ts",
 			"tests/server/portfolio-admin.test.ts",
 			"tests/server/portfolio-public.test.ts",
 			"e2e/flows/portfolio.spec.ts",

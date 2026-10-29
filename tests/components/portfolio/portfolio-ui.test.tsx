@@ -11,11 +11,14 @@ import {
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { HomeTime } from "@/features/portfolio/components/chrome/home-time";
 import { PortfolioMenu } from "@/features/portfolio/components/chrome/portfolio-menu";
 import { CopyEmailButton } from "@/features/portfolio/components/contact/copy-email-button";
-import { Marquee } from "@/features/portfolio/components/primitives/marquee";
-import { SplitWords } from "@/features/portfolio/components/primitives/split-words";
+import { SelectedWorkSection } from "@/features/portfolio/components/sections/selected-work-section";
+import type { ProjectSummary } from "@/features/portfolio/types";
+import { formatDate } from "@/lib/i18n/intl";
 import { createPreferencesStore, DEFAULT_PREFERENCES } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
 import type { RouterContext } from "@/router";
@@ -24,7 +27,7 @@ import type { RouterContext } from "@/router";
 async function renderInRouter(ui: ReactNode) {
 	const rootRoute = createRootRouteWithContext<Pick<RouterContext, "preferences">>()({ component: () => <>{ui}</> });
 	const routeTree = rootRoute.addChildren(
-		["/", "/work", "/about", "/journal", "/contact"].map((path) =>
+		["/", "/work", "/work/$slug", "/about", "/journal", "/contact"].map((path) =>
 			createRoute({ getParentRoute: () => rootRoute, path, component: () => null }),
 		),
 	);
@@ -62,22 +65,6 @@ describe("PortfolioMenu", () => {
 	});
 });
 
-describe("Marquee", () => {
-	it("exposes one labelled list, hides the loop copy, and can be paused", async () => {
-		const user = userEvent.setup();
-		const { container } = render(<Marquee items={["React", "Postgres"]} label="Toolbox" />);
-		const list = screen.getByRole("list", { name: "Toolbox" });
-		expect(within(list).getByText("React")).toBeTruthy();
-		expect(container.querySelectorAll('ul[aria-hidden="true"]')).toHaveLength(1);
-
-		const button = screen.getByRole("button", { name: m.portfolio_marquee_pause() });
-		expect(button.getAttribute("aria-pressed")).toBe("false");
-		await user.click(button);
-		expect(button.getAttribute("aria-pressed")).toBe("true");
-		expect(container.querySelector(".pf-marquee")?.hasAttribute("data-paused")).toBe(true);
-	});
-});
-
 describe("CopyEmailButton", () => {
 	it("copies the address and announces it", async () => {
 		const user = userEvent.setup();
@@ -90,13 +77,56 @@ describe("CopyEmailButton", () => {
 	});
 });
 
-describe("SplitWords", () => {
-	it("reads as the original text and numbers each word for the CSS stagger", () => {
-		const { container } = render(<SplitWords text="Good software disappears." />);
-		const root = container.firstElementChild as HTMLElement;
-		expect(root.textContent).toBe("Good software disappears.");
-		expect(root.style.getPropertyValue("--n")).toBe("3");
-		const words = [...root.querySelectorAll("span")];
-		expect(words.map((word) => word.style.getPropertyValue("--i"))).toEqual(["0", "1", "2"]);
+const project = (slug: string, title: string): ProjectSummary => ({
+	slug,
+	title,
+	client: `${title} Ltd`,
+	year: 2025,
+	disciplines: ["product"],
+	role: "Lead",
+	duration: "3 months",
+	summary: `What ${title} did.`,
+	stack: ["TypeScript"],
+	featured: true,
+	cover: { motif: "orbit", glyph: title.slice(0, 1), seed: slug, image: null },
+	metrics: [],
+});
+
+describe("SelectedWorkSection", () => {
+	it("strikes forward the project under the focus or the pointer and shows its mountain and summary", async () => {
+		const user = userEvent.setup();
+		await renderInRouter(
+			<SelectedWorkSection projects={[project("ledgerline", "Ledgerline"), project("sathi", "Sathi")]} total={7} />,
+		);
+		const name = (title: string) => screen.getByRole("heading", { level: 3, name: title });
+		expect(name("Ledgerline").className).toContain("md:text-hm-ink");
+		expect(name("Sathi").className).toContain("md:text-hm-muted");
+		expect(screen.getByText("What Ledgerline did.")).toBeTruthy();
+
+		await act(() => screen.getByRole("link", { name: /Sathi/ }).focus());
+		expect(name("Sathi").className).toContain("md:text-hm-ink");
+		expect(screen.getByText("What Sathi did.")).toBeTruthy();
+
+		await user.hover(screen.getByRole("link", { name: /Ledgerline/ }));
+		expect(name("Ledgerline").className).toContain("md:text-hm-ink");
+	});
+});
+
+describe("HomeTime", () => {
+	const generatedAt = "2026-10-23T00:27:00.000Z";
+
+	it("renders Kathmandu's time for the moment the page was read, and no gap, on the server", () => {
+		const html = renderToString(<HomeTime generatedAt={generatedAt} location="Kathmandu, Nepal" />);
+		const time = formatDate(Date.parse(generatedAt), { timeStyle: "short" });
+		expect(html).toContain(m.portfolio_time_now({ time, place: "Kathmandu" }));
+		expect(html).not.toContain("ahead");
+	});
+
+	it("tells the visitor how far ahead Kathmandu's clock is, in the browser", () => {
+		const offset = vi.spyOn(Date.prototype, "getTimezoneOffset").mockReturnValue(-60);
+		render(<HomeTime generatedAt={generatedAt} location="Kathmandu, Nepal" />);
+		const gap = m.portfolio_time_hours_minutes({ hours: "4", minutes: "45" });
+		expect(screen.getByText(m.portfolio_time_ahead({ gap }))).toBeTruthy();
+		offset.mockRestore();
 	});
 });

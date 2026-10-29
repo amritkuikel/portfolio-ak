@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { CaseStudyPage } from "@/features/portfolio/components/pages/case-study-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { caseStudyJsonLd } from "@/features/portfolio/lib/structured-data";
 import { projectQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema, previewSearchSchema } from "@/features/portfolio/search";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/_site/work/$slug")({
 					noindex: loaderData.preview,
 					image: loaderData.image
 						? { url: loaderData.image.og, width: 1200, height: 630, alt: loaderData.title }
-						: null,
+						: himalOgImage(loaderData.title),
 					jsonLd: caseStudyJsonLd(loaderData),
 				})
 			: {},

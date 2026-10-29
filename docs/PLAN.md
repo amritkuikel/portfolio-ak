@@ -908,7 +908,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | Showcase apps | Routes in this app under `/apps/<slug>`: Kanban, Expenses, Links (shortener), Notes, Forms (survey builder), Habits |
 | Visitors trying the apps | Guest sessions (Better Auth `anonymous`), seeded sample data, deleted after 7 days, can upgrade to a real account and keep the data |
 | `/dev` | The current demo site (home, `/stack`, public Test CRUD, `/dev/examples`, `/dev/forms`) lives there, **dev builds only** (404 in production) |
-| Portfolio art direction | **Himalayan topography**: generative contour lines that react to cursor and scroll, earthy palette, big serif display |
+| Portfolio art direction | **Himalayan topography**: generative contour lines that react to cursor and scroll, earthy palette, big serif display. Refined 2026-10-23 (Task 40): the range printed in filled altitude layers that rise on scroll, Eczar for both scripts, the sky at Kathmandu's real hour |
 | Admin look | **Linear-style "Graphite"**: dense, refined, one brand accent, keyboard-first, with accent, radius and density presets switchable in admin settings |
 | Machine translation | UI strings only (`pnpm i18n:translate`). Admin content is typed in both languages (no translate button) |
 | New libraries allowed | Motion (motion.dev), dnd-kit, Recharts (shadcn chart), TanStack Table |
@@ -931,7 +931,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 37 | Admin component kit | high | Done (decisions 0168–0172) |
 | 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | Done (decisions 0173–0175) |
 | 39 | The dynamic portfolio: tables, admin, media library, public reads | high | Done (decisions 0176–0178) |
-| 40 | "Himal" portfolio redesign at `/` | xhigh | |
+| 40 | "Himal" portfolio redesign at `/` | xhigh | Done (decisions 0179–0184) |
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | |
 | 42 | Notes and Links | high | |
 | 43 | Expenses and Habits | high | |
@@ -1208,50 +1208,130 @@ The owner runs one task per session and clears the context between tasks. A sess
   - **Found on the way:** CI's template job would have failed on two pre-existing gaps that this task exposed: strip-demo never wrote a migration for a layer that owns columns, and `new:feature`'s icon insertion broke on a commented import name (both fixed). Component tests that load the `_site` layout mock its server-function module (CLAUDE.md pitfall).
 - **Left for the owner:** run `pnpm db:migrate` against Neon (migration `0011_portfolio`), then `pnpm db:seed-portfolio` (or edit the content in the admin after seeding). Scratch copies from earlier tasks are still there: `C:\tw`, `C:\tw2`, `C:\tw4`, `C:\tw5`, `C:\tw6` (`git worktree remove --force` for `C:/tw2` and `C:/tw6`).
 
-### Task 40: "Himal" portfolio redesign (frontend at `/`)
+### Task 40: "Himal" portfolio redesign (done)
 
-**Goal:** an original, artistic portfolio that is bilingual and accessible, with CLS ≤ 0.01 and Lighthouse mobile performance ≥ 95. Use the `frontend-design` skill. Build only on the Task 39 data.
+**The brief was revised with the owner on 2026-10-23, before the build.** The first plan contradicted decision 0110: it brought back Fraunces, prayer-flag colours and hairline contours, all of which 0110 had rejected. A serif on cream "snow paper" with a red accent is also the commonest generated look. The owner's answers:
+- direction: **Himal, "the map rises"**;
+- live thing: **Kathmandu at this hour**;
+- pictures: **public-domain archival**;
+- audience: **clients and employers equally**, with "Get in touch" as the main action and the résumé beside it.
 
-**Design brief:**
-- **Concept:** the owner's work as an expedition map.
-  - **Hero:** the name over generative contour lines of a ridge; altitude labels; a live "Kathmandu · 27.7° N 85.3° E · 1,400 m" marker with local time.
-  - **Sections:** Basecamp (about and principles), Routes (projects as waypoints along an elevation profile), Ascent log (experience drawn as an elevation chart over time), Toolkit (skills), Field notes (journal), Summit (contact). The case study and article pages use the same language.
-- **"Himal" system** (`src/styles/himal.css`, tokens scoped under `.himal`, utilities prefixed `hm-`):
-  - Light palette: snow paper, granite ink, glacier blue, rhododendron red (the only accent that carries text). Prayer-flag colours (blue, white, red, green, yellow) are sparing markers only.
-  - Dark mode is "night on the ridge".
-  - Every text pair is ≥ 4.5:1; add a contrast test like Task 36's.
-- **Type:**
-  - Display: a serif, e.g. Fraunces (`@fontsource-variable/fraunces`; check axes and file sizes), paired with a Devanagari serif (e.g. Noto Serif Devanagari).
-  - Body: Inter and Noto Sans Devanagari (shared with the app). Code: JetBrains Mono.
-  - Preload only the Latin display face, from `_site`'s `head`. Each preloaded file must be ≤ 150 kB (use the `wght`-only axis file if the full one is bigger); the bundle check enforces it.
-  - Measure a metric-matched fallback per face and width, as decision 0110 did: `size-adjust` and ascent/descent overrides measured in Chrome.
-- **Contour art** (`features/portfolio/components/art/`):
-  - Seeded simplex noise on a grid → marching squares at 8–12 levels → smoothed paths (Catmull-Rom) → SVG, rendered on the server.
-  - Coordinates are rounded, so the server and the browser print identical markup (no hydration mismatch).
-  - `aria-hidden`, colours from tokens.
-  - Contour cover art per project (its seed and motif) when it has no cover image.
-- **Motion** (`motion` package, `motion/react`, loaded on demand; supersedes 0109's CSS-only rule):
-  - Section reveals; depth on project-card hover; the hero's contour layers drift with the cursor and scroll (transforms on 2–3 SVG layers, not a new path per frame).
-  - CSS scroll timelines where enough; view transitions from a card to its case study (`Link viewTransition`).
-  - Everything is off under `prefers-reduced-motion`, paused offscreen, and only transform, opacity and clip-path animate.
-- **Live apps:** a project with `appSlug` shows "Try the live app" → `/apps/<slug>` (behind `@apps` markers until Task 41 exists; hide the button when the app route doesn't exist yet).
-- **SEO:** `seo()` and JSON-LD (Person, ProfilePage, CreativeWork, BlogPosting; one `Person` `@id`), and an OG image per project (the Cloudinary cover or a generated default).
+**How the design skills were used:**
+- **taste-skill:**
+  - the direction "The name as a monument" (seed 426837719) and its house rules;
+  - `lint.mjs`: 0 FAIL;
+  - `inspect.mjs`: 0 FAIL on home in both languages; see the deviations for the other pages.
+  
+  Its sheet and credits are in `.taste-skill/`, which is gitignored.
+- **impeccable:**
+  - `PRODUCT.md`;
+  - the surface brief `.impeccable/surfaces/src-routes-site-tsx.md` with its direction contract (roll `seed:b3d9cd8a084181f1`), amended after review to the measured first viewport and the owner's contact field;
+  - the craft floor and the detector (0 findings);
+  - a fresh finish reviewer, in three rounds:
+    1. **fix**, with 8 material fixes;
+    2. **fix**: 5 resolved, 2 open, 3 regressions from the fix batch;
+    3. **ship**.
+  
+  The ship verdict covers the scored fixes. The reviewer's ceiling notes are open headroom:
+  - the real Kathmandu skyline with named summits;
+  - map lettering;
+  - print grain;
+  - a device for the skills section;
+  - a footer that closes on the range.
+  
+  The documenter wrote `DESIGN.md` and `.impeccable/design.json`.
+- **frontend-design:** the two-pass token plan.
+- **ui-ux-pro-max:** the Devanagari font data (read from its CSV; its search script needs Python) and its UX checklist.
+- **awesome-design:** not used. It copies an existing brand, and this site must look like nobody else's.
 
-**Steps:**
-1. Build the components (`features/portfolio/components/{chrome,sections,project,journal,art,primitives}`), each presentational and storied, with thin routes.
-2. **Remove the old design:**
-   - `src/styles/portfolio.css` and its import in `app.css`.
-   - The Dhaka primitives (weave, cover-art, screen-art, marquee, …) and `features/portfolio/lib/{weave,seeded-random,cn}.ts` if unused.
-   - The Anek font packages (`pnpm remove @fontsource-variable/anek-latin @fontsource-variable/anek-devanagari`).
-   - The font exemption in `scripts/check-bundle.ts` (the check fails while it is stale).
-   - Unused `portfolio_*` messages.
-3. **Rewrite `docs/guides/portfolio.md`:** design system, content and admin, motion, fonts and fallbacks, pitfalls.
-4. **Measure:**
-   - Lighthouse mobile on a production build (`node e2e/harness/server.ts` serves one with seeded data on port 3100, then `npx lighthouse http://localhost:3100/ --form-factor=mobile --only-categories=performance`).
-   - Record performance, LCP and CLS in the decision.
-5. Screenshots for the owner's sign-off.
+**What was built:**
+- **The system (0179):** `src/styles/himal.css` replaces `portfolio.css`.
+  - Tokens are scoped under `.himal`.
+  - Five fields: snow, ridge, pine, night and rhododendron. No two neighbouring sections share one.
+  - The altitude ramp, with a snow line.
+  - Flat sky bands for each phase of the day.
+  - Five type sizes.
+  - Rhododendron red marks actions (and the owner's contact field). Active states, selection and the reading line use ink.
+  - The contrast test (`tests/unit/himal-tokens.test.ts`) checks every text pair on every field in both themes.
+- **The art (0180):**
+  - `lib/terrain/`: seeded noise, a height field per landform, marching squares, `reliefOf`, the panorama.
+  - `components/art/`.
+  - The sheets are flat fills, each lifted one step. The hero bleeds past its frame, so the low land runs off both edges, and a speck filter drops pebbles and holes.
+  - `/work`'s board uses the same engine: one summit per project, with leader lines ending on the snow.
+  - The output is deterministic and within budget (hero ≤ 35 kB, cover ≤ 8 kB), and every ring closes.
+- **The live hour (0182):**
+  - `lib/daylight.ts`: the sun's position from NOAA's algorithm, sunrise and sunset (within 2 minutes) and the phases of the day.
+  - `generatedAt` on the profile read.
+  - `useMinuteClock` (`src/hooks/use-minute-clock.ts`), shared with `RelativeTime`.
+  - `HomeTime`, which adds the gap to the visitor's clock after hydration.
+- **Pictures (0183):** five public-domain pictures from Wikimedia Commons in `public/himal/`, each with its origin beside it. Credited in the footer:
+  - Sella 1899 (two);
+  - Round Kangchenjunga 1903;
+  - Kathmandu about 1920;
+  - Landon's 1928 map of the valley.
+- **Type (0184):**
+  - Eczar in both scripts: Latin 25.8 kB, Devanagari 85.8 kB.
+  - Metric overrides and measured fallbacks.
+  - No font exemption left in `check-bundle.ts`.
+  - `lib/fit.ts` fits the name and the email from Eczar's measured advance widths, so the name fills 98% of the width. From tablets up it never wraps.
+  - Nepali headings start at 30px on phones.
+- **Motion (0181):**
+  - CSS, plus a 1 kB drift script.
+  - The map rises on load: three bands of altitude lift from the flat map, compositor only.
+  - The bands spread on scroll.
+  - Reveals, a settle on the pictures, the preview swap, view transitions and a reading line.
+  - All of it is off under reduced motion.
+- **Pages:** every page of the `_site` layout was rewritten on the new primitives (home, `/work`, case study, about, journal, article, contact, 404). Routes, loaders and fields are unchanged. Every `_site` page head falls back to `public/himal/og.png` for its social image.
+- **Removed:**
+  - Dhaka's primitives and sections;
+  - `lib/weave.ts`;
+  - `portfolio.css`;
+  - 18 unused messages;
+  - the Anek fonts.
 
-**Acceptance:** the browser review is clean on every portfolio page; Lighthouse mobile performance ≥ 95 on `/`; no font over budget; the owner signs off on the screenshots before Task 41.
+**Numbers:**
+- **Gates:**
+  - `pnpm test`: 89 files, 696 tests.
+  - Storybook: 72 files, 362 story tests (both passes; new: `Portfolio/Art`, `Portfolio/Primitives`, the hero with a résumé).
+  - `pnpm test:e2e`: 871 checks: 870 passed, and 1 failed twice while the machine was short of memory (the Test CRUD conflict flow, which this task doesn't touch; it then passed 3 times out of 3 alone).
+- **Bundle:** entry JS 237.8 → 237.9 kB gzip (budget 240). Preloaded fonts are within budget with no exemptions (Eczar Latin 25.8 kB, Devanagari 85.8 kB).
+- **Lighthouse, mobile, on `/`:** measured behind a brotli proxy, because the harness server doesn't compress (see the deviations).
+  - Simulated throttling: home 64 (FCP 5.5 s, LCP 6.4 s, TBT 20 ms, CLS 0); `/login` 69; `/health` 72.
+  - Applied throttling: home 65–79 (TBT 0.7–1.8 s, CLS 0.004); `/login` 90–95.
+
+**Screenshots** for the owner's sign-off are in `docs/history/screens/task-40/` (WebP, 8.6 MB):
+- home, work, a case study (`ledgerline`), about, journal, an article, contact and the 404, each in light and dark at 390 and 1280;
+- home in Nepali at both widths;
+- home at dawn (light) and at night (dark).
+
+**Deviations:**
+- **Lighthouse ≥ 95 is not met.**
+  - **The simulated score is capped by the template's JavaScript:** around 400 kB of compressed module preloads on every page, which Lighthouse puts on the critical path. Even `/login`, with no portfolio code, scores 69.
+  - **Where the portfolio costs more:** under applied throttling, home blocks 0.7–1.8 s against `/login`'s 0.2–0.3 s. A trace attributes it to the long page's first layout and React hydrating its sections; reduced motion changes little.
+  - **What this task changed:** the first load animation (a clip-path per sheet inside the SVG) repainted the drawing every frame, so it became a transform-only lift.
+  - **Carried to Task 45**, with the entry bundle.
+- **The harness server doesn't compress,** so Lighthouse against port 3100 measures raw downloads. The guide's pitfalls say to measure behind compression.
+- **One social image, not one per project:** `public/himal/og.png`, rendered once from the art with a scratch script. Projects still use their Cloudinary cover when they have one. There is no `scripts/render-og.ts`.
+- **No Motion library** (0181).
+- **The 1921 Everest plate was left out:** its photographer may still be in copyright in the UK.
+- **The range fills about 57% of a 1280×900 first screen, not 60%:** the fold rule keeps "Get in touch" on the first screen. The contract was amended to match.
+- **The contact section stays rhododendron,** as the brief says. The reviewer accepted this, and the contract now names it.
+- **taste-skill's sheet was redrawn four times:**
+  - type: its Unbounded/Onest have no Devanagari;
+  - palette: the subject's colours in the dealt proportions;
+  - photographs: archival pictures instead of its architecture set;
+  - hero: the range instead of "a photograph for a letter".
+- **The inspector's few-pictures rule fails on `/work`, `/contact` and the reading pages.** Those pages carry the owner's covers and screenshots, which the demo content doesn't have.
+- **No placeholder résumé is seeded:** the hero shows the link once the owner uploads one. The story `Portfolio/Sections › HeroWithResume` shows its treatment.
+- **Found on the way:**
+  - The selected-work names had lost their headings, so screen-reader users lost them as landmarks and the portfolio flow couldn't find them. They are `h3` again.
+  - `Math.hypot` and `**` aren't exact across engines, so the art uses `Math.sqrt` and plain multiplication (guide pitfall).
+
+**Left for the owner:**
+- Sign off on the screenshots before Task 41.
+- Replace the sample content in the admin (projects, posts, testimonials, numbers), and add the portrait, the project screenshots and the résumé.
+- From Task 39: `pnpm db:migrate` against Neon (migration `0011_portfolio`), then `pnpm db:seed-portfolio`.
+- Scratch copies from earlier tasks: `C:\tw`, `C:\tw2`, `C:\tw4`, `C:\tw5`, `C:\tw6`.
 
 ### Task 41: Apps platform and Kanban
 

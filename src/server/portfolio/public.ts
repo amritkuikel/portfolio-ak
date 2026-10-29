@@ -107,6 +107,7 @@ export async function getProfile({ db, imageStore }: PublicServices, { locale }:
 			description: text.seoDescription,
 			image: asset(row.ogImageId) ?? asset(row.portraitId),
 		},
+		generatedAt: new Date().toISOString(),
 	};
 }
 

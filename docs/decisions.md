@@ -183,6 +183,12 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0176](#0176-the-portfolios-content-lives-in-the-database-edited-in-the-admin-read-through-public-server-functions): The portfolio's content lives in the database, edited in the admin, read through public server functions
 - [0177](#0177-a-media-library-items-reference-library-attachments-by-id-alt-text-in-both-languages): A media library: items reference library attachments by id; alt text in both languages
 - [0178](#0178-missing-nepali-falls-back-to-english-marked-langen-on-the-record-or-block): Missing Nepali falls back to English, marked `lang="en"` on the record or block
+- [0179](#0179-the-portfolio-is-himal-the-himalaya-from-kathmandu-printed-in-altitude-layers-in-fields-of-colour): The portfolio is "Himal": the Himalaya from Kathmandu, printed in altitude layers, in fields of colour
+- [0180](#0180-the-generated-mountains-seeded-peaks-marching-squares-stacked-sheets-the-same-markup-everywhere): The generated mountains: seeded peaks, marching squares, stacked sheets, the same markup everywhere
+- [0181](#0181-portfolio-motion-stays-css-plus-a-1-kb-pointer-drift-no-motion-library): Portfolio motion stays CSS, plus a 1 kB pointer drift (no Motion library)
+- [0182](#0182-kathmandu-at-this-hour-the-sky-from-the-suns-real-position-hydrated-from-the-servers-read-time): "Kathmandu at this hour": the sky from the sun's real position, hydrated from the server's read time
+- [0183](#0183-archival-pictures-public-domain-credited-printed-in-the-pages-two-inks): Archival pictures: public domain, credited, printed in the page's two inks
+- [0184](#0184-eczar-for-display-in-both-scripts-preloaded-with-measured-fallbacks-per-weight): Eczar for display in both scripts, preloaded, with measured fallbacks per weight
 </details>
 
 ---
@@ -1469,6 +1475,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0108: The portfolio's design system is scoped under .portfolio; generated art; fonts pinned to an optical size
 
+*The scoping rule stands (now `.himal`, `hm-`); the look and the art are superseded by 0179 and 0180.*
+
 - **What:**
   - **Scoped tokens:** `src/styles/portfolio.css` (imported once from `app.css`) holds the "Ink & Paper" system:
     - colour tokens under `.portfolio`, with a dark palette and `.pf-inverse` bands
@@ -1494,6 +1502,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0109: Portfolio motion is CSS only: scroll-driven animations, clip-path reveals and View Transitions
 
+*Extended by 0181 (a 1 kB pointer drift script; still no animation library).*
+
 - **What:**
   - **Effects:** hero lines rise out of masks on load. Blocks wipe in with `animation-timeline: view()` (`.pf-reveal`). The manifesto inks in word by word (`SplitWords` sets `--i`/`--n`). The toolbox marquee slides in pure CSS. Articles show a reading-progress bar (`scroll(root)`).
   - **Shared element:** a card's cover morphs into the case study hero through View Transitions (`CoverFrame` sets `view-transition-name`, links pass `viewTransition`, and the transition styles are scoped to a `pf-cover` class).
@@ -1507,6 +1517,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - IntersectionObserver reveals in React: needs JavaScript, and risks content hidden until hydration (or forever if it fails).
 
 ## 0110: The portfolio is dressed as Dhaka cloth: Anek type, generated weaves, no house-style defaults
+
+*Superseded by 0179 (Himal) and 0184 (Eczar).*
 
 - **What:**
   - **Identity:** the "Ink & Paper" look (cream paper, Fraunces, a vermilion accent, uppercase mono eyebrows numbered "01 ——") is replaced by "Dhaka", after the handloom cloth of Palpa. Cotton-white ground and indigo ink. Dark mode is an indigo night. Three thread colours (crimson, marigold, jade) are shared by both themes.
@@ -2130,3 +2142,112 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - **What:** `resolveLocalized(value, locale)` (now in `src/lib/i18n/localized.ts`) shows English where a Nepali text is empty, and adds `lang: "en"` to an object none of whose own localized texts is in the page's language (a record or a block not translated yet). Components put it on the element that renders that object (`<article lang={project.lang}>`, a chapter, a testimonial). A partly translated object stays unmarked. `localized(schema)` is the Zod shape (Nepali may be empty); `isFallback` tells it for one value.
 - **Why:** screen readers choose their voice and pronunciation by `lang`, and hyphenation follows it. A whole untranslated record is the common case (a new project typed in English first), and marking it needs no change to every string-rendering component.
 - **Alternatives considered:** marking each string (a branded string type, or objects instead of strings, would touch every component); marking an object as soon as any text fell back (its translated texts would then be read with the English voice).
+
+## 0179: The portfolio is "Himal": the Himalaya from Kathmandu, printed in altitude layers, in fields of colour
+
+*Supersedes 0110 (Dhaka) and the look of 0108; 0108's scoping rule stands, renamed.*
+
+- **What:**
+  - **Idea:** the Himalaya seen from Kathmandu is the site's one picture. The hero is a range of generated mountains printed as stacked sheets, one per altitude, like a multi-block woodblock print (0180). Its sky follows the hour in Kathmandu (0182). The owner's name runs margin to margin under it.
+  - **Tokens:** `src/styles/himal.css`, scoped under `.himal` with `hm-` utilities (the `_site` layout sets the class).
+    - Semantic tokens: `--hm-ground`, `--hm-ground-2`, `--hm-ink`, `--hm-muted`, `--hm-accent`, `--hm-action`, `--hm-on-action`, `--hm-focus`.
+    - Fields (`hm-field-snow-2`, `ridge`, `pine`, `night`, `rhodo`) reassign them for a section. Neighbouring sections never share a field.
+    - The altitude ramp (`--hm-alt-0` … `8`) runs pine → rock blue → snow, like a relief map's tints and Nepal's own belts.
+    - Rhododendron red marks what can be acted on (the primary button, a link's hover underline, focus, form errors) and the contact field, which the owner chose. Active states, selection, quote marks and the reading line use ink: the finish review found red spread onto them, and a serif with red everywhere is the look this direction refuses.
+    - Dark mode is night on the ridge.
+  - **Contrast:** `tests/unit/himal-tokens.test.ts` checks ink, muted and accent on every field's ground and surface step, the buttons, and the text set on the art (strata, sky labels), in both themes.
+  - **Composition:** taste-skill's direction "The name as a monument" (seed 426837719) and its section layouts, adapted:
+    - big project names beside a sticky preview;
+    - name columns for skills;
+    - switchback lines for the process;
+    - quiet figure lines;
+    - a lead quote with corner quotes;
+    - a journal line-up;
+    - the email as display type;
+    - the name at full width in the footer.
+  - **House rules:** taste-skill's (no eyebrows, rules, cards, shadows, gradients or index numbers), applied site-wide.
+  - **Social image:** a page without its own image (a project's Cloudinary cover, the profile's social image) shares `public/himal/og.png` (`himalOgImage`, `lib/og-image.ts`): the range at dawn with the name, rendered once at 1200 × 630 from the art. The app's `public/og-default.png` stays the template's, outside the portfolio layer.
+  - **Process:** impeccable's (`PRODUCT.md`, the surface brief's direction contract with roll `seed:b3d9cd8a084181f1`, the finish review, `DESIGN.md`).
+- **Why:**
+  - **The first written plan failed its own history:** a Fraunces serif on cream "snow paper" with a red accent, and prayer-flag markers. 0110 had already rejected the serif as house style and the flags as religious symbols, and that combination is the most common look of generated pages.
+  - **Where Himal comes from:** the owner chose Himalayan topography; this keeps it but draws it in filled layers, not contour hairlines (0110's "common on developer portfolios").
+  - **Fields of colour instead of cards** give each section its own place without dividers.
+- **Alternatives considered:**
+  - A lokta-paper woodblock world: impeccable's roll assigned it. The owner chose Himal, and the roll's layered print and print-on-load ritual were kept.
+  - Kathmandu's bilingual painted signboards.
+  - A plain conventional portfolio.
+
+## 0180: The generated mountains: seeded peaks, marching squares, stacked sheets, the same markup everywhere
+
+- **What:**
+  - **Pipeline** (`features/portfolio/lib/terrain/`):
+    1. A height field of seeded peaks: rounded pyramids with concave slopes, domain-warped and roughened by ridged simplex noise, with saddles and a foothill band. Each cover motif is a landform.
+    2. Marching squares at 7–9 levels on a grid framed by "sea", so every contour closes into a ring.
+    3. Each level's region is drawn as one even-odd path, smoothed through its midpoints and rounded to whole units.
+    4. Each level is lifted a step above the one below and filled flat in its altitude colour. Above a snow line (the top 38% of the levels) the colours are the ramp's two snows, so every summit that clears it carries snow.
+    5. The hero's plan is drawn wider than its frame (`bleed`), so the low land closes out of view and runs off both edges. Sides longer than 64 units are split before smoothing, or a straight edge's corner rounded across half the drawing.
+  - **Rendering:**
+    - `Relief` renders inline SVG, `aria-hidden`, coloured by tokens.
+    - The hero splits its sheets into three stacked SVGs so motion can move bands of altitude on the compositor.
+    - `PanoramaBoard` draws `/work`'s board with the same engine (`reliefOf` over a field of its own): a crest with one summit per project and a leader line from each name to the highest sheet drawn there.
+    - `cachedRelief` keeps the last 64 reliefs.
+- **Why:**
+  - **No hydration mismatch:** noise and heights use only +, −, ×, ÷, floor and sqrt, exact in every engine, and the output is rounded, so the server and every browser print the same `d`.
+  - **Bounded markup:** tests hold the hero under 35 kB and a cover under 8 kB, and check that every ring closes.
+  - **No layout shift:** frames have fixed sizes or aspect ratios.
+- **Alternatives considered:**
+  - Hairline contour lines: the cliché 0110 named.
+  - Side-view silhouettes only: they lose the map that rises.
+  - Canvas or WebGL: no server render, more JavaScript.
+
+## 0181: Portfolio motion stays CSS, plus a 1 kB pointer drift (no Motion library)
+
+*Extends 0109.*
+
+- **What:**
+  - The map rises on load: each of the hero's three bands of altitude starts lowered to the flat map and lifts into relief (`hm-lift`, transform only, the low land first). The first version clipped and moved each sheet inside the SVG, which repaints the drawing every frame: 720 ms of blocking time on the home page under Lighthouse's applied mobile throttling, against 180 ms on `/login`.
+  - Scrolling past the hero spreads the three bands of altitude apart (`animation-timeline: scroll(root)`).
+  - `art/drift.ts`, loaded after hydration on fine pointers only, sets `--hm-px`/`--hm-py` so the bands move by depth with the cursor. It pauses while the hero is offscreen.
+  - Section parts rise into view with `clip-path` and transform (`hm-reveal`, staggered by `--hm-i`). Archival pictures settle from a slight zoom.
+  - The work index's preview swaps on hover and focus. Mountains morph from the index to the case study (`viewTransition`, `view-transition-class: hm-frame`). Articles draw a reading line.
+  - Everything sits under `prefers-reduced-motion: no-preference` and `@supports`. Only transform, translate, clip-path and colour move.
+- **Why:** the plan allowed the Motion library, but CSS covers every effect here, and Lighthouse mobile ≥ 95 leaves no room for tens of kB of animation code. Opacity fades stay out (0109: axe measured half-faded text).
+
+## 0182: "Kathmandu at this hour": the sky from the sun's real position, hydrated from the server's read time
+
+- **What:**
+  - **Sky:** `lib/daylight.ts` (place constant `HOME`: Asia/Kathmandu, 27.7172° N 85.324° E) computes the sun's elevation and azimuth with NOAA's algorithm, and sunrise and sunset (within 2 minutes of the published times, tested).
+    - Its phases: night, dawn, day, dusk. Dawn and dusk give the summits alpenglow.
+    - The sun shows near the edge it rises or sets on, the view facing north. At noon it is behind the viewer.
+  - **Server render:** the public profile read carries `generatedAt`. The server draws that moment, and hydration uses it.
+  - **Browser:** `useMinuteClock` (`src/hooks/use-minute-clock.ts`, extracted from `RelativeTime`) takes over.
+  - **Time line:** `HomeTime` writes the Kathmandu time. Only in the browser does it add the gap to the visitor's clock ("4 h 45 min ahead of you"), in a line reserved for it.
+- **Why:** the one live thing taste-skill asks for, made from the subject: a remote client learns when the owner is awake. It works without JavaScript, can't mismatch on hydration, and never moves the layout.
+
+## 0183: Archival pictures: public domain, credited, printed in the page's two inks
+
+- **What:** five public-domain pictures from Wikimedia Commons, found with taste-skill's assets tool:
+  - Vittorio Sella's Kangchen Glacier panorama (1899);
+  - Sella's "Below the Jonsong La" (1899);
+  - Kangchenjunga at first light (Round Kangchenjunga, 1903);
+  - Kathmandu and the Tundikhel (about 1920);
+  - Perceval Landon's Map of the Valley (1928).
+  - **Preparation:** the books' printed captions were cropped off, the pictures greyed and saved as WebP at two widths in `public/himal/` (33–245 kB; the large map is the heaviest).
+  - **Registry:** `lib/archive.ts` holds them, with alt text and captions in both languages, and the credits print in the footer.
+  - **Display:** `ArchivalFigure` frames them at a fixed shape, lazy, in a CSS duotone. The field sets the inks: the map is printed in rhododendron on the contact field.
+  - **Provenance:** each file's origin (creator, date, licence, Commons page) is also written beside it (`<file>.webp.json`, impeccable's `embed-prompt`), and `og.png` carries how it was made; `embed-prompt --scan public/himal` lists any picture without one.
+  - **Left out:** a 1921 Everest plate (its photographer may still be in copyright in the UK) and a plate of people.
+- **Why:** pages with real pictures read as finished (taste-skill's study), and these show the world the site is about. Captions say what each one is, and none is presented as the owner's work.
+
+## 0184: Eczar for display in both scripts, preloaded, with measured fallbacks per weight
+
+*Replaces 0110's type.*
+
+- **What:**
+  - **Faces:** Eczar Variable (wght 400–800) sets display type in Latin and Devanagari; the app's Inter and Noto Sans Devanagari set the text.
+  - **Preloads:** the `_site` layout preloads Eczar Latin (25.8 kB) and Inter, and on Nepali pages both Devanagari files (Eczar 85.8 kB). All are under the 150 kB budget, so `scripts/check-bundle.ts` has no font exemption left. The Anek packages are removed.
+  - **Fallbacks:** "Eczar Fallback" (Times New Roman, or Liberation Serif on Linux with the same metrics) and "Eczar Devanagari Fallback" (Nirmala UI), one face per weight range, with `size-adjust` and ascent/descent measured in Chrome.
+  - **Fitting the name:** the hero name and the contact email are sized to their container from their length (`lib/fit.ts`), with no measuring script. Latin sums Eczar 700's advance widths, measured in Chrome (kerning only narrows, so a name fills 97–99% and never overflows). Devanagari, whose conjuncts make per-letter widths meaningless, counts letters, half forms and spacing signs by Unicode category, times a measured factor.
+  - **Nepali display:** no negative tracking (it breaks conjuncts) and leading ≥ 1.2.
+  - **Metric overrides:** the Eczar faces are declared in `himal.css` (Fontsource's files, its unicode ranges) with `ascent-override` and `descent-override` of 0.88/0.24 em (Latin) and 1.0/0.36 em (Devanagari). Eczar ships 1.14/0.63 em, and at display sizes the text's hit box reached half an em past the line, so a big mailto link caught clicks on the sentence above it; the taste inspector reported it as covered text.
+- **Why:** one family for both scripts, as 0110 argued, in a face built for display in both. Impeccable flags Fraunces as a default every generated page uses.

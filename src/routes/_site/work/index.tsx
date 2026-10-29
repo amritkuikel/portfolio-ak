@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { WorkPage } from "@/features/portfolio/components/pages/work-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { collectionPageJsonLd } from "@/features/portfolio/lib/structured-data";
 import { workQueryOptions } from "@/features/portfolio/queries";
 import { workSearchSchema } from "@/features/portfolio/search";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_site/work/")({
 	head: ({ match: { search } }) =>
 		seo({
 			title: m.portfolio_work_title(),
+			image: himalOgImage(m.portfolio_work_title()),
 			description: m.portfolio_work_description(),
 			path: "/work",
 			noindex: search.discipline !== undefined,

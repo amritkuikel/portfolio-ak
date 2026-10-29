@@ -7,7 +7,13 @@ import { CaseStudyHero } from "../case-study/case-study-hero";
 import { FactSheet } from "../case-study/fact-sheet";
 import { NextProject } from "../case-study/next-project";
 import { DraftNotice } from "../chrome/draft-notice";
-import { StatGrid } from "../primitives/stat";
+import { FigureLines } from "../primitives/figure-lines";
+// apps:start
+import { ButtonAnchor } from "../primitives/links";
+
+/** The showcase apps' routes (/apps/<slug>) arrive with Task 41; until then no project links to one. */
+const LIVE_APPS = false;
+// apps:end
 
 const route = getRouteApi("/_site/work/$slug");
 
@@ -18,28 +24,34 @@ export function CaseStudyPage() {
 	const { data } = useSuspenseQuery(projectQueryOptions(slug, preview));
 	// The loader already threw for a missing slug; this narrows the type.
 	if (!data) throw notFound();
-	const { project, index, total, next, draft } = data;
+	const { project, next, draft } = data;
 
 	return (
 		<article aria-labelledby="case-title" lang={project.lang}>
 			{draft ? <DraftNotice /> : null}
-			<CaseStudyHero project={project} index={index} total={total} />
+			<CaseStudyHero project={project} />
 
-			{project.metrics.length > 0 ? (
-				<section aria-labelledby="outcomes-title" className="pf-container pt-[clamp(4rem,8vw,7rem)]">
-					<h2 id="outcomes-title" className="pf-label mb-8 text-pf-stone">
-						{m.portfolio_case_outcomes()}
-					</h2>
-					<StatGrid metrics={project.metrics} className="lg:grid-cols-4" />
-				</section>
-			) : null}
-
-			<div className="pf-container pf-grid gap-y-16 py-[clamp(5rem,10vw,9rem)]">
-				<div className="col-span-4 md:col-span-4 lg:col-span-3">
+			<div className="hm-container hm-grid gap-y-16 py-[clamp(4rem,9vw,8rem)]">
+				<div className="col-span-4 flex flex-col gap-10 md:col-span-4 lg:col-span-4">
 					<FactSheet project={project} />
+					{/* apps:start */}
+					{LIVE_APPS && project.appSlug ? (
+						<ButtonAnchor href={`/apps/${project.appSlug}`} className="self-start">
+							{m.portfolio_case_try_app()}
+						</ButtonAnchor>
+					) : null}
+					{/* apps:end */}
 				</div>
-				<div className="col-span-4 md:col-span-8 lg:col-span-8 lg:col-start-5">
-					<CaseStudyBody blocks={project.body} seed={project.cover.seed} />
+				<div className="col-span-4 flex flex-col gap-[clamp(3.5rem,7vw,6rem)] md:col-span-8 lg:col-span-7 lg:col-start-6">
+					{project.metrics.length > 0 ? (
+						<section aria-labelledby="outcomes-title" className="flex flex-col gap-8">
+							<h2 id="outcomes-title" className="hm-display text-hm-lead">
+								{m.portfolio_case_outcomes()}
+							</h2>
+							<FigureLines metrics={project.metrics} size="small" />
+						</section>
+					) : null}
+					<CaseStudyBody blocks={project.body} gallery={project.gallery} cover={project.cover} />
 				</div>
 			</div>
 

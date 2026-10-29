@@ -1,51 +1,77 @@
-import type { CaseStudyBlock } from "../../types";
+import type { Cover, Project } from "../../types";
 import { CodeBlock } from "../content/code-block";
 import { PullQuote } from "../content/pull-quote";
-import { Display } from "../primitives/display";
-import { Reveal } from "../primitives/reveal";
 import { ArchitectureDiagram } from "./architecture-diagram";
-import { Gallery } from "./gallery";
+import { Screens } from "./screens";
 
-/** Renders one typed case study block. Exhaustive: a new block type fails typecheck until it has a renderer. */
-function Block({ block, seed }: { block: CaseStudyBlock; seed: string }) {
-	switch (block.type) {
-		case "chapter":
-			return (
-				<section lang={block.lang} className="flex flex-col gap-6">
-					<Display as="h2" size="h3">
-						{block.title}
-					</Display>
-					{block.body.map((paragraph) => (
-						<p key={paragraph} className="pf-measure text-pf-lead text-pf-ink-2">
-							{paragraph}
-						</p>
-					))}
-				</section>
-			);
-		case "quote":
-			return <PullQuote text={block.text} cite={block.cite || undefined} />;
-		case "code":
-			return <CodeBlock code={block.code} language={block.language} caption={block.caption || undefined} />;
-		case "architecture":
-			return <ArchitectureDiagram block={block} />;
-		case "gallery":
-			return <Gallery seed={seed} captions={block.captions} />;
-		default: {
-			const unknown: never = block;
-			return unknown;
-		}
+type CaseStudyBodyProps = {
+	blocks: Project["body"];
+	gallery: Project["gallery"];
+	cover: Cover;
+};
+
+/**
+ * The story of a project, block by block, each rising into view. Exhaustive:
+ * a new block type fails typecheck until it has a renderer. The "Screens"
+ * blocks take the gallery's images in order, one per caption.
+ */
+export function CaseStudyBody({ blocks, gallery, cover }: CaseStudyBodyProps) {
+	// Where each Screens block starts in the gallery: the blocks take its images in order.
+	const starts = new Map<string, number>();
+	let next = 0;
+	for (const block of blocks) {
+		if (block.type !== "gallery") continue;
+		starts.set(block.id, next);
+		next += block.captions.length;
 	}
-}
-
-/** The story of a project, block by block, each wiping into view. */
-export function CaseStudyBody({ blocks, seed }: { blocks: ReadonlyArray<CaseStudyBlock>; seed: string }) {
 	return (
 		<div className="flex flex-col gap-[clamp(3.5rem,7vw,6rem)]">
-			{blocks.map((block) => (
-				<Reveal key={block.id}>
-					<Block block={block} seed={seed} />
-				</Reveal>
-			))}
+			{blocks.map((block) => {
+				switch (block.type) {
+					case "chapter":
+						return (
+							<section key={block.id} lang={block.lang} className="hm-reveal flex flex-col gap-5">
+								<h2 className="hm-display text-hm-lead">{block.title}</h2>
+								{block.body.map((paragraph) => (
+									<p key={paragraph} className="hm-measure text-hm-body">
+										{paragraph}
+									</p>
+								))}
+							</section>
+						);
+					case "quote":
+						return <PullQuote key={block.id} text={block.text} cite={block.cite || undefined} className="hm-reveal" />;
+					case "code":
+						return (
+							<CodeBlock
+								key={block.id}
+								code={block.code}
+								language={block.language}
+								caption={block.caption || undefined}
+								className="hm-reveal"
+							/>
+						);
+					case "architecture":
+						return (
+							<div key={block.id} className="hm-reveal">
+								<ArchitectureDiagram block={block} />
+							</div>
+						);
+					case "gallery": {
+						const start = starts.get(block.id) ?? 0;
+						const images = gallery.slice(start, start + block.captions.length);
+						return (
+							<div key={block.id} lang={block.lang} className="hm-reveal">
+								<Screens captions={block.captions} images={images} cover={cover} />
+							</div>
+						);
+					}
+					default: {
+						const unknown: never = block;
+						return unknown;
+					}
+				}
+			})}
 		</div>
 	);
 }

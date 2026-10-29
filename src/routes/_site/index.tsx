@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PortfolioHome } from "@/features/portfolio/components/pages/home-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { personId, personJsonLd } from "@/features/portfolio/lib/structured-data";
 import { homeQueryOptions, profileQueryOptions } from "@/features/portfolio/queries";
 import { ensureQuery } from "@/lib/query";
@@ -29,9 +30,9 @@ export const Route = createFileRoute("/_site/")({
 					title: loaderData.seo.title || m.portfolio_home_title({ name: loaderData.name, role: loaderData.role }),
 					description: loaderData.seo.description || loaderData.intro,
 					path: "/",
-					...(loaderData.seo.image
-						? { image: { url: loaderData.seo.image.og, width: 1200, height: 630, alt: loaderData.name } }
-						: {}),
+					image: loaderData.seo.image
+						? { url: loaderData.seo.image.og, width: 1200, height: 630, alt: loaderData.name }
+						: himalOgImage(loaderData.name),
 					// The site's home: the WebSite, run by its owner, and the owner.
 					jsonLd: [
 						websiteJsonLd(loaderData.intro, personId()),

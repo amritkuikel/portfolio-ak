@@ -10,8 +10,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 /* portfolio:start */
-/* Scoped tokens and utilities of the portfolio at / (pf-*, under .portfolio). */
-@import "./portfolio.css";
+/* "Himal": scoped tokens and utilities of the portfolio at / (hm-*, under .himal). */
+@import "./himal.css";
 /* portfolio:end */
 @plugin "@tailwindcss/typography";
 

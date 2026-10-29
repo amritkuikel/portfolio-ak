@@ -15,8 +15,8 @@ import { getLocale } from "@/paraglide/runtime";
 
 /**
  * The portfolio at `/` (docs/guides/portfolio.md): a pathless layout with its own
- * header and footer, its design tokens scoped under `.portfolio`
- * (src/styles/portfolio.css). Its content comes from the database through
+ * header and footer, its design tokens scoped under `.himal`
+ * (src/styles/himal.css). Its content comes from the database through
  * public server functions (decision 0176). Its pages never read the session,
  * so the root skips looking it up (`staticData.session: "skip"`, decision 0161).
  */
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_site")({
 function PortfolioShell({ children }: { children: ReactNode }) {
 	const { data: profile } = useSuspenseQuery(profileQueryOptions());
 	return (
-		<div id="pf-top" className="portfolio pf-canvas flex flex-1 flex-col">
+		<div id="hm-top" className="himal hm-canvas flex flex-1 flex-col">
 			<PortfolioHeader profile={profile} />
 			<main {...MAIN_CONTENT} className="flex-1 outline-none">
 				{children}

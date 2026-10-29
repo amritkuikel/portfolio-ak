@@ -7,7 +7,7 @@ import { PortfolioHeader } from "./portfolio-header";
 import { PortfolioMenu } from "./portfolio-menu";
 import { PortfolioNotFound } from "./portfolio-not-found";
 
-/** The portfolio's own header, footer and 404 (the app's SiteHeader is hidden under /portfolio). */
+/** The portfolio's own header, phone menu, footer and 404 (each section brings its own header, decision 0161). */
 const meta = {
 	title: "Portfolio/Chrome",
 	decorators: [withPortfolioCanvas],
@@ -27,7 +27,7 @@ export const Header: Story = {
 /** The phone menu (shown below the md breakpoint), opened: a native <details>, so it works before JavaScript. */
 export const PhoneMenu: Story = {
 	render: () => (
-		<div className="pf-container flex h-(--pf-header-h) items-center justify-end">
+		<div className="hm-container flex h-(--hm-header-h) items-center justify-end">
 			<PortfolioMenu />
 		</div>
 	),

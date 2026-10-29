@@ -6,7 +6,7 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–39 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–40 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
 - **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
@@ -33,7 +33,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
 | [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo` (layers), renaming, first admin, your first feature |
-| [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content in the database, its admin, the media library, the contact form, seeding, "Dhaka" design system, motion <!-- @portfolio --> |
+| [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content in the database, its admin, the media library, the contact form, seeding, the "Himal" design system (generated mountains, the hour in Kathmandu, archival pictures), motion <!-- @portfolio --> |
 
 ## Stack
 
@@ -85,7 +85,7 @@ src/server/            SERVER-ONLY: env, db (Drizzle schema, list SQL, crud.ts h
 src/middleware/        security headers + CSP, CSRF, logging, errors, auth/permissions, dev-only
 src/components/        shared UI: admin-shell/, auth-shell/, app-header/, brand/, data-display/, charts/, page/, data-table/, filters/,
                        navigation/, dialogs/, forms/, crud/ (list page, mutations, forms), layout/, errors/, ui/ (shadcn)
-src/hooks/             React hooks: useListPage, useListQuery, useHotkeys, useDebouncedValue, useMediaQuery
+src/hooks/             React hooks: useListPage, useListQuery, useHotkeys, useDebouncedValue, useMediaQuery, useMinuteClock
 src/lib/               isomorphic helpers by area: list/ (URL params, paging, serialization), env/, i18n/, http/,
                        observability/, crud/ (keys, listSchema, filters, route helpers), start/ (Start runtime: routes and
                        server only); query, seo, validation, errors, zod
@@ -93,7 +93,8 @@ messages/              en.json, ne.json        drizzle/   SQL migrations        
 tests/                 unit/, server/, components/, i18n/, email/, setup/ (env, dom, PGlite snapshot), utils/ (test-db, fake-cloudinary)
 e2e/                   Playwright: review.spec.ts, flows/, harness/ (build + PGlite + fake Resend + server), support/
 scripts/               setup-local, diagnose, dev-local, dev-offline, check-bundle, seeds, new-feature, strip-demo (TypeScript run by Node)
-docs/                  PLAN.md, decisions.md, guides/, history/ (past reviews)
+docs/                  PLAN.md, decisions.md, guides/, history/ (past reviews, screenshots)
+PRODUCT.md, DESIGN.md  the portfolio's product record and design system for the design tools (impeccable); .impeccable/ holds the direction contract
 .github/               CI workflow, Dependabot        lefthook.yml   git hooks        knip.json   dead-code config
 ```
 
@@ -165,7 +166,7 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
 - [testing.md](docs/guides/testing.md): Radix menus in tests.
 - [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
-- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; Variable fonts with a width axis need one fallback per width; Reordering keeps the version; Seeds read rows, not row counts. <!-- @portfolio -->
+- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; A fallback face per weight; Exact arithmetic in the art; The clock hydrates from the read time; Text on a field takes the field's tokens; Animating the art repaints it; Lighthouse on the harness server; Lazy pictures in dev; Reordering keeps the version; Seeds read rows, not row counts. <!-- @portfolio -->
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
 - [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.

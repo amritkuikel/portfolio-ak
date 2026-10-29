@@ -1,38 +1,35 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRightIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import type { ProjectDetail } from "../../types";
-import { CoverArt } from "../primitives/cover-art";
-import { CoverFrame } from "../primitives/cover-frame";
-import { Eyebrow } from "../primitives/eyebrow";
+import { MountainFrame } from "../art/mountain-frame";
+import { ProjectMountain } from "../art/project-mountain";
 
-/** The exit of a case study: the next project as one large link, its cover ready to morph. */
+/** The exit of a case study, on the ridge field: the next project as one large link, its mountain ready to morph. */
 export function NextProject({ next }: { next: ProjectDetail["next"] }) {
 	return (
-		<nav aria-label={m.portfolio_case_next()} className="pf-inverse">
+		<nav aria-label={m.portfolio_case_next()} className="hm-field-ridge">
 			<Link
 				to="/work/$slug"
 				params={{ slug: next.slug }}
 				viewTransition
-				className="pf-focus group/next block py-[clamp(5rem,10vw,9rem)]"
+				className="hm-focus group block py-[clamp(4rem,9vw,8rem)]"
 			>
-				<div className="pf-container pf-grid items-end gap-y-10">
-					<div className="col-span-4 md:col-span-7">
-						<Eyebrow>{m.portfolio_case_next()}</Eyebrow>
-						<p className="pf-display mt-6 flex items-center gap-[0.2em] text-pf-hero transition-colors duration-(--pf-dur-2) group-hover/next:text-pf-accent">
+				<div className="hm-container hm-grid items-end gap-y-10">
+					<div className="col-span-4 flex flex-col gap-4 md:col-span-7">
+						<p className="text-hm-lead text-hm-muted">{m.portfolio_case_next()}</p>
+						<p className="hm-display text-hm-title decoration-[0.05em] decoration-hm-accent underline-offset-[0.1em] group-hover:underline">
 							{next.title}
-							<ArrowRightIcon
-								aria-hidden
-								className="size-[0.5em] shrink-0 transition-transform duration-(--pf-dur-2) group-hover/next:translate-x-[0.1em]"
-							/>
 						</p>
-						<p className="pf-label mt-6 text-pf-stone">{next.client}</p>
+						<p className="text-hm-lead">{next.client}</p>
 					</div>
-					<div className="col-span-4 md:col-span-4 md:col-start-9">
-						<CoverFrame transitionSlug={next.slug} aspect="landscape" zoom>
-							<CoverArt seed={next.cover.seed} motif={next.cover.motif} glyph={next.cover.glyph} />
-						</CoverFrame>
-					</div>
+					<MountainFrame
+						transitionSlug={next.slug}
+						aspect="landscape"
+						zoom
+						className="col-span-4 md:col-span-5 md:col-start-8"
+					>
+						<ProjectMountain cover={next.cover} sizes="(min-width: 48rem) 40vw, 100vw" />
+					</MountainFrame>
 				</div>
 			</Link>
 		</nav>

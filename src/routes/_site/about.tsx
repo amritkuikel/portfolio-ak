@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AboutPage } from "@/features/portfolio/components/pages/about-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { profilePageJsonLd } from "@/features/portfolio/lib/structured-data";
 import { aboutQueryOptions, profileQueryOptions } from "@/features/portfolio/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/_site/about")({
 	head: ({ loaderData }) =>
 		seo({
 			title: m.portfolio_about_title(),
+			image: himalOgImage(m.portfolio_about_title()),
 			description: m.portfolio_about_description(),
 			path: "/about",
 			jsonLd: loaderData

@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ACCENTS } from "@/lib/stores/preferences";
+import { contrast, parseOklch, readRules, resolve, tokensWhere } from "../utils/css-tokens";
 
 /**
  * Graphite's colour contrast (src/styles/app.css, decision 0164): every text pair is
@@ -13,17 +13,8 @@ import { ACCENTS } from "@/lib/stores/preferences";
  */
 
 type Theme = "light" | "dark";
-type Oklch = { l: number; c: number; h: number; alpha: number };
 
-const css = readFileSync("src/styles/app.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-
-/** Top-level rules (`selector { --name: value; }`), in order; at-rules like @theme are skipped. */
-const rules = [...css.matchAll(/(^|\n)([^@{}\n][^{}]*)\{([^{}]*)\}/g)].map((match) => ({
-	selectors: (match[2] ?? "").split(",").map((selector) => selector.trim()),
-	declarations: Object.fromEntries(
-		[...(match[3] ?? "").matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((d) => [d[1], (d[2] ?? "").trim()]),
-	),
-}));
+const rules = readRules("src/styles/app.css");
 
 /** Does `selector` match <html> with this theme and accent? Descendant selectors never do. */
 const matchesHtml = (selector: string, theme: Theme, accent: string) => {
@@ -38,56 +29,8 @@ const matchesHtml = (selector: string, theme: Theme, accent: string) => {
 	});
 };
 
-const tokensFor = (theme: Theme, accent: string) => {
-	const tokens: Record<string, string> = {};
-	for (const rule of rules) {
-		if (rule.selectors.some((selector) => matchesHtml(selector, theme, accent))) {
-			Object.assign(tokens, rule.declarations);
-		}
-	}
-	return tokens;
-};
-
-const resolve = (tokens: Record<string, string>, name: string, depth = 0): string => {
-	const value = tokens[name];
-	if (value === undefined) throw new Error(`${name} is not defined`);
-	const reference = value.match(/^var\((--[\w-]+)\)$/);
-	if (!reference?.[1]) return value;
-	if (depth > 10) throw new Error(`${name}: var() cycle`);
-	return resolve(tokens, reference[1], depth + 1);
-};
-
-const parseOklch = (value: string): Oklch => {
-	const match = value.match(/^oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+)(%?))?\)$/);
-	if (!match) throw new Error(`Not an oklch() colour: ${value}`);
-	const alpha = match[4] === undefined ? 1 : Number(match[4]) / (match[5] ? 100 : 1);
-	return { l: Number(match[1]), c: Number(match[2]), h: Number(match[3]), alpha };
-};
-
-/** OKLCH -> linear sRGB (Björn Ottosson's OKLab matrices), clipped to [0, 1]. */
-const linearRgb = ({ l: L, c, h }: Oklch) => {
-	const a = c * Math.cos((h * Math.PI) / 180);
-	const b = c * Math.sin((h * Math.PI) / 180);
-	const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-	const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-	const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-	const clip = (v: number) => Math.min(1, Math.max(0, v));
-	return [
-		clip(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-		clip(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-		clip(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-	] as const;
-};
-
-const luminance = (colour: Oklch) => {
-	const [r, g, b] = linearRgb(colour);
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const contrast = (a: Oklch, b: Oklch) => {
-	const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-	return (light + 0.05) / (dark + 0.05);
-};
+const tokensFor = (theme: Theme, accent: string) =>
+	tokensWhere(rules, (selector) => matchesHtml(selector, theme, accent));
 
 const SURFACES = ["--background", "--surface-1", "--surface-2", "--card", "--popover", "--sidebar"];
 

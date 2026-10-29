@@ -2,42 +2,36 @@ import { Link } from "@tanstack/react-router";
 import { formatNumber } from "@/lib/i18n/intl";
 import { DISCIPLINE_LABELS } from "../../lib/labels";
 import type { ProjectSummary } from "../../types";
-import { CoverArt } from "../primitives/cover-art";
-import { CoverFrame } from "../primitives/cover-frame";
+import { MountainFrame } from "../art/mountain-frame";
+import { ProjectMountain } from "../art/project-mountain";
 
 /**
- * One project in the work index: a wide row (title, client,
- * disciplines, year) with its cover. On phones the cover sits above the text;
- * from tablets up it waits at the end of the row and wipes open on hover.
+ * One project in the work index: its mountain (or cover), its title in display
+ * type, the client and year, the disciplines and the one-line summary. The
+ * whole row is the link; the mountain morphs into the case study's.
  */
 export function WorkRow({ project }: { project: ProjectSummary }) {
 	return (
-		<li className="border-pf-line border-t last:border-b">
+		<li lang={project.lang} className="hm-reveal">
 			<Link
 				to="/work/$slug"
 				params={{ slug: project.slug }}
 				viewTransition
-				className="pf-focus group/row grid grid-cols-4 items-center gap-x-(--pf-gutter) gap-y-5 py-8 md:grid-cols-12 md:py-10"
+				className="hm-focus group hm-grid items-center gap-y-5 py-7"
 			>
-				<div className="col-span-4 md:order-last md:col-span-3">
-					<div className="transition-[clip-path] duration-(--pf-dur-3) ease-(--pf-ease-out) md:[clip-path:inset(0_0_0_100%)] md:group-hover/row:[clip-path:inset(0)] md:group-focus-visible/row:[clip-path:inset(0)]">
-						<CoverFrame transitionSlug={project.slug} aspect="landscape">
-							<CoverArt seed={project.cover.seed} motif={project.cover.motif} glyph={project.cover.glyph} />
-						</CoverFrame>
-					</div>
-				</div>
-				<div className="col-span-4 md:col-span-6">
-					<h2 className="pf-display text-pf-h2 transition-transform duration-(--pf-dur-2) ease-(--pf-ease-out) md:group-hover/row:translate-x-3">
+				<MountainFrame transitionSlug={project.slug} aspect="landscape" zoom className="col-span-4 md:col-span-4">
+					<ProjectMountain cover={project.cover} sizes="(min-width: 48rem) 30vw, 100vw" />
+				</MountainFrame>
+				<div className="col-span-4 flex flex-col gap-3 md:col-span-7 md:col-start-6">
+					<h2 className="hm-display text-hm-head decoration-[0.06em] decoration-hm-accent underline-offset-[0.12em] group-hover:underline">
 						{project.title}
 					</h2>
-					<p className="mt-2 text-pf-body text-pf-ink-2">{project.client}</p>
+					<p className="text-hm-body text-hm-muted">
+						{project.client}, {formatNumber(project.year, { useGrouping: false })}.{" "}
+						{project.disciplines.map((discipline) => DISCIPLINE_LABELS[discipline]()).join(", ")}
+					</p>
+					<p className="hm-measure text-hm-body">{project.summary}</p>
 				</div>
-				<p className="pf-label col-span-3 text-pf-stone md:col-span-2">
-					{project.disciplines.map((discipline) => DISCIPLINE_LABELS[discipline]()).join(" / ")}
-				</p>
-				<p className="pf-label col-span-1 text-right text-pf-stone tabular-nums md:col-span-1">
-					{formatNumber(project.year, { useGrouping: false })}
-				</p>
 			</Link>
 		</li>
 	);

@@ -3,17 +3,15 @@ import { getRouteApi, Link, notFound } from "@tanstack/react-router";
 import { isoDateInstant } from "@/lib/i18n/date-only";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
+import { cssVars } from "../../lib/css-vars";
 import { postQueryOptions } from "../../queries";
 import { DraftNotice } from "../chrome/draft-notice";
 import { ArticleBody } from "../journal/article-body";
-import { ArrowLink } from "../primitives/arrow-link";
-import { Display } from "../primitives/display";
-import { Eyebrow } from "../primitives/eyebrow";
-import { TagList } from "../primitives/tag";
+import { TextLink } from "../primitives/links";
 
 const route = getRouteApi("/_site/journal/$slug");
 
-/** /journal/$slug: an article (`?preview=1` shows a draft to someone who may read it). */
+/** /journal/$slug: an article in the reading type (`?preview=1` shows a draft to someone who may read it). */
 export function ArticlePage() {
 	const { slug } = route.useParams();
 	const { preview } = route.useLoaderDeps();
@@ -26,42 +24,58 @@ export function ArticlePage() {
 	return (
 		<article aria-labelledby="article-title" lang={post.lang}>
 			{draft ? <DraftNotice /> : null}
-			{/* Reading progress, driven by the page's scroll position (CSS only). */}
-			<div aria-hidden className="pf-progress fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-pf-accent" />
+			{/* Reading progress: a line of ink across the top, driven by the page's scroll (CSS only). */}
+			<div aria-hidden className="hm-progress fixed inset-x-0 top-0 z-50 h-1 origin-left bg-hm-ink" />
 
-			<header className="pf-container pf-grid gap-y-8 pt-[clamp(3rem,8vw,7rem)] pb-[clamp(3rem,6vw,5rem)]">
-				<div className="col-span-4 md:col-span-12">
-					<ArrowLink to="/journal" direction="left" className="pf-label font-normal text-pf-ink-2">
-						{m.portfolio_journal_all()}
-					</ArrowLink>
+			<header className="hm-container hm-grid gap-y-8 pt-[clamp(2.5rem,6vw,5rem)] pb-[clamp(2.5rem,5vw,4rem)]">
+				<div className="col-span-4 flex flex-col gap-6 md:col-span-8">
+					<h1 id="article-title" className="hm-display hm-reveal text-hm-head">
+						{post.title}
+					</h1>
+					<p className="hm-reveal text-hm-lead" style={cssVars({ "--hm-i": 1 })}>
+						{post.excerpt}
+					</p>
 				</div>
-				<Eyebrow className="col-span-4 md:col-span-12">
-					<time dateTime={post.publishedAt}>{published}</time>
-					{" / "}
-					{m.portfolio_journal_reading_time({ minutes: formatNumber(post.readingMinutes) })}
-				</Eyebrow>
-				<Display as="h1" id="article-title" size="h1" className="col-span-4 md:col-span-10">
-					{post.title}
-				</Display>
-				<p className="col-span-4 text-pf-lead text-pf-ink-2 md:col-span-7">{post.excerpt}</p>
-				<TagList items={post.tags} label={m.portfolio_journal_tags()} className="col-span-4 md:col-span-12" />
+				{/* The article's facts beside its title, where the first screen would otherwise stand empty. */}
+				<dl
+					className="hm-reveal col-span-4 flex flex-col gap-4 text-hm-body md:col-span-3 md:col-start-10 md:pt-3"
+					style={cssVars({ "--hm-i": 2 })}
+				>
+					<div>
+						<dt className="hm-meta">{m.portfolio_journal_published()}</dt>
+						<dd>
+							<time dateTime={post.publishedAt}>{published}</time>
+						</dd>
+					</div>
+					<div>
+						<dt className="hm-meta">{m.portfolio_journal_length()}</dt>
+						<dd>{m.portfolio_journal_reading_time({ minutes: formatNumber(post.readingMinutes) })}</dd>
+					</div>
+					{post.tags.length > 0 ? (
+						<div>
+							<dt className="hm-meta">{m.portfolio_journal_tags()}</dt>
+							<dd>{post.tags.join(", ")}</dd>
+						</div>
+					) : null}
+				</dl>
 			</header>
 
-			<div className="pf-container pf-grid border-pf-line border-t pt-[clamp(3rem,6vw,5rem)] pb-[clamp(5rem,10vw,9rem)]">
-				<div className="col-span-4 md:col-span-8 md:col-start-3 lg:col-span-7 lg:col-start-4">
-					<ArticleBody html={post.body} />
-				</div>
+			<div className="hm-container pb-[clamp(5rem,10vw,9rem)]">
+				<ArticleBody html={post.body} className="hm-reveal-each" />
+				<p className="mt-[clamp(3rem,6vw,5rem)] text-hm-lead">
+					<TextLink to="/journal">{m.portfolio_journal_all()}</TextLink>
+				</p>
 			</div>
 
-			<nav aria-label={m.portfolio_journal_next()} className="pf-inverse">
+			<nav aria-label={m.portfolio_journal_next()} className="hm-field-ridge">
 				<Link
 					to="/journal/$slug"
 					params={{ slug: next.slug }}
-					className="pf-focus group/next block py-[clamp(4rem,8vw,7rem)]"
+					className="hm-focus group block py-[clamp(4rem,8vw,7rem)]"
 				>
-					<div className="pf-container">
-						<Eyebrow>{m.portfolio_journal_next()}</Eyebrow>
-						<p className="pf-display mt-6 text-pf-h1 transition-colors duration-(--pf-dur-2) group-hover/next:text-pf-accent">
+					<div className="hm-container flex flex-col gap-4">
+						<p className="text-hm-lead text-hm-muted">{m.portfolio_journal_next()}</p>
+						<p className="hm-display text-hm-head decoration-[0.05em] decoration-hm-accent underline-offset-[0.12em] group-hover:underline">
 							{next.title}
 						</p>
 					</div>

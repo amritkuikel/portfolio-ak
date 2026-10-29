@@ -1,22 +1,29 @@
 import { m } from "@/paraglide/messages";
-import { ArrowLink } from "../primitives/arrow-link";
-import { Display } from "../primitives/display";
-import { Eyebrow } from "../primitives/eyebrow";
+import { ArchivalFigure } from "../primitives/archival-picture";
+import { ButtonLink, TextLink } from "../primitives/links";
 
-/** The portfolio's 404: a missing project or article, in the site's own voice and chrome. */
+/** The portfolio's 404, off the map: a missing project or article, in the site's own voice and chrome. */
 export function PortfolioNotFound() {
 	return (
-		<section aria-labelledby="not-found-title" className="pf-section" data-testid="portfolio-not-found">
-			<div className="pf-container pf-grid gap-y-8">
-				<Eyebrow className="col-span-4 md:col-span-12">404</Eyebrow>
-				<Display as="h1" id="not-found-title" size="h1" className="col-span-4 md:col-span-9">
-					{m.portfolio_not_found_title()}
-				</Display>
-				<p className="col-span-4 text-pf-lead text-pf-ink-2 md:col-span-6">{m.portfolio_not_found_body()}</p>
-				<div className="col-span-4 flex flex-wrap gap-x-10 gap-y-4 md:col-span-12">
-					<ArrowLink to="/work">{m.portfolio_nav_work()}</ArrowLink>
-					<ArrowLink to="/">{m.portfolio_not_found_cta()}</ArrowLink>
+		<section aria-labelledby="not-found-title" className="hm-section" data-testid="portfolio-not-found">
+			<div className="hm-container hm-grid items-center gap-y-12">
+				<div className="col-span-4 flex flex-col gap-6 md:col-span-6">
+					<h1 id="not-found-title" className="hm-display text-hm-title">
+						{m.portfolio_not_found_title()}
+					</h1>
+					<p className="hm-measure text-hm-lead">{m.portfolio_not_found_body()}</p>
+					<p className="flex flex-wrap items-center gap-x-7 gap-y-4 pt-2">
+						<ButtonLink to="/">{m.portfolio_not_found_cta()}</ButtonLink>
+						<TextLink to="/work">{m.portfolio_nav_work()}</TextLink>
+					</p>
 				</div>
+				<ArchivalFigure
+					picture="valleyMap"
+					aspect="1 / 1"
+					position="100% 50%"
+					sizes="(min-width: 48rem) 40vw, 100vw"
+					className="col-span-4 md:col-span-5 md:col-start-8"
+				/>
 			</div>
 		</section>
 	);

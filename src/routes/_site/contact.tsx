@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { authFeaturesQueryOptions } from "@/features/auth/queries";
 import { ContactPage } from "@/features/portfolio/components/pages/contact-page";
+import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { profileQueryOptions } from "@/features/portfolio/queries";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { ensureQuery } from "@/lib/query";
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_site/contact")({
 	head: () =>
 		seo({
 			title: m.portfolio_contact_title(),
+			image: himalOgImage(m.portfolio_contact_title()),
 			description: m.portfolio_contact_description(),
 			path: "/contact",
 		}),

@@ -3,7 +3,7 @@ import { expect } from "storybook/test";
 import { demo, withPortfolioCanvas } from "../story-helpers";
 import { WorkRow } from "../work/work-row";
 import { ArticleBody } from "./article-body";
-import { PostRow } from "./post-row";
+import { PostLine } from "./post-line";
 
 /** Lists and the article body. */
 const meta = {
@@ -16,9 +16,9 @@ type Story = StoryObj<typeof meta>;
 
 export const JournalList: Story = {
 	render: () => (
-		<ul className="pf-container py-12">
+		<ul className="hm-container py-12">
 			{demo().posts.map((post) => (
-				<PostRow key={post.slug} post={post} headingLevel="h2" />
+				<PostLine key={post.slug} post={post} headingLevel="h2" withExcerpt />
 			))}
 		</ul>
 	),
@@ -32,7 +32,7 @@ export const Article: Story = {
 		const post = demo().posts.find((each) => each.slug === "designing-for-two-scripts");
 		if (!post) throw new Error("demo post missing");
 		return (
-			<div className="pf-container py-12">
+			<div className="hm-container py-12">
 				<ArticleBody html={post.body} />
 			</div>
 		);
@@ -42,7 +42,7 @@ export const Article: Story = {
 export const WorkIndex: Story = {
 	parameters: { app: { route: "/work" } },
 	render: () => (
-		<ul className="pf-container py-12">
+		<ul className="hm-container py-12">
 			{demo().summaries.map((project) => (
 				<WorkRow key={project.slug} project={project} />
 			))}

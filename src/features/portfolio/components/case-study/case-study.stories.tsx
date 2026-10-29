@@ -24,7 +24,7 @@ const ledgerline = () => {
 };
 
 export const Hero: Story = {
-	render: () => <CaseStudyHero project={ledgerline()} index={1} total={7} />,
+	render: () => <CaseStudyHero project={ledgerline()} />,
 	play: async ({ canvas }) => {
 		await expect(canvas.getByRole("heading", { level: 1, name: "Ledgerline" })).toBeVisible();
 	},
@@ -32,7 +32,7 @@ export const Hero: Story = {
 
 export const Facts: Story = {
 	render: () => (
-		<div className="pf-container max-w-sm py-12">
+		<div className="hm-container max-w-sm py-12">
 			<FactSheet project={ledgerline()} />
 		</div>
 	),
@@ -41,12 +41,12 @@ export const Facts: Story = {
 	},
 };
 
-/** Every block kind: chapters, architecture diagram, code, quote, gallery. */
+/** Every block kind: chapters, the architecture strata, code, quote, screens (plates where no screenshot is uploaded). */
 export const Story_: Story = {
 	name: "Story blocks",
 	render: () => (
-		<div className="pf-container py-12">
-			<CaseStudyBody blocks={ledgerline().body} seed="ledgerline" />
+		<div className="hm-container py-12">
+			<CaseStudyBody blocks={ledgerline().body} gallery={[]} cover={ledgerline().cover} />
 		</div>
 	),
 	play: async ({ canvas }) => {

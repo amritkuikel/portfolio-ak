@@ -1,13 +1,18 @@
 import { cn } from "../../lib/cn";
 
-/** A quotation set large, hung from a crimson thread. */
+/** A quotation set at statement size, its opening mark hung in the margin, muted. */
 export function PullQuote({ text, cite, className }: { text: string; cite?: string | undefined; className?: string }) {
 	return (
-		<figure className={cn("border-pf-crimson border-l-4 pl-6 md:pl-10", className)}>
-			<blockquote className="pf-quote text-[clamp(1.5rem,1rem+1.8vw,2.75rem)] leading-[1.2]">
-				<p>{text}</p>
+		<figure className={cn("ps-[0.6em] md:ps-0", className)}>
+			<blockquote className="hm-statement text-hm-lead">
+				<p className="-indent-[0.45em]">
+					<span aria-hidden className="font-bold text-hm-muted">
+						“
+					</span>
+					{text}
+				</p>
 			</blockquote>
-			{cite ? <figcaption className="pf-label mt-5 text-pf-stone">{cite}</figcaption> : null}
+			{cite ? <figcaption className="mt-4 text-hm-muted">{cite}</figcaption> : null}
 		</figure>
 	);
 }

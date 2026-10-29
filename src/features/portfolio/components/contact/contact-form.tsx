@@ -13,8 +13,8 @@ const FIELDS = ["name", "email", "message"] as const;
 type Field = (typeof FIELDS)[number];
 
 const control =
-	"pf-focus w-full border-2 border-pf-line bg-transparent px-4 py-3 text-pf-body transition-colors " +
-	"hover:border-pf-ink focus-visible:border-pf-ink aria-invalid:border-pf-accent";
+	"hm-focus w-full border-transparent border-b-2 bg-hm-ground-2 px-4 py-3 text-hm-body transition-colors " +
+	"hover:border-hm-muted focus-visible:border-hm-ink aria-invalid:border-hm-accent";
 
 const text = (form: FormData, name: string) => {
 	const value = form.get(name);
@@ -63,11 +63,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string | n
 	};
 
 	if (send.isSuccess) {
-		return (
-			<output className="block border-pf-jade border-l-4 bg-pf-paper-2 px-5 py-4 text-pf-lead">
-				{m.portfolio_contact_form_sent()}
-			</output>
-		);
+		return <output className="block bg-hm-ground-2 px-5 py-4 text-hm-lead">{m.portfolio_contact_form_sent()}</output>;
 	}
 
 	const field = (
@@ -79,7 +75,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string | n
 		const errorId = `${id}-${name}-error`;
 		return (
 			<div className="flex flex-col gap-2">
-				<label htmlFor={`${id}-${name}`} className="pf-label">
+				<label htmlFor={`${id}-${name}`} className="font-semibold">
 					{label}
 				</label>
 				{input({
@@ -87,7 +83,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string | n
 					...(error ? { "aria-invalid": true as const, "aria-describedby": errorId } : {}),
 				})}
 				{error ? (
-					<p id={errorId} className="text-pf-small text-pf-accent">
+					<p id={errorId} className="font-medium text-hm-accent text-hm-small">
 						{error}
 					</p>
 				) : null}
@@ -97,11 +93,11 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string | n
 
 	return (
 		<form method="post" noValidate onSubmit={onSubmit} className="flex flex-col gap-6" aria-labelledby={`${id}-title`}>
-			<h2 id={`${id}-title`} className="pf-display text-pf-h3">
+			<h2 id={`${id}-title`} className="hm-display text-hm-lead">
 				{m.portfolio_contact_form_heading()}
 			</h2>
 			{formError ? (
-				<p role="alert" className="border-pf-accent border-l-4 px-4 py-3 text-pf-body">
+				<p role="alert" className="bg-hm-ground-2 px-4 py-3 font-medium text-hm-accent text-hm-body">
 					{formError}
 				</p>
 			) : null}
@@ -122,11 +118,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string | n
 			))}
 			<Honeypot />
 			{captcha.element}
-			<button
-				type="submit"
-				disabled={send.isPending}
-				className="pf-focus pf-label self-start bg-pf-ink px-6 py-3 text-pf-paper transition-colors hover:bg-pf-accent disabled:opacity-70"
-			>
+			<button type="submit" disabled={send.isPending} className="hm-button self-start disabled:opacity-70">
 				{send.isPending ? m.portfolio_contact_form_sending() : m.portfolio_contact_form_send()}
 			</button>
 		</form>

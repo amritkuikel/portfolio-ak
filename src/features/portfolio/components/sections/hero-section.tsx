@@ -1,54 +1,59 @@
+import { useMinuteClock } from "@/hooks/use-minute-clock";
 import { m } from "@/paraglide/messages";
-import { cssVars } from "../../lib/css-vars";
+import { skyAt } from "../../lib/daylight";
 import type { Profile } from "../../types";
-import { AvailabilityBadge } from "../chrome/availability-badge";
-import { ArrowAnchor, ArrowLink } from "../primitives/arrow-link";
-import { Weave } from "../primitives/weave";
+import { HeroRange } from "../art/hero-range";
+import { AvailabilityNote } from "../chrome/availability";
+import { HomeTime } from "../chrome/home-time";
+import { FittedName } from "../primitives/fitted-name";
+import { ButtonLink, TextAnchor, TextLink } from "../primitives/links";
 
-type HeroProfile = Pick<Profile, "headline" | "intro" | "role" | "location" | "timezone" | "availability">;
+type HeroProfile = Pick<
+	Profile,
+	"name" | "initials" | "role" | "location" | "availability" | "resume" | "generatedAt" | "lang"
+>;
 
 /**
- * Chapter zero: who, what and where. The headline rises line by line while a
- * length of Dhaka cloth weaves itself beside it, row by row (CSS only, once).
- * The values are static, so the server and the browser render the same thing.
+ * The first screen: the range under Kathmandu's sky at this hour, then the
+ * owner's name set as a monument, one sentence saying who and where, the
+ * availability, the live time, and the one action. The sky and the time are
+ * drawn for the moment the server read the page and follow the clock after
+ * hydration (decision 0182).
  */
 export function HeroSection({ profile }: { profile: HeroProfile }) {
+	const now = useMinuteClock(Date.parse(profile.generatedAt));
 	return (
-		<section aria-labelledby="hero-title" className="relative overflow-clip">
-			<div className="pf-container pt-[clamp(2rem,6vw,5rem)] pb-[clamp(4rem,8vw,7rem)]">
-				<div className="pf-grid gap-y-[clamp(2rem,5vw,4rem)]">
-					<div className="col-span-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-pf-ink-2 md:col-span-12">
-						<AvailabilityBadge status={profile.availability.status} />
-						<p className="pf-label">{profile.role}</p>
-						<p className="pf-label font-normal">{profile.location}</p>
-						<p className="pf-label font-normal text-pf-stone">{profile.timezone}</p>
+		<section aria-labelledby="hero-title" className="relative">
+			{/*
+			 * The range takes what the first screen leaves after the header, the fitted
+			 * name (about 13vw tall) and the text under it, up to 56% of the screen, so
+			 * "Get in touch" stays on the first screen of a laptop.
+			 */}
+			<HeroRange
+				seed={profile.initials}
+				sky={skyAt(now)}
+				className="h-[clamp(12rem,34svh,20rem)] md:h-[clamp(17rem,min(56svh,calc(100svh_-_18rem_-_13vw)),40rem)]"
+			/>
+			<div className="hm-container pt-[clamp(1.25rem,2.5vw,2.25rem)] pb-[clamp(3rem,6vw,5rem)]" lang={profile.lang}>
+				<div className="@container">
+					<FittedName as="h1" id="hero-title" name={profile.name} animate />
+				</div>
+				<div className="hm-grid mt-[clamp(1.25rem,2.5vw,2rem)] items-end gap-y-8">
+					<div className="col-span-4 flex flex-col gap-3 md:col-span-7">
+						<p className="font-medium text-hm-lead">
+							{m.portfolio_hero_sentence({ role: profile.role, place: profile.location })}
+						</p>
+						<AvailabilityNote availability={profile.availability} className="text-hm-body" />
+						<HomeTime generatedAt={profile.generatedAt} location={profile.location} className="text-hm-muted" />
 					</div>
-
-					<h1 id="hero-title" className="pf-display col-span-4 text-pf-hero md:col-span-12 lg:col-span-9">
-						{profile.headline.map((line, position) => (
-							<span key={line} className="pf-line" style={cssVars({ "--i": position })}>
-								<span>{line}</span>
-							</span>
-						))}
-					</h1>
-
-					{/* On phones a band under the headline; from large screens a hanging length beside it. */}
-					<div className="col-span-4 h-24 sm:h-32 md:col-span-12 lg:col-span-3 lg:col-start-10 lg:row-span-2 lg:row-start-2 lg:h-auto lg:min-h-[28rem]">
-						<Weave seed="hero" columns={31} rows={72} animate />
-					</div>
-
-					<div className="col-span-4 md:col-span-7 lg:col-span-5">
-						<p className="text-pf-lead text-pf-ink-2">{profile.intro}</p>
-						<div className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
-							<ArrowLink to="/work">{m.portfolio_hero_cta_work()}</ArrowLink>
-							<ArrowLink to="/contact">{m.portfolio_hero_cta_contact()}</ArrowLink>
-						</div>
-					</div>
-
-					<div className="col-span-4 md:col-span-4 md:col-start-9 md:self-end lg:col-span-3 lg:col-start-7">
-						<ArrowAnchor href="#manifesto" direction="down" className="pf-label text-pf-stone">
-							{m.portfolio_hero_scroll()}
-						</ArrowAnchor>
+					<div className="col-span-4 flex flex-wrap items-center gap-x-7 gap-y-4 md:col-span-5 md:justify-end">
+						<ButtonLink to="/contact">{m.portfolio_hero_contact()}</ButtonLink>
+						{profile.resume ? (
+							<TextAnchor href={profile.resume} type="application/pdf">
+								{m.portfolio_hero_resume()}
+							</TextAnchor>
+						) : null}
+						<TextLink to="/work">{m.portfolio_hero_cta_work()}</TextLink>
 					</div>
 				</div>
 			</div>

@@ -2,7 +2,7 @@
 
 Graphite is the look of everything except the portfolio: the admin area, the sign-in pages, the account page, `/dev` and, later, the apps. It is Linear-style: dense, neutral, one accent colour, keyboard first.
 
-The portfolio at `/` has its own scoped system (`src/styles/portfolio.css`, [portfolio.md](portfolio.md)). <!-- @portfolio -->
+The portfolio at `/` has its own scoped system, "Himal" (`src/styles/himal.css`, [portfolio.md](portfolio.md)). <!-- @portfolio -->
 
 Decisions: 0164 (tokens and presets), 0165 (the command palette), 0166 (the dashboard), 0168–0172 (the component kit).
 
