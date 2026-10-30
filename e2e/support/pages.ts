@@ -18,7 +18,8 @@ export type ReviewedPage = {
 		| { from: "test-crud-id" }
 		| { from: "seeded-slug" }
 		| { from: "portfolio-project-id" } // @portfolio
-		| { from: "portfolio-post-id" }; // @portfolio
+		| { from: "portfolio-post-id" } // @portfolio
+		| { from: "kanban-board-id" }; // @apps
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -82,6 +83,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/register" },
 	{ route: "/forgot-password" },
 	{ route: "/sign-in-code" },
+	// A guest is sent here from account pages; a visitor sees the same offer.
+	{ route: "/upgrade" },
 	// Account and admin
 	{ route: "/account", as: "member" },
 	// Without the emailed token it only explains where the link comes from (nothing is deleted).
@@ -115,6 +118,14 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	// The demo editor writes the portfolio but doesn't read the inbox.
 	{ route: "/admin/portfolio/messages", as: "editor", status: 403, label: "forbidden" },
 	// portfolio:end
+	// apps:start
+	// The showcase apps (decision 0187): landings for visitors, the app for a user.
+	{ route: "/apps" },
+	{ route: "/apps/kanban" },
+	{ route: "/apps/kanban", as: "member", label: "boards" },
+	{ route: "/apps/kanban/$boardId", as: "member", params: { from: "kanban-board-id" } },
+	{ route: "/admin/apps", as: "admin" },
+	// apps:end
 	// @new-feature:reviewed-pages
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },

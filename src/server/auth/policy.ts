@@ -35,10 +35,34 @@ export const OWNER_ONLY_PATHS = [
 	"/two-factor/",
 ] as const;
 
-export const isOwnerOnlyPath = (path: string) =>
-	OWNER_ONLY_PATHS.some((entry) =>
+const matches = (entries: ReadonlyArray<string>, path: string) =>
+	entries.some((entry) =>
 		entry.endsWith("/") ? path.startsWith(entry) : path === entry || path.startsWith(`${entry}/`),
 	);
+
+export const isOwnerOnlyPath = (path: string) => matches(OWNER_ONLY_PATHS, path);
+
+/**
+ * Better Auth endpoints a guest session can't call (decision 0185): changing the
+ * email, name or password, two-factor, linked accounts, other sessions, deletion.
+ * A guest has no real address and nothing to secure; they sign up to get an account.
+ * Two-factor's sign-in steps (`/two-factor/verify-*`, `/two-factor/send-otp`) stay
+ * open: they run on the two-factor cookie of someone signing in, never on a guest's
+ * session, and a guest upgrading by signing in to an account with two-factor needs them.
+ */
+export const GUEST_REFUSED_PATHS = [
+	...OWNER_ONLY_PATHS.filter((entry) => entry !== "/two-factor/"),
+	"/two-factor/enable",
+	"/two-factor/disable",
+	"/two-factor/get-totp-uri",
+	"/two-factor/generate-backup-codes",
+	"/send-verification-email",
+] as const;
+
+export const isGuestRefusedPath = (path: string) => matches(GUEST_REFUSED_PATHS, path);
+
+/** Guests are created only here: Better Auth's anonymous plugin (decision 0185). */
+export const GUEST_SIGN_IN_PATH = "/sign-in/anonymous";
 
 /**
  * Whether this user must turn on two-factor authentication before using what their

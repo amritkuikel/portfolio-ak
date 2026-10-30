@@ -46,6 +46,11 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 		return page.route.replace("$id", await harness.portfolioId("post", "server-render-everything"));
 	}
 	// portfolio:end
+	// apps:start
+	if (page.params.from === "kanban-board-id") {
+		return page.route.replace("$boardId", await harness.kanbanBoardId(page.as ?? "member"));
+	}
+	// apps:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

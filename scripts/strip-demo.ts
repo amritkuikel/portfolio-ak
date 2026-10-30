@@ -82,12 +82,29 @@ const SPECS: Record<Layer, LayerSpec> = {
 		schema: ["src/server/db/schema/portfolio.ts"],
 	},
 	apps: {
-		sentinel: "src/routes/apps",
-		paths: [],
+		// The showcase apps (Task 41, decisions 0187–0189). Guest sessions stay: they are core
+		// (Better Auth's anonymous plugin, the claim, the daily cleanup; 0185, 0186).
+		sentinel: "src/routes/_apps.tsx",
+		paths: [
+			"src/routes/_apps.tsx",
+			"src/routes/_apps",
+			"src/routes/_admin/admin/apps.tsx",
+			"src/features/apps",
+			"src/functions/apps",
+			"src/server/apps",
+			"src/middleware/apps.ts",
+			"src/lib/fractional-index.ts",
+			"tests/unit/fractional-index.test.ts",
+			"tests/unit/kanban-moves.test.ts",
+			"tests/server/apps-kanban.test.ts",
+			"tests/components/apps",
+			"e2e/flows/apps.spec.ts",
+			"docs/guides/apps.md",
+		],
 		packageScripts: [],
 		crons: [],
 		knipEntries: [],
-		schema: [],
+		schema: ["src/server/db/schema/apps/kanban.ts"],
 	},
 };
 

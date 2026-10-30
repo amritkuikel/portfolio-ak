@@ -1,8 +1,6 @@
-import type { DbClient } from "@tanstack/react-db";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
-import { routerWithDbClient } from "@tanstack/react-router-with-db";
 import { getGlobalStartContext } from "@tanstack/react-start";
 import { ErrorPage } from "./components/errors/error-page";
 import { NotFoundPage } from "./components/errors/not-found-page";
@@ -13,15 +11,12 @@ import { createQueryClient } from "./lib/query";
 import type { Session } from "./lib/session";
 import { readPreferences } from "./lib/start/read-preferences";
 import { createPreferencesStore, type PreferencesStore } from "./lib/stores/preferences";
-import { createDbClient } from "./lib/tanstack-db";
 import { deLocalizeUrl, localizeUrl } from "./paraglide/runtime";
 import { routeTree } from "./routeTree.gen";
 
 /** Available to every route's beforeLoad/loader via `context`. */
 export type RouterContext = {
 	queryClient: QueryClient;
-	/** TanStack DB client: live collections on top of queryClient (src/lib/tanstack-db.ts). */
-	dbClient: DbClient;
 	/** UI preferences (theme, sidebar, tables), seeded from cookies (src/lib/stores). */
 	preferences: PreferencesStore;
 	/** Filled by the root route's beforeLoad once auth exists (Phase 6). */
@@ -30,15 +25,14 @@ export type RouterContext = {
 
 export function getRouter() {
 	// getRouter runs once per request on the server, so each request gets its own
-	// cache, DB client and preferences store. Never make these module-level: a
+	// cache and preferences store. Never make these module-level: a
 	// shared server instance would leak one visitor's data into another's render.
 	const queryClient = createQueryClient();
-	const dbClient = createDbClient(queryClient);
 	const preferences = createPreferencesStore(readPreferences());
 
 	const router = createTanStackRouter({
 		routeTree,
-		context: { queryClient, dbClient, preferences, session: null } satisfies RouterContext,
+		context: { queryClient, preferences, session: null } satisfies RouterContext,
 		// Per-request CSP nonce (security-headers middleware) for Start's inline scripts
 		// and ScriptOnce. Only meaningful during SSR; undefined in the browser.
 		ssr: { nonce: typeof window === "undefined" ? getGlobalStartContext()?.nonce : undefined },
@@ -72,10 +66,9 @@ export function getRouter() {
 	// Navigation performance traces in the browser (only when Sentry is on).
 	if (!router.isServer) traceNavigation(router);
 
-	// Official TanStack DB integration, applied after the Query one because it
-	// wraps the existing dehydrate/hydrate/Wrap: adds <DbProvider>, streams live
-	// query results rendered during SSR and hydrates them in the browser.
-	return routerWithDbClient(router, dbClient);
+	// TanStack DB isn't wired here (decision 0189): the pages that use it mount <DbScope>
+	// (src/components/layout/db-scope.tsx), so its runtime stays out of every other page.
+	return router;
 }
 
 declare module "@tanstack/react-router" {

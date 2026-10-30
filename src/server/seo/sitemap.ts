@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { APPS, appPath } from "@/features/apps/registry"; // @apps
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, locales } from "@/paraglide/runtime";
 import { listSitemap } from "@/server/portfolio/public"; // @portfolio
@@ -35,6 +36,8 @@ export async function sitemapEntries({ db }: Pick<Services, "db">): Promise<Site
 		{ path: "/contact" },
 	);
 	// portfolio:end
+	// The showcase apps' gallery and landings (decision 0187); what's inside an app is private.
+	entries.push({ path: "/apps" }, ...APPS.map((app) => ({ path: appPath(app.slug) }))); // @apps
 	for (const source of SITEMAP_SOURCES) entries.push(...(await source({ db })));
 	return entries;
 }

@@ -8,11 +8,13 @@
  * - attachments.ts: files stored in Cloudinary, linked to entities.
  * - audit.ts: the audit log of admin actions.
  * - portfolio.ts: the portfolio at `/` and its contact messages (the `portfolio` layer).
+ * - apps/<app>.ts: the showcase apps' tables, each row owned by a user (the `apps` layer).
  * - columns.ts: column helpers (localized text), no tables.
  *
  * `pnpm new:feature` adds its table's file above the marker line.
  */
 
+export * from "./apps/kanban"; // @apps
 export * from "./attachments";
 export * from "./audit";
 export * from "./auth";

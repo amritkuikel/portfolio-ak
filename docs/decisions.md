@@ -189,6 +189,11 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0182](#0182-kathmandu-at-this-hour-the-sky-from-the-suns-real-position-hydrated-from-the-servers-read-time): "Kathmandu at this hour": the sky from the sun's real position, hydrated from the server's read time
 - [0183](#0183-archival-pictures-public-domain-credited-printed-in-the-pages-two-inks): Archival pictures: public domain, credited, printed in the page's two inks
 - [0184](#0184-eczar-for-display-in-both-scripts-preloaded-with-measured-fallbacks-per-weight): Eczar for display in both scripts, preloaded, with measured fallbacks per weight
+- [0185](#0185-guest-sessions-better-auths-anonymous-plugin-no-permissions-refused-everywhere-an-account-is-needed): Guest sessions: Better Auth's anonymous plugin, no permissions, refused everywhere an account is needed
+- [0186](#0186-guest-data-sample-rows-on-start-moved-to-the-account-on-sign-up-or-sign-in-deleted-after-7-days): Guest data: sample rows on start, moved to the account on sign-up or sign-in, deleted after 7 days
+- [0187](#0187-the-showcase-apps-a-registry-in-two-halves-an-_apps-frame-every-row-owned): The showcase apps: a registry in two halves, an `_apps` frame, every row owned
+- [0188](#0188-kanban-fractional-positions-moves-by-pointer-or-keyboard-optimistic-in-tanstack-db): Kanban: fractional positions, moves by pointer or keyboard, optimistic in TanStack DB
+- [0189](#0189-tanstack-db-loads-only-with-the-pages-that-use-it): TanStack DB loads only with the pages that use it
 </details>
 
 ---
@@ -645,6 +650,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0045: Rate limits keyed by a trusted client IP
 
+*Extended by 0185: guest sign-in (`/sign-in/anonymous`) allows 5 per hour per IP.*
+
 - **What:**
   - Rate limiting is on in every environment, stored in the database, and has stricter rules for sign-in, sign-up, OTP, reset, verification and account changes.
   - The `/api/auth` route rewrites the request with `x-client-ip` taken from a trusted source (Vercel's edge headers on Vercel, otherwise the socket address), and Better Auth reads only that header.
@@ -888,6 +895,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - A server function to set cookies: an extra round trip for a purely cosmetic change.
 
 ## 0066: TanStack DB uses the official router integration and has its own chunk
+
+*Superseded by 0189: TanStack DB loads only with the pages that use it (`DbScope`).*
 
 - **What:**
   - `getRouter()` creates a `DbClient` with the request's `QueryClient` as a dependency (`src/lib/tanstack-db.ts`, `queryClientOf`). It wraps the router with `routerWithDbClient` from `@tanstack/react-router-with-db` 0.1.0, after `setupRouterSsrQueryIntegration`, because it chains the existing `dehydrate`, `hydrate` and `Wrap`.
@@ -1544,6 +1553,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0112: Better Auth's admin endpoints are disabled over HTTP
 
+*Extended by 0185: the anonymous plugin's `/delete-anonymous-user` is off too.*
+
 - **What:** every `/api/auth/admin/*` path of the admin plugin is in `disabledPaths` (`src/server/auth/disabled-paths.ts`); Better Auth answers 404. A test compares the list with the plugin's endpoints, so an upgrade that adds one fails until it is listed.
 - **Why:** the plugin let any `role: "admin"` user call set-role, ban-user, remove-user, impersonate-user and set-user-password directly, skipping `src/server/rbac/service.ts` (an admin could demote the last admin, or themselves). The UI never used them; roles and bans go through `src/functions/rbac.ts`. The plugin stays for its `role`/`banned` fields and sign-in checks; `disabledPaths` only affects the HTTP router, so server code (and `db:seed-admin`'s CLI) can still call `auth.api.*`.
 - **Alternatives considered:** removing the admin plugin (loses the banned-user sign-in refusal and the `role` field the schema relies on); re-implementing the service rules inside Better Auth hooks (two places for one set of rules).
@@ -1700,6 +1711,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0129: Account deletion always takes an emailed link; the export is a JSON download
 
+*Extended by 0186: guests are deleted by a daily cleanup, with their uploads.*
+
 - **What:** Better Auth's `deleteUser` with `sendDeleteAccountVerification`. "Email me a deletion link" on the account page sends a `delete-account` email whose link opens `/account/delete?token=…` (signed-in only), where one more click sends the token back (`authClient.deleteUser({ token })`). `beforeDelete` runs `prepareAccountDeletion` (`src/server/account/service.ts`): it refuses the last active admin (`LAST_ADMIN`, the same lock as the RBAC rules) and marks the user's unsaved uploads removed so the cleanup job deletes them from Cloudinary. Sessions, sign-in methods, two-factor rows and role assignments go with the user row (foreign keys cascade); records they created stay, with no author. `afterDelete` sends an `account-deleted` email. `GET /api/account/export` returns the user's data as a JSON download (profile, sign-in methods, sessions, roles, uploads, items they created; never password hashes, tokens or 2FA secrets).
 - **Choices:**
   - **Email always, password never enough:** a stolen session (or an unlocked laptop) can't delete the account. The link opens our page, not Better Auth's GET callback, so a mail scanner opening it deletes nothing.
@@ -1723,7 +1736,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 
 ## 0132: Admin actions are audited in the same transaction as the change
 
-*Its scope is widened by 0173: creates and edits of content are audited too, through `withAudit`.*
+*Its scope is widened by 0173: creates and edits of content are audited too, through `withAudit`. Extended by 0186: showcase-app data is never audited.*
 
 - **What:** an `audit_event` table (migration `0008_audit_log`): actor, the admin behind an impersonated session, action, target type, id and label, a `before`/`after` summary of the changed fields, request id, client IP and time. Services write it with `recordAudit(tx, actor, entry)` (`src/server/audit/record.ts`) inside the transaction that makes the change: role create, rename, delete and permission edits; a user's roles, ban, unban, sign-out-everywhere and invitation; impersonation start and stop; Test CRUD publish, unpublish and delete. `/admin/audit` lists it through the list contract (search by target or request id, actor, action, target type, day range), guarded by a new `audit:read` permission (page and function).
 - **Choices:**
@@ -2251,3 +2264,65 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Nepali display:** no negative tracking (it breaks conjuncts) and leading ≥ 1.2.
   - **Metric overrides:** the Eczar faces are declared in `himal.css` (Fontsource's files, its unicode ranges) with `ascent-override` and `descent-override` of 0.88/0.24 em (Latin) and 1.0/0.36 em (Devanagari). Eczar ships 1.14/0.63 em, and at display sizes the text's hit box reached half an em past the line, so a big mailto link caught clicks on the sentence above it; the taste inspector reported it as covered text.
 - **Why:** one family for both scripts, as 0110 argued, in a face built for display in both. Impeccable flags Fraunces as a default every generated page uses.
+
+## 0185: Guest sessions: Better Auth's anonymous plugin, no permissions, refused everywhere an account is needed
+
+*Extends 0112 (one more endpoint off over HTTP) and 0045 (a stricter rate limit).*
+
+- **What:**
+  - Visitors try the showcase apps without an account: "Try it" calls `signIn.anonymous()` (the `anonymous` plugin, after `twoFactor` in the plugin list). A guest is a user row with `is_anonymous` true, the name "Guest" and a placeholder address (`…@anonymous.placeholder.invalid`); `pnpm auth:schema` added only that column (migration `0012_guests_kanban`).
+  - `Session.isAnonymous` is set by `getServerSession`. `permissionsForUser` returns nothing for a guest, so the baseline `user` role never reaches one and `canEnterAdmin` is false.
+  - **Refused, server side:** `requireUserMiddleware` answers UNAUTHORIZED to a guest, so every account function (sessions, password, two-factor, the dashboard, every `requirePermission`) refuses them; the apps use `requireAppUser` (`src/middleware/apps.ts`), which lets them in. `/api/account/export` answers 401. A Better Auth `hooks.before` (`refuseGuestPaths`) refuses a guest on the account-changing endpoints (`GUEST_REFUSED_PATHS`: the owner-only list of 0134 plus `/send-verification-email`, with two-factor's sign-in steps left open), and refuses `/sign-in/anonymous` to someone already signed in (it would replace their session). `/delete-anonymous-user` is in `disabledPaths`.
+  - **Pages:** `_authed` sends a guest to `/upgrade` (sign up or sign in to keep the data); `_auth` treats a guest as signed out, so `/register` and `/login` open for them.
+  - **Elsewhere:** `sendEmail` refuses any `.invalid` address; `ObservabilitySync` never identifies a guest to PostHog or Sentry; `/admin/users`, the role counts and the dashboard leave guests out (`isAccount`).
+  - **Rate limit:** `/sign-in/anonymous` allows 5 per hour per client IP (each one is a user row). Turnstile isn't wired on it: the button would need a widget on every landing, and the limit plus the weekly cleanup bound the cost.
+- **Why core, not the apps layer:** the plugin's column lives in the Better Auth–generated schema, and the guards sit in the auth middleware and the session type. With the apps stripped nothing starts a guest session; the endpoint stays, rate limited and cleaned up, and removing the plugin is one line (docs/guides/apps.md).
+- **Alternatives considered:** a demo account shared by every visitor (everyone sees everyone's boards); data in localStorage (no server rendering, nothing to keep on sign-up); a guest role with an empty permission set (one role assignment away from holding something).
+
+## 0186: Guest data: sample rows on start, moved to the account on sign-up or sign-in, deleted after 7 days
+
+*Extends 0129 (deletion) and 0132 (what is audited).*
+
+- **What:**
+  - **Start:** an after hook on `/sign-in/anonymous` (`startGuest`) seeds every app's sample rows in the guest's language (`GUEST_DATA`, `src/server/guests/data.ts`, filled from the server apps registry) and sets the `guest_claim` cookie: the guest's id with an HMAC-SHA256 of it under `BETTER_AUTH_SECRET`, httpOnly, SameSite Lax, 7 days.
+  - **Claim:** `claimGuest(db, guestId, userId)` moves every owner's rows and the guest's uploads to the account and deletes the guest, in one transaction; it does nothing unless `guestId` is still a guest and `userId` an account, so it is idempotent. It runs from the plugin's `onLinkAccount` (a sign-up verified in the same browser, any sign-in that sets a session in one step, Google) with `disableDeleteAnonymousUser` (the claim deletes the guest itself, after moving the rows), and from `claimGuestData` (`src/functions/guests.ts`), which reads the cookie. That fallback runs after every sign-in (`useAuthNavigation.afterSignIn`, two-factor included) and on the verify-email landing, because a password sign-in that stops for two-factor deletes the guest's session cookie before the plugin's hook looks, and `/two-factor/verify-totp` isn't one of the paths the hook matches.
+  - Quotas don't apply to a claim: nothing a guest made is lost, though the account may have to delete some before adding more.
+  - **No publishing by guests:** an app's service checks `user.isGuest` before anything public (short links, published forms, shared notes: Tasks 42 and 44), so the owner's domain can't serve a stranger's phishing page.
+  - **Never audited:** app rows are users' own data, not admin actions; 0132's log stays the admin's.
+  - **Cleanup:** `GET /api/cron/guests` (a Nitro route, daily in `vercel.json`, bearer `CRON_SECRET`) deletes guests created more than 7 days ago in batches of 200. Their app rows go by cascade (every app table's `owner_id`); their uploads are marked removed in the same transaction, then deleted from Cloudinary through the attachments service, and what Cloudinary refuses stays queued for the attachments cleanup. The plugin's own delete would skip both, which is why it is off (0185).
+- **Why:** trying an app should cost nothing, and keeping what you made should cost one form. The cookie fallback is what makes the two-factor and verify-later paths keep the data.
+- **Verified:** e2e `apps.spec.ts`: a guest moves a card with the keyboard, signs up, verifies and finds the board; another signs in to an account with two-factor and finds it; a guest can't enter the admin area or change an account. PGlite tests cover the claim, its idempotency and rollback, and the cleanup.
+- **Alternatives considered:** claiming in `databaseHooks.session.create` (it fires for the guest's own session too, and has no cookie to read); a claim token in the verification URL (Better Auth builds that URL; the cookie needs no change to it).
+
+## 0187: The showcase apps: a registry in two halves, an `_apps` frame, every row owned
+
+- **What:**
+  - **Registry:** `src/features/apps/registry.ts` (slug, name, tagline, description, icon, usage labels; it drives `/apps`, the app switcher, the sitemap and `/admin/apps`) and `src/server/apps/registry.ts` (each app's `seedGuestData`, `claim` and `usage`). The plan's single registry would have put server code in the browser's.
+  - **Frame:** the pathless `_apps` layout (`AppsLayout`): the app header (brand, app switcher, a link to the app's case study, language, theme, the user menu or "Log in"), the guest banner, `ConfirmProvider` and `DbScope` (0189). Pages are private unless they say otherwise; `/apps` and each app's landing (`/apps/<slug>`) are indexable and in the sitemap. A landing explains the app with "Try it" for a visitor and becomes the app for anyone with a session.
+  - **Case study link:** a published portfolio project whose "App" field names the app (Task 39's `appSlug`); the case study page links to the live app the same way. The plan's `projectSlug` in the registry would have been a second source of truth.
+  - **Ownership:** every app table has `owner_id text not null references user(id) on delete cascade`; repositories take the owner and add `ownedBy(table, userId)` to every query, so another user's row is "not found", never "forbidden". App functions run `requireAppUser` then `withAppServices` (`context.db` and `context.user: { id, isGuest }`); no permission is involved, and the guard test checks that order for every file in `src/functions/apps/`.
+  - **Admin:** `/admin/apps` (group "Apps", permission `apps:read`): guests alive now, the accounts and guests with data in each app (a stacked bar chart), rows per app. Counts only.
+  - **strip-demo:** the `apps` layer is its routes, features, functions, server code, middleware, the Kanban schema, `src/lib/fractional-index.ts` and their tests, plus marked lines elsewhere (sections, permissions, labels, sitemap, schema index, guard test, e2e pages and harness, the case study's link). Guest sessions stay with the core (0185).
+- **Why:** the apps hold real people's data on a portfolio's domain; scoping by owner in one helper is what lets "user A can't read or move user B's cards" be tested once per repository.
+
+## 0188: Kanban: fractional positions, moves by pointer or keyboard, optimistic in TanStack DB
+
+- **What:**
+  - **Tables:** `kanban_board`, `kanban_column` (board, name, position), `kanban_card` (board, column, title, description, labels `text[]`, `due_on` date, checklist jsonb, position), each with `owner_id` and timestamps.
+  - **Order:** positions are fractional order keys (`src/lib/fractional-index.ts`, rocicorp's algorithm, CC0, unit-tested with 2,000 random inserts), so a move writes one row. Keys compare by code unit: `collate "C"` in SQL, plain `<` in JavaScript (`boardLayout` sorts; a DB `orderBy` would need `stringSort: "lexical"`). The browser computes the key (`moves.ts`, the same code for pointer and keys) and the server checks its form (`isOrderKey`).
+  - **Board:** dnd-kit (0170's pinned packages): cards are sortables grouped by column, columns are sortables that also accept cards (so an empty column takes one), committed on drop. From a handle: Space, arrows, Space (dnd-kit's keyboard sensor), or Alt + arrows at once (a card up or down its column or into the next column, a column left or right). Every move is announced in the page's language. On narrow screens the board scrolls sideways in a focusable, labelled region.
+  - **Writes:** columns and cards are TanStack DB query collections over the board query (`select`), so they start from the server-rendered rows; a change shows at once, the handler saves it, then refetches the board explicitly and returns `{ refetch: false }` (the automatic refetch is deprecated and logs a warning). A refused save rolls the row back, with a toast. Ids are made in the browser, so the optimistic row and the saved one share a key. The board list and board names use Query mutations.
+  - **Quotas:** 20 boards and 500 cards per user, 12 columns per board, checked by the service (CONFLICT, with a localized message).
+  - **Guest seed:** "Getting started": To do, Doing, Done, and five cards that explain the board (labels, a checklist, the keyboard).
+- **Why:** one-row moves keep a drag cheap and never renumber a column; computing the key where the move happens lets the optimistic row and the saved row agree.
+- **Alternatives considered:** integer positions with renumbering (a move writes a column's worth of rows); `@dnd-kit/helpers`' `move()` in `onDragOver` (state changes mid-drag; optimistic sorting already shows the drag); the server computing keys from neighbours (the optimistic position would differ from the saved one).
+
+## 0189: TanStack DB loads only with the pages that use it
+
+*Supersedes 0066.*
+
+- **What:** `routerWithDbClient` and `@tanstack/react-router-with-db` are gone. `dbClientFor(queryClient)` (`src/lib/tanstack-db.ts`) makes one DbClient per QueryClient (so per request on the server), and `<DbScope>` (`src/components/layout/db-scope.tsx`) provides it to the pages below it: the `_apps` layout and `/dev/examples/optimistic`. On the server it turns on DB's cleanup and runs it once the router has finished rendering, as the official integration does.
+- **How the first paint is server-rendered without DB's stream:** the loader fills the Query cache (`ensureQuery`), the collections read that query (`select`), and the page uses `useLiveSuspenseQuery`. On the server the live query resolves from the cache inside the render (measured: 37 ms, no fetch); in the browser the same rows come from the dehydrated Query cache, and the suspended boundary keeps the server's HTML until they do. Nothing DB-specific is streamed.
+- **Numbers:** every page's JavaScript went from 338.5 kB gzip (237.9 entry + 100.6 DB) to 245.6 kB. The entry line itself grew because TanStack Query's core, which the old `tanstack-db` chunk group had absorbed, is back in it; that group is removed, the entry budget is 250 kB, and `scripts/check-bundle.ts` fails if DB's code is ever preloaded by every page (`NOT_IN_ENTRY`). The Kanban board page adds 157.8 kB on top of the root (DB, dnd-kit, the board).
+- **Found on the way:** the optimistic example's loader imported `OPTIMISTIC_SEARCH` from its collection module, which put DB in every page's JavaScript as soon as the router stopped doing so; the constant moved to `queries.ts`.
+- **Alternatives considered:** keeping the router integration (100.6 kB on every page for two pages that use it); dehydrating DB state into loader data with `HydrationBoundary` (more moving parts for the same first paint).

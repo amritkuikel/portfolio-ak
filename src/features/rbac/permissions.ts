@@ -24,6 +24,10 @@ export const PERMISSION_CATALOG = {
 	/** The media library (/admin/media): write uploads, describes and deletes. */
 	media: ["read", "write"],
 	// portfolio:end
+	// apps:start
+	/** The showcase apps' usage (/admin/apps): who has data, and how much. Never the data itself. */
+	apps: ["read"],
+	// apps:end
 	// @new-feature:permissions
 } as const;
 

@@ -23,14 +23,16 @@ import { m } from "@/paraglide/messages";
  *   consent posthog-js isn't even downloaded);
  * - a pageview per resolved navigation while analytics runs;
  * - real-user Web Vitals (CLS, LCP, INP) once analytics runs (src/lib/observability/web-vitals.ts);
- * - Sentry user (id only) and PostHog identify on login, cleared/reset on logout.
+ * - Sentry user (id only) and PostHog identify on login, cleared/reset on logout;
+ *   never for a guest session.
  */
 export function ObservabilitySync() {
 	const router = useRouter();
 	const consent = usePreferences((preferences) => preferences.analyticsConsent);
 	// Not on pages that skip the session (the portfolio): it would be fetched after hydration.
 	const { data: session } = useQuery({ ...sessionQueryOptions(), enabled: !useSessionSkipped() });
-	const userId = session?.user.id ?? null;
+	// Guests (decision 0185) are never identified: they're anonymous visitors to analytics.
+	const userId = session && !session.isAnonymous ? session.user.id : null;
 	const [running, setRunning] = useState(false);
 
 	useEffect(() => {

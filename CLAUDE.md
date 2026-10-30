@@ -6,9 +6,9 @@ Entry point for working on this repository (people and AI sessions alike). Read 
 
 A bilingual (English + Nepali) portfolio app with a public site and an admin area. Every page renders on the server, works in both locales, and passes strict CSP, accessibility and layout-shift checks. **Test CRUD** is the reference feature to copy.
 
-- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–40 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
+- **Plan and status:** [docs/PLAN.md](docs/PLAN.md). Part 1 (sections 1–6), Part 2 (section 7, Tasks 17–24) and the editorial portfolio (section 8, `/portfolio`) are done. Part 3 (section 9, Tasks 25–33: template hardening) is done. Part 4 (section 10, Tasks 34–45: template v2, i.e. a fast foundation, the portfolio at `/` and the demo at `/dev`, the Graphite design system and admin kit, one CRUD standard, the database-driven portfolio and six showcase apps) is in progress: Tasks 34–41 are done. Each Part 4 task runs in its own session, following section 10.1 ("How to run a Part 4 task"); everything a task needs is written in section 10. Do only the task you're asked to do.
 - **Why things are the way they are:** [docs/decisions.md](docs/decisions.md), numbered with an index. Add an entry for every non-obvious choice.
-- **Where things are:** the portfolio is the site at `/`. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
+- **Where things are:** the portfolio is the site at `/`; the showcase apps are under `/apps` (Kanban so far), open to visitors through guest sessions. The demo and the references live under `/dev` (`pnpm dev` only, 404 in production): the demo home, `/dev/stack`, the public Test CRUD pages and `/dev/examples`, one working page per module, each naming its source file and guide.
 
 ## Guides ([docs/guides/](docs/guides/))
 
@@ -33,6 +33,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 | [deployment.md](docs/guides/deployment.md) | Vercel + Neon, migrations, cron, running a production build |
 | [recipes.md](docs/guides/recipes.md) | Optional features: background jobs, cursor pagination, caching, rate limits, contact form, avatars, CSV/undo/saved views, offline dev, previews, changelog, orgs and billing |
 | [new-project.md](docs/guides/new-project.md) | Starting a project: `pnpm strip-demo` (layers), renaming, first admin, your first feature |
+| [apps.md](docs/guides/apps.md) | The showcase apps at `/apps`: guest sessions and keeping their data, ownership (`owner_id`, `ownedBy`), the registry, adding an app, Kanban <!-- @apps --> |
 | [portfolio.md](docs/guides/portfolio.md) | The portfolio at `/`: content in the database, its admin, the media library, the contact form, seeding, the "Himal" design system (generated mountains, the hour in Kathmandu, archival pictures), motion <!-- @portfolio --> |
 
 ## Stack
@@ -75,8 +76,9 @@ A task is done when `typecheck`, `check`, `knip`, `test`, `test:storybook`, `tes
 ## Where everything lives
 
 ```
-src/routes/            file routes: _site (the portfolio at /), dev (demo and references, dev builds only), _public (health,
-                       verify email, reset password), _auth (sign-in), _authed (account), _admin (admin area), server routes
+src/routes/            file routes: _site (the portfolio at /), _apps (the showcase apps at /apps), dev (demo and references, dev
+                       builds only), _public (health, verify email, reset password), _auth (sign-in, /upgrade), _authed (account),
+                       _admin (admin area), server routes
 src/features/<name>/   one feature, shared by client and server: search.ts, schema.ts, keys.ts, queries.ts, columns, filters,
                        labels, commands, components/ (crud.md)
 src/functions/         server functions: requirePermission + withServices + validator + one service call
@@ -132,6 +134,8 @@ Read [crud.md](docs/guides/crud.md): it is the only "add a feature" text, and ev
 - **Forms handled in JavaScript set `method="post"`** (the shared `Form` does): without it a submit before hydration puts the fields, passwords included, in the URL. A test checks every `<form>` (0104).
 - **Server functions: `requirePermission` first, then `withServices`** (0173): the guard test's regex allows exactly that order, and a refused call builds nothing. Keep `createServerFn(…)` literal in each functions file (Start extracts them statically). Inputs are `z.strictObject`; URL search schemas never are (links carry utm tags).
 - **Admin writes are Query mutations** (`useCrudMutation`, 0174): optimistic updates patch every cached list page (`keys.lists()`). TanStack DB is for client-first apps; don't add collections to admin lists.
+- **TanStack DB exists only below `<DbScope>`** (0189): the `_apps` layout and `/dev/examples/optimistic`. A route file never imports a collection module (its loader would put DB in every page's JavaScript; `check-bundle.ts` fails); keep what a loader needs in `queries.ts`. Handlers refetch explicitly and return `{ refetch: false }` (the automatic refetch logs a deprecation warning).
+- **A session can be a guest's** (`session.isAnonymous`, 0185): visitors trying the apps. They hold no permissions; `requireUserMiddleware` refuses them, so account functions must use it (or a `requirePermission`), and the apps use `requireAppUser` + `withAppServices`. App tables have `owner_id` and every query goes through `ownedBy` ([apps.md](docs/guides/apps.md)).
 - **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
 - **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.
 - **Dev-only pages** live under `src/routes/dev/`: the layout 404s unless `DEV_ROUTES` (`src/lib/dev-routes.ts`: `vite dev`, or a build with `VITE_DEV_ROUTES=true`, which the e2e harness uses and production refuses; 0162). Their server functions use `devOnlyMiddleware`. Gate dev-only code on `DEV_ROUTES`, not `import.meta.env.DEV`, or the e2e build breaks it.
@@ -166,6 +170,7 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
 - [testing.md](docs/guides/testing.md): Radix menus in tests.
 - [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
+- [apps.md](docs/guides/apps.md): A scroll region needs `relative`; Route files never import a collection module; Handlers refetch explicitly; A two-factor sign-in loses the guest's session. <!-- @apps -->
 - [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; A fallback face per weight; Exact arithmetic in the art; The clock hydrates from the read time; Text on a field takes the field's tokens; Animating the art repaints it; Lighthouse on the harness server; Lazy pictures in dev; Reordering keeps the version; Seeds read rows, not row counts. <!-- @portfolio -->
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronsUpDownIcon, LayoutDashboardIcon, LogOutIcon, PaletteIcon, UserIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LayoutDashboardIcon, LogOutIcon, PaletteIcon, UserIcon, UserPlusIcon } from "lucide-react";
 import { UserAvatar } from "@/components/data-display/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +21,17 @@ import { m } from "@/paraglide/messages";
  * The signed-in user's menu: account, the admin area and appearance (when they may
  * enter it), sign out. `variant="sidebar"` shows the name and email next to the
  * avatar (the admin sidebar's footer); "compact" is the avatar alone (headers).
- * Renders nothing when signed out.
+ * A guest (decision 0185) is "Guest", offered an account instead. Renders nothing
+ * when signed out.
  */
 export function UserMenu({ variant = "compact" }: { variant?: "compact" | "sidebar" }) {
 	const { data: session } = useQuery(sessionQueryOptions());
 	const { signOut } = useAuthNavigation();
 	if (!session) return null;
-	const { name, email } = session.user;
+	const guest = session.isAnonymous === true;
+	// A guest's placeholder address means nothing to them.
+	const name = guest ? m.guest_label() : session.user.name;
+	const email = guest ? "" : session.user.email;
 	const admin = canEnterAdmin(session.permissions);
 	return (
 		<DropdownMenu modal={false}>
@@ -55,16 +59,25 @@ export function UserMenu({ variant = "compact" }: { variant?: "compact" | "sideb
 			<DropdownMenuContent align="end" side={variant === "sidebar" ? "top" : "bottom"} className="min-w-56">
 				<DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
 					<span className="truncate font-medium">{name || email}</span>
-					<span className="truncate text-caption text-muted-foreground">{email}</span>
+					{email ? <span className="truncate text-caption text-muted-foreground">{email}</span> : null}
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
-					<DropdownMenuItem asChild>
-						<Link to="/account" data-testid="nav-account">
-							<UserIcon aria-hidden />
-							{m.nav_account()}
-						</Link>
-					</DropdownMenuItem>
+					{guest ? (
+						<DropdownMenuItem asChild>
+							<Link to="/upgrade" data-testid="nav-upgrade">
+								<UserPlusIcon aria-hidden />
+								{m.guest_create_account()}
+							</Link>
+						</DropdownMenuItem>
+					) : (
+						<DropdownMenuItem asChild>
+							<Link to="/account" data-testid="nav-account">
+								<UserIcon aria-hidden />
+								{m.nav_account()}
+							</Link>
+						</DropdownMenuItem>
+					)}
 					{admin ? (
 						<>
 							<DropdownMenuItem asChild>

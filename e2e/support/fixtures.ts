@@ -119,6 +119,17 @@ export class Harness {
 		return row.id;
 	}
 	// portfolio:end
+
+	// apps:start
+	/** A user's first Kanban board (the harness makes one on first ask). */
+	async kanbanBoardId(user: E2EUser): Promise<string> {
+		const email = E2E.users[user].email;
+		const response = await fetch(`${E2E.harnessURL}/e2e/kanban-board?email=${encodeURIComponent(email)}`);
+		const row = (await response.json()) as { id?: string };
+		if (!row.id) throw new Error(`no Kanban board for ${user}`);
+		return row.id;
+	}
+	// apps:end
 }
 
 let runId: Promise<string> | undefined;

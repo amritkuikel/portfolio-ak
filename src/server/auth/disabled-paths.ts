@@ -25,3 +25,11 @@ export const DISABLED_ADMIN_PATHS = [
 	"/admin/unban-user",
 	"/admin/update-user",
 ];
+
+/**
+ * The anonymous plugin's own deletion endpoint, turned off (decision 0185): guests are
+ * deleted by the daily cleanup (src/server/routes/cron-guests.ts), which also queues
+ * their uploads, and by a claim once they sign up or in. The plugin's delete would
+ * skip both (it goes straight to the adapter).
+ */
+export const DISABLED_GUEST_PATHS = ["/delete-anonymous-user"];

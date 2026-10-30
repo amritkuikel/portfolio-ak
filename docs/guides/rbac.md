@@ -16,6 +16,8 @@ A user's permissions are: everything (admin), or the baseline plus their custom 
 
 **Two sources, one rule each (0135):** Better Auth's `user.role === "admin"` is the superuser flag: every permission, plus what only an admin may do (make or unmake admins, act on an admin, impersonate). The RBAC tables hold everything else. The `admin` row in `role` is there for display and has no permission rows; don't assign it in `user_role`. Code that asks "is this an admin?" reads `role === "admin"` (`Actor.isAdmin` in the service, `useActor().isAdmin` in the UI); code that asks "may they do X?" checks the permission.
 
+- **Guests** (the showcase apps' visitors, decision 0185) hold no permissions at all, not even the baseline role's, and are never listed in `/admin/users` or counted in the role counts. App data isn't permission-guarded: every app query is scoped to its owner ([apps.md](apps.md)).
+
 ## Enforcing a permission (all three layers)
 
 1. **Server function:** the real protection:
@@ -27,7 +29,7 @@ A user's permissions are: everything (admin), or the baseline plus their custom 
    	.handler(({ data, context }) => service.publish(db, data.id, context.user.id));
    ```
 
-   Add the function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts`. The test fails if a function skips the middleware or checks a different permission, and if any file in `src/functions` is in neither `GUARDED_FUNCTIONS` nor `UNGUARDED_FILES` (deliberately public, per-user or dev-only, with a reason).
+   Add the function and its permission to `GUARDED_FUNCTIONS` in `tests/server/guarded-functions.test.ts`. The test fails if a function skips the middleware or checks a different permission, and if any file in `src/functions` is in neither `GUARDED_FUNCTIONS` nor `UNGUARDED_FILES` (deliberately public, per-user or dev-only, with a reason). The showcase apps’ files are in a third list, `APP_FUNCTIONS`: each function runs `requireAppUser` then `withAppServices` (no permission; every query is scoped to its owner, [apps.md](apps.md)).
 
 2. **Route:** so a direct visit gives the localized 403 page (a real 403 during SSR):
 

@@ -85,6 +85,13 @@
 			"when": 1792675329373,
 			"tag": "0011_portfolio",
 			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1793280300530,
+			"tag": "0012_guests_kanban",
+			"breakpoints": true
 		}
 	]
 }

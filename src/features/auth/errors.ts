@@ -35,6 +35,9 @@ const byCode: Readonly<Record<string, () => string>> = {
 	LAST_ADMIN: m.account_delete_last_admin,
 	// An impersonated session (decisions.md 0134).
 	IMPERSONATING: m.auth_error_impersonating,
+	// Guest sessions (decision 0185).
+	GUEST_ACCOUNT: m.auth_error_guest,
+	ALREADY_SIGNED_IN: m.auth_error_already_signed_in,
 };
 
 /** Turnstile refused the request (no token, or a token that didn't verify). */

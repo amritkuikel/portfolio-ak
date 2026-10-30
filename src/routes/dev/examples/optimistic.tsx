@@ -4,16 +4,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/components/errors/error-page";
+import { DbScope } from "@/components/layout/db-scope";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-	type ExampleUpdateMetadata,
-	exampleTasksCollection,
-	OPTIMISTIC_SEARCH,
-} from "@/features/dev/examples/collection";
+import { type ExampleUpdateMetadata, exampleTasksCollection } from "@/features/dev/examples/collection";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
-import { exampleTasksQueryOptions } from "@/features/dev/examples/queries";
+import { exampleTasksQueryOptions, OPTIMISTIC_SEARCH } from "@/features/dev/examples/queries";
 import type { ExampleTask } from "@/features/dev/examples/schema";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { ensureQuery } from "@/lib/query";
@@ -21,7 +18,8 @@ import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
 /**
- * TanStack DB optimistic update and rollback (src/features/dev/examples/collection.ts):
+ * TanStack DB optimistic update and rollback (src/features/dev/examples/collection.ts),
+ * inside <DbScope> (TanStack DB isn't on every page, decision 0189):
  * - the loader puts the rows in the Query cache (SSR); the collection uses the
  *   same query key, so they are its initial state;
  * - ticking a task changes the collection at once; the server is called in the
@@ -35,7 +33,11 @@ export const Route = createFileRoute("/dev/examples/optimistic")({
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_optimistic_title) },
 	head: () => privateHead(m.examples_optimistic_title()),
-	component: OptimisticExample,
+	component: () => (
+		<DbScope>
+			<OptimisticExample />
+		</DbScope>
+	),
 });
 
 function OptimisticExample() {

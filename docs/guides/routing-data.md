@@ -64,7 +64,7 @@ export const updateThing = createServerFn({ method: "POST" })
 ```
 
 - **Thin:** the middleware checks the permission, `zodInput` validates with the shared schema (field errors come back keyed by field), and the handler is one call into `src/server/**`. Logic lives there, where tests run it on PGlite.
-- **Every protected function** runs `requirePermission` first, and `tests/server/guarded-functions.test.ts` lists each function with its permission ([rbac.md](rbac.md)). Use `requireUserMiddleware` for "any signed-in user" and `devOnlyMiddleware` for `/dev` helpers.
+- **Every protected function** runs `requirePermission` first, and `tests/server/guarded-functions.test.ts` lists each function with its permission ([rbac.md](rbac.md)). Use `requireUserMiddleware` for "any signed-in account" (it refuses guests, 0185), `requireAppUser` for the showcase apps (guests included) and `devOnlyMiddleware` for `/dev` helpers.
 - **Global function middleware** (`src/start.ts`): it sends the page locale as a header (so `m.*` and `getLocale()` work inside handlers), passes on the request's id (`context.requestId`, the same as the `x-request-id` header, 0123), logs one JSON line per call, and normalises errors.
 - **Runtime:** server functions run only inside Start. Test the plain functions they call, not the wrappers.
 

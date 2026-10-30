@@ -11,6 +11,7 @@ export const RESOURCE_LABELS: Record<Resource, () => string> = {
 	portfolio: m.perm_resource_portfolio, // @portfolio
 	messages: m.perm_resource_messages, // @portfolio
 	media: m.perm_resource_media, // @portfolio
+	apps: m.perm_resource_apps, // @apps
 	// @new-feature:resource-labels
 };
 
@@ -37,6 +38,7 @@ export const PERMISSION_LABELS: Record<Permission, () => string> = {
 	"media:read": m.perm_media_read,
 	"media:write": m.perm_media_write,
 	// portfolio:end
+	"apps:read": m.perm_apps_read, // @apps
 	// @new-feature:permission-labels
 };
 

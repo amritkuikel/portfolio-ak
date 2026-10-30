@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/_admin'
+import { Route as AppsRouteImport } from './routes/_apps'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
@@ -22,6 +23,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-pa
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthSignInCodeRouteImport } from './routes/_auth/sign-in-code'
+import { Route as AuthUpgradeRouteImport } from './routes/_auth/upgrade'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as PublicHealthRouteImport } from './routes/_public/health'
 import { Route as PublicResetPasswordRouteImport } from './routes/_public/reset-password'
@@ -37,11 +39,13 @@ import { Route as DevFormsRouteImport } from './routes/dev/forms'
 import { Route as DevStackRouteImport } from './routes/dev/stack'
 import { Route as DevTestCrudRouteRouteImport } from './routes/dev/test-crud/route'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as AdminAdminAppsRouteImport } from './routes/_admin/admin/apps'
 import { Route as AdminAdminAuditRouteRouteImport } from './routes/_admin/admin/audit/route'
 import { Route as AdminAdminMediaRouteImport } from './routes/_admin/admin/media'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
+import { Route as AppsAppsIndexRouteImport } from './routes/_apps/apps/index'
 import { Route as AuthedAccountDeleteRouteImport } from './routes/_authed/account_.delete'
 import { Route as SiteJournalIndexRouteImport } from './routes/_site/journal/index'
 import { Route as SiteJournalSlugRouteImport } from './routes/_site/journal/$slug'
@@ -89,6 +93,8 @@ import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/adm
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
 import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
+import { Route as AppsAppsKanbanIndexRouteImport } from './routes/_apps/apps/kanban/index'
+import { Route as AppsAppsKanbanBoardIdRouteImport } from './routes/_apps/apps/kanban/$boardId'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
 import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
@@ -100,6 +106,10 @@ import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_ad
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppsRoute = AppsRouteImport.update({
+  id: '/_apps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -156,6 +166,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
 const AuthSignInCodeRoute = AuthSignInCodeRouteImport.update({
   id: '/sign-in-code',
   path: '/sign-in-code',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthUpgradeRoute = AuthUpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthedAccountRoute = AuthedAccountRouteImport.update({
@@ -233,6 +248,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
+const AdminAdminAppsRoute = AdminAdminAppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
 const AdminAdminAuditRouteRoute = AdminAdminAuditRouteRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -257,6 +277,11 @@ const AdminAdminUsersRouteRoute = AdminAdminUsersRouteRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AdminAdminRouteRoute,
+} as any)
+const AppsAppsIndexRoute = AppsAppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => AppsRoute,
 } as any)
 const AuthedAccountDeleteRoute = AuthedAccountDeleteRouteImport.update({
   id: '/account_/delete',
@@ -504,6 +529,16 @@ const AdminAdminUsersIndexRoute = AdminAdminUsersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminUsersRouteRoute,
 } as any)
+const AppsAppsKanbanIndexRoute = AppsAppsKanbanIndexRouteImport.update({
+  id: '/apps/kanban/',
+  path: '/apps/kanban/',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsKanbanBoardIdRoute = AppsAppsKanbanBoardIdRouteImport.update({
+  id: '/apps/kanban/$boardId',
+  path: '/apps/kanban/$boardId',
+  getParentRoute: () => AppsRoute,
+} as any)
 const DevExamplesMaskingIndexRoute = DevExamplesMaskingIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -563,6 +598,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/sign-in-code': typeof AuthSignInCodeRoute
+  '/upgrade': typeof AuthUpgradeRoute
   '/account': typeof AuthedAccountRoute
   '/health': typeof PublicHealthRoute
   '/reset-password': typeof PublicResetPasswordRoute
@@ -579,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
+  '/admin/apps': typeof AdminAdminAppsRoute
   '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
@@ -607,6 +644,7 @@ export interface FileRoutesByFullPath {
   '/dev/examples/streaming': typeof DevExamplesStreamingRoute
   '/dev/test-crud/$slug': typeof DevTestCrudSlugRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/apps/': typeof AppsAppsIndexRoute
   '/journal/': typeof SiteJournalIndexRoute
   '/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
@@ -623,11 +661,13 @@ export interface FileRoutesByFullPath {
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
@@ -644,6 +684,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/sign-in-code': typeof AuthSignInCodeRoute
+  '/upgrade': typeof AuthUpgradeRoute
   '/account': typeof AuthedAccountRoute
   '/health': typeof PublicHealthRoute
   '/reset-password': typeof PublicResetPasswordRoute
@@ -655,6 +696,7 @@ export interface FileRoutesByTo {
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
   '/dev': typeof DevIndexRoute
+  '/admin/apps': typeof AdminAdminAppsRoute
   '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
@@ -683,6 +725,7 @@ export interface FileRoutesByTo {
   '/dev/examples/streaming': typeof DevExamplesStreamingRoute
   '/dev/test-crud/$slug': typeof DevTestCrudSlugRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/apps': typeof AppsAppsIndexRoute
   '/journal': typeof SiteJournalIndexRoute
   '/work': typeof SiteWorkIndexRoute
   '/dev/examples': typeof DevExamplesIndexRoute
@@ -697,11 +740,13 @@ export interface FileRoutesByTo {
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
+  '/apps/kanban': typeof AppsAppsKanbanIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
@@ -714,6 +759,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/dev': typeof DevRouteRouteWithChildren
   '/_admin': typeof AdminRouteWithChildren
+  '/_apps': typeof AppsRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
@@ -727,6 +773,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/sign-in-code': typeof AuthSignInCodeRoute
+  '/_auth/upgrade': typeof AuthUpgradeRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_public/health': typeof PublicHealthRoute
   '/_public/reset-password': typeof PublicResetPasswordRoute
@@ -744,6 +791,7 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
+  '/_admin/admin/apps': typeof AdminAdminAppsRoute
   '/_admin/admin/media': typeof AdminAdminMediaRoute
   '/_authed/account_/delete': typeof AuthedAccountDeleteRoute
   '/_site/journal/$slug': typeof SiteJournalSlugRoute
@@ -772,6 +820,7 @@ export interface FileRoutesById {
   '/dev/examples/streaming': typeof DevExamplesStreamingRoute
   '/dev/test-crud/$slug': typeof DevTestCrudSlugRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_apps/apps/': typeof AppsAppsIndexRoute
   '/_site/journal/': typeof SiteJournalIndexRoute
   '/_site/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
@@ -788,11 +837,13 @@ export interface FileRoutesById {
   '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/_apps/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
@@ -815,6 +866,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/sign-in-code'
+    | '/upgrade'
     | '/account'
     | '/health'
     | '/reset-password'
@@ -831,6 +883,7 @@ export interface FileRouteTypes {
     | '/admin/test-crud'
     | '/admin/users'
     | '/dev/examples/masking'
+    | '/admin/apps'
     | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
@@ -859,6 +912,7 @@ export interface FileRouteTypes {
     | '/dev/examples/streaming'
     | '/dev/test-crud/$slug'
     | '/admin/'
+    | '/apps/'
     | '/journal/'
     | '/work/'
     | '/dev/examples/'
@@ -875,11 +929,13 @@ export interface FileRouteTypes {
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
     | '/admin/roles/'
     | '/admin/test-crud/'
     | '/admin/users/'
+    | '/apps/kanban/'
     | '/dev/examples/masking/'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
@@ -896,6 +952,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/sign-in-code'
+    | '/upgrade'
     | '/account'
     | '/health'
     | '/reset-password'
@@ -907,6 +964,7 @@ export interface FileRouteTypes {
     | '/dev/forms'
     | '/dev/stack'
     | '/dev'
+    | '/admin/apps'
     | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
@@ -935,6 +993,7 @@ export interface FileRouteTypes {
     | '/dev/examples/streaming'
     | '/dev/test-crud/$slug'
     | '/admin'
+    | '/apps'
     | '/journal'
     | '/work'
     | '/dev/examples'
@@ -949,11 +1008,13 @@ export interface FileRouteTypes {
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
+    | '/apps/kanban'
     | '/dev/examples/masking'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
@@ -965,6 +1026,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/dev'
     | '/_admin'
+    | '/_apps'
     | '/_auth'
     | '/_authed'
     | '/_public'
@@ -978,6 +1040,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/register'
     | '/_auth/sign-in-code'
+    | '/_auth/upgrade'
     | '/_authed/account'
     | '/_public/health'
     | '/_public/reset-password'
@@ -995,6 +1058,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
     | '/dev/examples/masking'
+    | '/_admin/admin/apps'
     | '/_admin/admin/media'
     | '/_authed/account_/delete'
     | '/_site/journal/$slug'
@@ -1023,6 +1087,7 @@ export interface FileRouteTypes {
     | '/dev/examples/streaming'
     | '/dev/test-crud/$slug'
     | '/_admin/admin/'
+    | '/_apps/apps/'
     | '/_site/journal/'
     | '/_site/work/'
     | '/dev/examples/'
@@ -1039,11 +1104,13 @@ export interface FileRouteTypes {
     | '/_admin/admin/settings/appearance'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
+    | '/_apps/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
+    | '/_apps/apps/kanban/'
     | '/dev/examples/masking/'
     | '/_admin/admin/portfolio/journal/$id'
     | '/_admin/admin/portfolio/journal/new'
@@ -1056,6 +1123,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   DevRouteRoute: typeof DevRouteRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
+  AppsRoute: typeof AppsRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
@@ -1075,6 +1143,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_apps': {
+      id: '/_apps'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
@@ -1159,6 +1234,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in-code'
       fullPath: '/sign-in-code'
       preLoaderRoute: typeof AuthSignInCodeRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/upgrade': {
+      id: '/_auth/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof AuthUpgradeRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_authed/account': {
@@ -1266,6 +1348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_admin/admin/apps': {
+      id: '/_admin/admin/apps'
+      path: '/apps'
+      fullPath: '/admin/apps'
+      preLoaderRoute: typeof AdminAdminAppsRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
     '/_admin/admin/audit': {
       id: '/_admin/admin/audit'
       path: '/audit'
@@ -1300,6 +1389,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AdminAdminUsersRouteRouteImport
       parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_apps/apps/': {
+      id: '/_apps/apps/'
+      path: '/apps'
+      fullPath: '/apps/'
+      preLoaderRoute: typeof AppsAppsIndexRouteImport
+      parentRoute: typeof AppsRoute
     }
     '/_authed/account_/delete': {
       id: '/_authed/account_/delete'
@@ -1630,6 +1726,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminUsersIndexRouteImport
       parentRoute: typeof AdminAdminUsersRouteRoute
     }
+    '/_apps/apps/kanban/': {
+      id: '/_apps/apps/kanban/'
+      path: '/apps/kanban'
+      fullPath: '/apps/kanban/'
+      preLoaderRoute: typeof AppsAppsKanbanIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/kanban/$boardId': {
+      id: '/_apps/apps/kanban/$boardId'
+      path: '/apps/kanban/$boardId'
+      fullPath: '/apps/kanban/$boardId'
+      preLoaderRoute: typeof AppsAppsKanbanBoardIdRouteImport
+      parentRoute: typeof AppsRoute
+    }
     '/dev/examples/masking/': {
       id: '/dev/examples/masking/'
       path: '/'
@@ -1886,6 +1996,7 @@ interface AdminAdminRouteRouteChildren {
   AdminAdminRolesRouteRoute: typeof AdminAdminRolesRouteRouteWithChildren
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
+  AdminAdminAppsRoute: typeof AdminAdminAppsRoute
   AdminAdminMediaRoute: typeof AdminAdminMediaRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminPortfolioJournalRouteRoute: typeof AdminAdminPortfolioJournalRouteRouteWithChildren
@@ -1904,6 +2015,7 @@ const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
   AdminAdminRolesRouteRoute: AdminAdminRolesRouteRouteWithChildren,
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
+  AdminAdminAppsRoute: AdminAdminAppsRoute,
   AdminAdminMediaRoute: AdminAdminMediaRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminPortfolioJournalRouteRoute:
@@ -1933,11 +2045,26 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface AppsRouteChildren {
+  AppsAppsIndexRoute: typeof AppsAppsIndexRoute
+  AppsAppsKanbanBoardIdRoute: typeof AppsAppsKanbanBoardIdRoute
+  AppsAppsKanbanIndexRoute: typeof AppsAppsKanbanIndexRoute
+}
+
+const AppsRouteChildren: AppsRouteChildren = {
+  AppsAppsIndexRoute: AppsAppsIndexRoute,
+  AppsAppsKanbanBoardIdRoute: AppsAppsKanbanBoardIdRoute,
+  AppsAppsKanbanIndexRoute: AppsAppsKanbanIndexRoute,
+}
+
+const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
+
 interface AuthRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
   AuthSignInCodeRoute: typeof AuthSignInCodeRoute
+  AuthUpgradeRoute: typeof AuthUpgradeRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -1945,6 +2072,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   AuthSignInCodeRoute: AuthSignInCodeRoute,
+  AuthUpgradeRoute: AuthUpgradeRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -2002,6 +2130,7 @@ const SiteRouteWithChildren = SiteRoute._addFileChildren(SiteRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   DevRouteRoute: DevRouteRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
+  AppsRoute: AppsRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,

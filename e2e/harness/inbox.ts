@@ -24,6 +24,45 @@ const send = (response: ServerResponse, status: number, body: unknown) => {
 	response.end(JSON.stringify(body));
 };
 
+// apps:start
+/**
+ * A user's first Kanban board, made on first ask (columns, and a card with a label, a
+ * past due date and a checklist), for the review of the board page.
+ */
+async function kanbanBoard(query: DemoQuery, email: string | null) {
+	const { rows: users } = await query(`select "id" from "user" where "email" = $1`, [email]);
+	const owner = users[0]?.id;
+	if (!owner) throw new Error(`no user ${email}`);
+	const { rows: boards } = await query(
+		`select "id" from "kanban_board" where "owner_id" = $1 order by "created_at" limit 1`,
+		[owner],
+	);
+	if (boards[0]) return boards[0];
+	const { rows: created } = await query(
+		`insert into "kanban_board" ("owner_id", "name") values ($1, 'Review board') returning "id"`,
+		[owner],
+	);
+	const board = created[0]?.id;
+	const { rows: columns } = await query(
+		`insert into "kanban_column" ("owner_id", "board_id", "name", "position")
+		values ($1, $2, 'To do', 'a0'), ($1, $2, 'Doing', 'a1'), ($1, $2, 'Done', 'a2') returning "id", "position"`,
+		[owner, board],
+	);
+	const todo = columns.find((column) => column.position === "a0")?.id;
+	const checklist = JSON.stringify([
+		{ id: randomUUID(), text: "Read the page", done: true },
+		{ id: randomUUID(), text: "Check both themes", done: false },
+	]);
+	await query(
+		`insert into "kanban_card" ("owner_id", "board_id", "column_id", "title", "labels", "due_on", "checklist", "position")
+		values ($1, $2, $3, 'Review the board', '{blue,red}', '2026-01-01', $4::jsonb, 'a0'),
+		($1, $2, $3, 'A card with a long title that has to wrap inside its column without pushing the page sideways', '{}', null, '[]'::jsonb, 'a1')`,
+		[owner, board, todo, checklist],
+	);
+	return { id: board };
+}
+// apps:end
+
 export async function serveHarness(port: number, query: DemoQuery) {
 	const emails: CapturedEmail[] = [];
 	// New per start (a fresh database): tests key their saved sign-ins on it.
@@ -77,6 +116,10 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
 			// portfolio:end
+			// apps:start
+			if (route === "GET /e2e/kanban-board")
+				return send(response, 200, await kanbanBoard(query, url.searchParams.get("email")));
+			// apps:end
 			return send(response, 404, { error: `no route ${route}` });
 		} catch (error) {
 			return send(response, 500, { error: error instanceof Error ? error.message : String(error) });

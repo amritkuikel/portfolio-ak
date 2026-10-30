@@ -13,3 +13,5 @@ export const safeRedirectPath = z
 export const redirectSearchSchema = z.object({
 	redirect: safeRedirectPath.optional().catch(undefined),
 });
+
+export type RedirectSearch = z.infer<typeof redirectSearchSchema>;

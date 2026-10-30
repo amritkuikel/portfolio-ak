@@ -30,4 +30,10 @@ export type Session = {
 	 * 0134): the admin's user id. The app shows a banner with a way back.
 	 */
 	impersonatedBy?: string;
+	/**
+	 * Set on a guest session (Better Auth's anonymous plugin, decision 0185): a
+	 * visitor trying the apps without an account. `permissions` is always empty,
+	 * the account pages are closed to them, and signing up or in keeps their data.
+	 */
+	isAnonymous?: true;
 };

@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { APIError, type createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { deleteSessionCookie } from "better-auth/cookies";
-import { isOwnerOnlyPath } from "./policy";
+import { GUEST_SIGN_IN_PATH, isGuestRefusedPath, isOwnerOnlyPath } from "./policy";
 
 /** The context Better Auth passes to an `after` hook. */
 export type AfterHookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
@@ -45,4 +45,29 @@ export async function refuseOwnerOnlyWhileImpersonating(ctx: BeforeHookContext):
 		code: "IMPERSONATING",
 		message: "Account changes aren't allowed while impersonating",
 	});
+}
+
+/** True for a guest's user row (the anonymous plugin adds the field, decision 0185). */
+export const isGuestUser = (user: object) => "isAnonymous" in user && user.isAnonymous === true;
+
+/**
+ * Guest sessions (decision 0185) can't change an account (email, password, two-factor,
+ * linked accounts, sessions, deletion): they have none to change, and they sign up
+ * instead. A guest session also starts only from no session at all: the plugin refuses
+ * a guest starting another one, this refuses someone signed in (it would replace
+ * their session with a guest's). Only those paths look the session up.
+ */
+export async function refuseGuestPaths(ctx: BeforeHookContext): Promise<void> {
+	const guestStart = ctx.path === GUEST_SIGN_IN_PATH;
+	if (!guestStart && !isGuestRefusedPath(ctx.path)) return;
+	const current = await getSessionFromCtx(ctx, { disableRefresh: true });
+	if (guestStart && current && !isGuestUser(current.user)) {
+		throw new APIError("BAD_REQUEST", { code: "ALREADY_SIGNED_IN", message: "Already signed in" });
+	}
+	if (!guestStart && current && isGuestUser(current.user)) {
+		throw new APIError("FORBIDDEN", {
+			code: "GUEST_ACCOUNT",
+			message: "Guests can't change an account: sign up first",
+		});
+	}
 }

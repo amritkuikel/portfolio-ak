@@ -19,7 +19,8 @@ export const Route = createFileRoute("/api/account/export")({
 		handlers: {
 			GET: async ({ request }) => {
 				const session = await auth.api.getSession({ headers: request.headers });
-				if (!session) return json(401, { error: "UNAUTHORIZED" });
+				// Guests (decision 0185) have no account to export.
+				if (!session || session.user.isAnonymous) return json(401, { error: "UNAUTHORIZED" });
 				const data = await exportAccountData(db, session.user.id);
 				if (!data) return json(404, { error: "NOT_FOUND" });
 				const date = data.exportedAt.slice(0, 10);

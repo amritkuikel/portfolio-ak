@@ -132,7 +132,11 @@ if (existsSync(path.join(root, "src/features", feature))) fail(`src/features/${f
 if (new RegExp(`^\\s*"?${feature}"?: \\[`, "m").test(read("src/features/rbac/permissions.ts"))) {
 	fail(`the permission catalog already has "${feature}"`);
 }
-for (const file of readdirSync(path.join(root, "src/server/db/schema"))) {
+// Files only: apps keep their tables in a subfolder (src/server/db/schema/apps/).
+const schemaFiles = readdirSync(path.join(root, "src/server/db/schema"), { withFileTypes: true })
+	.filter((entry) => entry.isFile())
+	.map((entry) => entry.name);
+for (const file of schemaFiles) {
 	if (new RegExp(`export const ${names.camel}\\b`).test(read(`src/server/db/schema/${file}`))) {
 		fail(`src/server/db/schema/${file} already exports "${names.camel}"`);
 	}

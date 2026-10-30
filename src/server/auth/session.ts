@@ -37,8 +37,11 @@ const loadSession = async (): Promise<Session | null> => {
 	const impersonation = result.session.impersonatedBy ? { impersonatedBy: result.session.impersonatedBy } : {};
 	const role = toRole(user.role);
 	const twoFactorEnabled = user.twoFactorEnabled === true;
-	const permissions = await permissionsForUser(db, { id: user.id, role, banned: user.banned ?? false });
 	const sessionUser = { id: user.id, email: user.email, name: user.name, role, twoFactorEnabled };
+	// A guest (decision 0185) holds no permissions: permissionsForUser returns none without a query.
+	const isAnonymous = user.isAnonymous === true;
+	const permissions = await permissionsForUser(db, { id: user.id, role, banned: user.banned ?? false, isAnonymous });
+	if (isAnonymous) return { user: sessionUser, permissions, isAnonymous: true };
 	if (mustSetUpTwoFactor({ required: serverEnv.AUTH_REQUIRE_ADMIN_2FA, permissions, twoFactorEnabled })) {
 		return { user: sessionUser, permissions: [], twoFactorRequired: true, ...impersonation };
 	}

@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, notFound } from "@tanstack/react-router";
+import { appPath, isAppSlug } from "@/features/apps/registry"; // @apps
 import { m } from "@/paraglide/messages";
 import { projectQueryOptions } from "../../queries";
 import { CaseStudyBody } from "../case-study/case-study-body";
@@ -8,12 +9,7 @@ import { FactSheet } from "../case-study/fact-sheet";
 import { NextProject } from "../case-study/next-project";
 import { DraftNotice } from "../chrome/draft-notice";
 import { FigureLines } from "../primitives/figure-lines";
-// apps:start
-import { ButtonAnchor } from "../primitives/links";
-
-/** The showcase apps' routes (/apps/<slug>) arrive with Task 41; until then no project links to one. */
-const LIVE_APPS = false;
-// apps:end
+import { ButtonLink } from "../primitives/links"; // @apps
 
 const route = getRouteApi("/_site/work/$slug");
 
@@ -35,10 +31,10 @@ export function CaseStudyPage() {
 				<div className="col-span-4 flex flex-col gap-10 md:col-span-4 lg:col-span-4">
 					<FactSheet project={project} />
 					{/* apps:start */}
-					{LIVE_APPS && project.appSlug ? (
-						<ButtonAnchor href={`/apps/${project.appSlug}`} className="self-start">
+					{isAppSlug(project.appSlug) ? (
+						<ButtonLink to={appPath(project.appSlug)} className="self-start">
 							{m.portfolio_case_try_app()}
-						</ButtonAnchor>
+						</ButtonLink>
 					) : null}
 					{/* apps:end */}
 				</div>

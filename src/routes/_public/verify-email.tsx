@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { z } from "zod";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { CheckEmail } from "@/features/auth/components/check-email";
+import { claimGuestDataQuietly } from "@/features/auth/use-auth-actions";
 import { field, validateEmail } from "@/features/auth/validation";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
@@ -13,7 +14,9 @@ import { m } from "@/paraglide/messages";
  * Landing page for the emailed verification link. Better Auth verifies the token,
  * signs the user in (autoSignInAfterVerification) and redirects here; on failure
  * it appends ?error=INVALID_TOKEN (or similar). Public, because a successful
- * visit arrives signed in.
+ * visit arrives signed in. A guest who signed up here keeps their data (decision
+ * 0186): the anonymous plugin moves it when the link opens in the same browser, and
+ * this page asks once more in case that browser had lost the guest's session.
  */
 export const Route = createFileRoute("/_public/verify-email")({
 	validateSearch: z.object({ error: z.string().max(64).optional().catch(undefined) }),
@@ -26,6 +29,11 @@ function VerifyEmailPage() {
 	const { session } = Route.useRouteContext();
 	const [resendTo, setResendTo] = useState<string>();
 	const [emailError, setEmailError] = useState<string>();
+	const verified = !error && session !== null && !session.isAnonymous;
+
+	useEffect(() => {
+		if (verified) void claimGuestDataQuietly();
+	}, [verified]);
 
 	const onResend = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -50,7 +58,7 @@ function VerifyEmailPage() {
 			data-testid="verify-email-page"
 		>
 			<h1 className="font-semibold text-2xl tracking-tight">{m.auth_verify_title()}</h1>
-			{error || !session ? (
+			{!verified ? (
 				<>
 					<FormMessage tone="error">{m.auth_verify_failed()}</FormMessage>
 					<form method="post" noValidate onSubmit={onResend} className="flex flex-col gap-4">

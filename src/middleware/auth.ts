@@ -20,14 +20,17 @@ export const sessionMiddleware = createMiddleware({ type: "function" }).server(a
 });
 
 /**
- * Rejects anonymous calls with UNAUTHORIZED; adds `context.user`, `context.permissions`,
- * `context.twoFactorRequired` (admin permissions held back until 2FA is on, 0126) and
- * `context.impersonatedBy` (the admin behind an impersonated session, or null; 0134).
+ * Rejects anonymous calls and guests (decision 0185) with UNAUTHORIZED; adds `context.user`,
+ * `context.permissions`, `context.twoFactorRequired` (admin permissions held back until
+ * 2FA is on, 0126) and `context.impersonatedBy` (the admin behind an impersonated
+ * session, or null; 0134). Everything about an account (its sessions, data export,
+ * password, two-factor) and every admin function goes through it, so a guest reaches
+ * none of them; the apps use `requireAppUser`.
  */
 export const requireUserMiddleware = createMiddleware({ type: "function" })
 	.middleware([sessionMiddleware])
 	.server(({ next, context }) => {
-		if (!context.session) throw new AppError("UNAUTHORIZED", "Authentication required");
+		if (!context.session || context.session.isAnonymous) throw new AppError("UNAUTHORIZED", "Authentication required");
 		return next({
 			context: {
 				user: context.session.user,

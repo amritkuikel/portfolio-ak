@@ -14,7 +14,10 @@
 
 ## Scheduled jobs
 
-`vercel.json` runs `/api/cron/attachments` daily (03:17 UTC). It deletes removed images and day-old unlinked uploads from Cloudinary. Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; without `CRON_SECRET` the route answers 404.
+`vercel.json` runs two jobs daily (Hobby plans allow daily crons only). Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; without `CRON_SECRET` the routes answer 404.
+
+- `/api/cron/attachments` (03:17 UTC) deletes removed images and day-old unlinked uploads from Cloudinary.
+- `/api/cron/guests` (03:41 UTC) deletes guest sessions older than 7 days, with their app data and uploads (decision 0186).
 
 ## Every release
 

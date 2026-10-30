@@ -6,6 +6,7 @@ import {
 	ImagesIcon, // @portfolio
 	InboxIcon, // @portfolio
 	KeyRoundIcon,
+	LayoutGridIcon, // @apps
 	type LucideIcon,
 	NotebookPenIcon, // @portfolio
 	PaletteIcon,
@@ -149,6 +150,17 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_media,
 	},
 	// portfolio:end
+	// apps:start
+	{
+		...linkOptions({ to: "/admin/apps" }),
+		label: m.admin_nav_apps,
+		description: m.apps_usage_description,
+		icon: LayoutGridIcon,
+		permission: "apps:read",
+		group: "apps",
+		keywords: m.admin_keywords_apps,
+	},
+	// apps:end
 	{
 		...linkOptions({ to: "/admin/users" }),
 		label: m.admin_nav_users,

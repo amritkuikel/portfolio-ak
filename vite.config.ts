@@ -79,11 +79,6 @@ export default defineConfig(async ({ command, mode }) => {
 										name: "react-vendor",
 										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:react|react-dom|scheduler)\//,
 									},
-									{
-										// TanStack DB is loaded with the router (routerWithDbClient), same reasoning.
-										name: "tanstack-db",
-										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@tanstack\/(?:db|db-ivm|react-db|query-db-collection|react-router-with-db)\//,
-									},
 								],
 							},
 						},
@@ -108,6 +103,7 @@ export default defineConfig(async ({ command, mode }) => {
 				// Scheduled jobs (Vercel Cron, see vercel.json): bearer CRON_SECRET, 404 when unset.
 				routes: {
 					"/api/cron/attachments": { handler: "./src/server/routes/cron-attachments.ts", method: "GET" },
+					"/api/cron/guests": { handler: "./src/server/routes/cron-guests.ts", method: "GET" },
 					// Nitro routes so dev serves them to manifest fetches too (see the file). One per locale.
 					"/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
 					"/ne/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },

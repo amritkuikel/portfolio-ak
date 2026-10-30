@@ -12,7 +12,6 @@ import { sessionQueryOptions } from "../src/features/auth/queries";
 import { parseSearch, stringifySearch } from "../src/lib/list/url";
 import type { Session } from "../src/lib/session";
 import { createPreferencesStore, DEFAULT_PREFERENCES, type Preferences } from "../src/lib/stores/preferences";
-import { createDbClient } from "../src/lib/tanstack-db";
 import { deLocalizeUrl, localizeUrl } from "../src/paraglide/runtime";
 import type { RouterContext } from "../src/router";
 
@@ -49,7 +48,6 @@ function createStoryRouter({ session = null, preferences, route = "/" }: AppPara
 			history: createMemoryHistory({ initialEntries: [route] }),
 			context: {
 				queryClient,
-				dbClient: createDbClient(queryClient),
 				preferences: createPreferencesStore({ ...DEFAULT_PREFERENCES, theme, ...preferences }),
 				session,
 			} satisfies RouterContext,

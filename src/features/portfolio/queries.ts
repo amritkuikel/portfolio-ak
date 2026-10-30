@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
 	getAbout,
+	getAppCaseStudies, // @apps
 	getArticle,
 	getCaseStudy,
 	getHome,
@@ -59,3 +60,12 @@ export const postQueryOptions = (slug: string, preview = false) =>
 		queryKey: portfolioKeys.post(slug, preview),
 		queryFn: () => getArticle({ data: { locale: getLocale(), slug, preview } }),
 	});
+
+// apps:start
+/**
+ * The published case studies of the showcase apps (a project's "App" field), for the apps'
+ * header (decision 0187). Not per language: only slugs.
+ */
+export const appCaseStudiesQueryOptions = () =>
+	queryOptions({ queryKey: [...portfolioKeys.all, "app-case-studies"] as const, queryFn: () => getAppCaseStudies() });
+// apps:end

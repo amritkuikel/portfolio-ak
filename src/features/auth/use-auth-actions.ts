@@ -18,8 +18,12 @@ export function useAuthNavigation() {
 
 	return {
 		refresh,
-		/** After signing in. `to` is de-localized (e.g. "/account"); the router re-prefixes it. */
+		/**
+		 * After signing in (with two-factor too). `to` is de-localized (e.g. "/account"); the
+		 * router re-prefixes it. A guest who signed in keeps their data (decision 0186).
+		 */
 		afterSignIn: async (to: string) => {
+			await claimGuestDataQuietly();
 			await refreshAuth(queryClient);
 			await router.navigate({ href: localizeHref(to), replace: true });
 		},
@@ -32,6 +36,20 @@ export function useAuthNavigation() {
 			await router.navigate({ href: localizeHref("/"), replace: true });
 		},
 	};
+}
+
+/**
+ * Moves this browser's guest data to the account just signed in to (src/functions/guests.ts).
+ * Loaded on demand like the auth client. A failure never blocks signing in: the guest
+ * stays until the next try or the weekly cleanup.
+ */
+export async function claimGuestDataQuietly(): Promise<void> {
+	try {
+		const { claimGuestData } = await import("@/functions/guests");
+		await claimGuestData();
+	} catch {
+		// Nothing to undo: the sign-in itself succeeded.
+	}
 }
 
 /** A localized absolute path for Better Auth callbackURL / redirectTo options. */

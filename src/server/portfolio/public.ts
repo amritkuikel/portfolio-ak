@@ -373,3 +373,18 @@ export async function listSitemap(db: Db): Promise<{
 	]);
 	return { projects, posts };
 }
+// apps:start
+
+/**
+ * Which published case study tells each showcase app's story (decision 0187): a project
+ * names its app in the admin's "App" field; the apps' header links back to it.
+ */
+export async function listAppCaseStudies(db: Db): Promise<Array<{ app: string; slug: string }>> {
+	const rows = await db
+		.select({ app: portfolioProject.appSlug, slug: portfolioProject.slug })
+		.from(portfolioProject)
+		.where(eq(portfolioProject.status, "published"))
+		.orderBy(...projectOrder);
+	return rows.flatMap((row) => (row.app ? [{ app: row.app, slug: row.slug }] : []));
+}
+// apps:end

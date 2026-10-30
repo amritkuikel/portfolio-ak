@@ -102,8 +102,35 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["deleteMedia", "media:write"],
 	],
 	// portfolio:end
+	// apps:start
+	"apps/admin.ts": [["getAppsUsage", "apps:read"]],
+	// apps:end
 	// @new-feature:guarded-functions
 };
+
+// apps:start
+/**
+ * The showcase apps' files (decision 0187): every function runs `requireAppUser` then
+ * `withAppServices` first. No permission is involved (guests use the apps too); each
+ * service scopes every read and write to the caller's own rows (`ownedBy`, tested in
+ * tests/server/apps-kanban.test.ts).
+ */
+const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
+	"apps/kanban.ts": [
+		"listKanbanBoards",
+		"getKanbanBoard",
+		"createKanbanBoard",
+		"renameKanbanBoard",
+		"deleteKanbanBoard",
+		"createKanbanColumn",
+		"updateKanbanColumn",
+		"deleteKanbanColumn",
+		"createKanbanCard",
+		"updateKanbanCard",
+		"deleteKanbanCard",
+	],
+};
+// apps:end
 
 /**
  * Files whose functions deliberately don't require a permission, with why, and
@@ -127,6 +154,10 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 		why: "the admin area's gate (requireAdminAccessMiddleware); the dashboard fills only the parts whose read permission the user holds",
 		functions: ["getDashboard"],
 	},
+	"guests.ts": {
+		why: "moves this browser's guest data to the signed-in account (requireUserMiddleware: accounts only; the guest comes from a signed httpOnly cookie, decision 0186)",
+		functions: ["claimGuestData"],
+	},
 	// portfolio:start
 	"portfolio-public.ts": {
 		why: "the portfolio's public pages and contact form: published content only; drafts only in a preview the handler grants to a session holding portfolio:read; the form is rate limited, Turnstile-checked and honeypotted",
@@ -138,6 +169,9 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 			"getAbout",
 			"getJournal",
 			"getArticle",
+			// apps:start
+			"getAppCaseStudies",
+			// apps:end
 			"submitContactMessage",
 		],
 	},
@@ -200,7 +234,11 @@ const serverFunctions = (file: string) =>
 describe("guarded server functions", () => {
 	it("every file in src/functions is declared as guarded or deliberately unguarded", () => {
 		const files = functionFiles();
-		const declared = [...Object.keys(GUARDED_FUNCTIONS), ...Object.keys(UNGUARDED_FILES)];
+		const declared = [
+			...Object.keys(GUARDED_FUNCTIONS),
+			...Object.keys(UNGUARDED_FILES),
+			...Object.keys(APP_FUNCTIONS), // @apps
+		];
 		expect(files.filter((file) => !declared.includes(file))).toEqual([]);
 		expect(declared.filter((file) => !files.includes(file))).toEqual([]);
 	});
@@ -223,6 +261,20 @@ describe("guarded server functions", () => {
 			}
 		});
 	}
+
+	// apps:start
+	for (const [file, expected] of Object.entries(APP_FUNCTIONS)) {
+		it(`every function in ${file} runs requireAppUser and withAppServices first`, () => {
+			const functions = serverFunctions(file);
+			expect(functions.map((fn) => fn.name)).toEqual(expected);
+			for (const { definition } of functions) {
+				expect(definition).toMatch(
+					/= createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireAppUser, withAppServices\]\)/,
+				);
+			}
+		});
+	}
+	// apps:end
 
 	for (const [file, { functions }] of Object.entries(UNGUARDED_FILES)) {
 		it(`${file} holds only its declared functions`, () => {

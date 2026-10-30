@@ -86,6 +86,13 @@ export const getArticle = createServerFn({ method: "GET" })
 			portfolio.getPost(context, data.slug, { locale: data.locale, drafts: await canPreview(data.preview) }),
 	);
 
+// apps:start
+/** Published case studies of the showcase apps (the apps' header links to them). */
+export const getAppCaseStudies = createServerFn({ method: "GET" })
+	.middleware([withPublicServices])
+	.handler(({ context }): Promise<Array<{ app: string; slug: string }>> => portfolio.listAppCaseStudies(context.db));
+// apps:end
+
 /**
  * The contact form: honeypot, Turnstile when configured and a rate limit per
  * sender, then the message is saved for the inbox and emailed to the owner.

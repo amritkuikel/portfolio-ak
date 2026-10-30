@@ -1,7 +1,8 @@
 /**
  * Bundle budget for a production build (`pnpm build` first). Fails when:
- *  - the JavaScript every page preloads (the root route's preloads) is over ENTRY_BUDGET_KB gzip
- *    (the TanStack DB chunk is counted on its own line, see SEPARATE_CHUNKS);
+ *  - the JavaScript every page preloads (the root route's preloads) is over ENTRY_BUDGET_KB gzip;
+ *  - a chunk only some pages need is preloaded by every page (NOT_IN_ENTRY: TanStack DB, which
+ *    only the apps and one example use, decision 0189);
  *  - any route adds more than ROUTE_BUDGET_KB gzip on top of the root;
  *  - a font preloaded by a `fonts.ts` module is over FONT_BUDGET_KB.
  *
@@ -15,13 +16,15 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 
-// Lowered to 200 once the site header leaves the root layout (Task 35).
-const ENTRY_BUDGET_KB = 240;
+// 240 until Task 41, plus a separate 105 kB line for TanStack DB. DB left every page then (0189),
+// and TanStack Query's core, which DB's chunk group used to hold, came back into the entry: every
+// page went from 338.5 to 245.6 kB.
+const ENTRY_BUDGET_KB = 250;
 const ROUTE_BUDGET_KB = 250;
 const FONT_BUDGET_KB = 150;
-/** Chunks reported apart from the entry total, each with its own budget (kB gzip). */
-const SEPARATE_CHUNKS: ReadonlyArray<{ name: string; test: RegExp; budgetKb: number }> = [
-	{ name: "tanstack-db", test: /\/tanstack-db-[\w-]+\.js$/, budgetKb: 105 },
+/** Code that must never be preloaded by every page, found by a string it always contains: its pages load it. */
+const NOT_IN_ENTRY: ReadonlyArray<{ name: string; contains: string }> = [
+	{ name: "TanStack DB", contains: "[Live Query Error]" },
 ];
 
 /**
@@ -81,18 +84,14 @@ const manifest = await loadManifest();
 const rootPreloads = new Set(manifest.routes.__root__?.preloads ?? []);
 const failures: string[] = [];
 
-const separate = SEPARATE_CHUNKS.map(({ name, test, budgetKb }) => {
-	const assets = [...rootPreloads].filter((asset) => test.test(asset));
-	for (const asset of assets) rootPreloads.delete(asset);
-	return { name, size: sum(assets), budgetKb };
-});
-
 const entry = sum(rootPreloads);
 console.log(`Entry JS (every page): ${kb(entry)} gzip in ${rootPreloads.size} files (budget ${ENTRY_BUDGET_KB} kB)`);
 if (entry > ENTRY_BUDGET_KB) failures.push(`entry JS is ${kb(entry)}, over ${ENTRY_BUDGET_KB} kB`);
-for (const { name, size, budgetKb } of separate) {
-	console.log(`  + ${name}: ${kb(size)} gzip (budget ${budgetKb} kB)`);
-	if (size > budgetKb) failures.push(`${name} is ${kb(size)}, over ${budgetKb} kB`);
+for (const { name, contains } of NOT_IN_ENTRY) {
+	const assets = [...rootPreloads].filter((asset) =>
+		readFileSync(join(OUTPUT, "public", asset), "utf8").includes(contains),
+	);
+	if (assets.length > 0) failures.push(`${name} (${kb(sum(assets))}) is preloaded by every page`);
 }
 
 const routes = Object.entries(manifest.routes)

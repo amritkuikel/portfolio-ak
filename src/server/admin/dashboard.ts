@@ -6,6 +6,7 @@ import type { Permission } from "@/features/rbac/permissions";
 import { listAuditEvents } from "@/server/audit/repository";
 import { role, testCrud, user } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
+import { isAccount } from "@/server/rbac/repository";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -15,8 +16,7 @@ const countWhere = (when: SQL) => sql<number>`count(*) filter (where ${when})`.m
 /**
  * The admin dashboard's numbers, only for the sections `permissions` may read (the
  * same read permissions the sections' own pages and server functions require). The
- * reads run in parallel. Users are every account (guests are left out once they
- * exist, Task 41).
+ * reads run in parallel. Users are accounts: guests are left out (decision 0185).
  */
 export async function getDashboard(
 	db: Db,
@@ -45,6 +45,7 @@ export async function getDashboard(
 						recent: countWhere(gte(user.createdAt, since)),
 					})
 					.from(user)
+					.where(isAccount)
 					.then(([row]) => row)
 			: null,
 		can("roles:read")

@@ -6,6 +6,7 @@
  * - Two-factor authentication (TOTP + backup codes), breached-password checks,
  *   optional Turnstile captcha, and account deletion confirmed by email
  *   (decisions.md 0126–0129).
+ * - Guest sessions for the showcase apps (the anonymous plugin, decisions 0185–0186).
  * - Every email goes through the Phase 6a email system in the user's language
  *   (see resolveEmailLocale).
  * - `tanstackStartCookies()` must stay the LAST plugin (official integration).
@@ -16,7 +17,7 @@ import { waitUntil } from "@vercel/functions";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { verifyJWT } from "better-auth/crypto";
-import { admin, captcha, emailOTP, haveIBeenPwned, twoFactor } from "better-auth/plugins";
+import { admin, anonymous, captcha, emailOTP, haveIBeenPwned, twoFactor } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { clientEnv } from "@/lib/env/client";
@@ -27,12 +28,18 @@ import * as schema from "../db/schema";
 import { sendEmail } from "../email/send";
 import type { SecurityNoticeKind } from "../email/templates/emails";
 import { serverEnv } from "../env";
+import { linkGuest, startGuest } from "../guests/auth-hooks";
 import { errorFields, log } from "../log";
 import { CLIENT_IP_HEADER } from "./client-ip";
-import { DISABLED_ADMIN_PATHS } from "./disabled-paths";
-import { hasTwoFactor, refuseEmailCodeWithTwoFactor, refuseOwnerOnlyWhileImpersonating } from "./hooks";
+import { DISABLED_ADMIN_PATHS, DISABLED_GUEST_PATHS } from "./disabled-paths";
+import {
+	hasTwoFactor,
+	refuseEmailCodeWithTwoFactor,
+	refuseGuestPaths,
+	refuseOwnerOnlyWhileImpersonating,
+} from "./hooks";
 import { resolveEmailLocale } from "./locale";
-import { BREACHED_PASSWORD_PATHS, CAPTCHA_PATHS } from "./policy";
+import { BREACHED_PASSWORD_PATHS, CAPTCHA_PATHS, GUEST_SIGN_IN_PATH } from "./policy";
 
 /** Token and code lifetimes, shared with the email copy ("expires in N minutes"). */
 export const AUTH_LIFETIMES = {
@@ -96,7 +103,7 @@ export const auth = betterAuth({
 	secret: serverEnv.BETTER_AUTH_SECRET,
 	trustedOrigins: [serverEnv.BETTER_AUTH_URL],
 	database: drizzleAdapter(db, { provider: "pg", schema }),
-	disabledPaths: DISABLED_ADMIN_PATHS,
+	disabledPaths: [...DISABLED_ADMIN_PATHS, ...DISABLED_GUEST_PATHS],
 
 	emailAndPassword: {
 		enabled: true,
@@ -239,9 +246,11 @@ export const auth = betterAuth({
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
 			await refuseOwnerOnlyWhileImpersonating(ctx);
+			await refuseGuestPaths(ctx);
 		}),
 		after: createAuthMiddleware(async (ctx) => {
 			await refuseEmailCodeWithTwoFactor(ctx);
+			await startGuest(ctx);
 			if (ctx.path === "/unlink-account" && !isAPIError(ctx.context.returned) && ctx.context.session) {
 				notify(ctx.context.session.user, "google-unlinked", ctx.request);
 			}
@@ -281,6 +290,8 @@ export const auth = betterAuth({
 			"/delete-user": { window: 60, max: 3 },
 			"/delete-user/callback": { window: 60, max: 5 },
 			"/link-social": { window: 60, max: 5 },
+			// Guest sessions: each one is a user row, so few per address (decision 0185).
+			[GUEST_SIGN_IN_PATH]: { window: 60 * 60, max: 5 },
 			"/unlink-account": { window: 60, max: 5 },
 		},
 	},
@@ -319,6 +330,15 @@ export const auth = betterAuth({
 			allowPasswordless: true,
 		}),
 		haveIBeenPwned({ enabled: serverEnv.AUTH_BREACHED_PASSWORD_CHECK, paths: [...BREACHED_PASSWORD_PATHS] }),
+		// Guest sessions (decisions 0185, 0186). After twoFactor: a password sign-in that stops for the
+		// second factor has dropped the session by the time this plugin's hook looks, so nothing is
+		// claimed before the code is checked. The guest is deleted by the claim (in its transaction),
+		// not by the plugin.
+		anonymous({
+			generateName: () => "Guest",
+			disableDeleteAnonymousUser: true,
+			onLinkAccount: linkGuest,
+		}),
 		...(turnstile
 			? [captcha({ provider: "cloudflare-turnstile", secretKey: turnstile.secretKey, endpoints: [...CAPTCHA_PATHS] })]
 			: []),

@@ -1,4 +1,4 @@
-import { adminClient, emailOTPClient, twoFactorClient } from "better-auth/client/plugins";
+import { adminClient, anonymousClient, emailOTPClient, twoFactorClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { getLocale } from "@/paraglide/runtime";
 import { LOCALE_HEADER } from "./i18n/locale-header";
@@ -16,5 +16,6 @@ export const authClient = createAuthClient({
 		},
 	},
 	// twoFactorClient without a redirect: the login form shows the code step itself.
-	plugins: [adminClient(), emailOTPClient(), twoFactorClient()],
+	// anonymousClient: guest sessions for the showcase apps (decision 0185).
+	plugins: [adminClient(), emailOTPClient(), twoFactorClient(), anonymousClient()],
 });

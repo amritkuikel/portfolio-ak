@@ -40,14 +40,15 @@ export const thingsCollection = (input) => collectionOptions(id, (client) =>
 	}));
 ```
 
+- **Where it's available (0189):** only below `<DbScope>` (`src/components/layout/db-scope.tsx`): the `_apps` layout and `/dev/examples/optimistic` mount it. The router doesn't, so DB's runtime isn't in other pages' JavaScript; `scripts/check-bundle.ts` fails if it ever is. A route file must not import a collection module (route options are in every page, 0151): keep what a loader needs in `queries.ts`.
 - **In the component:**
-  - `const collection = useMemo(() => dbClient.collection(thingsCollection(input)), …)`;
-  - `useLiveQuery((q) => q.from({ row: collection }))`;
+  - `const collection = useDbClient().collection(thingsCollection(input))`;
+  - `useLiveSuspenseQuery((q) => q.from({ row: collection }))`: it renders on the server from the Query cache the loader filled, and the browser builds the same rows from the dehydrated cache (Kanban: `src/features/apps/kanban/components/board-page.tsx`). The older pattern, `useLiveQuery` with the Query rows until the collection is ready, is in `src/routes/dev/examples/optimistic.tsx`;
   - `collection.update(id, (draft) => { draft.status = … })`;
-  - `tx.isPersisted.promise` resolves or rejects, so show a toast either way.
-- **Until the collection is ready** (SSR, first paint), render the Query rows so hydration matches. See `src/routes/dev/examples/optimistic.tsx` and `src/features/dev/examples/collection.ts`.
+  - `tx.when("settled")` resolves or rejects (`isPersisted` is deprecated), so show a toast either way.
+- **After a save:** call `await collection.utils.refetch()` and return `{ refetch: false }` from the handler. Query collections' automatic refetch is deprecated and logs a warning (which fails the browser review).
 - **Per-call data** (like the example's "make the server refuse") travels as `collection.update(id, { metadata }, …)`.
-- **Per request:** one DbClient per router (`src/lib/tanstack-db.ts`), so server requests never share rows.
+- **Per request:** one DbClient per QueryClient (`dbClientFor`, `src/lib/tanstack-db.ts`), so server requests never share rows; `DbScope` cleans it up when the server render ends.
 
 ## Store (preferences)
 

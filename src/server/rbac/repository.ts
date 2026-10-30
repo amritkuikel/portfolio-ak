@@ -25,16 +25,17 @@ import type { Db, Tx } from "@/server/db/types";
  */
 
 /** The fields of a user that decide their permissions. */
-export type AuthSubject = { id: string; role: string | null; banned: boolean | null };
+export type AuthSubject = { id: string; role: string | null; banned: boolean | null; isAnonymous?: boolean | null };
 
 /**
  * Everything `subject` may do, resolved from the database on every request:
  * admins get the whole catalog; everyone else gets the `user` baseline plus their
- * custom roles. Banned users get nothing. Unknown strings (a permission removed
- * from the catalog) are ignored.
+ * custom roles. Banned users and guests (decision 0185) get nothing: the baseline
+ * role never reaches a guest, so a guest can't enter the admin area. Unknown strings
+ * (a permission removed from the catalog) are ignored.
  */
 export async function permissionsForUser(db: Db, subject: AuthSubject): Promise<Permission[]> {
-	if (subject.banned) return [];
+	if (subject.banned || subject.isAnonymous) return [];
 	if (subject.role === "admin") return [...ALL_PERMISSIONS];
 	const rows = await db
 		.selectDistinct({ permission: rolePermission.permission })
@@ -94,7 +95,7 @@ export async function listRoles(db: Db): Promise<RoleSummary[]> {
 		db.select().from(rolePermission),
 		db.select({ roleId: userRole.roleId, total: count() }).from(userRole).groupBy(userRole.roleId),
 		db.select({ total: count() }).from(user).where(eq(user.role, "admin")),
-		db.select({ total: count() }).from(user),
+		db.select({ total: count() }).from(user).where(isAccount),
 	]);
 	const counts = new Map(assignments.map((row) => [row.roleId, row.total]));
 	return roles.map((row) => {
@@ -243,6 +244,12 @@ const SORT_COLUMNS = { name: user.name, email: user.email, created: user.created
 
 const notBanned = or(eq(user.banned, false), sql`${user.banned} is null`);
 
+/**
+ * Accounts only: guests (decision 0185) are visitors trying the apps, deleted after a
+ * week. They aren't listed, counted or given roles in the admin area.
+ */
+export const isAccount = sql`not coalesce(${user.isAnonymous}, false)`;
+
 /** "all", "admin", "user" (the baseline only: no admin flag, no custom role) or a custom role's key. */
 function roleFilter(db: Db, key: string): SQL | undefined {
 	if (key === "all") return undefined;
@@ -266,6 +273,7 @@ export function listUsers(db: Db, input: UserListInput): Promise<UserPage> {
 	return listPage(db, user, {
 		input,
 		where: allOf(
+			isAccount,
 			textSearch(input.q, [user.name, user.email]),
 			input.status === "banned" ? eq(user.banned, true) : input.status === "active" ? notBanned : undefined,
 			roleFilter(db, input.role),

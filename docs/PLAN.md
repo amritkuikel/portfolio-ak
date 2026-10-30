@@ -932,7 +932,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 38 | The CRUD standard, applied to Test CRUD, users, roles, permissions and audit | xhigh | Done (decisions 0173–0175) |
 | 39 | The dynamic portfolio: tables, admin, media library, public reads | high | Done (decisions 0176–0178) |
 | 40 | "Himal" portfolio redesign at `/` | xhigh | Done (decisions 0179–0184) |
-| 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | |
+| 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | Done (decisions 0185–0189) |
 | 42 | Notes and Links | high | |
 | 43 | Expenses and Habits | high | |
 | 44 | Forms (survey builder) | high | |
@@ -1333,63 +1333,53 @@ The owner runs one task per session and clears the context between tasks. A sess
 - From Task 39: `pnpm db:migrate` against Neon (migration `0011_portfolio`), then `pnpm db:seed-portfolio`.
 - Scratch copies from earlier tasks: `C:\tw`, `C:\tw2`, `C:\tw4`, `C:\tw5`, `C:\tw6`.
 
-### Task 41: Apps platform and Kanban
+### Task 41: Apps platform and Kanban (done)
 
-**Goal:** visitors can try real apps without signing up, safely; the first app is Kanban.
+**Guest sessions (0185, 0186), in the core:**
+- **Setup:** Better Auth's `anonymous` plugin (after `twoFactor`; `disableDeleteAnonymousUser`, the name "Guest") and its client. `pnpm auth:schema` added only `user.is_anonymous`; **migration `0012_guests_kanban`** (with the Kanban tables). `Session.isAnonymous` is set by `getServerSession`.
+- **Guards:**
+  - `permissionsForUser` returns nothing for a guest; `requireUserMiddleware` refuses guests (UNAUTHORIZED), `requireAppUser` (`src/middleware/apps.ts`) lets them in; `/api/account/export` refuses them.
+  - `_authed` sends a guest to the new `/upgrade` page (under `_auth`); `_auth` treats a guest as signed out.
+  - `refuseGuestPaths` (Better Auth `hooks.before`) refuses guests on `GUEST_REFUSED_PATHS` (0134's owner-only list plus `/send-verification-email`; two-factor's sign-in steps stay open) and refuses `/sign-in/anonymous` to someone signed in. `/delete-anonymous-user` is in `disabledPaths`.
+  - `sendEmail` refuses `.invalid` addresses; `ObservabilitySync` never identifies a guest; users list, role counts and dashboard exclude guests (`isAccount`).
+  - Rate limit: 5 guest sign-ins per hour per IP; per-user quotas in each app's service.
+- **Keeping the data:** `startGuest` seeds every app's sample rows in the guest's language and sets the signed `guest_claim` cookie; `claimGuest` moves the rows and uploads and deletes the guest in one transaction, from `onLinkAccount` and from `claimGuestData` (after every sign-in, two-factor included, and on the verify-email landing).
+- **Cleanup:** `GET /api/cron/guests` (Nitro route, daily in `vercel.json`, bearer `CRON_SECRET`): guests older than 7 days, their rows by cascade, their uploads through the attachments service.
 
-**Guest sessions** (Better Auth `anonymous` plugin; read its docs first: `onLinkAccount`, `disableDeleteAnonymousUser`, `generateName`):
-1. **Setup:**
-   - Enable the plugin in `src/server/auth/auth.ts` and its client in `src/lib/auth-client.ts`.
-   - Run `pnpm auth:schema` and check that the diff only adds `user.is_anonymous` (default false). Generate the migration.
-   - Add `isAnonymous?: true` to `Session` (`src/lib/session.ts`) and set it in `getServerSession`.
-2. **Guards, all of them:**
-   - `permissionsForUser` (`src/server/rbac/repository.ts`) returns `[]` for an anonymous user, so the baseline `user` role never reaches a guest and `canEnterAdmin` is false.
-   - `requireUserMiddleware` (`src/middleware/auth.ts`) refuses guests (`UNAUTHORIZED`); a new `requireAppUser` allows them. Account export, session listing, setting a password and 2FA must use the refusing one.
-   - `_authed` sends guests to an "upgrade" page; `_auth` treats a guest as signed out, so a guest can reach `/register` and `/login` to upgrade.
-   - A Better Auth `hooks.before` (`src/server/auth/hooks.ts`, like `refuseOwnerOnlyWhileImpersonating`) refuses guests on `/change-email`, `/change-password`, `/two-factor/*`, `/link-social` and `/delete-user`.
-   - `/delete-anonymous-user` is disabled over HTTP (`src/server/auth/disabled-paths.ts`; extends 0112).
-   - `sendEmail` refuses `*.invalid` addresses (guests get `…@anonymous.placeholder.invalid` style emails).
-   - No PostHog identify for guests (`ObservabilitySync`).
-   - Guests are filtered from `/admin/users` and from dashboard counts.
-   - Guest app data is never audited.
-   - Rate limits: a strict custom Better Auth rule for `/sign-in/anonymous` (e.g. 5 per hour per IP; optionally Turnstile), plus per-user row quotas in each app's service.
-3. **Upgrading keeps the data:**
-   - `onLinkAccount` moves the guest's rows to the new user in one transaction (each app's registry entry provides `claim(tx, fromUserId, toUserId)`).
-   - Because sign-up with email verification sets no session (the move would only run on the verify page, in the same browser) and 2FA sign-in finishes on `/two-factor/verify-totp` (which the plugin's hook doesn't match), also add an idempotent `claimGuestData` server function. It reads an httpOnly, signed `guest_claim` cookie (HMAC with `BETTER_AUTH_SECRET`, 7 days) set when the guest starts. It is called after sign-in (`useAuthNavigation.afterSignIn`), on the verify-email landing and after 2FA, and moves the rows if that guest still exists.
-4. **No public publishing by guests:** a guest's short links don't resolve, forms can't be published and notes can't be shared until they upgrade (phishing on the owner's domain).
-5. **Cleanup:** a daily cron `/api/cron/guests`:
-   - A Nitro route in `vite.config.ts` like `cron-attachments`, an entry in `knip.json` and a cron in `vercel.json` (Hobby plans run crons daily only).
-   - Bearer `CRON_SECRET`.
-   - It deletes guests created more than 7 days ago, their rows by cascade, and their attachments through the attachments service (the plugin's delete skips `deleteUser.beforeDelete`).
-6. Decisions superseding or extending 0112, 0129 (deletion), 0045 (rate limits) and 0132 (no audit for guest data).
+**Apps platform (0187):**
+- **Registry** in two halves: `src/features/apps/registry.ts` (what pages show) and `src/server/apps/registry.ts` (`seedGuestData`, `claim`, `usage`).
+- **Frame:** the `_apps` layout (`AppsLayout`): app header with the app switcher, the case-study link, language, theme and the user (or "Log in"); the guest banner; `ConfirmProvider` and `DbScope`.
+- **Pages:** `/apps` (gallery) and `/apps/kanban` (landing with "Try it now", or the user's boards) are indexable and in the sitemap; `/apps/kanban/$boardId` is private (someone else's board is a 404).
+- **Ownership:** `owner_id` on every app table, `ownedBy` in every query; app functions run `requireAppUser` then `withAppServices` (the guard test has an `APP_FUNCTIONS` list for them).
+- **Admin:** `/admin/apps` (group "Apps", `apps:read`): guests now, accounts and guests per app (stacked bars), rows per app.
+- **TanStack DB (0189, supersedes 0066):** `routerWithDbClient` and its package are gone; `DbScope` provides a DbClient per QueryClient to the apps and the optimistic example; live queries render on the server from the Query cache (`useLiveSuspenseQuery`), nothing DB-specific is streamed.
 
-**Apps platform:**
-- **Registry and shell:**
-  - `src/features/apps/registry.ts`: `{ slug, name(), description(), icon, projectSlug, claim, seedGuestData }`. It drives the `/apps` gallery, the app switcher, the sitemap and the admin usage page.
-  - `_apps.tsx` layout (the app header from Task 36): the app switcher, a guest banner ("Your data is deleted after 7 days · Create an account to keep it"), the user menu, and a link back to the project's case study.
-- **Each app's shape:**
-  - `features/apps/<app>/`, `server/apps/<app>/` (repositories scoped with an `ownedBy(userId)` helper), `functions/apps/<app>.ts` (`requireAppUser`), `routes/_apps/apps/<app>/…`, `server/db/schema/apps/<app>.ts` (every table has `owner_id text not null references user(id) on delete cascade`).
-  - A landing at `/apps/<app>` explains the app with a "Try it" button (`signIn.anonymous()`) when signed out, and shows the app when signed in.
-  - The landing is indexable; the app's inner pages are private.
-- **TanStack DB decision (do this first):**
-  - Try a `DbProvider` in the `_apps` layout with the SSR hydration `@tanstack/react-router-with-db` does today (read its source).
-  - If Kanban's live queries render on the server and hydrate, remove `routerWithDbClient` from `src/router.tsx` (the 100.6 kB leaves every page; lower the budget line in `scripts/check-bundle.ts`). Otherwise keep it.
-  - Either way, a decision superseding 0066.
-- **Admin:** group "Apps", `/admin/apps`: usage per app (users vs guests, rows) with charts; permission `apps:read`.
+**Kanban (0188):** tables `kanban_board`, `kanban_column`, `kanban_card`; fractional order keys (`src/lib/fractional-index.ts`); dnd-kit sortables (cards grouped by column, columns that also take cards), Space/arrows/Space or Alt + arrows, localized announcements; TanStack DB collections over the board query with optimistic moves and rollback; card sheet (title, description, labels, due date, checklist); quotas (20 boards, 500 cards, 12 columns per board); the guest's "Getting started" board.
 
-**Kanban:**
-- **Tables:** `boards` (name), `columns` (board, name, position), `cards` (column, board, title, description, labels text[], due date, checklist jsonb, position), with timestamps.
-- **Ordering:** positions are fractional-index keys (`src/lib/fractional-index.ts`, `generateKeyBetween`, unit-tested), so a move updates one row.
-- **Board UI:**
-  - dnd-kit with the keyboard sensor and localized announcements; cards move within and between columns, and columns reorder.
-  - TanStack DB live queries with optimistic moves and rollback on failure; the first paint is server-rendered.
-  - Quotas: 20 boards, 500 cards per user.
-- **Guest seed:** a sample board with columns and cards, on the first visit.
-- **Tests:** PGlite tests (ownership isolation: user A can't read or move user B's cards), jsdom tests of keyboard moves, stories, review pages, and an e2e flow: "a guest tries Kanban with the keyboard, registers, verifies and keeps the board".
+**strip-demo:** the `apps` layer (paths, the Kanban schema, marked lines in shared files); guest sessions stay with the core.
 
-**Strip-demo:** fill the `apps` layer (paths, markers, the `vercel.json` cron, migrations).
+**Tests:** PGlite `apps-kanban` (ownership isolation, moves, collation, quotas, seed, claim, usage) and `guests` (permissions, admin exclusions, email, the cookie, claim and rollback, cleanup); unit `fractional-index` and `kanban-moves`; jsdom `kanban-board` (keyboard moves, announcements, adding a card); stories `Apps/Kanban` and `Apps/Platform`; e2e `apps.spec.ts` (a guest moves a card with the keyboard, registers, verifies and keeps the board; a guest signs in to an account with two-factor and keeps it; a guest can't enter the admin area or change an account); review pages `/apps`, `/apps/kanban` (visitor and member), the board, `/admin/apps` and `/upgrade`.
 
-**Acceptance:** a guest can use Kanban, can't reach `/admin`, account changes or emails, and keeps the data on upgrade (email-verification path and 2FA path); the cleanup cron removes old guests and their attachments; all gates are green.
+**Numbers:**
+- `pnpm test`: 94 files, 747 tests. Storybook: 374 story tests (both passes; see the deviations for a flake). `pnpm test:e2e`: 946 checks, all passed, none flaky, 15.8 min (Task 40: 871).
+- **Every page's JavaScript:** 338.5 → 245.6 kB gzip (−93 kB): TanStack DB left every page. The entry line is 245.6 kB against a budget raised from 240 to 250 kB, because TanStack Query's core, which the removed `tanstack-db` chunk group had absorbed, is back in it; `check-bundle.ts` now fails if DB's code is ever preloaded by every page. The board page adds 157.8 kB on top of the root.
+
+**Deviations:**
+- **Guest sessions are core, not the `apps` layer:** the column is in the Better Auth–generated schema and the guards are in the auth middleware; without apps nothing starts a guest session (0185).
+- **The registry is two files**, and has no `projectSlug`: the case-study link comes from a published project whose "App" field (Task 39's `appSlug`) names the app; the case study's "Try the live app" link uses the same field (it was behind `LIVE_APPS = false`).
+- **`requireAppUser` and `withAppServices` live in `src/middleware/apps.ts`** (the `apps` layer), not in `auth.ts`.
+- **No Turnstile on guest sign-in:** the rate limit and the weekly cleanup bound the cost (0185).
+- **The plugin's own guest deletion is off:** the claim deletes the guest in its transaction, after moving the rows.
+- **The entry budget went from 240 to 250 kB** (see the numbers).
+- **Found on the way:** `/dev/examples/optimistic`'s loader imported a constant from its collection module, which would have kept DB in every page (moved to `queries.ts`); an `sr-only` label in the board's scroll region widened phone pages (the region is `relative`); the apps header was too wide at 390 px signed out (the brand shows its mark only, and "Log in" hides on phones where the landing has its own button).
+- **Fixed while running CI's template matrix:** `new:feature` read every entry of `src/server/db/schema/` as a file (the new `apps/` folder broke it); `todayInZone` (Kanban only) needed `apps` markers; the apps' case-study query moved into the portfolio's `queries.ts` (inside `apps` markers) so either layer strips cleanly.
+- **Template matrix:** in a scratch worktree, all three variants (all layers, `--keep-apps`, `--keep-portfolio`) pass strip-demo, both `new:feature` runs, typecheck, check, knip, test and the migration check.
+- **A Storybook flake, older than this task:** in the dark/Nepali pass an overlay story (Test CRUD's quick view or edit dialog, UI primitives' overlays) is sometimes not yet visible when checked: 1 run in 3 to 5, on this task's tree and on Task 40's commit alike; each passes on rerun.
+
+**Left for the owner:**
+- Run `pnpm db:migrate` against Neon (migration `0012_guests_kanban`).
+- To link Kanban to its case study, write the project and set its "App" field to `kanban`.
+- Scratch copy to delete: `C:\tw7` (no longer a git worktree, just a folder this session couldn't remove).
 
 ### Task 42: Notes and Links
 
