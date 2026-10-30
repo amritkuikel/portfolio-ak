@@ -24,6 +24,8 @@ const LIST: ExampleTaskSearch = { ...EXAMPLE_SEARCH_DEFAULTS, done: undefined };
 export const Route = createFileRoute("/dev/examples/masking/")({
 	validateSearch: z.object({ open: z.uuid().optional().catch(undefined) }),
 	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleTasksQueryOptions } = await import("@/features/dev/examples/queries");
 		await ensureQuery(context.queryClient, exampleTasksQueryOptions(LIST));
 	},
 	head: () => privateHead(m.examples_masking_title()),

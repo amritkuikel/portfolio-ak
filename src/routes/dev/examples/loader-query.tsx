@@ -19,6 +19,8 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/dev/examples/loader-query")({
 	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleSnapshotQueryOptions } = await import("@/features/dev/examples/queries");
 		await ensureQuery(context.queryClient, exampleSnapshotQueryOptions());
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_loader_title) },

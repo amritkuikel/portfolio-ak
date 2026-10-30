@@ -295,7 +295,7 @@ export async function claimImportKey(tx: Tx, ownerId: string, key: string, finge
 	return rows.length > 0;
 }
 
-export async function getImport(tx: Tx, key: string) {
+export async function getImport(tx: Db | Tx, key: string) {
 	const [row] = await tx.select().from(expenseImport).where(eq(expenseImport.key, key));
 	return row ?? null;
 }

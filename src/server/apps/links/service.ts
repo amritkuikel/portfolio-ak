@@ -8,7 +8,7 @@ import { addDays, startOfDayInZone, todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import { notFound, uniqueViolation, withAudit } from "@/server/db/crud";
 import { allOf, orderBySort, paginate, textSearch } from "@/server/db/list";
 import { link, linkClick, user } from "@/server/db/schema";
@@ -63,6 +63,7 @@ export async function createLink(
 	await enforceRateLimit(db, `links-create:${user.id}`, { max: LINKS_QUOTAS.createsPerHour, windowSeconds: 3600 });
 	try {
 		return await db.transaction(async (tx) => {
+			await lockQuota(tx, `links:${user.id}`);
 			if ((await repo.countLinks(tx, user.id)) >= LINKS_QUOTAS.links) throw quotaError();
 			const slug = input.slug || (await freeRandomSlug(tx));
 			const [row] = await repo.insertLinks(tx, user.id, [

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { clearServerErrorOnChange, formValidators, useAppForm, withForm } from "@/components/forms";
+import { formValidators, useAppForm, withForm } from "@/components/forms";
 import { email, required } from "@/lib/validation";
 
 const schema = z.object({ name: required(), email: email() });
@@ -19,15 +19,15 @@ const deferred = () => {
 
 function ProfileForm({
 	onSubmit,
-	clearStale = false,
+	onChange,
 }: {
 	onSubmit: (value: z.infer<typeof schema>) => Promise<void> | void;
-	clearStale?: boolean;
+	onChange?: (name: string) => void;
 }) {
 	const form = useAppForm({
 		defaultValues: { name: "", email: "" },
 		validators: formValidators(schema),
-		...(clearStale ? { listeners: { onChange: clearServerErrorOnChange } } : {}),
+		listeners: { onChange: ({ fieldApi }) => onChange?.(fieldApi.name) },
 		onSubmit: ({ value }) => onSubmit(value),
 	});
 	return (
@@ -73,11 +73,11 @@ describe("FormErrorSummary", () => {
 	});
 });
 
-describe("clearServerErrorOnChange", () => {
+describe("useAppForm clears stale errors on change (clearServerErrorOnChange)", () => {
 	it("clears a fixed field's submit error while typing, not when it loses focus", async () => {
 		// An error leaving on blur moved the page between the press and release of the next click.
 		const user = userEvent.setup();
-		render(<ProfileForm onSubmit={() => {}} clearStale />);
+		render(<ProfileForm onSubmit={() => {}} />);
 		await user.click(screen.getByRole("button", { name: "Save" }));
 		await screen.findByTestId("form-error-summary");
 		await user.type(screen.getByLabelText("Name"), "Sita");
@@ -86,6 +86,17 @@ describe("clearServerErrorOnChange", () => {
 		// A field still wrong after the edit shows what the change validator found.
 		await user.type(screen.getByLabelText("Email"), "sita@");
 		expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
+	});
+
+	it("still runs the form's own onChange listener", async () => {
+		const user = userEvent.setup();
+		const onChange = vi.fn();
+		render(<ProfileForm onSubmit={() => {}} onChange={onChange} />);
+		await user.click(screen.getByRole("button", { name: "Save" }));
+		await screen.findByTestId("form-error-summary");
+		await user.type(screen.getByLabelText("Name"), "S");
+		expect(onChange).toHaveBeenCalledWith("name");
+		expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
 	});
 });
 

@@ -19,7 +19,7 @@ import { todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import { notFound } from "@/server/db/crud";
 import type { Tx } from "@/server/db/types";
 import * as repo from "./repository";
@@ -72,6 +72,7 @@ async function insertBoardWithColumns(tx: Tx, ownerId: string, input: { id?: str
 
 export async function createBoard({ db, user }: AppServices, input: CreateBoardInput): Promise<KanbanBoardSummary> {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `kanban:${user.id}`);
 		if ((await repo.countBoards(tx, user.id)) >= KANBAN_QUOTAS.boards) throw quotaError("boards", KANBAN_QUOTAS.boards);
 		const { board, columns } = await insertBoardWithColumns(tx, user.id, input);
 		return { id: board.id, name: board.name, columns: columns.length, cards: 0, updatedAt: new Date().toISOString() };
@@ -122,6 +123,7 @@ export async function deleteColumn({ db, user }: AppServices, id: string): Promi
 
 export async function createCard({ db, user }: AppServices, input: CreateCardInput): Promise<KanbanCard> {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `kanban:${user.id}`);
 		const column = await repo.getColumn(tx, user.id, input.columnId);
 		if (!column || column.boardId !== input.boardId) throw notFound("Column");
 		if ((await repo.countCards(tx, user.id)) >= KANBAN_QUOTAS.cards) throw quotaError("cards", KANBAN_QUOTAS.cards);

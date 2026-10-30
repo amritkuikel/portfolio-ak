@@ -29,6 +29,8 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/dev/examples/optimistic")({
 	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleTasksQueryOptions, OPTIMISTIC_SEARCH } = await import("@/features/dev/examples/queries");
 		await ensureQuery(context.queryClient, exampleTasksQueryOptions(OPTIMISTIC_SEARCH));
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_optimistic_title) },

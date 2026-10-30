@@ -18,7 +18,7 @@ import { addDays, addMonths, type IsoMonth, monthDays, todayInZone } from "@/lib
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import { notFound, uniqueViolation } from "@/server/db/crud";
 import type { Tx } from "@/server/db/types";
 import { enforceRateLimit } from "@/server/http/rate-limit";
@@ -92,6 +92,7 @@ export async function getMonth(
 
 export async function createExpense({ db, user }: AppServices, { id, ...expense }: ExpenseInput): Promise<ExpenseItem> {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `expenses:${user.id}`);
 		if ((await repo.countExpenses(tx, user.id)) >= EXPENSES_QUOTAS.transactions) throw expensesQuota();
 		await checkCategory(tx, user.id, expense.categoryId);
 		const [row] = await repo.insertExpenses(tx, user.id, [{ id, ...expense }]);
@@ -122,6 +123,7 @@ export async function listCategories({ db, user }: AppServices): Promise<Categor
 export async function createCategory({ db, user }: AppServices, input: CategoryInput): Promise<ExpenseCategory> {
 	try {
 		return await db.transaction(async (tx) => {
+			await lockQuota(tx, `expenses:${user.id}`);
 			if ((await repo.countCategories(tx, user.id)) >= EXPENSES_QUOTAS.categories) throw categoriesQuota();
 			const [row] = await repo.insertCategories(tx, user.id, [input]);
 			if (!row) throw new Error("Category insert returned no row");
@@ -179,16 +181,22 @@ const NEW_CATEGORY_LOOKS: ReadonlyArray<{ color: AppColor; icon: CategoryIcon }>
  * A CSV import (decision 0192): up to 1,000 rows, once per idempotency key. The key is
  * claimed in the same transaction as the rows, so a repeat (a double click, a retry
  * after a lost answer) waits for the first and gets its result; the same key with
- * other rows, or someone else's key, is a CONFLICT. Categories are matched by name
+ * other rows, or someone else's key, is a CONFLICT. A finished import's repeat is answered
+ * before the hourly import limit counts it. Categories are matched by name
  * (any case) and made when missing.
  */
 export async function importExpenses({ db, user }: AppServices, input: ImportInput): Promise<ImportResult> {
 	const fingerprint = createHash("sha256").update(JSON.stringify(input.rows)).digest("hex");
+	// A retry of an import that went through gets its result back before the rate limit counts it.
+	const done = await repo.getImport(db, input.key);
+	if (done?.result && done.ownerId === user.id && done.fingerprint === fingerprint)
+		return { ...done.result, replayed: true };
 	await enforceRateLimit(db, `expenses-import:${user.id}`, {
 		max: EXPENSES_QUOTAS.importsPerHour,
 		windowSeconds: 3600,
 	});
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `expenses:${user.id}`);
 		if (!(await repo.claimImportKey(tx, user.id, input.key, fingerprint))) {
 			const earlier = await repo.getImport(tx, input.key);
 			if (earlier?.ownerId !== user.id || earlier.fingerprint !== fingerprint || !earlier.result) {

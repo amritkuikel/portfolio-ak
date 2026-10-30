@@ -24,6 +24,8 @@ import { m } from "@/paraglide/messages";
 export const Route = createFileRoute("/dev/examples/masking/$id")({
 	params: { parse: (raw) => parseParams(exampleTaskIdSchema, raw) },
 	loader: async ({ context, params }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleTaskQueryOptions } = await import("@/features/dev/examples/queries");
 		try {
 			const task = await ensureQuery(context.queryClient, exampleTaskQueryOptions(params.id));
 			return { title: task.title };

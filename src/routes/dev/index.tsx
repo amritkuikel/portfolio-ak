@@ -13,7 +13,11 @@ import { m } from "@/paraglide/messages";
 /** /dev: the demo home (feature flags, Intl formatting), a starting point for the references below it. */
 export const Route = createFileRoute("/dev/")({
 	// Feature flags are evaluated on the server and SSR'd with the page (see feature-flags.ts).
-	loader: ({ context }) => ensureQuery(context.queryClient, homeFlagsQueryOptions()),
+	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { homeFlagsQueryOptions } = await import("@/features/flags/queries");
+		return ensureQuery(context.queryClient, homeFlagsQueryOptions());
+	},
 	head: () => privateHead(m.nav_dev()),
 	component: Home,
 });

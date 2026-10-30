@@ -105,6 +105,7 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/unit/habit-streaks.test.ts",
 			"tests/unit/expenses-import.test.ts",
 			"tests/unit/forms-fields.test.ts",
+			"tests/unit/links-target.test.ts",
 			"tests/server/apps-kanban.test.ts",
 			"tests/server/apps-notes.test.ts",
 			"tests/server/apps-links.test.ts",
@@ -328,6 +329,8 @@ run("compiling messages", node, [
 	"compile",
 	"--project",
 	"./project.inlang",
+	"--output-structure",
+	"locale-modules",
 	"--silent",
 ]);
 run(

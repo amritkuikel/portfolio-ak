@@ -24,6 +24,8 @@ export const Route = createFileRoute("/dev/test-crud/$slug")({
 	// is served without a query.
 	params: { parse: (raw) => parseParams(testCrudSlugParamSchema, raw) },
 	loader: async ({ context, params }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { publicTestCrudDetailQueryOptions } = await import("@/features/test-crud/queries");
 		try {
 			const { title } = await ensureQuery(context.queryClient, publicTestCrudDetailQueryOptions(params.slug));
 			// Only what head() and the breadcrumb need: the full item (with its body) already

@@ -22,7 +22,7 @@ Nothing in the admin area (no permissions, not even the baseline role's), no acc
 | Server registry entry | `src/server/apps/registry.ts` (`APP_SERVERS`) | `seedGuestData`, `claim`, `usage` |
 | Tables | `src/server/db/schema/apps/<app>.ts`, exported from the schema index with `// @apps` | `kanban_board`, `kanban_column`, `kanban_card` |
 | Feature code | `src/features/apps/<app>/` | `types.ts`, `schema.ts`, `search.ts`, `queries.ts`, `collections.ts`, `moves.ts`, `components/` |
-| Repository and service | `src/server/apps/<app>/` | every query takes the owner (`ownedBy`); quotas in the service |
+| Repository and service | `src/server/apps/<app>/` | every query takes the owner (`ownedBy`); quotas in the service, counted under `lockQuota` (0199) |
 | Server functions | `src/functions/apps/<app>.ts` | `.middleware([requireAppUser, withAppServices])`, then one service call |
 | Routes | `src/routes/_apps/apps/<app>/` | `index.tsx` (landing or boards), `$boardId.tsx` (private); loaders import `queries.ts` on demand (0194) |
 | Admin usage | `usage(db)` on the server entry | accounts and guests with boards, boards and cards |
@@ -35,7 +35,7 @@ Nothing in the admin area (no permissions, not even the baseline role's), no acc
 
 1. Add the slug to `APP_SLUGS` and an entry to `APPS` (messages in both languages), and an entry to `APP_SERVERS` with its `seedGuestData`, `claim` (one `update … set owner_id = to where owner_id = from` per table, children first) and `usage`.
 2. Tables in `src/server/db/schema/apps/<app>.ts` with `owner_id` as above; export them from the schema index with a `// @apps` line; `pnpm db:generate`.
-3. Repository and service in `src/server/apps/<app>/`, tested on PGlite: ownership isolation first (user A can't read or change user B's rows), then quotas, the seed and the claim.
+3. Repository and service in `src/server/apps/<app>/`, tested on PGlite: ownership isolation first (user A can't read or change user B's rows), then quotas (a create takes `lockQuota(tx, "<app>:<user id>")` in its transaction before it counts), the seed and the claim.
 4. Functions in `src/functions/apps/<app>.ts` and their names in the guard test's `APP_FUNCTIONS`.
 5. Routes under `src/routes/_apps/apps/<app>/`: the landing at `index.tsx` with `seo()` (add it to `INDEXABLE` in `tests/unit/route-seo.test.ts`), inner pages private; every route in `e2e/support/pages.ts`. The sitemap and the gallery pick the app up from the registry. A loader imports the app's `queries.ts` with `await import(…)`, never statically (0194).
 6. Add the new paths to the `apps` layer in `scripts/strip-demo.ts`.
@@ -87,7 +87,7 @@ The `_apps` layout mounts `<DbScope>`, so DB is available to every app page and 
 - **Builder** (`/apps/forms/$formId`): a draft in the page; Save validates it with `saveFormInput` and sends it against the loaded version (stale: Reload). Problems are keyed like the input (`fields.2.label`). The palette and the questions share one dnd-kit provider (a type dropped on a question goes in there); every palette entry also has an add button, and questions move with Alt + ↑/↓. Publishing keeps the version and needs an account.
 - **Public page** `/f/$slug`: outside every section (its own frame, no session lookup), an account's published form only, `noindex` in the head and `X-Robots-Tag`. Submissions: honeypot, Turnstile, 5 an hour per sender and form (`clientIpHash`), the form's schema, 1,000 per form.
 - **Results:** `summarize` (`results.ts`) per question, the responses in a `DataTable` (`?page=`), every response as CSV.
-- **Quotas:** 20 forms per user.
+- **Quotas:** 20 forms per user. A submission whose answers don't match the form's question ids (the questions changed since the page loaded) is a CONFLICT asking to reload (0199).
 
 ## Turning guest sessions off
 
@@ -105,3 +105,4 @@ Remove `anonymous(…)` from `src/server/auth/auth.ts` and `anonymousClient()` f
 - **Deleting what the page shows:** invalidating a detail query while its page is still mounted refetches a 404. Habits' delete invalidates the overview only, navigates, then removes the habit's query.
 - **A page outside every section renders its own frame:** `/f/$slug` has no layout, so its component draws the header, preloads the fonts in its `head` and sets `staticData.session: "skip"` (a respondent has no session to look up).
 - **A two-factor sign-in loses the guest's session:** the password step clears the session cookie before the anonymous plugin's hook runs; the `guest_claim` cookie and `claimGuestData` after sign-in are what keep the data.
+- **A count then an insert isn't a limit:** under READ COMMITTED two requests both count `quota − 1` and both insert. Take `lockQuota` (a transaction-scoped advisory lock per owner, or per form for responses) before the count, inside the same transaction (0199).

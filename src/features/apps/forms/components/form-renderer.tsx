@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { clearServerErrorOnChange, formValidators, handleSaveError, useAppForm } from "@/components/forms";
+import { formValidators, handleSaveError, useAppForm } from "@/components/forms";
 import { m } from "@/paraglide/messages";
 import { type AnswerDraft, emptyAnswers, type FormField, toZodSchema } from "../fields";
 import { RatingField } from "./rating-field";
@@ -28,7 +28,6 @@ export function FormRenderer({
 	const form = useAppForm({
 		defaultValues: emptyAnswers(fields),
 		validators: formValidators(toZodSchema(fields)),
-		listeners: { onChange: clearServerErrorOnChange },
 		onSubmit: async ({ value, formApi }) => {
 			try {
 				await onSubmit(value);

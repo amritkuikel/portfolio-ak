@@ -23,7 +23,7 @@
 		"db:studio": "drizzle-kit studio",
 		"storybook": "storybook dev -p 6006 --no-open",
 		"build-storybook": "storybook build",
-		"i18n:compile": "paraglide-js compile --project ./project.inlang --silent",
+		"i18n:compile": "paraglide-js compile --project ./project.inlang --output-structure locale-modules --silent",
 		"i18n:translate": "inlang machine translate --project ./project.inlang --locale en --targetLocales ne",
 		"i18n:check": "inlang check --project ./project.inlang --missing-translations --empty-translations --empty-variants --missing-variables --unknown-variables --missing-markup --missing-variants --missing-selectors",
 		"db:seed-admin": "node scripts/seed-admin.ts",

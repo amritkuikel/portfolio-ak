@@ -32,7 +32,11 @@ export const Route = createFileRoute("/dev/examples/data-table")({
 	validateSearch: exampleTaskSearchSchema,
 	search: { middlewares: [stripSearchParams(EXAMPLE_SEARCH_DEFAULTS)] },
 	loaderDeps: ({ search }) => search,
-	loader: ({ context, deps, cause }) => loadList(context.queryClient, exampleTasksQueryOptions(deps), cause),
+	loader: async ({ context, deps, cause }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleTasksQueryOptions } = await import("@/features/dev/examples/queries");
+		return loadList(context.queryClient, exampleTasksQueryOptions(deps), cause);
+	},
 	staticData: { breadcrumb: staticCrumb(m.examples_table_title) },
 	head: () => privateHead(m.examples_table_title()),
 	component: DataTableExample,

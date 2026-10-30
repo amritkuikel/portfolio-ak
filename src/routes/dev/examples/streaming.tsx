@@ -1,7 +1,6 @@
 import { Await, createFileRoute } from "@tanstack/react-router";
 import { DescriptionList } from "@/components/data-display/description-list";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
-import { getSlowExample } from "@/functions/examples";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { formatDateTime, formatNumber } from "@/lib/i18n/intl";
 import { privateHead } from "@/lib/seo";
@@ -15,7 +14,11 @@ import { m } from "@/paraglide/messages";
  * The fallback reserves the result's height, so nothing shifts.
  */
 export const Route = createFileRoute("/dev/examples/streaming")({
-	loader: () => ({ slow: getSlowExample() }),
+	loader: async () => {
+		// On demand: the server functions stay out of every page's JavaScript (0194).
+		const { getSlowExample } = await import("@/functions/examples");
+		return { slow: getSlowExample() };
+	},
 	staticData: { breadcrumb: staticCrumb(m.examples_streaming_title) },
 	head: () => privateHead(m.examples_streaming_title()),
 	component: StreamingExample,

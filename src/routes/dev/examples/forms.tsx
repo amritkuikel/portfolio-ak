@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { clearServerErrorOnChange, formValidators, handleSaveError, useAppForm } from "@/components/forms";
+import { formValidators, handleSaveError, useAppForm } from "@/components/forms";
 import { Demo, ExamplePage } from "@/features/dev/examples/example-page";
 import { exampleSignupSchema } from "@/features/dev/examples/schema";
 import { submitExampleSignup } from "@/functions/examples";
@@ -17,7 +17,7 @@ import { m } from "@/paraglide/messages";
  * - Simple: client validation only (on change, blur and submit), an error summary.
  * - Server field errors: the server validates the same schema plus its own rules;
  *   a refusal with `fieldErrors` lands on the matching field (handleSaveError)
- *   and clears when the field is edited (clearServerErrorOnChange).
+ *   and clears when the field is edited (every useAppForm form does, clearServerErrorOnChange).
  */
 export const Route = createFileRoute("/dev/examples/forms")({
 	staticData: { breadcrumb: staticCrumb(m.examples_forms_title) },
@@ -69,7 +69,6 @@ function ServerErrorsForm() {
 	const form = useAppForm({
 		defaultValues: { username: "", email: "" },
 		validators: formValidators(exampleSignupSchema),
-		listeners: { onChange: clearServerErrorOnChange },
 		onSubmit: async ({ value, formApi }) => {
 			try {
 				const result = await submitExampleSignup({ data: value });

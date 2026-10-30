@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (172 entries)</summary>
+<summary>Index (177 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -200,6 +200,11 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0193](#0193-habits-streaks-on-calendar-days-in-kathmandu-a-server-drawn-heatmap-optimistic-check-ins): Habits: streaks on calendar days in Kathmandu, a server-drawn heatmap, optimistic check-ins
 - [0194](#0194-a-routes-loader-imports-its-queries-on-demand): A route's loader imports its queries on demand
 - [0195](#0195-forms-field-definitions-as-data-one-schema-for-both-sides-a-public-page-outside-the-sections): Forms: field definitions as data, one schema for both sides, a public page outside the sections
+- [0196](#0196-every-form-clears-a-fields-stale-errors-when-it-changes): Every form clears a field's stale errors when it changes
+- [0197](#0197-every-route-loader-imports-its-queries-on-demand): Every route loader imports its queries on demand
+- [0198](#0198-paraglides-cli-is-told-the-output-structure): Paraglide's CLI is told the output structure
+- [0199](#0199-app-quotas-are-checked-under-a-transaction-scoped-advisory-lock): App quotas are checked under a transaction-scoped advisory lock
+- [0200](#0200-part-4-measured-task-45): Part 4 measured (Task 45)
 </details>
 
 ---
@@ -1923,7 +1928,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 ## 0155: Dev speed: one message module per locale, Babel only on our code, a local database
 
 - **What:**
-  - **Paraglide:** `paraglide.config.ts` uses `outputStructure: "locale-modules"`, so the CLI, Vitest and `pnpm dev` produce the same files. Only production builds override it to `message-modules` (in `vite.config.ts`), which tree-shakes messages per page. Supersedes 0020's "the same options everywhere".
+  - **Paraglide:** `paraglide.config.ts` uses `outputStructure: "locale-modules"`, so the CLI, Vitest and `pnpm dev` produce the same files (the CLI needs the flag too: 0198). Only production builds override it to `message-modules` (in `vite.config.ts`), which tree-shakes messages per page. Supersedes 0020's "the same options everywhere".
   - **React Compiler:** Babel runs on `src/**` only, excluding `src/paraglide` (the plugin's default ran it on all 1,064 compiled message modules).
   - **Vite:** `server.warmup` transforms the client entry, the layouts and the server entry at startup.
   - **Database:** `pnpm dev:local` serves PGlite stored in `.data/pglite` (gitignored) over TCP; every start applies new migrations and the first one seeds an admin and the demo data. The dev pool keeps idle connections for 5 minutes (production: 10 s).
@@ -2414,3 +2419,46 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - **Found on the way, in the form kit:** after a failed submit, a field fixed by typing kept its submit error until it lost focus; the message leaving moved the page between the press and the release of the next click, so pressing Send did nothing (the public form's e2e flow caught it). `clearServerErrorOnChange` now clears the server's, the submit's and the blur's errors of the changed field (the change validator has just checked it), so the message goes while typing. It is the listener `useCrudForm` already sets; forms without it keep the old behaviour (forms guide, pitfalls).
 - **Why:** a definition that is data can be stored, previewed and validated by one schema on both sides, so the browser's errors are the server's. Option ids keep results meaningful when the owner fixes a typo after answers came in.
 - **Alternatives considered:** a schema stored as JSON Schema (another validator, and Zod's localized messages would be lost); TanStack Form for the builder (nested arrays of unions with per-type settings; the draft-and-validate model is simpler and the errors map the same way); answers keyed by position (reordering would scramble them); versioned form definitions per response (more than a showcase needs; removed questions simply leave the results).
+
+## 0196: Every form clears a field's stale errors when it changes
+
+*Extends 0195's fix to every form.*
+
+- **What:** `useAppForm` (`src/components/forms/index.ts`) wraps the hook `createFormHook` makes: every form gets `clearServerErrorOnChange` as its `listeners.onChange`, run before the form's own listener when it has one. Editing a field clears the errors the edit made stale (the server's, the last submit's and blur's); the change validator has just checked the field, so what it found is what shows. `useCrudForm`, the public form's renderer and `/dev/examples/forms` no longer pass the listener, and the forms barrel no longer exports it.
+- **Why:** Task 44 found that without it a field fixed after a failed submit kept its message until it lost focus, and the message leaving moved the page between the press and the release of the next click, so the click on Send was lost. Only forms that remembered the listener were safe; the Expenses, Habits, Kanban, Links and media dialogs and the portfolio's section pages weren't.
+- **Alternatives considered:** adding the listener to each form (easy to forget, which is how those forms missed it); a lint rule (no AST rule for "an options object without a key").
+
+## 0197: Every route loader imports its queries on demand
+
+*Extends 0194 from the apps to every section.*
+
+- **What:** the admin, portfolio, `/dev` and `_apps` layout loaders load their feature's `queries.ts` with `await import(…)` inside the loader, as the apps' routes have since 0194; `/dev/examples/errors` and `/dev/examples/streaming` do the same for the functions module they call. Where a route's own component reads the same query options, the file also keeps the static import: the router's code splitter moves the component into its own chunk, and the reference file (loader, head, search) drops imports only the component uses. The auth routes keep their static import: `features/auth/queries` is in the root (the session) anyway.
+- **Numbers (gzip, every page):** 249.8 kB → 246.3 kB; the server-function stubs in the entry chunk went from 94 to 11 (one stub pulls its whole functions file, and stubs are 64-character hashes that don't compress). The rest of the entry is the router (about 60 kB raw of `router-core` and `react-router`), React (66 kB gzip, its own chunk), Zod's core, and the route tree with every route's options and the messages their heads and crumbs use.
+- **Trade-off:** a client-side navigation to a route whose chunk isn't loaded yet fetches the queries chunk before the loader can start its request. Links preload on intent (hover, focus, touch), which fetches the chunk and runs the loader before the click; on the server the import is a module already in memory. TanStack Router's docs advise against splitting the whole loader (`codeSplittingOptions` `['loader']`) for this reason; this moves only the import, route by route.
+- **Not done:** the theme toggle's dropdown (Radix menu and floating-ui, about 45 kB raw) is in the entry because `theme.tsx` also holds what the root needs. Moving it to its own file would lower the entry line, but every section's header renders the toggle, so every page would still load it: the number would move, not the cost.
+- **Alternatives considered:** splitting every loader with the router's option (an extra round trip even for routes whose loader needs nothing); raising the budget.
+
+## 0198: Paraglide's CLI is told the output structure
+
+*Corrects 0155.*
+
+- **What:** `pnpm i18n:compile` (and so `pnpm typecheck`), `scripts/setup-local.ts`, `scripts/new-feature.ts` and `scripts/strip-demo.ts` pass `--output-structure locale-modules` to `paraglide-js compile`.
+- **Why:** 0155 assumed the CLI reads `outputStructure` from `project.inlang/paraglide.config.ts`. It reads the config's other options, but this one is always the command-line value or the CLI's default, message-modules (Paraglide 2.25, `cli/commands/compile/command.js`). So `pnpm typecheck` replaced a running dev server's two message modules with 4,600 files, and a fresh clone's first `pnpm dev:local` (after `setup:local`) failed to load a message module while the Vite plugin rewrote them (Task 45's fresh-clone check).
+- **Alternatives considered:** letting the CLI default stand and the plugin rewrite (the race above, and a thousand modules in dev, which 0155 removed).
+
+## 0199: App quotas are checked under a transaction-scoped advisory lock
+
+- **What:** `lockQuota(tx, scope)` (`src/server/apps/ownership.ts`) runs `pg_advisory_xact_lock(hashtextextended(scope, 0))`. Every app create that counts before it inserts (Kanban boards and cards, Notes, Links, Expenses' expenses, categories and imports, Habits, Forms) takes it first with `<app>:<user id>`, and a form's submission takes `forms-responses:<form id>` around the cap's count and the insert, now in one transaction.
+- **Why:** under READ COMMITTED two requests could both count `quota − 1` and both insert, so a script could pass any per-user quota (the review of Part 4 found it). Kanban's columns were already safe because `createColumn` locks the board row; most quotas have no row to lock.
+- **Also from the review:** an Expenses import's retry with a finished key is answered before the hourly import limit counts it (the key exists for retries); the short-link middleware no longer throws `URIError` on malformed percent-encoding (`/l/%E0`), though such a URL doesn't reach it yet: Nitro's h3 (2.0.1-rc.22) decodes every path with `decodeURI` while creating the request event, so any malformed path (`/work/%E0` too) is an uncaught exception and a request left without an answer on the Node server. h3 2.0.8 no longer decodes there; it comes with a Nitro upgrade; a short link can't target this site in another spelling (port, trailing dot, `www.`); a public form whose questions changed since the page loaded asks the respondent to reload (a CONFLICT with that message) instead of failing on questions the page doesn't show.
+- **Alternatives considered:** `SERIALIZABLE` transactions (retries on every conflict for every create); a counter row per owner (another table and its upkeep in the claim and the cleanup).
+
+## 0200: Part 4 measured (Task 45)
+
+Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
+
+- **Every page's JavaScript:** 246.4 kB gzip (budget 250; 235.5 after Task 34, 338.5 with TanStack DB before Task 41). The heaviest routes on top of the root: the Kanban board 160.3 kB (TanStack DB, dnd-kit), the form builder 132.7, the notes list 127.6, the habits list 124.2, the `/dev/examples` pages 107–113, the admin profile editor 78.0. Preloaded fonts within budget, no exemptions.
+- **`pnpm dev:local` on a fresh clone:** `pnpm install` 23 s, `pnpm setup:local` 10 s. Vite ready in 2.8–3.7 s once messages are compiled (15.9 s on the very first start, with the compile and the dependency scan); the first page 5.5–8.5 s; a page not seen yet 0.1–0.4 s, except the first app page (`/apps/kanban`: 18 s, the dependency optimizer bundling dnd-kit and TanStack DB); a repeat 0.1–0.4 s. A request in the first seconds after Vite prints its address can get a 503 ("Vite environment nitro is unavailable", Nitro 3 beta); a reload a moment later works.
+- **Lighthouse 13.6, mobile, simulated throttling, behind a brotli proxy** (the harness server doesn't compress, portfolio guide): `/` 89, 97 and 94 in three runs (FCP and LCP 0.9 s, TBT 210–440 ms, CLS 0); `/login` 100, 99, 99. Task 40's 64 (home) and 69 (`/login`) were measured with TanStack DB still on every page (338.5 kB, removed in Task 41) and with an earlier Lighthouse, so the two aren't directly comparable. The home page's blocking time (hydrating the long page) is what still separates it from `/login`; the plan's ≥ 95 is met by one run in three.
+- **Gates:** `pnpm test` 79 s (104 files, 905 tests); `pnpm test:storybook` 181 s (406 story tests, both passes); `pnpm build` 80 s; `pnpm build-storybook` 349 s; `pnpm test:e2e` 1,194 checks, all passed, none flaky, 14.8 min (Task 44: 1,194 in 14.4 min).
+- **Review:** `/code-review` (high) over the Part 4 diff (`c129243..HEAD`, about 1,000 files) plus this task's changes. Fixed: the findings in 0199, the forms barrel's dead export and the missing decision (0196). Kept, with the reason: the loaders' on-demand import (0197's trade-off); the results page reading every response of a form (at most 1,000, and the summaries need them all).

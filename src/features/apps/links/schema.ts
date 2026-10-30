@@ -46,8 +46,14 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
 	"www",
 ]);
 
-/** The host short links live on (a target there would loop or pass for this site). */
-const siteHost = () => new URL(clientEnv.VITE_SITE_URL).host.toLowerCase();
+/**
+ * A host name as a site: without a trailing dot or a leading "www." (URL already drops
+ * the case and the default port), so `www.example.com.` is `example.com`.
+ */
+const siteOf = (hostname: string) => hostname.replace(/\.$/, "").replace(/^www\./, "");
+
+/** The site short links live on (a target there would loop or pass for this site), on any port. */
+const siteHost = () => siteOf(new URL(clientEnv.VITE_SITE_URL).hostname);
 
 /** Why `value` can't be a target, as a message, or null when it can. */
 export function targetProblem(value: string): string | null {
@@ -60,7 +66,7 @@ export function targetProblem(value: string): string | null {
 	}
 	if (url.protocol !== "http:" && url.protocol !== "https:") return m.links_error_target_url();
 	if (url.username || url.password) return m.links_error_target_url();
-	if (url.host.toLowerCase() === siteHost()) return m.links_error_target_self();
+	if (siteOf(url.hostname) === siteHost()) return m.links_error_target_self();
 	return null;
 }
 

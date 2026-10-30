@@ -45,6 +45,11 @@ export const withTrustedClientIp = (request: Request): Request => {
  * A keyed hash of a client IP, for rate limits on public forms (the contact form, a
  * published Forms survey): stored instead of the IP, and keyed, so it can't be
  * reversed by hashing every IPv4 address. Null when the IP is unknown.
+ *
+ * Core, for any public form: a project stripped of both demo layers has no caller
+ * yet, so knip is told the export is kept on purpose (Task 45).
+ *
+ * @public
  */
 export const clientIpHash = (ip: string | undefined): string | null =>
 	ip ? createHmac("sha256", serverEnv.BETTER_AUTH_SECRET).update(ip).digest("hex").slice(0, 32) : null;

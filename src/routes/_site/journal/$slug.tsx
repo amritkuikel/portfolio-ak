@@ -2,7 +2,6 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ArticlePage } from "@/features/portfolio/components/pages/article-page";
 import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { articleJsonLd } from "@/features/portfolio/lib/structured-data";
-import { postQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema, previewSearchSchema } from "@/features/portfolio/search";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { parseParams } from "@/lib/list/params";
@@ -14,6 +13,8 @@ export const Route = createFileRoute("/_site/journal/$slug")({
 	validateSearch: previewSearchSchema,
 	loaderDeps: ({ search }) => ({ preview: search.preview === 1 }),
 	loader: async ({ context, params, deps }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { postQueryOptions } = await import("@/features/portfolio/queries");
 		const detail = await ensureQuery(context.queryClient, postQueryOptions(params.slug, deps.preview));
 		if (!detail) throw notFound();
 		const { title, excerpt, slug, publishedAt, tags, cover } = detail.post;

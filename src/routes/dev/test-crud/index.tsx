@@ -28,7 +28,11 @@ export const Route = createFileRoute("/dev/test-crud/")({
 	loaderDeps: ({ search: { view: _view, ...list } }) => list,
 	// SSR and entering: awaited, so the cards are in the HTML and the page works without
 	// JavaScript. A new search keeps the current cards until the new ones arrive (loadList).
-	loader: ({ context, deps, cause }) => loadList(context.queryClient, publicTestCrudListQueryOptions(deps), cause),
+	loader: async ({ context, deps, cause }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { publicTestCrudListQueryOptions } = await import("@/features/test-crud/queries");
+		return loadList(context.queryClient, publicTestCrudListQueryOptions(deps), cause);
+	},
 	// A dev reference for public list pages: private like all of /dev (listSeo() is what a public list uses).
 	head: () => privateHead(m.test_crud_public_title()),
 	pendingComponent: PublicListPending,

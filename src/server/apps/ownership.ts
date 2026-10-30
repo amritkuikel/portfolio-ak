@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { Db } from "@/server/db/types";
+import type { Db, Tx } from "@/server/db/types";
 
 /**
  * Ownership in the showcase apps (decision 0187): every app table has `owner_id`, and
@@ -20,3 +20,13 @@ export const ownedBy = (table: Owned, userId: string) => eq(table.ownerId, userI
  * published (0186). Tests pass their own.
  */
 export type AppServices = { db: Db; user: { id: string; isGuest: boolean } };
+
+/**
+ * Serializes the quota checks of one owner (or one form) until the transaction ends:
+ * a count followed by an insert is only a limit when two requests can't both count
+ * before either inserts. Call it in the transaction, before the count. A transaction-
+ * scoped advisory lock, so there's no row to lock and nothing to release.
+ */
+export async function lockQuota(tx: Tx, scope: string): Promise<void> {
+	await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${scope}, 0))`);
+}

@@ -192,6 +192,16 @@ describe("Expenses CSV", () => {
 		]);
 	});
 
+	it("answers a finished import's retry even after the hourly import limit", async () => {
+		const key = crypto.randomUUID();
+		await expenses.importExpenses(alice(), { key, rows });
+		for (let index = 1; index < EXPENSES_QUOTAS.importsPerHour; index++) {
+			await expenses.importExpenses(alice(), { key: crypto.randomUUID(), rows: rows.slice(0, 1) });
+		}
+		expect(await code(expenses.importExpenses(alice(), { key: crypto.randomUUID(), rows }))).toBe("RATE_LIMITED");
+		expect(await expenses.importExpenses(alice(), { key, rows })).toMatchObject({ inserted: 4, replayed: true });
+	});
+
 	it("refuses a key reused for other rows, or by someone else", async () => {
 		const key = crypto.randomUUID();
 		await expenses.importExpenses(alice(), { key, rows });

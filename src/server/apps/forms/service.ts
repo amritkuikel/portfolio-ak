@@ -28,7 +28,7 @@ import { AppError, ruleError, zodFieldErrors } from "@/lib/errors";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import { notFound } from "@/server/db/crud";
 import type { FormRow } from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
@@ -89,6 +89,7 @@ export async function getForm({ db, user }: AppServices, id: string): Promise<Fo
 
 export async function createForm({ db, user }: AppServices, input: CreateFormInput): Promise<FormDetail> {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `forms:${user.id}`);
 		if ((await repo.countForms(tx, user.id)) >= FORMS_QUOTAS.forms) {
 			throw ruleError("CONFLICT", "Forms quota reached", m.forms_quota({ max: formatNumber(FORMS_QUOTAS.forms) }));
 		}
@@ -182,7 +183,8 @@ export type ResponseClient = {
 /**
  * A respondent's answers: the honeypot (a filled one gets the same "sent" answer and
  * stores nothing, so bots learn nothing), Turnstile, a rate limit per sender and
- * form, the form's own schema (its problems come back per field, keyed by field id),
+ * form, the same questions as the page that sent them (a CONFLICT asks to reload when
+ * they changed), the form's own schema (its problems come back per field, keyed by field id),
  * and a cap on responses per form.
  */
 export async function submitResponse(
@@ -197,14 +199,26 @@ export async function submitResponse(
 	const row = await repo.findPublished(db, slug);
 	if (!row) throw notFound("Form");
 	await enforceRateLimit(db, `forms-response:${row.id}:${client.ipHash ?? "unknown"}`, FORM_RESPONSE_LIMIT);
+	// The page sends every question's answer by id: other ids mean the questions changed
+	// since it loaded (or a forged request). Say so, rather than errors on questions it
+	// doesn't show.
+	const ids = new Set(row.fields.map((field) => field.id));
+	const keys = Object.keys(answers);
+	if (keys.length !== ids.size || keys.some((key) => !ids.has(key))) {
+		throw ruleError("CONFLICT", "The form's questions changed", m.forms_error_changed());
+	}
 	const parsed = toZodSchema(row.fields).safeParse(answers);
 	if (!parsed.success) {
 		throw new AppError("BAD_REQUEST", "Invalid answers", { fieldErrors: zodFieldErrors(parsed.error) });
 	}
-	if ((await repo.countResponses(db, row.id)) >= FORMS_QUOTAS.responsesPerForm) {
-		throw ruleError("CONFLICT", "Responses quota reached", m.forms_responses_full());
-	}
-	await repo.insertResponses(db, row.ownerId, row.id, [{ data: compactAnswers(parsed.data), ipHash: client.ipHash }]);
+	await db.transaction(async (tx) => {
+		// Respondents of one form wait for each other here, so the cap holds under concurrency.
+		await lockQuota(tx, `forms-responses:${row.id}`);
+		if ((await repo.countResponses(tx, row.id)) >= FORMS_QUOTAS.responsesPerForm) {
+			throw ruleError("CONFLICT", "Responses quota reached", m.forms_responses_full());
+		}
+		await repo.insertResponses(tx, row.ownerId, row.id, [{ data: compactAnswers(parsed.data), ipHash: client.ipHash }]);
+	});
 	return { sent: true };
 }
 

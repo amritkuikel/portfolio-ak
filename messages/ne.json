@@ -2236,6 +2236,7 @@
 	"forms_public_footer": "फारमबाट बनाइएको, निःशुल्क चलाएर हेर्न मिल्ने सर्वेक्षण बनाउने एप।",
 	"forms_public_try": "आफैँ बनाउनुहोस्",
 	"forms_responses_full": "यो फारमले अब थप जवाफ लिँदैन।",
+	"forms_error_changed": "तपाईंले भरिरहँदा यो फारम परिवर्तन भयो। यसका अहिलेका प्रश्नहरू हेर्न पृष्ठ फेरि लोड गर्नुहोस्।",
 	"forms_answer_yes": "हो",
 	"forms_answer_no": "होइन",
 	"forms_results_title": "नतिजा: {title}",

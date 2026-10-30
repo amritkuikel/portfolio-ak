@@ -134,11 +134,14 @@ test.describe("as an admin", () => {
 	});
 
 	test("an editor gets a 403 from the audit log's server function", async ({ page }) => {
-		// The admin's own call, captured from a client-side navigation to the page…
+		// The admin's own call, captured from a client-side navigation to the page: the one
+		// answering with audit entries (the session can be revalidated on the way)…
 		await open(page, "/admin");
-		const listed = page.waitForRequest((request) => request.url().includes("/_serverFn/"));
+		const listed = page.waitForResponse(
+			async (response) => response.url().includes("/_serverFn/") && (await response.text()).includes('"action"'),
+		);
 		await page.getByRole("link", { name: "Audit log" }).first().click();
-		const request = await listed;
+		const request = (await listed).request();
 		await expect(page.getByTestId("audit-table")).toBeVisible();
 		// …replayed with the editor's session.
 		const replay = await fetch(request.url(), {

@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppsLayout } from "@/features/apps/components/apps-layout";
-import { appCaseStudiesQueryOptions } from "@/features/portfolio/queries"; // @portfolio
 import { fontPreloads } from "@/lib/fonts";
 import { ensureQuery } from "@/lib/query"; // @portfolio
 import { NOINDEX } from "@/lib/seo";
@@ -14,7 +13,11 @@ import { getLocale } from "@/paraglide/runtime";
 export const Route = createFileRoute("/_apps")({
 	// portfolio:start
 	// The case study of each app, for the header's link back to it.
-	loader: ({ context }) => ensureQuery(context.queryClient, appCaseStudiesQueryOptions()),
+	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { appCaseStudiesQueryOptions } = await import("@/features/portfolio/queries");
+		return ensureQuery(context.queryClient, appCaseStudiesQueryOptions());
+	},
 	// portfolio:end
 	head: () => ({ meta: [NOINDEX], links: fontPreloads(getLocale()) }),
 	component: AppsLayout,

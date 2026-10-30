@@ -27,6 +27,8 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/dev/examples/idempotency")({
 	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { exampleMessagesQueryOptions } = await import("@/features/dev/examples/queries");
 		await ensureQuery(context.queryClient, exampleMessagesQueryOptions());
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_idempotency_title) },

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PortfolioHome } from "@/features/portfolio/components/pages/home-page";
 import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { personId, personJsonLd } from "@/features/portfolio/lib/structured-data";
-import { homeQueryOptions, profileQueryOptions } from "@/features/portfolio/queries";
 import { ensureQuery } from "@/lib/query";
 import { seo } from "@/lib/seo";
 import { websiteJsonLd } from "@/lib/structured-data";
@@ -11,6 +10,8 @@ import { m } from "@/paraglide/messages";
 export const Route = createFileRoute("/_site/")({
 	// The whole story in one round trip (getHome), next to the layout's profile.
 	loader: async ({ context: { queryClient } }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { homeQueryOptions, profileQueryOptions } = await import("@/features/portfolio/queries");
 		const [profile] = await Promise.all([
 			ensureQuery(queryClient, profileQueryOptions()),
 			ensureQuery(queryClient, homeQueryOptions()),

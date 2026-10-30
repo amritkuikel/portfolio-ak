@@ -4,8 +4,11 @@ import { defineConfig } from "@inlang/paraglide-js";
  * Paraglide compiler options, read by both the Vite plugin and the
  * `paraglide-js compile` CLI (used by `pnpm typecheck` on a fresh clone).
  *
- * Output structure: one module per locale here, so the CLI, Vitest and `pnpm dev`
- * produce the same files (and a CLI compile never rewrites the dev server's output).
+ * Output structure: one module per locale here, so Vitest and `pnpm dev` produce the
+ * same files. The CLI ignores this option (it uses one module per message unless told
+ * otherwise), so every CLI call passes `--output-structure locale-modules`: without it,
+ * `pnpm typecheck` rewrote a running dev server's messages and a fresh clone's first
+ * `pnpm dev:local` failed to load one (Task 45).
  * With one module per message, dev loaded about a thousand modules on the first page.
  * Production builds override it to "message-modules" in vite.config.ts, which
  * tree-shakes unused messages per page (decision 0155).

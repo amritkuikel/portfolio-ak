@@ -31,6 +31,8 @@ export const Route = createFileRoute("/dev/stack")({
 	search: { middlewares: [stripSearchParams(STACK_SEARCH_DEFAULTS)] },
 	loaderDeps: ({ search }) => search,
 	loader: async ({ context: { queryClient }, deps, cause }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { stackListQueryOptions } = await import("@/features/stack/queries");
 		// SSR and entering: awaited, so the list is part of the HTML and hydrates the Query
 		// cache. A new search keeps the current list until the new one arrives (loadList).
 		await loadList(queryClient, stackListQueryOptions(deps), cause);

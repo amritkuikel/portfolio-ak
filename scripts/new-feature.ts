@@ -394,6 +394,8 @@ run("compiling messages", node, [
 	"compile",
 	"--project",
 	"./project.inlang",
+	"--output-structure",
+	"locale-modules",
 	"--silent",
 ]);
 if (build) {

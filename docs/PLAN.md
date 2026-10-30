@@ -877,7 +877,7 @@ Each recipe is a guide section with a dev example or script, decided and documen
 
 ---
 
-## 10. Part 4: template v2 (Tasks 34–45)
+## 10. Part 4: template v2 (Tasks 34–45, done)
 
 Part 4 makes the template the base every project starts from, and the home of the owner's real portfolio:
 - A personal portfolio at `/`, its content in the database and edited in the admin. The current demo site moves to `/dev` (dev builds only).
@@ -936,7 +936,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 42 | Notes and Links | high | Done (decisions 0190–0191) |
 | 43 | Expenses and Habits | high | Done (decisions 0192–0194) |
 | 44 | Forms (survey builder) | high | Done (decision 0195) |
-| 45 | Wrap-up: guides, measurements, full review | medium | |
+| 45 | Wrap-up: guides, measurements, full review | medium | Done (decisions 0196–0200) |
 
 "Effort" is the recommended reasoning effort for the session (`/effort` or the model picker).
 
@@ -1507,10 +1507,41 @@ The owner runs one task per session and clears the context between tasks. A sess
 - Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban` to `0015_forms`).
 - To link Forms to a case study, set a published project's "App" field to `forms`.
 
-### Task 45: Wrap-up
+### Task 45: Wrap-up (done)
 
-- **Guides:** `design-system.md` and `crud.md` complete; new `apps.md` (guest sessions, ownership, adding an app); `portfolio.md` matches the code; CLAUDE.md's route map, layout block and pitfalls match the code.
-- **Measure and record** in a decision: the entry bundle and the heaviest routes; `pnpm dev:local` ready time, first page and later pages; Lighthouse mobile on `/`; the durations of `pnpm test`, `test:storybook` and `test:e2e`.
-- **Review:** run `/code-review` (or a full review) over the Part 4 diff (`git diff <Task 33 commit>..HEAD`), fix the findings, and rerun the gates.
-- **Check the promise:** a fresh clone → `pnpm setup:local` → `pnpm dev:local` works; the CI template matrix (strip-demo layers, new:feature, gates) is green.
-- Mark Part 4 done in 10.3 and CLAUDE.md.
+**Entry bundle (0197):** every route loader imports its feature's queries on demand, as the apps' did (0194): admin, portfolio, `/dev` and the `_apps` layout, plus two `/dev` examples that called a functions module. Every page's JavaScript went from 249.8 to 246.4 kB gzip (budget 250); the entry chunk's server-function stubs from 94 to 11.
+
+**Forms (0196):** `useAppForm` clears a field's stale errors on change for every form (Task 44's listener), before a form's own listener.
+
+**Review:** `/code-review` (high) over `c129243..HEAD` plus this task. Fixed (0199):
+- app quotas counted under a transaction-scoped advisory lock (`lockQuota`), and a form's response cap in one transaction with it;
+- an Expenses import's retry answered before the hourly import limit;
+- the short-link middleware's `URIError` on `/l/%E0` (but see the deviations: h3 throws first);
+- a short link can't target this site with a port, a trailing dot or `www.`;
+- a public form whose questions changed asks the respondent to reload;
+- the forms barrel's dead export.
+
+Kept, with the reason in 0197 and 0200: the loaders' on-demand import (a chunk before the request on a cold navigation; preload on intent hides it) and the results page reading every response (at most 1,000).
+
+**The promise:** a fresh clone, `pnpm setup:local`, then `pnpm dev:local` works. The check found that Paraglide's CLI ignores the config's `outputStructure`: `pnpm typecheck` rewrote a running dev server's messages, and a fresh clone's first `dev:local` failed to load one. Every CLI call now passes the flag (0198). The CI template matrix (strip-demo with all layers, `--keep-apps`, `--keep-portfolio`; both `new:feature` runs; typecheck, check, knip, test and the migration check) passes in a scratch clone; on the way it found:
+- the new `links-target` test missing from strip-demo's apps list;
+- `clientIpHash` unused with both layers stripped (Task 44): it stays a core helper for public forms, tagged `@public` for knip;
+- a Habits test that failed after midnight: `createHabit` took a `now` but let the database stamp `created_at`, so the habit's first day followed the real clock; it now inserts `createdAt: now`.
+
+**Numbers (0200):**
+- **Bundle:** every page 246.4 kB gzip; the heaviest routes: Kanban board 160.3, form builder 132.7, notes list 127.6, habits list 124.2.
+- **`pnpm dev:local`:** ready in 2.8–3.7 s (15.9 s on a fresh clone's first start); first page 5.5–8.5 s; a new page 0.1–0.4 s (the first app page 18 s, the dependency optimizer); a repeat 0.1–0.4 s.
+- **Lighthouse 13.6 mobile (simulated, behind brotli):** `/` 89, 97, 94; `/login` 100, 99, 99.
+- **Gates:** `pnpm test` 104 files, 905 tests, 79 s; Storybook 406 story tests, 181 s; `pnpm test:e2e` 1,194 checks, all passed, none flaky, 14.8 min. An earlier run lost its harness halfway (the PGlite proxy's own `pg` client failed with "unexpected parseComplete" after the hanging malformed-URL test); it didn't recur.
+
+**Deviations:**
+- **Lighthouse ≥ 95 on `/`** is met by one run in three (median 94); the home page's blocking time is hydration of the long page.
+- **Malformed URLs hang the Node server (upstream, not fixed):** Nitro's h3 (2.0.1-rc.22) runs `decodeURI` on the path before any app code, so `/work/%E0` is an uncaught `URIError` and a request that never gets an answer (on Vercel the function fails). h3 2.0.8 no longer decodes there; it needs a Nitro upgrade (3.0.261029-rc is out), a task of its own.
+- **A dev-server race, not fixed:** a request in the first seconds after Vite prints its address can get a 503 ("Vite environment nitro is unavailable", Nitro 3 beta).
+- **An e2e flow depended on request order:** "an editor gets a 403 from the audit log's server function" replayed the first server-function call of the navigation; with the loader importing its queries first, a session call can come first, so it now takes the call that answers with audit entries.
+- **Guides:** `design-system.md`, `crud.md`, `apps.md` and `portfolio.md` already matched the code (every path they name exists); this task added the new pitfalls (forms, apps, CLAUDE.md).
+
+**Left for the owner:**
+- Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban` to `0015_forms`; `pnpm diagnose` lists 4 unapplied).
+- Decide on a Nitro upgrade (with h3 2.0.8) to fix malformed URLs (deviations).
+- Scratch folders to delete: `C:/tw9` and `C:/tw9-logs` (this task's fresh clone and matrix logs).

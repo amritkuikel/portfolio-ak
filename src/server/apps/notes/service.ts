@@ -6,7 +6,7 @@ import { ruleError } from "@/lib/errors";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import type { ImageStore } from "@/server/attachments/cloudinary";
 import { toImageAsset } from "@/server/attachments/images";
 import { AttachmentLinkError } from "@/server/attachments/repository";
@@ -63,6 +63,7 @@ export async function getNote({ db, user, imageStore }: NoteServices, id: string
 /** A new, empty note (the editor opens on it). */
 export async function createNote({ db, user }: NoteServices, input: CreateNoteInput): Promise<NoteSummary> {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `notes:${user.id}`);
 		if ((await repo.countNotes(tx, user.id)) >= NOTES_QUOTAS.notes) throw quotaError();
 		const [row] = await repo.insertNotes(tx, user.id, [input]);
 		if (!row) throw new Error("Note insert returned no row");

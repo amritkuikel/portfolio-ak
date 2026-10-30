@@ -2236,6 +2236,7 @@
 	"forms_public_footer": "Made with Forms, a survey builder you can try for free.",
 	"forms_public_try": "Make one",
 	"forms_responses_full": "This form isn't taking more responses.",
+	"forms_error_changed": "This form changed while you were filling it in. Reload the page to see its questions now.",
 	"forms_answer_yes": "Yes",
 	"forms_answer_no": "No",
 	"forms_results_title": "Results: {title}",

@@ -31,8 +31,9 @@ import { OtpField, PhoneField } from "./fields/phone-otp-fields";
 import { RichTextField } from "./fields/rich-text-field";
 import { EmailField, PasswordField, TextareaField, TextField, UrlField } from "./fields/text-fields";
 import { Form, FormErrorSummary, SubmitButton } from "./form-components";
+import { clearServerErrorOnChange } from "./server-errors";
 
-export const { useAppForm, withForm, withFieldGroup } = createFormHook({
+const formHook = createFormHook({
 	fieldContext,
 	formContext,
 	fieldComponents: {
@@ -65,6 +66,25 @@ export const { useAppForm, withForm, withFieldGroup } = createFormHook({
 	formComponents: { Form, SubmitButton, FormErrorSummary },
 });
 
+export const { withForm, withFieldGroup } = formHook;
+
+/**
+ * The app's form hook. Every form clears a field's stale errors when it changes
+ * (clearServerErrorOnChange: the server's, the last submit's and blur's), before
+ * any `listeners.onChange` of its own (decision 0196).
+ */
+export const useAppForm: typeof formHook.useAppForm = (options) =>
+	formHook.useAppForm({
+		...options,
+		listeners: {
+			...options.listeners,
+			onChange: (event) => {
+				clearServerErrorOnChange(event);
+				options.listeners?.onChange?.(event);
+			},
+		},
+	});
+
 /**
  * Runs one schema on change, on blur and on submit. Blur catches fields the user
  * tabbed through without typing; submit catches fields never touched. Errors are
@@ -72,6 +92,6 @@ export const { useAppForm, withForm, withFieldGroup } = createFormHook({
  */
 export const formValidators = <TSchema>(schema: TSchema) => ({ onChange: schema, onBlur: schema, onSubmit: schema });
 
-export { clearServerErrorOnChange, handleSaveError } from "./server-errors";
+export { handleSaveError } from "./server-errors";
 export { StaleVersionAlert } from "./stale-version-alert";
 export { UnsavedChangesGuard } from "./unsaved-changes";

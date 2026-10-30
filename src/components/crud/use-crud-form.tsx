@@ -3,7 +3,7 @@ import { type QueryKey, type UseMutationOptions, useMutation, useQueryClient } f
 import { type ComponentType, type PropsWithChildren, type ReactNode, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/components/errors/error-page";
-import { clearServerErrorOnChange, handleSaveError, StaleVersionAlert, UnsavedChangesGuard } from "@/components/forms";
+import { handleSaveError, StaleVersionAlert, UnsavedChangesGuard } from "@/components/forms";
 import { useFormContext } from "@/components/forms/contexts";
 import { Form, FormErrorSummary } from "@/components/forms/form-components";
 import { cn } from "@/lib/utils";
@@ -82,8 +82,8 @@ export function useCrudForm<TValues, TInput, TItem extends Versioned, TCreated, 
 	};
 
 	return {
-		/** Spread into useAppForm: the submit, and editing a field clears its server error. */
-		formProps: { onSubmit, listeners: { onChange: clearServerErrorOnChange } },
+		/** Spread into useAppForm: the submit (useAppForm clears a field's stale errors on change). */
+		formProps: { onSubmit },
 		/** Set after a stale save: what StaleVersionAlert's "Reload" runs. */
 		stale:
 			stale && reload

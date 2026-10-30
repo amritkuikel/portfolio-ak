@@ -28,6 +28,8 @@ export const Route = createFileRoute("/dev/examples/errors")({
 	loader: async ({ deps }) => {
 		if (deps.case === undefined) return;
 		if (deps.case === "not-found") throw notFound();
+		// On demand: the server functions stay out of every page's JavaScript (0194).
+		const { failExample } = await import("@/functions/examples");
 		try {
 			await failExample({ data: { case: deps.case } });
 		} catch (error) {

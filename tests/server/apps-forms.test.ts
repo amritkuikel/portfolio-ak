@@ -195,7 +195,21 @@ describe("Forms public page and submissions", () => {
 				"fstars001",
 			]);
 		}
-		expect(await code(submit(form.slug, { ...good, fsomething: "extra" }))).toBe("BAD_REQUEST");
+		expect(await env.db.select().from(schema.formResponse)).toEqual([]);
+	});
+
+	it("asks to reload when the questions changed since the page loaded", async () => {
+		const form = await makeForm(alice());
+		const { fdrink001: _drink, ...withoutOne } = good;
+		for (const answers of [{ ...good, fextra001: "added since" }, withoutOne]) {
+			try {
+				await submit(form.slug, answers);
+				throw new Error("accepted");
+			} catch (error) {
+				expect(isAppError(error) && error.code).toBe("CONFLICT");
+				expect(error instanceof Error && error.message).toBe("The form's questions changed");
+			}
+		}
 		expect(await env.db.select().from(schema.formResponse)).toEqual([]);
 	});
 

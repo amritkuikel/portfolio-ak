@@ -22,7 +22,11 @@ import { getLocale } from "@/paraglide/runtime";
  */
 export const Route = createFileRoute("/_site")({
 	// The header and footer need the owner's name, email and links on every page.
-	loader: ({ context }) => ensureQuery(context.queryClient, profileQueryOptions()),
+	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { profileQueryOptions } = await import("@/features/portfolio/queries");
+		return ensureQuery(context.queryClient, profileQueryOptions());
+	},
 	staticData: { session: "skip", breadcrumb: staticCrumb(m.portfolio_section_label) },
 	// noindex is only the fallback (a 404 inside the section): every page's own seo() overrides it.
 	head: () => ({ meta: [NOINDEX], links: portfolioFontPreloads(getLocale()) }),

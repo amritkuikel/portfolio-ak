@@ -24,6 +24,8 @@ import { m } from "@/paraglide/messages";
  */
 export const Route = createFileRoute("/dev/examples/analytics")({
 	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { homeFlagsQueryOptions } = await import("@/features/flags/queries");
 		await ensureQuery(context.queryClient, homeFlagsQueryOptions());
 	},
 	staticData: { breadcrumb: staticCrumb(m.examples_analytics_title) },

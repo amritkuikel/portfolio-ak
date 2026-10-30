@@ -45,7 +45,16 @@ if (/^BETTER_AUTH_SECRET=("")?\s*$/m.test(env)) {
 step("Messages");
 const compile = spawnSync(
 	process.execPath,
-	["node_modules/@inlang/paraglide-js/bin/run.js", "compile", "--project", "./project.inlang", "--silent"],
+	[
+		"node_modules/@inlang/paraglide-js/bin/run.js",
+		"compile",
+		"--project",
+		"./project.inlang",
+		// The CLI ignores the config's outputStructure (see project.inlang/paraglide.config.ts).
+		"--output-structure",
+		"locale-modules",
+		"--silent",
+	],
 	{ stdio: "inherit" },
 );
 if (compile.status !== 0) process.exit(compile.status ?? 1);

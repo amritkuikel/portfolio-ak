@@ -2,7 +2,6 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { CaseStudyPage } from "@/features/portfolio/components/pages/case-study-page";
 import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { caseStudyJsonLd } from "@/features/portfolio/lib/structured-data";
-import { projectQueryOptions } from "@/features/portfolio/queries";
 import { portfolioSlugParamSchema, previewSearchSchema } from "@/features/portfolio/search";
 import { loaderTitleCrumb } from "@/lib/breadcrumbs";
 import { parseParams } from "@/lib/list/params";
@@ -15,6 +14,8 @@ export const Route = createFileRoute("/_site/work/$slug")({
 	validateSearch: previewSearchSchema,
 	loaderDeps: ({ search }) => ({ preview: search.preview === 1 }),
 	loader: async ({ context, params, deps }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { projectQueryOptions } = await import("@/features/portfolio/queries");
 		const detail = await ensureQuery(context.queryClient, projectQueryOptions(params.slug, deps.preview));
 		if (!detail) throw notFound();
 		// Only what head() and the breadcrumb need; the full project is in the Query cache.

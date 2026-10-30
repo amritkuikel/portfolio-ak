@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { WorkPage } from "@/features/portfolio/components/pages/work-page";
 import { himalOgImage } from "@/features/portfolio/lib/og-image";
 import { collectionPageJsonLd } from "@/features/portfolio/lib/structured-data";
-import { workQueryOptions } from "@/features/portfolio/queries";
 import { workSearchSchema } from "@/features/portfolio/search";
 import { staticCrumb } from "@/lib/breadcrumbs";
 import { ensureQuery } from "@/lib/query";
@@ -12,7 +11,11 @@ import { m } from "@/paraglide/messages";
 export const Route = createFileRoute("/_site/work/")({
 	validateSearch: workSearchSchema,
 	// Every published project in one read; the discipline filter is applied on the page.
-	loader: ({ context }) => ensureQuery(context.queryClient, workQueryOptions()),
+	loader: async ({ context }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { workQueryOptions } = await import("@/features/portfolio/queries");
+		return ensureQuery(context.queryClient, workQueryOptions());
+	},
 	staticData: { breadcrumb: staticCrumb(m.portfolio_nav_work) },
 	// A filtered view is the same page: noindex, canonical to the full list.
 	head: ({ match: { search } }) =>

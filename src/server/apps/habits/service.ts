@@ -19,7 +19,7 @@ import { addDays, type IsoDate, todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import type { AppServices } from "@/server/apps/ownership";
+import { type AppServices, lockQuota } from "@/server/apps/ownership";
 import { notFound } from "@/server/db/crud";
 import type { HabitRow } from "@/server/db/schema";
 import type { Tx } from "@/server/db/types";
@@ -95,10 +95,12 @@ export async function getHabit({ db, user }: AppServices, id: string, now = new 
 
 export async function createHabit({ db, user }: AppServices, input: CreateHabitInput, now = new Date()) {
 	return db.transaction(async (tx) => {
+		await lockQuota(tx, `habits:${user.id}`);
 		if ((await repo.countHabits(tx, user.id)) >= HABITS_QUOTAS.habits) {
 			throw ruleError("CONFLICT", "Habits quota reached", m.habits_quota({ max: formatNumber(HABITS_QUOTAS.habits) }));
 		}
-		const [row] = await repo.insertHabits(tx, user.id, [input]);
+		// Created at the caller's now, which also decides the day the habit starts (its first rate day).
+		const [row] = await repo.insertHabits(tx, user.id, [{ ...input, createdAt: now }]);
 		if (!row) throw new Error("Habit insert returned no row");
 		return toSummary(row, new Map(), todayInZone(APP_TIME_ZONE, now));
 	});
