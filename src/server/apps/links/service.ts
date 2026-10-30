@@ -4,7 +4,7 @@ import type { LinkModerationInput, LinkModerationItem, LinkModerationPage } from
 import type { CreateLinkInput, UpdateLinkInput } from "@/features/apps/links/schema";
 import { LINKS_QUOTAS, type LinkItem, type LinkList, type LinkStats, type Tally } from "@/features/apps/links/types";
 import { ruleError } from "@/lib/errors";
-import { isoDateInstant, startOfDayInZone, todayInZone } from "@/lib/i18n/date-only";
+import { addDays, startOfDayInZone, todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
@@ -94,10 +94,6 @@ export async function deleteLink({ db, user }: AppServices, id: string): Promise
 		if (!(await repo.deleteLink(tx, user.id, id))) throw notFound("Link");
 	});
 }
-
-/** "2026-10-30" moved by `days` (calendar arithmetic at noon UTC, so no zone can shift it). */
-const addDays = (day: string, days: number) =>
-	new Date(isoDateInstant(day).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
 /** Days shown on a link's page, today included. */
 export const STATS_DAYS = 30;

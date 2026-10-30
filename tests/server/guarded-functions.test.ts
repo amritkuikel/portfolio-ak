@@ -150,6 +150,20 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"discardNoteImageUpload",
 	],
 	"apps/links.ts": ["listLinks", "getLinkStats", "createLink", "updateLink", "deleteLink"],
+	"apps/expenses.ts": [
+		"getExpensesMonth",
+		"createExpense",
+		"updateExpense",
+		"deleteExpense",
+		"listExpenseCategories",
+		"createExpenseCategory",
+		"updateExpenseCategory",
+		"deleteExpenseCategory",
+		"setExpenseBudget",
+		"importExpenses",
+		"exportExpenses",
+	],
+	"apps/habits.ts": ["getHabitsOverview", "getHabit", "createHabit", "updateHabit", "deleteHabit", "setHabitCheckin"],
 };
 // apps:end
 

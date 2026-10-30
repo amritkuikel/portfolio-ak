@@ -1,4 +1,11 @@
-import { Link2Icon, type LucideIcon, NotebookTextIcon, SquareKanbanIcon } from "lucide-react";
+import {
+	CalendarCheckIcon,
+	Link2Icon,
+	type LucideIcon,
+	NotebookTextIcon,
+	SquareKanbanIcon,
+	WalletIcon,
+} from "lucide-react";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -10,7 +17,7 @@ import { m } from "@/paraglide/messages";
  * the visitor has a session, its inner pages private. A portfolio project links to it
  * by naming the slug in its "App" field.
  */
-export const APP_SLUGS = ["kanban", "notes", "links"] as const;
+export const APP_SLUGS = ["kanban", "notes", "links", "expenses", "habits"] as const;
 export type AppSlug = (typeof APP_SLUGS)[number];
 
 export type AppEntry = {
@@ -49,6 +56,26 @@ export const APPS: ReadonlyArray<AppEntry> = [
 		description: m.links_description,
 		icon: Link2Icon,
 		rows: { links: m.links_usage_links, clicks: m.links_usage_clicks },
+	},
+	{
+		slug: "expenses",
+		name: m.expenses_name,
+		tagline: m.expenses_tagline,
+		description: m.expenses_description,
+		icon: WalletIcon,
+		rows: {
+			expenses: m.expenses_usage_expenses,
+			categories: m.expenses_usage_categories,
+			budgets: m.expenses_usage_budgets,
+		},
+	},
+	{
+		slug: "habits",
+		name: m.habits_name,
+		tagline: m.habits_tagline,
+		description: m.habits_description,
+		icon: CalendarCheckIcon,
+		rows: { habits: m.habits_usage_habits, checkins: m.habits_usage_checkins },
 	},
 ];
 

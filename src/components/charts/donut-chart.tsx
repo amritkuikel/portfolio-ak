@@ -5,16 +5,23 @@ import { type ChartProps, seriesColor } from "./types";
 
 /**
  * Parts of a whole: one slice per row (`index` names it, the first series holds the
- * numbers), with the total in the middle. Loaded with React.lazy from ./index.tsx.
+ * numbers), with the total in the middle. `colors` gives slices their own colours (a
+ * category's), in row order. Loaded with React.lazy from ./index.tsx.
  */
-export default function DonutChart({ data, index, series, format = (value) => formatNumber(value) }: ChartProps) {
+export default function DonutChart({
+	data,
+	index,
+	series,
+	colors,
+	format = (value) => formatNumber(value),
+}: ChartProps & { colors?: ReadonlyArray<string> }) {
 	const [values] = series;
 	if (!values) return null;
 	// Slices are the rows: each gets a colour of its own, named by its category.
 	const slices = data.map((row, position) => ({
 		key: String(row[index]),
 		value: Number(row[values.key] ?? 0),
-		color: seriesColor({ key: String(row[index]), label: String(row[index]) }, position),
+		color: colors?.[position] ?? seriesColor({ key: String(row[index]), label: String(row[index]) }, position),
 	}));
 	const total = slices.reduce((sum, slice) => sum + slice.value, 0);
 	const config = Object.fromEntries(slices.map((slice) => [slice.key, { label: slice.key, color: slice.color }]));

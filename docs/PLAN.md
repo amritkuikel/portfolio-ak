@@ -934,7 +934,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 40 | "Himal" portfolio redesign at `/` | xhigh | Done (decisions 0179–0184) |
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | Done (decisions 0185–0189) |
 | 42 | Notes and Links | high | Done (decisions 0190–0191) |
-| 43 | Expenses and Habits | high | |
+| 43 | Expenses and Habits | high | Done (decisions 0192–0194) |
 | 44 | Forms (survey builder) | high | |
 | 45 | Wrap-up: guides, measurements, full review | medium | |
 
@@ -1428,30 +1428,47 @@ The owner runs one task per session and clears the context between tasks. A sess
 - Grant `links:moderate` to a role other than admin if someone else should moderate short links.
 - Scratch folder to delete: `C:\tw8` (no longer a git worktree).
 
-### Task 43: Expenses and Habits
+### Task 43: Expenses and Habits (done)
 
-**Expenses** (`/apps/expenses`):
-- **Tables:**
-  - `categories`: name, colour, icon.
-  - `transactions`: `amount_minor` bigint, currency NPR or USD, category, `occurred_on` date, note.
-  - `budgets`: category, month (first day), `amount_minor`.
-- **Charts:** spending by category (donut), monthly trend (bars), budget progress.
-- **Intl:** formatting through `src/lib/i18n/intl.ts`, with Devanagari digits in `ne`.
-- **CSV import:**
-  - A tested RFC 4180 parser in `src/lib/csv.ts`, which today only exports.
-  - A mapping step (which column is date, amount, category), a preview with per-row Zod errors, and a server function inserting up to 1,000 rows with an idempotency key (the `/dev/examples/idempotency` recipe).
-- **CSV export.**
+**Expenses (0192):**
+- **Tables** (**migration `0014_expenses_habits`**, with Habits'): `expense_category` (name unique per owner in any case, colour, icon), `expense_transaction` (`amount_minor` bigint, NPR or USD, `occurred_on`, note, category or null, the import's key), `expense_budget` (category, month, currency; unique), `expense_import` (idempotency keys).
+- **Dashboard** `/apps/expenses?month=&currency=`: spent, budgeted and count tiles; a donut by category in the categories' colours; six months of bars; budget progress ("left" or "over"); the month's expenses (add, edit, delete in a dialog). Amounts are minor units end to end; totals per currency, never converted; Devanagari digits in Nepali through `formatCurrency`.
+- **Categories** `/apps/expenses/categories`: name, colour, icon; deleting keeps the expenses (uncategorized) and drops the budgets.
+- **CSV import** `/apps/expenses/import`: `parseCsv` (RFC 4180, tested) in `src/lib/csv.ts`; a file or pasted text; columns guessed from the header and changeable, a date order and a default currency; a preview of every line through `previewImport` and the server's `importRowSchema`, with the problems listed by line; up to 1,000 valid rows sent once with an idempotency key kept in Postgres (a repeat returns the first result; another owner or other rows is a CONFLICT); missing categories made. **CSV export** with localized headers the import recognizes.
+- **Quotas:** 5,000 expenses, 30 categories, 10 imports an hour. **Guest seed:** five categories, six months of spending, a dollar expense, three budgets.
 
-**Habits** (`/apps/habits`):
-- **Tables:**
-  - `habits`: name, colour, a days-of-week bitmask, a daily target, archived.
-  - `checkins`: habit, day (date), count; primary key (habit, day).
-- **Streaks and completion rate** come from `src/features/apps/habits/streaks.ts`, unit-tested around month and year boundaries and in Kathmandu time (dates are calendar days from `src/lib/i18n/date-only.ts`).
-- **Heatmap:** an SVG, GitHub-style, 53 × 7, server-rendered.
-- **Check-ins:** TanStack DB optimistic check-ins.
-- **Stretch goals** (each its own decision, only if time allows):
-  - A Bikram Sambat calendar view. Evaluate `nepali-date-pro-max` and `@remotemerge/nepali-date-converter` (typed, zero dependencies, maintained?) or vendor a tested table.
-  - A daily reminder digest for registered users through the daily cron.
+**Habits (0193):**
+- **Tables** `habit` (name, colour, weekday bitmask, daily target 1–20, archived) and `habit_checkin` (habit, day, count; primary key habit and day).
+- **Streaks and rates** in `src/features/apps/habits/streaks.ts`, on calendar days with today from Kathmandu: unscheduled days skipped, today open until done, a day done at its target; unit-tested across month, year and leap-day boundaries and at midnight in Kathmandu.
+- **List** `/apps/habits` (in use or archived): each habit's schedule, target, streak and 30-day rate, and a 7-day strip of check-in buttons (a TanStack DB collection: optimistic, rolled back with a toast; the refetch brings the new streak).
+- **Habit page** `/apps/habits/$habitId`: streak, best, rate and days done this year, and a server-rendered SVG heatmap (53 × 7, four levels of the habit's colour); edit, archive, delete.
+- **Quotas:** 20 habits; check-ins for today and the 366 days before. **Guest seed:** three habits begun 60 days ago with streaks and gaps.
+- **Stretch goals not done:** the Bikram Sambat view and the reminder digest.
+
+**Shared:** both apps in the registries (gallery, switcher, sitemap, `/admin/apps`); a colour palette for app rows (`src/features/apps/colors.ts`); `addDays`, `weekdayOf`, `addMonths`, `monthDays` (`date-only.ts`) and `formatMonthShort` (`intl.ts`) in `apps` markers (Links uses the shared `addDays` now); `StatCard` takes a `format`, `DonutChart` takes `colors`; 217 messages written by hand in both languages.
+
+**Entry bundle (0194):** route loaders under `_apps` import their `queries.ts` on demand, so an app's queries and server-function stubs leave every page's JavaScript; applied to the new routes and to Kanban's, Notes' and Links'.
+
+**Tests:**
+- Unit: `csv` (parsing), `habit-streaks` (date helpers, streaks, rates, heatmap), `expenses-import` (dates, amounts, currencies, the header guess, the preview).
+- PGlite `apps-expenses` (15: ownership, someone else's category refused, month totals, trend and budgets, the current month in Kathmandu, category delete, names unique in any case, import once per key, key reuse refused, a refused import rolled back, export, quota, seed, claim merging categories, usage) and `apps-habits` (10: ownership, set and clear, days allowed in Kathmandu, overview and stats, archive and delete, quota, seed, claim, usage).
+- Stories `Apps/Expenses` (new, invalid, edit, categories) and `Apps/Habits` (new, no days, check-in states, heatmap).
+- e2e `expenses-habits.spec.ts`: a guest adds an expense and imports a CSV with a bad line left out; a guest checks a habit in and the streak grows, and its year is drawn. Review pages: `/apps/expenses` and `/apps/habits` (visitor and member, with harness data), `/apps/expenses/categories`, `/apps/expenses/import`, `/apps/habits/$habitId`.
+
+**Numbers:**
+- `pnpm test`: 101 files, 845 tests. Storybook: 398 story tests (see the deviations for the flake). `pnpm test:e2e`: 1,132 checks, all passed, 1 flaky (the existing Test CRUD conflict flow, passed on retry), 16.6 min (Task 42: 1,046).
+- **Bundle:** entry JS 248.9 → 248.4 kB gzip (budget 250), with five new routes (0194). On top of the root: the habits list 124.4 kB (TanStack DB), the expenses dashboard's charts load on demand.
+
+**Deviations:**
+- **Singular table names** (`expense_category`, `expense_transaction`, `expense_budget`, `habit`, `habit_checkin`), like the rest of the schema; the plan said `categories`, `transactions`, `budgets`, `habits`, `checkins`.
+- **Budgets and totals are per currency**, with an NPR/USD switch on the dashboard (no conversion).
+- **Streaks are computed on the server** for the list and the page (from every check-in); the strip's cells are optimistic and the streak follows after the save.
+- **Kanban's, Notes' and Links' route loaders changed** (on-demand queries, 0194): the five new routes would otherwise have put the entry over its budget.
+- **Found on the way:** axe's label-content-name-mismatch on the check-in buttons (an `aria-label` without the visible text; now visible text plus an `sr-only` sentence); deleting a habit from its own page refetched it as a 404 (the delete now invalidates the overview only); a long category name in a chart's screen-reader table widened phones (`sr-only` doesn't wrap and a table can't shrink: `ChartFrame` now clips it in an `sr-only` div); the stat tiles' `h3` followed the `h1` (axe heading-order: an `sr-only` h2 "At a glance", as on `/admin/apps`).
+- **The Storybook overlay flake:** three full runs each failed one known overlay story (the admin shell's user menu, UI primitives' overlays, Test CRUD's quick view), a different one each time and none new; an earlier full run on this task passed all 398.
+
+**Left for the owner:**
+- Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban`, `0013_notes_links` and `0014_expenses_habits`).
 
 ### Task 44: Forms (survey builder)
 

@@ -99,4 +99,27 @@ const dateParts = (value: IsoDate): [number, number, number] => {
 /** Today's calendar day in a time zone, as "YYYY-MM-DD" (en-CA formats dates that way). */
 export const todayInZone = (timeZone: string, now: Date = new Date()): IsoDate =>
 	new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+
+/** A calendar day moved by `days` (arithmetic at noon UTC, so no time zone or DST can shift it). */
+export const addDays = (day: IsoDate, days: number): IsoDate =>
+	new Date(isoDateInstant(day).getTime() + days * 86_400_000).toISOString().slice(0, 10);
+
+/** The day of the week of a calendar day: 0 is Sunday, 6 Saturday (as Date#getDay). */
+export const weekdayOf = (day: IsoDate): number => isoDateInstant(day).getUTCDay();
+
+/** A calendar month as "YYYY-MM". */
+export type IsoMonth = string;
+
+/** "2026-10" moved by `months` ("2026-01" − 1 is "2025-12"). */
+export const addMonths = (month: IsoMonth, months: number): IsoMonth => {
+	const [year = 1970, number = 1] = month.split("-").map(Number);
+	const index = year * 12 + (number - 1) + months;
+	return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
+};
+
+/** The first and last calendar days of a month ("2024-02" -> 2024-02-01, 2024-02-29). */
+export const monthDays = (month: IsoMonth): { first: IsoDate; last: IsoDate } => ({
+	first: `${month}-01`,
+	last: addDays(`${addMonths(month, 1)}-01`, -1),
+});
 // apps:end

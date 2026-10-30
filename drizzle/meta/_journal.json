@@ -99,6 +99,13 @@
 			"when": 1793351312730,
 			"tag": "0013_notes_links",
 			"breakpoints": true
+		},
+		{
+			"idx": 14,
+			"version": "7",
+			"when": 1793366329600,
+			"tag": "0014_expenses_habits",
+			"breakpoints": true
 		}
 	]
 }

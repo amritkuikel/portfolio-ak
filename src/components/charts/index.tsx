@@ -28,8 +28,8 @@ export function BarChart({ stacked, ...props }: ChartProps & { stacked?: boolean
 	);
 }
 
-/** Parts of a whole: a slice per row, the total in the middle. */
-export function DonutChart(props: ChartProps) {
+/** Parts of a whole: a slice per row, the total in the middle; `colors` (by row) overrides the palette. */
+export function DonutChart(props: ChartProps & { colors?: ReadonlyArray<string> }) {
 	return (
 		<ChartFrame {...props} aspect="square">
 			<Donut {...props} />

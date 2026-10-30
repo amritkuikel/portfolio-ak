@@ -14,6 +14,8 @@
  * `pnpm new:feature` adds its table's file above the marker line.
  */
 
+export * from "./apps/expenses"; // @apps
+export * from "./apps/habits"; // @apps
 export * from "./apps/kanban"; // @apps
 export * from "./apps/links"; // @apps
 export * from "./apps/notes"; // @apps

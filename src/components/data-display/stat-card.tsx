@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
  * over a period ("+4 this week"), green when it grows, red when it shrinks; `hint` is
  * a line of context under the value; `trend` draws the recent values as a sparkline
  * (decorative: say the trend in `delta` or `hint`). With `to`, the whole card is
- * one link to the section it counts.
+ * one link to the section it counts. `format` prints the value (an amount of money) when a
+ * plain number won't do.
  */
 export function StatCard({
 	label,
@@ -20,6 +21,7 @@ export function StatCard({
 	hint,
 	trend,
 	to,
+	format = (number) => formatNumber(number),
 	className,
 }: {
 	label: string;
@@ -30,6 +32,7 @@ export function StatCard({
 	/** Recent values, oldest first (at least two). */
 	trend?: ReadonlyArray<number>;
 	to?: LinkProps["to"];
+	format?: (value: number) => string;
 	className?: string;
 }) {
 	const tone = !delta || delta.value === 0 ? "text-muted-foreground" : delta.value > 0 ? "text-success" : "text-danger";
@@ -55,7 +58,7 @@ export function StatCard({
 				</h3>
 				{Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
 			</div>
-			<p className="font-semibold text-display">{formatNumber(value)}</p>
+			<p className="font-semibold text-display">{format(value)}</p>
 			{delta || hint ? (
 				<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-caption">
 					{delta ? (

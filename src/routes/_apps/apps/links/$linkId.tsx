@@ -1,6 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LinkPage } from "@/features/apps/links/components/link-page";
-import { linkStatsQueryOptions } from "@/features/apps/links/queries";
 import { linkParamsSchema } from "@/features/apps/links/search";
 import { loadDetailOr404 } from "@/lib/crud/route";
 import { parseParams } from "@/lib/list/params";
@@ -16,6 +15,8 @@ export const Route = createFileRoute("/_apps/apps/links/$linkId")({
 		return { session: context.session };
 	},
 	loader: async ({ context, params }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { linkStatsQueryOptions } = await import("@/features/apps/links/queries");
 		const { link } = await loadDetailOr404(
 			context.queryClient,
 			linkStatsQueryOptions(context.session.user.id, params.linkId),

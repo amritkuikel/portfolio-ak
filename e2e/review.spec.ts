@@ -55,6 +55,15 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 		return page.route.replace("$token", (await harness.reviewNote("member")).token);
 	}
 	if (page.params.from === "link-id") return page.route.replace("$linkId", (await harness.reviewLink("member")).id);
+	if (page.params.from === "expenses-data") {
+		await harness.reviewExpenses("member");
+		return page.route;
+	}
+	if (page.params.from === "habit-data") {
+		await harness.reviewHabit("member");
+		return page.route;
+	}
+	if (page.params.from === "habit-id") return page.route.replace("$habitId", (await harness.reviewHabit("member")).id);
 	// apps:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));

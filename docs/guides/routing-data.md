@@ -83,6 +83,8 @@ export const updateThing = createServerFn({ method: "POST" })
 
 For actions with side effects outside the database (sending an email or an invite, charging, calling a webhook), a double submit or a retry after a lost response must not do it twice. The client makes one key per intended action (when the form opens, a new one after success; never per click) and sends it with every attempt; the server runs the action once per key and answers repeats with the first result. Live example: `/dev/examples/idempotency` (in memory, `src/server/examples/idempotency.ts`). The base doesn't need it: its creates are admin forms and the submit button disables itself while saving (0125).
 
+Expenses' CSV import keeps its keys in Postgres as below (`expense_import`, decision 0192). <!-- @apps -->
+
 In a real feature, keep keys in Postgres so every instance sees them:
 
 ```ts

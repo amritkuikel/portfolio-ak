@@ -38,30 +38,33 @@ export function ChartFrame({
 					<Suspense fallback={skeleton}>{children}</Suspense>
 				</ClientOnly>
 			</div>
-			<table className="sr-only">
-				<caption>{label}</caption>
-				<thead>
-					<tr>
-						<td />
-						{series.map((each) => (
-							<th key={each.key} scope="col">
-								{each.label}
-							</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{data.map((row) => (
-						<tr key={String(row[index])}>
-							<th scope="row">{row[index]}</th>
-							{series.map((each) => {
-								const value = row[each.key];
-								return <td key={each.key}>{typeof value === "number" ? format(value) : value}</td>;
-							})}
+			{/* The wrapper clips: a table can't be narrower than its content, and sr-only text doesn't wrap. */}
+			<div className="sr-only">
+				<table>
+					<caption>{label}</caption>
+					<thead>
+						<tr>
+							<td />
+							{series.map((each) => (
+								<th key={each.key} scope="col">
+									{each.label}
+								</th>
+							))}
 						</tr>
-					))}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{data.map((row) => (
+							<tr key={String(row[index])}>
+								<th scope="row">{row[index]}</th>
+								{series.map((each) => {
+									const value = row[each.key];
+									return <td key={each.key}>{typeof value === "number" ? format(value) : value}</td>;
+								})}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</figure>
 	);
 }

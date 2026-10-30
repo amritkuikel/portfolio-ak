@@ -263,6 +263,17 @@ export const formatDayMonth = (day: string, locale: Locale = getLocale()): strin
 				() => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }),
 			).format(instant);
 };
+
+/** A calendar month ("YYYY-MM") as its short name, for chart axes: "Oct" / "अक्टोबर" (no time zone applies). */
+export const formatMonthShort = (month: string, locale: Locale = getLocale()): string => {
+	const [year, number] = month.split("-").map(Number);
+	const instant = new Date(Date.UTC(year ?? 1970, (number ?? 1) - 1, 15));
+	return locale === "ne"
+		? (NE_MONTHS[instant.getUTCMonth()] ?? "")
+		: cached("month-short|en", () => new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" })).format(
+				instant,
+			);
+};
 // apps:end
 
 /** Short weekday from a local Date: "Mon" / "सोम". */

@@ -1,6 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { NoteEditorPage } from "@/features/apps/notes/components/note-editor";
-import { noteQueryOptions } from "@/features/apps/notes/queries";
 import { noteParamsSchema } from "@/features/apps/notes/search";
 import { loadDetailOr404 } from "@/lib/crud/route";
 import { parseParams } from "@/lib/list/params";
@@ -15,9 +14,12 @@ export const Route = createFileRoute("/_apps/apps/notes/$noteId")({
 		if (!context.session) throw redirect({ to: "/apps/notes" });
 		return { session: context.session };
 	},
-	loader: async ({ context, params }) => ({
-		title: (await loadDetailOr404(context.queryClient, noteQueryOptions(context.session.user.id, params.noteId))).title,
-	}),
+	loader: async ({ context, params }) => {
+		// On demand: the queries and their server functions stay out of every page's JavaScript (0194).
+		const { noteQueryOptions } = await import("@/features/apps/notes/queries");
+		const note = await loadDetailOr404(context.queryClient, noteQueryOptions(context.session.user.id, params.noteId));
+		return { title: note.title };
+	},
 	head: ({ loaderData }) => privateHead(loaderData?.title ?? m.notes_name()),
 	component: NoteEditorPage,
 });

@@ -22,7 +22,10 @@ export type ReviewedPage = {
 		| { from: "kanban-board-id" } // @apps
 		| { from: "note-id" } // @apps
 		| { from: "shared-note-token" } // @apps
-		| { from: "link-id" }; // @apps
+		| { from: "link-id" } // @apps
+		| { from: "expenses-data" } // @apps
+		| { from: "habit-data" } // @apps
+		| { from: "habit-id" }; // @apps
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -135,6 +138,14 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/apps/links" },
 	{ route: "/apps/links", as: "member", label: "links" },
 	{ route: "/apps/links/$linkId", as: "member", params: { from: "link-id" } },
+	{ route: "/apps/expenses" },
+	// With a month of expenses, budgets and categories (the harness adds them on first ask).
+	{ route: "/apps/expenses", as: "member", label: "expenses", params: { from: "expenses-data" } },
+	{ route: "/apps/expenses/categories", as: "member", params: { from: "expenses-data" } },
+	{ route: "/apps/expenses/import", as: "member" },
+	{ route: "/apps/habits" },
+	{ route: "/apps/habits", as: "member", label: "habits", params: { from: "habit-data" } },
+	{ route: "/apps/habits/$habitId", as: "member", params: { from: "habit-id" } },
 	{ route: "/admin/apps", as: "admin" },
 	{ route: "/admin/links", as: "admin" },
 	// apps:end

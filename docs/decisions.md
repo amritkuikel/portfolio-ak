@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (169 entries)</summary>
+<summary>Index (172 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -196,6 +196,9 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0189](#0189-tanstack-db-loads-only-with-the-pages-that-use-it): TanStack DB loads only with the pages that use it
 - [0190](#0190-notes-full-text-search-with-the-simple-configuration-app-uploads-revocable-share-links): Notes: full-text search with the `simple` configuration, app uploads, revocable share links
 - [0191](#0191-links-a-redirect-route-with-request-middleware-clicks-without-ips-moderation): Links: a redirect route with request middleware, clicks without IPs, moderation
+- [0192](#0192-expenses-minor-units-per-currency-budgets-per-month-a-csv-import-that-runs-once): Expenses: minor units per currency, budgets per month, a CSV import that runs once
+- [0193](#0193-habits-streaks-on-calendar-days-in-kathmandu-a-server-drawn-heatmap-optimistic-check-ins): Habits: streaks on calendar days in Kathmandu, a server-drawn heatmap, optimistic check-ins
+- [0194](#0194-a-routes-loader-imports-its-queries-on-demand): A route's loader imports its queries on demand
 </details>
 
 ---
@@ -2356,3 +2359,39 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
   - The link's click total was always 0: inside a subquery Drizzle printed `link.id` unqualified, which resolved to the click's own id. It now names `"link"."id"`.
 - **Why:** a server handler keeps the redirect off the React render path; storing no IP keeps the statistics useful without collecting personal data; moderation exists because a short link on this domain can hide where it leads.
 - **Alternatives considered:** a redirect in a global request middleware (it would run on every request); redirecting from the 404 page's loader (it renders HTML first); counting the click before redirecting (the visitor waits for a database write); hashed IPs for unique visitors (still personal data, and the app doesn't need uniques).
+
+## 0192: Expenses: minor units per currency, budgets per month, a CSV import that runs once
+
+- **What:**
+  - **Tables** (singular, like the rest of the schema): `expense_category` (name unique per owner in any case, a palette colour, an icon), `expense_transaction` (`amount_minor` bigint, `currency` NPR or USD, `occurred_on` date, note, the category or null, the import's key), `expense_budget` (category, the month's first day, currency, `amount_minor`; unique per category, month and currency), `expense_import` (the idempotency key, owner, a SHA-256 of the rows, the result). All with `owner_id`. Migration `0014_expenses_habits`.
+  - **Money:** integers in minor units (paisa, cents) everywhere: the database, the wire and the sums; forms take major units and convert with `toMinor` (`Math.round(x * 100)`). Totals, charts and budgets are per currency and never converted (no exchange rates to keep); the dashboard has an NPR/USD switch in the URL. Formatting goes through `formatCurrency`, so Nepali shows Devanagari digits and "नेरू".
+  - **Dashboard** (`/apps/expenses?month=YYYY-MM&currency=…`; no month is the current one in Kathmandu): spent, budgeted and count tiles (`StatCard` takes a `format`); spending by category (a donut in the categories' own colours: `DonutChart` takes `colors`); six months of spending (bars); budget progress (spent of budget, "left" or "over"); the month's expenses with edit and delete. Writes are Query mutations that invalidate the user's keys.
+  - **CSV import** (`/apps/expenses/import`): `parseCsv` in `src/lib/csv.ts` (RFC 4180: quoted delimiters, doubled quotes and line breaks, CRLF/LF/CR, a BOM, an unclosed quote reported by line). The page maps columns (guessed from the header, the export's own names in both languages), a date order (Y-M-D, D/M/Y, M/D/Y) and a default currency, then previews every line through `previewImport` (`features/apps/expenses/import.ts`), which checks each row with `importRowSchema`, the schema the server checks again. Only valid rows are sent, at most 1,000. The server claims the key (`insert … on conflict do nothing`) in the same transaction as the rows: a repeat waits for the first and gets its result, and the same key with other rows or from another owner is a CONFLICT (the routing guide's recipe, kept in Postgres). A refused import rolls the key back with the rows, so a retry runs. Categories are matched without case and made when missing (spelled as first seen). Ten imports an hour per user.
+  - **CSV export:** every expense, oldest first, with localized headers, through `toCsv`/`downloadCsv` (formula cells neutralized). The import reads it back.
+  - **Claim:** category names are unique per owner, so a guest's "Food" joins an account's "Food": its expenses move over, its budgets too unless the account has one for that month and currency.
+  - **Quotas:** 5,000 expenses and 30 categories per user. **Guest seed:** five categories, six months of spending (and one dollar expense), three budgets for this month.
+- **Why:** floats lose paisa; converting currencies needs rates nobody maintains; a bank CSV is the realistic way in, and a double click on "Import" must not double a month.
+- **Alternatives considered:** a `numeric` column (fine in SQL, but JavaScript would still need care at every step); a server-side upload and parse (the preview would need a round trip per mapping change, and the browser already has the file); idempotency in memory (`/dev/examples/idempotency`; lost on a restart and per instance).
+
+## 0193: Habits: streaks on calendar days in Kathmandu, a server-drawn heatmap, optimistic check-ins
+
+- **What:**
+  - **Tables:** `habit` (name, palette colour, `days` a weekday bitmask with bit 0 Sunday, `target` check-ins a day from 1 to 20, `archived`) and `habit_checkin` (habit, `day` date, `count` > 0; primary key habit and day; no row is zero).
+  - **Streaks and rates** (`src/features/apps/habits/streaks.ts`) work on "YYYY-MM-DD" strings only, with "today" passed in as Kathmandu has it (`todayInZone(APP_TIME_ZONE)`). Days a habit isn't meant for neither count nor break a streak; today doesn't break it until it is over; a day is done at its target. History starts at the habit's creation day or an earlier back-filled check-in. The completion rate covers the last 30 days since the start, today only once done, and is null before any scheduled day. Unit-tested across month, year and leap-day boundaries and at 00:05 on 1 January in Kathmandu (still 31 December in UTC).
+  - **Server-computed stats:** the overview loads every check-in of the user (bounded by 20 habits) and computes streak, best and rate with the same module; the list's strip shows the last 7 days.
+  - **Check-ins** are a TanStack DB collection over the overview query (0189): a tap adds one, back to none after the target, shown at once and rolled back with a toast if refused; the handler saves the day's count and refetches, which brings the new streak. Check-ins are accepted for today and the 366 days before, in Kathmandu time, never ahead.
+  - **Heatmap:** plain SVG, 53 weeks by 7 days from a Sunday, rendered on the server (no chart library), four levels of the habit's colour by share of the target, days the habit isn't meant for outlined; `role="img"` with a summary title, and a title per cell for hover.
+  - **Accessibility:** a strip button's name is its visible text (weekday, date or count) followed by a visually hidden sentence ("Water, Tuesday 27 October 2026: 5 of 8"), as WCAG 2.5.3 asks (axe's label-content-name-mismatch caught an `aria-label` that didn't hold the visible text); done cells are a tint of the colour behind body text, not white on the colour.
+  - **Colours** for categories and habits are one palette (`src/features/apps/colors.ts`), stored by name, each a middle lightness that shows on both themes.
+  - **Deleting from the habit's own page** invalidates the overview only and drops the page's query after navigating away: invalidating it while still on screen would refetch a 404.
+  - **Guest seed:** three habits begun 60 days ago (a 9-day reading streak, weekday walks, eight glasses of water part-done today).
+- **Not done (stretch goals, each would need its own decision):** a Bikram Sambat calendar view and a daily reminder digest.
+- **Why:** a streak is a calendar notion; computing it on instants would move days for anyone not on UTC, and Nepal is UTC+5:45. Server-side SVG keeps the year view out of the JavaScript and on the first paint.
+- **Alternatives considered:** streaks in SQL (gaps-and-islands can't skip unscheduled weekdays simply); recomputing streaks in the browser from the strip (it would need the whole history on every page); a chart library heatmap (about 100 kB of JavaScript for 371 rectangles).
+
+## 0194: A route's loader imports its queries on demand
+
+- **What:** the apps' routes (`src/routes/_apps/apps/**`) load their query options inside the loader with `await import("@/features/apps/<app>/queries")` instead of a static import. A loader is in every page's JavaScript (0151), and a static import put the queries module there with the server-function stubs of every function in the app's functions file (a module lands in one chunk, whole). Now the queries load with the route: on the server while rendering, in the browser on navigation or on preload (intent), next to the component chunk that needs them anyway.
+- **Numbers:** with Expenses and Habits added (five routes), the entry was 251.4 kB gzip, over the 250 kB budget. Loading the new routes' queries on demand gave 250.5 kB; doing the same for Kanban's, Notes' and Links' routes gave 248.5 kB, below Task 42's 248.9 kB.
+- **Why:** the plan says new pages must not grow the entry chunk; this keeps an app's data layer out of pages that never show it.
+- **Alternatives considered:** splitting each functions file into reads and writes (the loader's reads would still be in the entry, and the guard test's layout would change); raising the budget again. Task 45 can apply the same to the admin and portfolio routes.

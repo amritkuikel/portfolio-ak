@@ -95,6 +95,11 @@ import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/adm
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
 import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
+import { Route as AppsAppsExpensesIndexRouteImport } from './routes/_apps/apps/expenses/index'
+import { Route as AppsAppsExpensesCategoriesRouteImport } from './routes/_apps/apps/expenses/categories'
+import { Route as AppsAppsExpensesImportRouteImport } from './routes/_apps/apps/expenses/import'
+import { Route as AppsAppsHabitsIndexRouteImport } from './routes/_apps/apps/habits/index'
+import { Route as AppsAppsHabitsHabitIdRouteImport } from './routes/_apps/apps/habits/$habitId'
 import { Route as AppsAppsKanbanIndexRouteImport } from './routes/_apps/apps/kanban/index'
 import { Route as AppsAppsKanbanBoardIdRouteImport } from './routes/_apps/apps/kanban/$boardId'
 import { Route as AppsAppsLinksIndexRouteImport } from './routes/_apps/apps/links/index'
@@ -546,6 +551,32 @@ const AdminAdminUsersIndexRoute = AdminAdminUsersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminUsersRouteRoute,
 } as any)
+const AppsAppsExpensesIndexRoute = AppsAppsExpensesIndexRouteImport.update({
+  id: '/apps/expenses/',
+  path: '/apps/expenses/',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsExpensesCategoriesRoute =
+  AppsAppsExpensesCategoriesRouteImport.update({
+    id: '/apps/expenses/categories',
+    path: '/apps/expenses/categories',
+    getParentRoute: () => AppsRoute,
+  } as any)
+const AppsAppsExpensesImportRoute = AppsAppsExpensesImportRouteImport.update({
+  id: '/apps/expenses/import',
+  path: '/apps/expenses/import',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsHabitsIndexRoute = AppsAppsHabitsIndexRouteImport.update({
+  id: '/apps/habits/',
+  path: '/apps/habits/',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsHabitsHabitIdRoute = AppsAppsHabitsHabitIdRouteImport.update({
+  id: '/apps/habits/$habitId',
+  path: '/apps/habits/$habitId',
+  getParentRoute: () => AppsRoute,
+} as any)
 const AppsAppsKanbanIndexRoute = AppsAppsKanbanIndexRouteImport.update({
   id: '/apps/kanban/',
   path: '/apps/kanban/',
@@ -705,6 +736,9 @@ export interface FileRoutesByFullPath {
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
+  '/apps/expenses/import': typeof AppsAppsExpensesImportRoute
+  '/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
@@ -713,6 +747,8 @@ export interface FileRoutesByFullPath {
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/apps/expenses/': typeof AppsAppsExpensesIndexRoute
+  '/apps/habits/': typeof AppsAppsHabitsIndexRoute
   '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/apps/links/': typeof AppsAppsLinksIndexRoute
   '/apps/notes/': typeof AppsAppsNotesIndexRoute
@@ -791,6 +827,9 @@ export interface FileRoutesByTo {
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
+  '/apps/expenses/import': typeof AppsAppsExpensesImportRoute
+  '/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
@@ -799,6 +838,8 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
+  '/apps/expenses': typeof AppsAppsExpensesIndexRoute
+  '/apps/habits': typeof AppsAppsHabitsIndexRoute
   '/apps/kanban': typeof AppsAppsKanbanIndexRoute
   '/apps/links': typeof AppsAppsLinksIndexRoute
   '/apps/notes': typeof AppsAppsNotesIndexRoute
@@ -895,6 +936,9 @@ export interface FileRoutesById {
   '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
+  '/_apps/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
+  '/_apps/apps/expenses/import': typeof AppsAppsExpensesImportRoute
+  '/_apps/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
   '/_apps/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/_apps/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/_apps/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
@@ -903,6 +947,8 @@ export interface FileRoutesById {
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
+  '/_apps/apps/expenses/': typeof AppsAppsExpensesIndexRoute
+  '/_apps/apps/habits/': typeof AppsAppsHabitsIndexRoute
   '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/_apps/apps/links/': typeof AppsAppsLinksIndexRoute
   '/_apps/apps/notes/': typeof AppsAppsNotesIndexRoute
@@ -994,6 +1040,9 @@ export interface FileRouteTypes {
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/apps/expenses/categories'
+    | '/apps/expenses/import'
+    | '/apps/habits/$habitId'
     | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
@@ -1002,6 +1051,8 @@ export interface FileRouteTypes {
     | '/admin/roles/'
     | '/admin/test-crud/'
     | '/admin/users/'
+    | '/apps/expenses/'
+    | '/apps/habits/'
     | '/apps/kanban/'
     | '/apps/links/'
     | '/apps/notes/'
@@ -1080,6 +1131,9 @@ export interface FileRouteTypes {
     | '/admin/settings/appearance'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
+    | '/apps/expenses/categories'
+    | '/apps/expenses/import'
+    | '/apps/habits/$habitId'
     | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
@@ -1088,6 +1142,8 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
+    | '/apps/expenses'
+    | '/apps/habits'
     | '/apps/kanban'
     | '/apps/links'
     | '/apps/notes'
@@ -1183,6 +1239,9 @@ export interface FileRouteTypes {
     | '/_admin/admin/settings/appearance'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
+    | '/_apps/apps/expenses/categories'
+    | '/_apps/apps/expenses/import'
+    | '/_apps/apps/habits/$habitId'
     | '/_apps/apps/kanban/$boardId'
     | '/_apps/apps/links/$linkId'
     | '/_apps/apps/notes/$noteId'
@@ -1191,6 +1250,8 @@ export interface FileRouteTypes {
     | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
+    | '/_apps/apps/expenses/'
+    | '/_apps/apps/habits/'
     | '/_apps/apps/kanban/'
     | '/_apps/apps/links/'
     | '/_apps/apps/notes/'
@@ -1825,6 +1886,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminUsersIndexRouteImport
       parentRoute: typeof AdminAdminUsersRouteRoute
     }
+    '/_apps/apps/expenses/': {
+      id: '/_apps/apps/expenses/'
+      path: '/apps/expenses'
+      fullPath: '/apps/expenses/'
+      preLoaderRoute: typeof AppsAppsExpensesIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/expenses/categories': {
+      id: '/_apps/apps/expenses/categories'
+      path: '/apps/expenses/categories'
+      fullPath: '/apps/expenses/categories'
+      preLoaderRoute: typeof AppsAppsExpensesCategoriesRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/expenses/import': {
+      id: '/_apps/apps/expenses/import'
+      path: '/apps/expenses/import'
+      fullPath: '/apps/expenses/import'
+      preLoaderRoute: typeof AppsAppsExpensesImportRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/habits/': {
+      id: '/_apps/apps/habits/'
+      path: '/apps/habits'
+      fullPath: '/apps/habits/'
+      preLoaderRoute: typeof AppsAppsHabitsIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/habits/$habitId': {
+      id: '/_apps/apps/habits/$habitId'
+      path: '/apps/habits/$habitId'
+      fullPath: '/apps/habits/$habitId'
+      preLoaderRoute: typeof AppsAppsHabitsHabitIdRouteImport
+      parentRoute: typeof AppsRoute
+    }
     '/_apps/apps/kanban/': {
       id: '/_apps/apps/kanban/'
       path: '/apps/kanban'
@@ -2183,9 +2279,14 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppsRouteChildren {
   AppsAppsIndexRoute: typeof AppsAppsIndexRoute
+  AppsAppsExpensesCategoriesRoute: typeof AppsAppsExpensesCategoriesRoute
+  AppsAppsExpensesImportRoute: typeof AppsAppsExpensesImportRoute
+  AppsAppsHabitsHabitIdRoute: typeof AppsAppsHabitsHabitIdRoute
   AppsAppsKanbanBoardIdRoute: typeof AppsAppsKanbanBoardIdRoute
   AppsAppsLinksLinkIdRoute: typeof AppsAppsLinksLinkIdRoute
   AppsAppsNotesNoteIdRoute: typeof AppsAppsNotesNoteIdRoute
+  AppsAppsExpensesIndexRoute: typeof AppsAppsExpensesIndexRoute
+  AppsAppsHabitsIndexRoute: typeof AppsAppsHabitsIndexRoute
   AppsAppsKanbanIndexRoute: typeof AppsAppsKanbanIndexRoute
   AppsAppsLinksIndexRoute: typeof AppsAppsLinksIndexRoute
   AppsAppsNotesIndexRoute: typeof AppsAppsNotesIndexRoute
@@ -2194,9 +2295,14 @@ interface AppsRouteChildren {
 
 const AppsRouteChildren: AppsRouteChildren = {
   AppsAppsIndexRoute: AppsAppsIndexRoute,
+  AppsAppsExpensesCategoriesRoute: AppsAppsExpensesCategoriesRoute,
+  AppsAppsExpensesImportRoute: AppsAppsExpensesImportRoute,
+  AppsAppsHabitsHabitIdRoute: AppsAppsHabitsHabitIdRoute,
   AppsAppsKanbanBoardIdRoute: AppsAppsKanbanBoardIdRoute,
   AppsAppsLinksLinkIdRoute: AppsAppsLinksLinkIdRoute,
   AppsAppsNotesNoteIdRoute: AppsAppsNotesNoteIdRoute,
+  AppsAppsExpensesIndexRoute: AppsAppsExpensesIndexRoute,
+  AppsAppsHabitsIndexRoute: AppsAppsHabitsIndexRoute,
   AppsAppsKanbanIndexRoute: AppsAppsKanbanIndexRoute,
   AppsAppsLinksIndexRoute: AppsAppsLinksIndexRoute,
   AppsAppsNotesIndexRoute: AppsAppsNotesIndexRoute,
