@@ -79,6 +79,12 @@ export type DataTableProps<Row> = {
 	empty?: ReactNode;
 	/** New rows are loading (a filter or page change); the current ones are dimmed meanwhile. */
 	busy?: boolean;
+	/**
+	 * Makes the frame a tab stop (a labelled region), so keyboard users can scroll a table
+	 * that is wider than the page and has no link or button to reach it by (a column per
+	 * question, plain text cells). Long tables get this anyway.
+	 */
+	scrollRegion?: boolean;
 	"data-testid"?: string;
 };
 
@@ -119,6 +125,7 @@ export function DataTable<Row extends RowData>({
 	savedViews = false,
 	empty,
 	busy = false,
+	scrollRegion = false,
 	"data-testid": testId,
 }: DataTableProps<Row>) {
 	const preferences = useTablePreferences(tableId);
@@ -262,10 +269,11 @@ export function DataTable<Row extends RowData>({
 					<div
 						className={cn(
 							"relative overflow-x-auto rounded-md border",
-							sticky &&
-								"max-h-[min(70dvh,48rem)] overflow-y-auto focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+							(sticky || scrollRegion) &&
+								"focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+							sticky && "max-h-[min(70dvh,48rem)] overflow-y-auto",
 						)}
-						{...(sticky ? { tabIndex: 0, role: "region", "aria-label": m.table_scroll_region() } : {})}
+						{...(sticky || scrollRegion ? { tabIndex: 0, role: "region", "aria-label": m.table_scroll_region() } : {})}
 					>
 						{/* A bare <table>: ui/table's own scroll wrapper would make the sticky header stick to it instead. */}
 						<table data-slot="table" data-testid={testId} className="w-full caption-bottom text-body">

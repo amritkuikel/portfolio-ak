@@ -25,7 +25,10 @@ export type ReviewedPage = {
 		| { from: "link-id" } // @apps
 		| { from: "expenses-data" } // @apps
 		| { from: "habit-data" } // @apps
-		| { from: "habit-id" }; // @apps
+		| { from: "habit-id" } // @apps
+		| { from: "form-data" } // @apps
+		| { from: "form-id" } // @apps
+		| { from: "form-slug" }; // @apps
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -146,6 +149,12 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/apps/habits" },
 	{ route: "/apps/habits", as: "member", label: "habits", params: { from: "habit-data" } },
 	{ route: "/apps/habits/$habitId", as: "member", params: { from: "habit-id" } },
+	{ route: "/apps/forms" },
+	{ route: "/apps/forms", as: "member", label: "forms", params: { from: "form-data" } },
+	{ route: "/apps/forms/$formId", as: "member", params: { from: "form-id" } },
+	{ route: "/apps/forms/$formId/results", as: "member", params: { from: "form-id" } },
+	// A published form, for anyone with the link (signed out).
+	{ route: "/f/$slug", params: { from: "form-slug" } },
 	{ route: "/admin/apps", as: "admin" },
 	{ route: "/admin/links", as: "admin" },
 	// apps:end

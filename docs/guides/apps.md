@@ -1,6 +1,6 @@
 # The showcase apps
 
-Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189). Kanban is the first and the reference; Notes and Links (decisions 0190, 0191), then Expenses and Habits (0192, 0193) followed, and Forms follows them (PLAN.md, Task 44). The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
+Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189). Kanban is the first and the reference; Notes and Links (decisions 0190, 0191), then Expenses and Habits (0192, 0193) and Forms (0195) followed. The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
 
 ## How a visit goes
 
@@ -81,6 +81,14 @@ The `_apps` layout mounts `<DbScope>`, so DB is available to every app page and 
 - **Heatmap:** server-rendered SVG, 53 weeks by 7 days (`heatmap.ts` places the cells).
 - **Quotas:** 20 habits.
 
+## Forms (0195)
+
+- **Definitions are data:** `features/apps/forms/fields.ts` is a Zod union of nine field types; `toZodSchema(fields)` makes the schema a response must pass, used by the public form's validators and again by the server. Answers are keyed by field id and choices stored as option ids (both made in the browser), so renaming keeps the answers.
+- **Builder** (`/apps/forms/$formId`): a draft in the page; Save validates it with `saveFormInput` and sends it against the loaded version (stale: Reload). Problems are keyed like the input (`fields.2.label`). The palette and the questions share one dnd-kit provider (a type dropped on a question goes in there); every palette entry also has an add button, and questions move with Alt + ↑/↓. Publishing keeps the version and needs an account.
+- **Public page** `/f/$slug`: outside every section (its own frame, no session lookup), an account's published form only, `noindex` in the head and `X-Robots-Tag`. Submissions: honeypot, Turnstile, 5 an hour per sender and form (`clientIpHash`), the form's schema, 1,000 per form.
+- **Results:** `summarize` (`results.ts`) per question, the responses in a `DataTable` (`?page=`), every response as CSV.
+- **Quotas:** 20 forms per user.
+
 ## Turning guest sessions off
 
 Remove `anonymous(…)` from `src/server/auth/auth.ts` and `anonymousClient()` from `src/lib/auth-client.ts`, and the "Try it" buttons. The guards can stay: they never match without guests.
@@ -95,4 +103,5 @@ Remove `anonymous(…)` from `src/server/auth/auth.ts` and `anonymousClient()` f
 - **A loader's imports are in every page:** a route that imports its `queries.ts` statically puts the queries and every server-function stub of the app in the entry chunk (`check-bundle.ts` fails). Import it inside the loader (0194).
 - **A button's name holds its visible text:** an `aria-label` that leaves out what the button shows ("Tue 27") fails axe's label-content-name-mismatch. Keep the visible text and add the rest in an `sr-only` span (`checkin-button.tsx`; the button is `relative` so the span stays inside).
 - **Deleting what the page shows:** invalidating a detail query while its page is still mounted refetches a 404. Habits' delete invalidates the overview only, navigates, then removes the habit's query.
+- **A page outside every section renders its own frame:** `/f/$slug` has no layout, so its component draws the header, preloads the fonts in its `head` and sets `staticData.session: "skip"` (a respondent has no session to look up).
 - **A two-factor sign-in loses the guest's session:** the password step clears the session cookie before the anonymous plugin's hook runs; the `guest_claim` cookie and `claimGuestData` after sign-in are what keep the data.

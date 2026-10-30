@@ -33,8 +33,22 @@ export function handleSaveError(form: AnyFormApi, error: unknown, onStale?: () =
 	else if (!applyServerFieldErrors(form, error)) toast.error(errorMessage(error));
 }
 
-/** Form `listeners.onChange`: editing a field clears the server error shown on it. */
+/** The errors a change makes stale: the server's, and those of the last submit and blur. */
+const STALE_ON_CHANGE = ["onServer", "onSubmit", "onBlur"] as const;
+
+/**
+ * Form `listeners.onChange`: editing a field clears the errors shown on it that the edit
+ * made stale: the server's, and the last submit's and blur's. The change validator has
+ * just checked the field again, so what it found is what shows. Without this, a field
+ * fixed after a failed submit kept its message until it lost focus, and the message
+ * leaving moved the page between the press and the release of the next click (the
+ * click on Send was lost).
+ */
 export const clearServerErrorOnChange = ({ fieldApi }: { fieldApi: AnyFieldApi }) => {
-	if (fieldApi.state.meta.errorMap.onServer === undefined) return;
-	fieldApi.setMeta((meta) => ({ ...meta, errorMap: { ...meta.errorMap, onServer: undefined } }));
+	const { errorMap } = fieldApi.state.meta;
+	if (STALE_ON_CHANGE.every((key) => errorMap[key] === undefined)) return;
+	fieldApi.setMeta((meta) => ({
+		...meta,
+		errorMap: { ...meta.errorMap, onServer: undefined, onSubmit: undefined, onBlur: undefined },
+	}));
 };

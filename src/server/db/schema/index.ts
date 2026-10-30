@@ -15,6 +15,7 @@
  */
 
 export * from "./apps/expenses"; // @apps
+export * from "./apps/forms"; // @apps
 export * from "./apps/habits"; // @apps
 export * from "./apps/kanban"; // @apps
 export * from "./apps/links"; // @apps

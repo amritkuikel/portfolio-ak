@@ -1,5 +1,6 @@
 import {
 	CalendarCheckIcon,
+	ClipboardListIcon,
 	Link2Icon,
 	type LucideIcon,
 	NotebookTextIcon,
@@ -17,7 +18,7 @@ import { m } from "@/paraglide/messages";
  * the visitor has a session, its inner pages private. A portfolio project links to it
  * by naming the slug in its "App" field.
  */
-export const APP_SLUGS = ["kanban", "notes", "links", "expenses", "habits"] as const;
+export const APP_SLUGS = ["kanban", "notes", "links", "expenses", "habits", "forms"] as const;
 export type AppSlug = (typeof APP_SLUGS)[number];
 
 export type AppEntry = {
@@ -76,6 +77,14 @@ export const APPS: ReadonlyArray<AppEntry> = [
 		description: m.habits_description,
 		icon: CalendarCheckIcon,
 		rows: { habits: m.habits_usage_habits, checkins: m.habits_usage_checkins },
+	},
+	{
+		slug: "forms",
+		name: m.forms_name,
+		tagline: m.forms_tagline,
+		description: m.forms_description,
+		icon: ClipboardListIcon,
+		rows: { forms: m.forms_usage_forms, published: m.forms_usage_published, responses: m.forms_usage_responses },
 	},
 ];
 

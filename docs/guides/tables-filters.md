@@ -39,6 +39,7 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 - **Row actions** are `RowAction` objects: `onSelect`, or `render` for a link (it gets the label). An action with `permission` is left out for users without it, `hidden` leaves it out for one row, and the actions column disappears when no row has any. Right-clicking a row opens the same menu (non-modal, like the "…" menu).
 - **Selection** is local to the page; the bulk bar appears when rows are selected.
 - **Long pages** (more than 15 rows) scroll inside a focusable frame under a sticky header. On phones the first column (and the checkboxes) stay pinned while the table scrolls sideways.
+- **Wide tables of plain text** (no link or button in the rows, e.g. a column per survey question): pass `scrollRegion` so the frame is a labelled tab stop and keyboard users can scroll it sideways (axe: scrollable-region-focusable).
 - **Density** follows the preference: cells use `--row-padding`.
 - **Destructive actions** confirm with `useConfirm()` (`components/dialogs/confirm.tsx`; focus starts on Cancel).
 - **Column resizing and row expansion** aren't built in: see [recipes.md](recipes.md), "Resizable columns and expandable rows".

@@ -163,6 +163,16 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"importExpenses",
 		"exportExpenses",
 	],
+	"apps/forms.ts": [
+		"listForms",
+		"getForm",
+		"createForm",
+		"saveForm",
+		"setFormStatus",
+		"deleteForm",
+		"getFormResults",
+		"exportFormResponses",
+	],
 	"apps/habits.ts": ["getHabitsOverview", "getHabit", "createHabit", "updateHabit", "deleteHabit", "setHabitCheckin"],
 };
 // apps:end
@@ -215,6 +225,10 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 	"apps/notes-public.ts": {
 		why: "the public page of a shared note: only a note its owner (an account) shared, by its random token (decision 0190)",
 		functions: ["getSharedNote"],
+	},
+	"apps/forms-public.ts": {
+		why: "a published form's public page and its submissions: only an account's published form, by its random slug; submissions are honeypotted, Turnstile-checked, rate limited per sender and checked against the form's own schema (decision 0195)",
+		functions: ["getPublicForm", "submitFormResponse"],
 	},
 	// apps:end
 	"test-crud-public.ts": {

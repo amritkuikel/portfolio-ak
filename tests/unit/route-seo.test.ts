@@ -85,6 +85,7 @@ const INDEXABLE: ReadonlyArray<{ to: string; label: string; context: Partial<Hea
 	{ to: "/apps/links", label: "links", context: {}, path: "/apps/links" },
 	{ to: "/apps/expenses", label: "expenses", context: { match: { search: {} } }, path: "/apps/expenses" },
 	{ to: "/apps/habits", label: "habits", context: { match: { search: {} } }, path: "/apps/habits" },
+	{ to: "/apps/forms", label: "forms", context: {}, path: "/apps/forms" },
 	// apps:end
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 	// @new-feature:indexable

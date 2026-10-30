@@ -3,6 +3,7 @@ import type { AppSlug } from "@/features/apps/registry";
 import type { Db } from "@/server/db/types";
 import type { GuestData } from "@/server/guests/data";
 import { claimExpenses, expensesUsage, seedExpenses } from "./expenses/service";
+import { claimForms, formsUsage, seedForms } from "./forms/service";
 import { claimHabits, habitsUsage, seedHabits } from "./habits/service";
 import { claimKanban, kanbanUsage, seedKanban } from "./kanban/service";
 import { claimLinks, linksUsage, seedLinks } from "./links/service";
@@ -25,4 +26,5 @@ export const APP_SERVERS: ReadonlyArray<AppServer> = [
 	{ slug: "links", seedGuestData: seedLinks, claim: claimLinks, usage: linksUsage },
 	{ slug: "expenses", seedGuestData: seedExpenses, claim: claimExpenses, usage: expensesUsage },
 	{ slug: "habits", seedGuestData: seedHabits, claim: claimHabits, usage: habitsUsage },
+	{ slug: "forms", seedGuestData: seedForms, claim: claimForms, usage: formsUsage },
 ];

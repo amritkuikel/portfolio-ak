@@ -159,6 +159,14 @@ export class Harness {
 		if (!row.id) throw new Error(`no review habit for ${user}`);
 		return { id: row.id };
 	}
+	/** A user's published review form, with responses: its id and slug (the harness makes it on first ask). */
+	async reviewForm(user: E2EUser): Promise<{ id: string; slug: string }> {
+		const email = E2E.users[user].email;
+		const response = await fetch(`${E2E.harnessURL}/e2e/form?email=${encodeURIComponent(email)}`);
+		const row = (await response.json()) as { id?: string; slug?: string };
+		if (!row.id || !row.slug) throw new Error(`no review form for ${user}`);
+		return { id: row.id, slug: row.slug };
+	}
 	// apps:end
 }
 

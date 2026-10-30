@@ -935,7 +935,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | Done (decisions 0185–0189) |
 | 42 | Notes and Links | high | Done (decisions 0190–0191) |
 | 43 | Expenses and Habits | high | Done (decisions 0192–0194) |
-| 44 | Forms (survey builder) | high | |
+| 44 | Forms (survey builder) | high | Done (decision 0195) |
 | 45 | Wrap-up: guides, measurements, full review | medium | |
 
 "Effort" is the recommended reasoning effort for the session (`/effort` or the model picker).
@@ -1470,23 +1470,42 @@ The owner runs one task per session and clears the context between tasks. A sess
 **Left for the owner:**
 - Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban`, `0013_notes_links` and `0014_expenses_habits`).
 
-### Task 44: Forms (survey builder)
+### Task 44: Forms (done)
 
-- **Tables:**
-  - `forms`: slug unique, title, description, fields jsonb, status (draft or published).
-  - `form_responses`: form, data jsonb, submitted at, an IP hash for rate limiting.
-- **Field definitions:**
-  - A Zod discriminated union of short text, long text, email, number, single select, multi select, rating 1–5, date and consent, each with label, help, required and type-specific options.
-  - `toZodSchema(fields)` generates the response schema, used on both client and server; it is unit-tested heavily.
-- **Builder:**
-  - A palette of field types, dragged into the form (dnd-kit, keyboard-accessible).
-  - A settings panel per field, live preview, draft and publish.
-  - Only registered users can publish.
-- **Public form:**
-  - `src/routes/f/$slug.tsx`: server-rendered, rendered from the definition with TanStack Form, noindex.
-  - Its submission is a public server function with a rate limit, Turnstile and a honeypot.
-- **Results:** a chart per field (bars for choices, the average and distribution for ratings), a response table (DataTable v2), and CSV export.
-- **Also:** a registry entry, `claim`, `seedGuestData` (a sample survey with responses), tests, stories, review pages, and an e2e flow ("a published form is filled in and the response appears in the results").
+**Forms (0195):**
+- **Tables** (**migration `0015_forms`**): `form` (slug unique, random and never changed; title, description, `fields` jsonb, status draft or published, `published_at`) and `form_response` (`data` jsonb, `submitted_at`, `ip_hash`; it carries the form's owner, so `ownedBy`, the claim and the cleanup cover it).
+- **Field definitions:** a Zod discriminated union of nine types (short and long text, email, number, one choice, several choices, rating 1–5, date, consent), each with label, help, required and its own settings; fields and options have ids, so answers survive renames. `toZodSchema(fields)` makes the response schema, used by the public form's validators and again by the server (`tests/unit/forms-fields.test.ts`, 32 tests).
+- **Builder** `/apps/forms/$formId`: a palette of the nine types, the questions (drag a type in at its place, or its add button; reorder by drag, Space/arrows/Space or Alt + ↑/↓, all announced), a settings panel per question (options sortable), a live preview of the draft; Save against the loaded version (stale: Reload), problems shown under their settings; Publish and Take down (accounts only; publishing keeps the version).
+- **Public page** `/f/$slug`: outside every section (its own frame, no session lookup), server-rendered from the definition with TanStack Form, `noindex` in the head and `X-Robots-Tag`; an account's published form only. Submission: honeypot, Turnstile, 5 an hour per sender and form, the form's schema (problems per question), 1,000 responses per form.
+- **Results** `/apps/forms/$formId/results?page=`: response count, questions and completion tiles; per question bars for choices, the average and 1–5 spread for ratings, average and range for numbers, agreement for consent, the newest text answers; the responses in a `DataTable` (25 a page); CSV export of every response.
+- **Quotas:** 20 forms. **Guest seed:** "Café feedback" (five questions, twelve responses) in the guest's language, a draft.
+
+**Shared:** Forms in both registries (gallery, switcher, sitemap, `/admin/apps`: forms, published, responses); `clientIpHash` (`src/server/auth/client-ip.ts`) shared with the contact form; `NameDialog` moved to `src/features/apps/components/`; `DataTable` gained `scrollRegion`; 185 messages written by hand in both languages.
+
+**Tests:**
+- Unit `forms-fields` (definitions, `toZodSchema` for every type, the whole response, results, answers as text and CSV).
+- PGlite `apps-forms` (19: ownership, list counts, slugs, the stale save and the kept version, quota, publishing rules, delete cascade, the public read, a guest's form never public, storing, schema problems per field, honeypot, Turnstile, the rate limit, the response cap, results and paging, seed, claim, usage).
+- jsdom: the stale-error listener (below).
+- Stories `Apps/Forms` (required answers, answered, the builder's palette and keyboard move, choice settings).
+- e2e `forms.spec.ts`: a guest gets the sample survey and its results, adds a question from the keyboard and saves, but can't publish; an account builds, previews and publishes a form, someone signed out fills it in at its link (`noindex`), the response shows in the results, and the link is a 404 once taken down. Review pages: `/apps/forms` (visitor and member, with harness data), the builder, the results, `/f/$slug` (signed out).
+
+**Numbers:**
+- `pnpm test`: 103 files, 899 tests. Storybook: 406 story tests, both passes (one of two full runs failed Expenses' "Invalid" dialog story, the overlay flake of Tasks 41–43: it passed 2 of 3 runs alone and the second full run passed). `pnpm test:e2e`: 1,194 checks, all passed, none flaky, 14.4 min (Task 43: 1,132).
+- **Bundle:** entry JS 248.4 → 249.8 kB gzip (budget 250; see the deviations). On top of the root: the builder 135.7 kB (dnd-kit and the form kit), the results page's charts load on demand.
+
+**Deviations:**
+- **Singular table names** (`form`, `form_response`), like the rest of the schema; the plan said `forms`, `form_responses`.
+- **The builder isn't a TanStack Form:** a draft in the page, validated whole on save with the server's schema (0195); the public form is TanStack Form, as planned.
+- **Slugs are random and fixed** (ten letters and digits): the plan only said unique.
+- **No moderation page:** a published form needs an account and collects no passwords or files; recorded in 0195 as a follow-up if forms are abused.
+- **Entry JS grew 1.4 kB gzip** (248.4 → 249.8, budget 250): four new routes bring their options (0151), as in Task 42. 0.2 kB is left, so Task 45 must move route options out of the entry before anything else is added.
+- **Found on the way, in the form kit:** after a failed submit, a field fixed by typing kept its error until it lost focus, and the message leaving moved the page between the press and the release of the next click, so Send did nothing (the public form's flow caught it). `clearServerErrorOnChange` now also clears the submit's and the blur's errors of the changed field (forms guide, pitfalls). Forms without that listener (outside `useCrudForm`) still behave the old way; Task 45 can decide whether every form gets it.
+- **Found on the way, in the table kit:** a wide table whose rows hold no link or button scrolled sideways without a tab stop (axe scrollable-region-focusable); `DataTable`'s new `scrollRegion` makes the frame one.
+- **In dev on this machine the guest's "Try it now" didn't hydrate in time** (as in Task 42), so the pages were checked on the production build (the harness, the review and the flows).
+
+**Left for the owner:**
+- Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban` to `0015_forms`).
+- To link Forms to a case study, set a published project's "App" field to `forms`.
 
 ### Task 45: Wrap-up
 

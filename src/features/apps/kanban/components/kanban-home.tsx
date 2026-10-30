@@ -14,7 +14,7 @@ import { createBoardMutation, kanbanBoardsQueryOptions } from "../queries";
 import { BOARD_NAME_MAX } from "../schema";
 import { KANBAN_QUOTAS } from "../types";
 
-const NameDialog = lazy(() => import("./name-dialog"));
+const NameDialog = lazy(() => import("../../components/name-dialog"));
 
 const route = getRouteApi("/_apps/apps/kanban/");
 

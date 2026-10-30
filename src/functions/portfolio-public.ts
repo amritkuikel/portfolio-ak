@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
@@ -17,7 +16,7 @@ import { hasAll } from "@/features/rbac/permissions";
 import { zodInput } from "@/functions/_lib/validator";
 import { withPublicServices } from "@/middleware/services";
 import { locales } from "@/paraglide/runtime";
-import { trustedClientIp } from "@/server/auth/client-ip";
+import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
 import { getServerSession } from "@/server/auth/session";
 import { sendEmail } from "@/server/email/send";
 import { serverEnv } from "@/server/env";
@@ -104,8 +103,7 @@ export const submitContactMessage = createServerFn({ method: "POST" })
 		const ip = trustedClientIp(getRequest());
 		const secret = serverEnv.TURNSTILE_SECRET_KEY;
 		return submitContact(context, data, {
-			// Keyed, so the stored hash can't be reversed by hashing every IPv4 address.
-			ipHash: ip ? createHmac("sha256", serverEnv.BETTER_AUTH_SECRET).update(ip).digest("hex").slice(0, 32) : null,
+			ipHash: clientIpHash(ip),
 			verifyCaptcha: secret ? (token) => verifyTurnstile(secret, token, ip) : null,
 			send: sendEmail,
 		});

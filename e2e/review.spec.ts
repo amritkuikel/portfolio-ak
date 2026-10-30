@@ -64,6 +64,12 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 		return page.route;
 	}
 	if (page.params.from === "habit-id") return page.route.replace("$habitId", (await harness.reviewHabit("member")).id);
+	if (page.params.from === "form-data") {
+		await harness.reviewForm("member");
+		return page.route;
+	}
+	if (page.params.from === "form-id") return page.route.replace("$formId", (await harness.reviewForm("member")).id);
+	if (page.params.from === "form-slug") return page.route.replace("$slug", (await harness.reviewForm("member")).slug);
 	// apps:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));

@@ -25,7 +25,7 @@ import type { KanbanCard, KanbanColumn } from "../types";
 import { Board } from "./board";
 
 const CardSheet = lazy(() => import("./card-sheet"));
-const NameDialog = lazy(() => import("./name-dialog"));
+const NameDialog = lazy(() => import("../../components/name-dialog"));
 
 const route = getRouteApi("/_apps/apps/kanban/$boardId");
 

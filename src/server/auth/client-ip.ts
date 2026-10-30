@@ -1,5 +1,7 @@
 import "@tanstack/react-start/server-only";
+import { createHmac } from "node:crypto";
 import { getRequestIP } from "@tanstack/react-start/server";
+import { serverEnv } from "@/server/env";
 
 /** The only header Better Auth trusts for the client IP (advanced.ipAddress in auth.ts). */
 export const CLIENT_IP_HEADER = "x-client-ip";
@@ -38,3 +40,11 @@ export const withTrustedClientIp = (request: Request): Request => {
 		...(hasBody ? { body: request.body, duplex: "half" } : {}),
 	});
 };
+
+/**
+ * A keyed hash of a client IP, for rate limits on public forms (the contact form, a
+ * published Forms survey): stored instead of the IP, and keyed, so it can't be
+ * reversed by hashing every IPv4 address. Null when the IP is unknown.
+ */
+export const clientIpHash = (ip: string | undefined): string | null =>
+	ip ? createHmac("sha256", serverEnv.BETTER_AUTH_SECRET).update(ip).digest("hex").slice(0, 32) : null;

@@ -38,6 +38,7 @@ import { Route as DevExamplesRouteRouteImport } from './routes/dev/examples/rout
 import { Route as DevFormsRouteImport } from './routes/dev/forms'
 import { Route as DevStackRouteImport } from './routes/dev/stack'
 import { Route as DevTestCrudRouteRouteImport } from './routes/dev/test-crud/route'
+import { Route as FSlugRouteImport } from './routes/f/$slug'
 import { Route as LSlugRouteImport } from './routes/l/$slug'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminAppsRouteImport } from './routes/_admin/admin/apps'
@@ -98,6 +99,7 @@ import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/
 import { Route as AppsAppsExpensesIndexRouteImport } from './routes/_apps/apps/expenses/index'
 import { Route as AppsAppsExpensesCategoriesRouteImport } from './routes/_apps/apps/expenses/categories'
 import { Route as AppsAppsExpensesImportRouteImport } from './routes/_apps/apps/expenses/import'
+import { Route as AppsAppsFormsIndexRouteImport } from './routes/_apps/apps/forms/index'
 import { Route as AppsAppsHabitsIndexRouteImport } from './routes/_apps/apps/habits/index'
 import { Route as AppsAppsHabitsHabitIdRouteImport } from './routes/_apps/apps/habits/$habitId'
 import { Route as AppsAppsKanbanIndexRouteImport } from './routes/_apps/apps/kanban/index'
@@ -114,6 +116,8 @@ import { Route as AdminAdminPortfolioJournalNewRouteImport } from './routes/_adm
 import { Route as AdminAdminPortfolioProjectsIndexRouteImport } from './routes/_admin/admin/portfolio/projects/index'
 import { Route as AdminAdminPortfolioProjectsIdRouteImport } from './routes/_admin/admin/portfolio/projects/$id'
 import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_admin/admin/portfolio/projects/new'
+import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
+import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
 
 const AdminRoute = AdminRouteImport.update({
@@ -254,6 +258,11 @@ const DevTestCrudRouteRoute = DevTestCrudRouteRouteImport.update({
   id: '/test-crud',
   path: '/test-crud',
   getParentRoute: () => DevRouteRoute,
+} as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
@@ -567,6 +576,11 @@ const AppsAppsExpensesImportRoute = AppsAppsExpensesImportRouteImport.update({
   path: '/apps/expenses/import',
   getParentRoute: () => AppsRoute,
 } as any)
+const AppsAppsFormsIndexRoute = AppsAppsFormsIndexRouteImport.update({
+  id: '/apps/forms/',
+  path: '/apps/forms/',
+  getParentRoute: () => AppsRoute,
+} as any)
 const AppsAppsHabitsIndexRoute = AppsAppsHabitsIndexRouteImport.update({
   id: '/apps/habits/',
   path: '/apps/habits/',
@@ -653,6 +667,18 @@ const AdminAdminPortfolioProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
   } as any)
+const AppsAppsFormsFormIdIndexRoute =
+  AppsAppsFormsFormIdIndexRouteImport.update({
+    id: '/apps/forms/$formId/',
+    path: '/apps/forms/$formId/',
+    getParentRoute: () => AppsRoute,
+  } as any)
+const AppsAppsFormsFormIdResultsRoute =
+  AppsAppsFormsFormIdResultsRouteImport.update({
+    id: '/apps/forms/$formId/results',
+    path: '/apps/forms/$formId/results',
+    getParentRoute: () => AppsRoute,
+  } as any)
 const AppsAppsNotesSTokenRoute = AppsAppsNotesSTokenRouteImport.update({
   id: '/apps/notes/s/$token',
   path: '/apps/notes/s/$token',
@@ -682,6 +708,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/f/$slug': typeof FSlugRoute
   '/l/$slug': typeof LSlugRoute
   '/dev/': typeof DevIndexRoute
   '/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
@@ -748,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
   '/apps/expenses/': typeof AppsAppsExpensesIndexRoute
+  '/apps/forms/': typeof AppsAppsFormsIndexRoute
   '/apps/habits/': typeof AppsAppsHabitsIndexRoute
   '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/apps/links/': typeof AppsAppsLinksIndexRoute
@@ -757,9 +785,11 @@ export interface FileRoutesByFullPath {
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof SiteIndexRoute
@@ -780,6 +810,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/f/$slug': typeof FSlugRoute
   '/l/$slug': typeof LSlugRoute
   '/dev': typeof DevIndexRoute
   '/admin/apps': typeof AdminAdminAppsRoute
@@ -839,6 +870,7 @@ export interface FileRoutesByTo {
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
   '/apps/expenses': typeof AppsAppsExpensesIndexRoute
+  '/apps/forms': typeof AppsAppsFormsIndexRoute
   '/apps/habits': typeof AppsAppsHabitsIndexRoute
   '/apps/kanban': typeof AppsAppsKanbanIndexRoute
   '/apps/links': typeof AppsAppsLinksIndexRoute
@@ -848,9 +880,11 @@ export interface FileRoutesByTo {
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/apps/forms/$formId': typeof AppsAppsFormsFormIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -881,6 +915,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/f/$slug': typeof FSlugRoute
   '/l/$slug': typeof LSlugRoute
   '/_site/': typeof SiteIndexRoute
   '/dev/': typeof DevIndexRoute
@@ -948,6 +983,7 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
   '/_apps/apps/expenses/': typeof AppsAppsExpensesIndexRoute
+  '/_apps/apps/forms/': typeof AppsAppsFormsIndexRoute
   '/_apps/apps/habits/': typeof AppsAppsHabitsIndexRoute
   '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/_apps/apps/links/': typeof AppsAppsLinksIndexRoute
@@ -957,9 +993,11 @@ export interface FileRoutesById {
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/_apps/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -986,6 +1024,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/f/$slug'
     | '/l/$slug'
     | '/dev/'
     | '/admin/audit'
@@ -1052,6 +1091,7 @@ export interface FileRouteTypes {
     | '/admin/test-crud/'
     | '/admin/users/'
     | '/apps/expenses/'
+    | '/apps/forms/'
     | '/apps/habits/'
     | '/apps/kanban/'
     | '/apps/links/'
@@ -1061,9 +1101,11 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
+    | '/apps/forms/$formId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1084,6 +1126,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/f/$slug'
     | '/l/$slug'
     | '/dev'
     | '/admin/apps'
@@ -1143,6 +1186,7 @@ export interface FileRouteTypes {
     | '/admin/test-crud'
     | '/admin/users'
     | '/apps/expenses'
+    | '/apps/forms'
     | '/apps/habits'
     | '/apps/kanban'
     | '/apps/links'
@@ -1152,9 +1196,11 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
+    | '/apps/forms/$formId'
   id:
     | '__root__'
     | '/dev'
@@ -1184,6 +1230,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/f/$slug'
     | '/l/$slug'
     | '/_site/'
     | '/dev/'
@@ -1251,6 +1298,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
     | '/_apps/apps/expenses/'
+    | '/_apps/apps/forms/'
     | '/_apps/apps/habits/'
     | '/_apps/apps/kanban/'
     | '/_apps/apps/links/'
@@ -1260,9 +1308,11 @@ export interface FileRouteTypes {
     | '/_admin/admin/portfolio/journal/new'
     | '/_admin/admin/portfolio/projects/$id'
     | '/_admin/admin/portfolio/projects/new'
+    | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
+    | '/_apps/apps/forms/$formId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1277,6 +1327,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  FSlugRoute: typeof FSlugRoute
   LSlugRoute: typeof LSlugRoute
   ApiAccountExportRoute: typeof ApiAccountExportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -1486,6 +1537,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/test-crud'
       preLoaderRoute: typeof DevTestCrudRouteRouteImport
       parentRoute: typeof DevRouteRoute
+    }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -1907,6 +1965,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppsExpensesImportRouteImport
       parentRoute: typeof AppsRoute
     }
+    '/_apps/apps/forms/': {
+      id: '/_apps/apps/forms/'
+      path: '/apps/forms'
+      fullPath: '/apps/forms/'
+      preLoaderRoute: typeof AppsAppsFormsIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
     '/_apps/apps/habits/': {
       id: '/_apps/apps/habits/'
       path: '/apps/habits'
@@ -2018,6 +2083,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/portfolio/projects/new'
       preLoaderRoute: typeof AdminAdminPortfolioProjectsNewRouteImport
       parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
+    }
+    '/_apps/apps/forms/$formId/': {
+      id: '/_apps/apps/forms/$formId/'
+      path: '/apps/forms/$formId'
+      fullPath: '/apps/forms/$formId/'
+      preLoaderRoute: typeof AppsAppsFormsFormIdIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/forms/$formId/results': {
+      id: '/_apps/apps/forms/$formId/results'
+      path: '/apps/forms/$formId/results'
+      fullPath: '/apps/forms/$formId/results'
+      preLoaderRoute: typeof AppsAppsFormsFormIdResultsRouteImport
+      parentRoute: typeof AppsRoute
     }
     '/_apps/apps/notes/s/$token': {
       id: '/_apps/apps/notes/s/$token'
@@ -2286,11 +2365,14 @@ interface AppsRouteChildren {
   AppsAppsLinksLinkIdRoute: typeof AppsAppsLinksLinkIdRoute
   AppsAppsNotesNoteIdRoute: typeof AppsAppsNotesNoteIdRoute
   AppsAppsExpensesIndexRoute: typeof AppsAppsExpensesIndexRoute
+  AppsAppsFormsIndexRoute: typeof AppsAppsFormsIndexRoute
   AppsAppsHabitsIndexRoute: typeof AppsAppsHabitsIndexRoute
   AppsAppsKanbanIndexRoute: typeof AppsAppsKanbanIndexRoute
   AppsAppsLinksIndexRoute: typeof AppsAppsLinksIndexRoute
   AppsAppsNotesIndexRoute: typeof AppsAppsNotesIndexRoute
+  AppsAppsFormsFormIdResultsRoute: typeof AppsAppsFormsFormIdResultsRoute
   AppsAppsNotesSTokenRoute: typeof AppsAppsNotesSTokenRoute
+  AppsAppsFormsFormIdIndexRoute: typeof AppsAppsFormsFormIdIndexRoute
 }
 
 const AppsRouteChildren: AppsRouteChildren = {
@@ -2302,11 +2384,14 @@ const AppsRouteChildren: AppsRouteChildren = {
   AppsAppsLinksLinkIdRoute: AppsAppsLinksLinkIdRoute,
   AppsAppsNotesNoteIdRoute: AppsAppsNotesNoteIdRoute,
   AppsAppsExpensesIndexRoute: AppsAppsExpensesIndexRoute,
+  AppsAppsFormsIndexRoute: AppsAppsFormsIndexRoute,
   AppsAppsHabitsIndexRoute: AppsAppsHabitsIndexRoute,
   AppsAppsKanbanIndexRoute: AppsAppsKanbanIndexRoute,
   AppsAppsLinksIndexRoute: AppsAppsLinksIndexRoute,
   AppsAppsNotesIndexRoute: AppsAppsNotesIndexRoute,
+  AppsAppsFormsFormIdResultsRoute: AppsAppsFormsFormIdResultsRoute,
   AppsAppsNotesSTokenRoute: AppsAppsNotesSTokenRoute,
+  AppsAppsFormsFormIdIndexRoute: AppsAppsFormsFormIdIndexRoute,
 }
 
 const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
@@ -2391,6 +2476,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
+  FSlugRoute: FSlugRoute,
   LSlugRoute: LSlugRoute,
   ApiAccountExportRoute: ApiAccountExportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

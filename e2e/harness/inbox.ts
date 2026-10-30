@@ -179,6 +179,117 @@ async function reviewHabit(query: DemoQuery, email: string | null) {
 	);
 	return habit;
 }
+
+/** Questions of every kind for the review form (one long label, so the pages must wrap it). */
+const REVIEW_FORM_FIELDS = [
+	{
+		id: "freview01",
+		type: "short_text",
+		label: "Your name",
+		help: "As you'd like to be addressed",
+		required: true,
+		maxLength: 80,
+	},
+	{
+		id: "freview02",
+		type: "rating",
+		label: "How was the trek overall?",
+		help: "",
+		required: true,
+		lowLabel: "Poor",
+		highLabel: "Superb",
+	},
+	{
+		id: "freview03",
+		type: "single_select",
+		label: "Which route did you take, and would you recommend it to someone walking it for the first time?",
+		help: "",
+		required: false,
+		options: [
+			{ id: "oroute1", label: "Annapurna Circuit" },
+			{ id: "oroute2", label: "Everest Base Camp" },
+			{ id: "oroute3", label: "Langtang Valley" },
+		],
+		display: "radio",
+	},
+	{
+		id: "freview04",
+		type: "multi_select",
+		label: "What did you bring?",
+		help: "",
+		required: false,
+		options: [
+			{ id: "obring1", label: "Poles" },
+			{ id: "obring2", label: "A water filter" },
+			{ id: "obring3", label: "Crampons" },
+		],
+		maxChoices: null,
+	},
+	{
+		id: "freview05",
+		type: "number",
+		label: "Days on the trail",
+		help: "",
+		required: false,
+		min: 1,
+		max: 60,
+		integer: true,
+	},
+	{ id: "freview06", type: "date", label: "When did you start?", help: "", required: false, min: null, max: null },
+	{ id: "freview07", type: "email", label: "Email", help: "", required: false },
+	{ id: "freview08", type: "long_text", label: "Anything else?", help: "", required: false, maxLength: 2000 },
+	{ id: "freview09", type: "consent", label: "You may quote my answers.", help: "", required: false },
+	{
+		id: "freview10",
+		type: "single_select",
+		label: "Season",
+		help: "",
+		required: false,
+		display: "dropdown",
+		options: [
+			{ id: "oseas01", label: "Spring" },
+			{ id: "oseas02", label: "Autumn" },
+		],
+	},
+];
+
+/**
+ * A user's review form, made on first ask: published, with a question of every kind and
+ * a few responses (one with a long answer), for the builder, the results and /f/$slug.
+ */
+async function reviewForm(query: DemoQuery, email: string | null) {
+	const owner = await ownerOf(query, email);
+	const { rows: found } = await query(
+		`select "id", "slug" from "form" where "owner_id" = $1 and "title" = 'Review form'`,
+		[owner],
+	);
+	if (found[0]) return found[0];
+	const slug = randomUUID().replaceAll("-", "").slice(0, 10);
+	const { rows } = await query(
+		`insert into "form" ("owner_id", "slug", "title", "description", "fields", "status", "published_at")
+		values ($1, $2, 'Review form', 'A few questions about your last trek, so the next one goes better.', $3::jsonb, 'published', now())
+		returning "id", "slug"`,
+		[owner, slug, JSON.stringify(REVIEW_FORM_FIELDS)],
+	);
+	const form = rows[0];
+	const long =
+		"A long answer that has to wrap on a phone without pushing the page sideways, because nobody writes short notes about the mountains.";
+	await query(
+		`insert into "form_response" ("form_id", "owner_id", "data", "submitted_at")
+		select $1, $2, jsonb_build_object(
+			'freview01', 'Respondent ' || n,
+			'freview02', n % 5 + 1,
+			'freview03', (array['oroute1', 'oroute2', 'oroute3'])[n % 3 + 1],
+			'freview04', jsonb_build_array('obring1'),
+			'freview05', n + 3,
+			'freview09', n % 2 = 0,
+			'freview08', case when n = 1 then $3 else 'Fine' end
+		), now() - (n || ' hours')::interval
+		from generate_series(1, 8) as n`,
+		[form?.id, owner, long],
+	);
+	return form;
+}
 // apps:end
 
 export async function serveHarness(port: number, query: DemoQuery) {
@@ -243,6 +354,7 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				return send(response, 200, await reviewExpenses(query, url.searchParams.get("email")));
 			if (route === "GET /e2e/habit")
 				return send(response, 200, await reviewHabit(query, url.searchParams.get("email")));
+			if (route === "GET /e2e/form") return send(response, 200, await reviewForm(query, url.searchParams.get("email")));
 			// apps:end
 			return send(response, 404, { error: `no route ${route}` });
 		} catch (error) {
