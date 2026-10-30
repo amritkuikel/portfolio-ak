@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (177 entries)</summary>
+<summary>Index (179 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -205,6 +205,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0198](#0198-paraglides-cli-is-told-the-output-structure): Paraglide's CLI is told the output structure
 - [0199](#0199-app-quotas-are-checked-under-a-transaction-scoped-advisory-lock): App quotas are checked under a transaction-scoped advisory lock
 - [0200](#0200-part-4-measured-task-45): Part 4 measured (Task 45)
+- [0201](#0201-loading-states-in-every-section-guest-sign-ins-per-address-and-the-home-pages-first-layout): Loading states in every section, guest sign-ins per address, and the home page's first layout
+- [0202](#0202-nitro-30261029-rc-h3-208-and-dev-servers-start-on-per-locale-messages): Nitro 3.0.261029-rc (h3 2.0.8), and dev servers start on per-locale messages
 </details>
 
 ---
@@ -2462,3 +2464,25 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 - **Lighthouse 13.6, mobile, simulated throttling, behind a brotli proxy** (the harness server doesn't compress, portfolio guide): `/` 89, 97 and 94 in three runs (FCP and LCP 0.9 s, TBT 210–440 ms, CLS 0); `/login` 100, 99, 99. Task 40's 64 (home) and 69 (`/login`) were measured with TanStack DB still on every page (338.5 kB, removed in Task 41) and with an earlier Lighthouse, so the two aren't directly comparable. The home page's blocking time (hydrating the long page) is what still separates it from `/login`; the plan's ≥ 95 is met by one run in three.
 - **Gates:** `pnpm test` 79 s (104 files, 905 tests); `pnpm test:storybook` 181 s (406 story tests, both passes); `pnpm build` 80 s; `pnpm build-storybook` 349 s; `pnpm test:e2e` 1,194 checks, all passed, none flaky, 14.8 min (Task 44: 1,194 in 14.4 min).
 - **Review:** `/code-review` (high) over the Part 4 diff (`c129243..HEAD`, about 1,000 files) plus this task's changes. Fixed: the findings in 0199, the forms barrel's dead export and the missing decision (0196). Kept, with the reason: the loaders' on-demand import (0197's trade-off); the results page reading every response of a form (at most 1,000, and the summaries need them all).
+
+## 0201: Loading states in every section, guest sign-ins per address, and the home page's first layout
+
+*After Part 4, from the owner's review.*
+
+- **Loading:**
+  - **A navigation line** (`NavigationProgress`): a line across the top while a client-side navigation loads, after 150 ms (quick loads never show it), growing toward the end and filling when the page is ready. Decorative, transform only. Every section's frame mounts it (0161): the accent in Graphite, 4px of ink in the portfolio, like its reading line.
+  - **The pending page** shows a spinner and "Loading…" in an `<output>`, and a layout can fit it to its frame with `<SectionPending>`: `insideMain` (the sign-in pages render `<main>` themselves; the old pending page nested a second one) or its own view.
+  - **The portfolio's view** (`PortfolioPending`): a panorama drawn by the hero's engine and proportions from its own seed, printed over and over. Its three bands of altitude rise out of the ground low land first, hold, and sink snow first, each on its own keyframes (`hm-print-0…2`), so no band ever stands above the land under it (with one timeline shifted by delays, the snow floated like islands). Transform only, still under reduced motion.
+  - **"Try it now"** shows the spinner while the guest session and its sample rows are made.
+- **Guest sign-ins:** 30 an hour per address (`GUEST_SIGN_INS_PER_HOUR`), not 5, and none in dev builds. The owner hit "Too many attempts" trying the apps on `pnpm dev`: every attempt there comes from 127.0.0.1, and the count lives in the database across restarts (the row was `127.0.0.1|/sign-in/anonymous`, count 5). In production, mobile carriers put many visitors behind one address. The button says what the limit is ("Too many guest sessions from your network in the last hour…") instead of "wait a moment". The 7-day cleanup still bounds the rows.
+- **The home page's hydration:** each section below the hero is a `Slice`, a Suspense boundary that never shows its empty fallback: React hydrates each boundary as its own task, so the long page hydrates in slices of 60–140 ms instead of one task (Lighthouse's long tasks). Lighthouse 13.6 mobile on `/` stays 87–97 run to run on this machine (TBT 210–510 ms, CLS 0); ≥ 95 is met by about half the runs.
+- **Tried and dropped: `content-visibility: auto`.** On the sections below the hero it gave 98–99 in five runs (the first layout of the whole page, 0.9 s of Style & Layout, was the longest task), but axe then measured light text on the dark fields (pine, ridge) against the page's snow: hit testing doesn't reach a skipped section's contents, so checkers find the wrong background. The browser review failed `/` in the light theme, and any audit tool would report the same. On the section, on a wrapper and on its inner container alike; on the drawings alone (no text) it was safe but saved nothing.
+- **Alternatives considered:** a progress bar in the root (it can't take each design system's colour); lazy-loading the pending view (it would suspend while the page it stands for is loading); removing the guest limit (each guest is a user row).
+
+## 0202: Nitro 3.0.261029-rc (h3 2.0.8), and dev servers start on per-locale messages
+
+*Fixes the two problems Task 45 left upstream (0200).*
+
+- **Nitro:** from 3.0.260610-beta to 3.0.261029-rc, which brings h3 2.0.8. h3 2.0.1-rc.22 ran `decodeURI` on every path while creating the request event, so a malformed path (`/work/%E0`) was an uncaught `URIError` and a request that never got an answer on the Node server. Now it's an immediate 400 (`e2e/flows/health.spec.ts`). The dev server's 503 in the first seconds after start ("Vite environment nitro is unavailable") is gone too: the first request waits for the environment. TanStack Start keeps its own h3 (2.0.1-rc.20) for its helpers; nothing else changed in the lockfile, and every page's JavaScript is 238.8 kB gzip (was 246.4) with Nitro's new client chunking.
+- **Dev messages:** `pnpm build` writes one module per message into `src/paraglide`; a dev server started on those loaded them while the Vite plugin rewrote them ("Failed to load url /src/paraglide/messages/<key>.js"). `pnpm dev`, `dev:local` and `dev:offline` now run `scripts/lib/dev-messages.ts` first, which compiles per locale only when `messages/en.js` is missing, so a normal start pays nothing (a compile on every start cost 7 s).
+- **Alternatives considered:** a pnpm override for h3 alone (Nitro's beta was written against rc.22); a separate output folder for production messages (the app imports one path).

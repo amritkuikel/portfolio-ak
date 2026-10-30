@@ -255,7 +255,8 @@ Everything is visible and at rest by default. On screens, for readers who have n
 - scrolling past the hero spreads the sheets apart; the cursor drifts them by depth;
 - section parts rise into view with clip and transform; pictures settle from a slight zoom;
 - a project's mountain morphs into its case study (view transition, 650ms);
-- articles draw a 4px ink reading line across the top.
+- articles draw a 4px ink reading line across the top;
+- while a page loads, a 4px ink line grows across the top, and a slow page prints a small panorama over and over: its bands rise out of the ground low land first and sink snow first, so no sheet ever floats.
 All of it uses one ease (cubic-bezier(0.16, 1, 0.3, 1)) and is off under reduced motion.
 
 ## Do's and Don'ts

@@ -116,3 +116,4 @@ Ports: the app on `E2E_PORT` (3100), the harness on `E2E_HARNESS_PORT` (3101); P
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
 - **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.
+- **A developer's .env changed test results:** Vitest loads `.env`, and a PostHog key there failed the "without a key" tests locally (CI has no `.env`). `tests/setup/env.ts` sets the required values and removes the optional services' keys (PostHog, Sentry); a test that needs one uses `vi.stubEnv`.

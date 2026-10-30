@@ -38,7 +38,7 @@ A bilingual (English + Nepali) portfolio app with a public site and an admin are
 
 ## Stack
 
-- **App:** TanStack Start 1.168 + Router 1.170 (file routes, server functions), Nitro 3 beta, deployed to Vercel; React 19.3, TypeScript 6 strict.
+- **App:** TanStack Start 1.168 + Router 1.170 (file routes, server functions), Nitro 3 RC (h3 2.0.8), deployed to Vercel; React 19.3, TypeScript 6 strict.
 - **TanStack libraries:** Query 5, DB 0.5, Form 1.33, Store 0.11.
 - **UI:** Tailwind 4.3 + shadcn/ui (Radix), lucide icons; TanStack Table 9, Recharts 3 (lazy), dnd-kit (`@dnd-kit/react`).
 - **Validation, i18n, env:** Zod 4.6 (aliased, jitless), Paraglide 2.25, T3 Env.
@@ -171,8 +171,8 @@ Each guide ends with its own "Pitfalls already solved" list. Read it before you 
 - [seo.md](docs/guides/seo.md): Duplicate meta names.
 - [testing.md](docs/guides/testing.md): Radix menus in tests.
 - [deployment.md](docs/guides/deployment.md): Running production locally; Raw SQL inserts into Better Auth tables.
-- [apps.md](docs/guides/apps.md): A scroll region needs `relative`; Route files never import a collection module; Handlers refetch explicitly; A server handler falls through only to a page; Grouping by a parameterized expression; A loader's imports are in every page; A button's name holds its visible text; Deleting what the page shows; A page outside every section renders its own frame; A two-factor sign-in loses the guest's session; A count then an insert isn't a limit. <!-- @apps -->
-- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; A fallback face per weight; Exact arithmetic in the art; The clock hydrates from the read time; Text on a field takes the field's tokens; Animating the art repaints it; Lighthouse on the harness server; Lazy pictures in dev; Reordering keeps the version; Seeds read rows, not row counts. <!-- @portfolio -->
+- [apps.md](docs/guides/apps.md): A scroll region needs `relative`; Route files never import a collection module; Handlers refetch explicitly; A server handler falls through only to a page; Grouping by a parameterized expression; A loader's imports are in every page; A button's name holds its visible text; Deleting what the page shows; A page outside every section renders its own frame; A two-factor sign-in loses the guest's session; A count then an insert isn't a limit; "Too many attempts" when trying an app. <!-- @apps -->
+- [portfolio.md](docs/guides/portfolio.md): A layout's `notFoundComponent` replaces the layout; Custom `text-*` sizes and tailwind-merge; A fallback face per weight; Exact arithmetic in the art; The clock hydrates from the read time; Text on a field takes the field's tokens; Animating the art repaints it; Lighthouse on the harness server; Lazy pictures in dev; Reordering keeps the version; Seeds read rows, not row counts; `content-visibility: auto` on sections hides their field from checkers. <!-- @portfolio -->
 - [i18n.md](docs/guides/i18n.md): Fonts are never inlined.
 - [security.md](docs/guides/security.md): Expired sessions are handled once, globally; Session tokens never go to the browser; Auth hardening (0126–0130); CSP reports.
 - [conventions.md](docs/guides/conventions.md): shadcn's `from "cn"` import; One header per section.

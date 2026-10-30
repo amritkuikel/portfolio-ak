@@ -2,6 +2,7 @@ import { PlayIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { authErrorMessage } from "@/features/auth/errors";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
 import { m } from "@/paraglide/messages";
@@ -21,15 +22,17 @@ export function TryAppButton() {
 		const { error } = await authClient.signIn.anonymous();
 		if (error) {
 			setPending(false);
-			toast.error(authErrorMessage(error));
+			// The limit is per address and per hour, not "a moment" (decision 0201).
+			toast.error(error.status === 429 ? m.apps_try_rate_limited() : authErrorMessage(error));
 			return;
 		}
 		await refresh();
 		setPending(false);
 	};
 	return (
-		<Button size="lg" onClick={() => void start()} disabled={pending} data-testid="try-app">
-			<PlayIcon aria-hidden />
+		<Button size="lg" onClick={() => void start()} disabled={pending} aria-busy={pending} data-testid="try-app">
+			{/* The session and its sample rows take a moment: the button says so ("Starting…"). */}
+			{pending ? <Spinner aria-hidden /> : <PlayIcon aria-hidden />}
 			{pending ? m.apps_starting() : m.apps_try()}
 		</Button>
 	);

@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AuthShell } from "@/components/auth-shell/auth-shell";
+import { SectionPending } from "@/components/errors/pending-page";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { fontPreloads } from "@/lib/fonts";
 import { redirectSearchSchema } from "@/lib/http/redirect";
@@ -25,7 +26,9 @@ export const Route = createFileRoute("/_auth")({
 	component: () => (
 		<AuthShell>
 			<main {...MAIN_CONTENT} className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-12">
-				<Outlet />
+				<SectionPending insideMain>
+					<Outlet />
+				</SectionPending>
 			</main>
 		</AuthShell>
 	),

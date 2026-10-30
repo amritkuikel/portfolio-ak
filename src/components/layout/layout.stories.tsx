@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin, sampleUser } from "../../../.storybook/mocks/data";
+import { PendingPage, SectionPending } from "../errors/pending-page";
 import { ImpersonationBanner } from "./impersonation-banner";
 import { LanguageSwitcher } from "./language-switcher";
 import { SiteFooter } from "./site-footer";
@@ -58,5 +59,29 @@ export const ThemeMenu: Story = {
 	render: () => <ThemeToggle />,
 	play: async ({ canvas, userEvent }) => {
 		await userEvent.click(canvas.getByTestId("theme-toggle"));
+	},
+};
+
+/** The router's pending page: a spinner and "Loading…", in its own main landmark (decision 0201). */
+export const Pending: Story = {
+	render: () => <PendingPage />,
+	play: async ({ canvas }) => {
+		await expect(canvas.getByRole("main")).toHaveAttribute("aria-busy", "true");
+		await expect(canvas.getByRole("status")).toHaveTextContent(m.pending_loading());
+	},
+};
+
+/** Inside a layout that renders `<main>` itself (the sign-in pages): no second landmark. */
+export const PendingInsideMain: Story = {
+	render: () => (
+		<main>
+			<SectionPending insideMain>
+				<PendingPage />
+			</SectionPending>
+		</main>
+	),
+	play: async ({ canvas }) => {
+		await expect(canvas.getAllByRole("main")).toHaveLength(1);
+		await expect(canvas.getByRole("status")).toHaveTextContent(m.pending_loading());
 	},
 };

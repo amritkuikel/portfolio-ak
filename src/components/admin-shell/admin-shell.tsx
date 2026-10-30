@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { ConfirmProvider } from "@/components/dialogs/confirm";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { useSidebar } from "@/lib/stores/hooks";
@@ -25,6 +26,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 			<SidebarProvider open={!collapsed} onOpenChange={(open) => setCollapsed(!open)} className="min-h-0 flex-1">
 				<AppSidebar />
 				<SidebarInset className="min-w-0">
+					<NavigationProgress />
 					<Topbar onOpenCommandMenu={() => setCommandOpen(true)} />
 					{children}
 				</SidebarInset>

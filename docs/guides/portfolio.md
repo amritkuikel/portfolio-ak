@@ -157,6 +157,10 @@ Content is visible and at rest by default. Animations run on screens where suppo
 | The work index's preview follows the pointer and focus | `SelectedWorkSection` state |
 | A mountain morphs into the case study | `MountainFrame transitionSlug` + `<Link viewTransition>` |
 | Reading progress on articles | `hm-progress`, `scroll(root)` |
+| A page loading: a line of ink grows across the top | `NavigationProgress className="h-1 bg-hm-ink"` in the layout (0201) |
+| A slow page: a panorama printed over and over, bands rising low land first and sinking snow first | `PortfolioPending` (`chrome/portfolio-pending.tsx`), `.hm-printing`, `hm-print-0…2`; the layout passes it to `SectionPending` (0201) |
+
+**The home page's hydration:** each section below the hero is a `Slice` (`pages/home-page.tsx`), its own Suspense boundary, so React hydrates it as a separate task (0201). A new home section goes in a `Slice`.
 
 ### Fonts and layout shift
 
@@ -203,3 +207,4 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 - **Animating the art repaints it:** a clip-path or transform on the `<path>`s or `<g>`s inside an SVG is painted on the main thread, the whole drawing every frame. The first print-on-load cost the home page 720 ms of blocking under Lighthouse's mobile throttling. Move whole SVGs (or their wrappers) with transform, which the compositor does alone (0181).
 - **Lighthouse on the harness server:** `node e2e/harness/server.ts` serves files uncompressed, which Vercel never does, so a run against it measures slow-4G downloads of raw JavaScript. Put a compressing proxy in front, and read its simulated score against a template page such as `/login` (0181).
 - **Lazy pictures in dev:** `pnpm dev` keeps devtools streams open, and the browser's six connections to localhost can queue lazy images forever. Review pictures on a production build (`node e2e/harness/server.ts`).
+- **`content-visibility: auto` on sections hides their field from checkers:** hit testing doesn't reach a skipped section's contents, so axe measured the pine and ridge fields' light text against the page's snow and the browser review failed `/` in light. It's off (0201).

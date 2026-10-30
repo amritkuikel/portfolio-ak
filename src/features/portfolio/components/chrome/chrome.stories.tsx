@@ -6,6 +6,7 @@ import { PortfolioFooter } from "./portfolio-footer";
 import { PortfolioHeader } from "./portfolio-header";
 import { PortfolioMenu } from "./portfolio-menu";
 import { PortfolioNotFound } from "./portfolio-not-found";
+import { PortfolioPending } from "./portfolio-pending";
 
 /** The portfolio's own header, phone menu, footer and 404 (each section brings its own header, decision 0161). */
 const meta = {
@@ -48,5 +49,13 @@ export const NotFound: Story = {
 	render: () => <PortfolioNotFound />,
 	play: async ({ canvas }) => {
 		await expect(canvas.getByRole("heading", { level: 1, name: m.portfolio_not_found_title() })).toBeVisible();
+	},
+};
+
+/** While a page loads: the range printed again and again, and the status in words (decision 0201). */
+export const Pending: Story = {
+	render: () => <PortfolioPending />,
+	play: async ({ canvas }) => {
+		await expect(canvas.getByRole("status")).toHaveTextContent(m.portfolio_pending());
 	},
 };

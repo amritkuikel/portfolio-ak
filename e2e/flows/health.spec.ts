@@ -19,3 +19,12 @@ test("every response has its own request id", async ({ request }) => {
 	for (const id of ids) expect(id).toMatch(/^[0-9a-f-]{36}$/);
 	expect(new Set(ids).size).toBe(ids.length);
 });
+
+test("a path with malformed percent-encoding is a quick 400, not a hung request", async ({ request }) => {
+	// Nitro's h3 before 2.0.8 threw an uncaught URIError on these and never answered (Task 45 follow-up).
+	for (const path of ["/work/%E0", "/l/%E0"]) {
+		const response = await request.get(path, { timeout: 5000, maxRedirects: 0 });
+		expect(response.status(), path).toBe(400);
+	}
+	expect((await request.get("/api/health")).status()).toBe(200);
+});

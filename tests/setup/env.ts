@@ -15,3 +15,17 @@ const defaults: Record<string, string> = {
 };
 
 for (const [key, value] of Object.entries(defaults)) process.env[key] = value;
+
+/**
+ * Optional services are off, as on CI, whatever a developer's .env holds: a PostHog or
+ * Sentry key there made the "without a key" tests fail locally. Tests that need one
+ * turn it on with vi.stubEnv.
+ */
+const OFF = [
+	"VITE_POSTHOG_KEY",
+	"VITE_POSTHOG_HOST",
+	"POSTHOG_SECRET_KEY",
+	"VITE_SENTRY_DSN",
+	"VITE_SENTRY_DEV_TRACING",
+];
+for (const key of OFF) delete process.env[key];

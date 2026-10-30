@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { BrandName } from "@/components/brand/brand";
 import { ContourArt } from "@/components/brand/contour-art";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { ConsentSettingsButton } from "@/components/layout/observability";
 import { ThemeToggle } from "@/components/layout/theme";
 import { m } from "@/paraglide/messages";
@@ -17,6 +18,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 	return (
 		<div className="grid flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
 			<div className="flex min-h-dvh flex-col">
+				<NavigationProgress />
 				<header className="flex h-14 items-center justify-between gap-4 px-4 sm:px-8">
 					<Link to="/" className="rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
 						<BrandName />

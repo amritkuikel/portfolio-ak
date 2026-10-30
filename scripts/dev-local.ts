@@ -11,6 +11,7 @@
  *   with `pnpm dev`. For no outside services at all, use `pnpm dev:offline`.
  */
 import { spawn } from "node:child_process";
+import { ensureDevMessages } from "./lib/dev-messages.ts";
 import { LOCAL_ADMIN, LOCAL_DB_DIR, startLocalDatabase } from "./lib/local-db.ts";
 
 const database = await startLocalDatabase();
@@ -19,6 +20,7 @@ console.log(
 );
 if (database.fresh) console.log(`[local] sign in as ${LOCAL_ADMIN.email} / ${LOCAL_ADMIN.password}`);
 
+ensureDevMessages();
 const vite = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "dev", "--port", "3000"], {
 	stdio: "inherit",
 	// DATABASE_URL_UNPOOLED is cleared so drizzle-kit and the app agree on the local database.

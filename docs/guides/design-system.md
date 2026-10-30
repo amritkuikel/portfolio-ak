@@ -71,6 +71,12 @@ Each layout renders its own frame (one header per section, 0161):
 
 **Building blocks:** see Components below.
 
+## Loading
+
+- **The navigation line** (`components/layout/navigation-progress.tsx`): a thin line across the top while a client-side navigation loads (loaders, lazy chunks), shown after 150 ms, growing toward the end and filling when the page is ready. Decorative (`aria-hidden`), transform only. Each section's frame mounts it: `AdminShell`, `AuthShell`, `AppHeader`, `SiteHeader`, `AppsLayout` in the accent, the portfolio in ink (0201).
+- **The pending page** (`components/errors/pending-page.tsx`, the router's `defaultPendingComponent`, after the router's 1 s pending delay): a spinner and "Loading…" in an `<output>`. A layout says how it fits with `<SectionPending>`: `insideMain` when it renders `<main>` around its outlet (`_auth`), or `component` for its own view (the portfolio's printed range). A list route's own `pendingComponent` (a table skeleton, `CrudListPage`) still wins.
+- **Buttons that start something slow** show the `Spinner` in place of their icon with a label that says what's happening ("Starting…", the apps' "Try it now").
+
 ## Components
 
 The admin kit (Task 37, decision 0168): everything an admin page needs, so a feature supplies data, columns, fields and actions. Every component has a story (both Storybook passes, axe on), and `/dev/examples/components` and `/dev/examples/fields` show them all on real pages.

@@ -16,6 +16,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { E2E } from "../e2e/harness/config.ts";
 import { prepareDatabase } from "../e2e/harness/database.ts";
 import { servePglite } from "../e2e/harness/pglite-server.ts";
+import { ensureDevMessages } from "./lib/dev-messages.ts";
 
 const served = await servePglite(new PGlite(), { port: Number(process.env.OFFLINE_DB_PORT ?? 0) });
 const databaseUrl = `postgresql://postgres:postgres@127.0.0.1:${served.port}/postgres`;
@@ -41,6 +42,7 @@ const OFF = [
 console.log(`[offline] database: in-memory PGlite on port ${served.port}`);
 console.log(`[offline] sign in as ${E2E.users.admin.email} / ${E2E.password}`);
 
+ensureDevMessages();
 const vite = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "dev", "--port", "3000"], {
 	stdio: "inherit",
 	env: {

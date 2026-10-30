@@ -402,6 +402,28 @@ html[data-density="compact"] {
 }
 
 /*
+ * The navigation line (components/layout/navigation-progress.tsx): it grows toward
+ * the end while a page loads, slowing as it goes, and fills when the page is ready.
+ * Transform only. Under reduced motion the growth finishes at once (below).
+ */
+@keyframes nav-progress-grow {
+	from {
+		transform: scaleX(0.04);
+	}
+	to {
+		transform: scaleX(0.9);
+	}
+}
+
+.nav-progress[data-phase="loading"] {
+	animation: nav-progress-grow 10s cubic-bezier(0.08, 0.82, 0.17, 1) forwards;
+}
+
+.nav-progress[data-phase="done"] {
+	transform: scaleX(1);
+}
+
+/*
  * Reduced motion (WCAG 2.3.3): animations and transitions finish at once instead
  * of being removed, so code waiting for animationend/transitionend (Radix
  * Presence, sonner) still runs. Sections that animate only under

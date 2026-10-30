@@ -39,7 +39,7 @@ import {
 	refuseOwnerOnlyWhileImpersonating,
 } from "./hooks";
 import { resolveEmailLocale } from "./locale";
-import { BREACHED_PASSWORD_PATHS, CAPTCHA_PATHS, GUEST_SIGN_IN_PATH } from "./policy";
+import { BREACHED_PASSWORD_PATHS, CAPTCHA_PATHS, GUEST_SIGN_IN_PATH, GUEST_SIGN_INS_PER_HOUR } from "./policy";
 
 /** Token and code lifetimes, shared with the email copy ("expires in N minutes"). */
 export const AUTH_LIFETIMES = {
@@ -290,8 +290,9 @@ export const auth = betterAuth({
 			"/delete-user": { window: 60, max: 3 },
 			"/delete-user/callback": { window: 60, max: 5 },
 			"/link-social": { window: 60, max: 5 },
-			// Guest sessions: each one is a user row, so few per address (decision 0185).
-			[GUEST_SIGN_IN_PATH]: { window: 60 * 60, max: 5 },
+			// Guest sessions: each one is a user row, so a limit per address (decisions 0185, 0201).
+			// `?.`: Better Auth's CLI (pnpm auth:schema, db:seed-admin) loads this file outside Vite.
+			[GUEST_SIGN_IN_PATH]: { window: 60 * 60, max: import.meta.env?.DEV ? 10_000 : GUEST_SIGN_INS_PER_HOUR },
 			"/unlink-account": { window: 60, max: 5 },
 		},
 	},

@@ -1545,3 +1545,10 @@ Kept, with the reason in 0197 and 0200: the loaders' on-demand import (a chunk b
 - Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban` to `0015_forms`; `pnpm diagnose` lists 4 unapplied).
 - Decide on a Nitro upgrade (with h3 2.0.8) to fix malformed URLs (deviations).
 - Scratch folders to delete: `C:/tw9` and `C:/tw9-logs` (this task's fresh clone and matrix logs).
+
+**After Task 45 (the owner's review, decisions 0201–0202):**
+- **Fixed:** malformed URLs (Nitro 3.0.261029-rc with h3 2.0.8: an immediate 400), the dev server's 503 right after start, the message-module error on a dev start after a build, and the home page hydrates section by section.
+- **Guest sessions:** "Too many attempts" came from the per-address limit (5 an hour, and every dev attempt is 127.0.0.1): now 30 an hour, none in dev builds, and a message that names the limit.
+- **Loading states:** a navigation line in every section's frame, a pending page that fits each frame, the portfolio's printed panorama, and a spinner on "Try it now".
+- **Still open:** Lighthouse on `/` is 87–97 run to run (≥ 95 in about half); `content-visibility` reached 98–99 but made checkers read the dark fields' text against snow, so it was dropped (0201).
+- **Still as designed:** the loaders' on-demand import (0197) and the results page reading every response (0200). The harness crash of one e2e run didn't recur.

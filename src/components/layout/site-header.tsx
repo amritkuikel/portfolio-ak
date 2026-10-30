@@ -6,6 +6,7 @@ import { canEnterAdmin } from "@/features/rbac/permissions";
 import { clientEnv } from "@/lib/env/client";
 import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
+import { NavigationProgress } from "./navigation-progress";
 import { ThemeToggle } from "./theme";
 
 const navLink =
@@ -28,6 +29,7 @@ export function SiteHeader({ links = [] }: { links?: ReadonlyArray<SiteHeaderLin
 
 	return (
 		<header className="border-b">
+			<NavigationProgress />
 			{/* Wraps onto two rows on narrow screens instead of overflowing. */}
 			<div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
 				{/* Brand name from config (VITE_APP_TITLE), identical in every locale. */}

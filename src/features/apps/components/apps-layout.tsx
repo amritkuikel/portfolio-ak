@@ -10,6 +10,7 @@ import { BrandName } from "@/components/brand/brand";
 import { ConfirmProvider } from "@/components/dialogs/confirm";
 import { DbScope } from "@/components/layout/db-scope";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { ThemeToggle } from "@/components/layout/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ export function AppsLayout() {
 	return (
 		<ConfirmProvider>
 			<DbScope>
+				<NavigationProgress />
 				<AppsHeader />
 				<GuestBanner />
 				<Outlet />

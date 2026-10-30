@@ -65,6 +65,14 @@ export const isGuestRefusedPath = (path: string) => matches(GUEST_REFUSED_PATHS,
 export const GUEST_SIGN_IN_PATH = "/sign-in/anonymous";
 
 /**
+ * Guest sessions started per address per hour. Each is a user row (deleted after 7 days),
+ * so there is a limit, but mobile carriers put many visitors behind one address (carrier-
+ * grade NAT), and 5 locked whole networks out. Dev builds don't limit it: every attempt
+ * there comes from 127.0.0.1, and the count is kept in the database across restarts.
+ */
+export const GUEST_SIGN_INS_PER_HOUR = 30;
+
+/**
  * Whether this user must turn on two-factor authentication before using what their
  * permissions allow: the setting is on, they hold an admin permission, and it's off.
  */

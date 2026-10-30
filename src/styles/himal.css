@@ -749,6 +749,55 @@
 	}
 }
 
+/*
+ * A pass of the pending page's print, one timeline per band of altitude (0 low land,
+ * 1 rock, 2 snow): each rises out of the ground (below the frame, which clips it),
+ * low land first; all hold; then they sink snow first. A band never stands higher than
+ * the band under it, so no sheet floats in the air.
+ */
+@keyframes hm-print-0 {
+	0% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+	28%,
+	88% {
+		transform: translateY(0);
+	}
+	100% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+}
+
+@keyframes hm-print-1 {
+	0%,
+	8% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+	38%,
+	80% {
+		transform: translateY(0);
+	}
+	94%,
+	100% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+}
+
+@keyframes hm-print-2 {
+	0%,
+	16% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+	48%,
+	72% {
+		transform: translateY(0);
+	}
+	86%,
+	100% {
+		transform: translateY(calc(var(--hm-lift) + 45%));
+	}
+}
+
 @keyframes hm-spread {
 	to {
 		transform: translateY(calc(var(--hm-depth) * var(--hm-spread) * -1));
@@ -798,6 +847,22 @@
 		/* backwards, not both: a finished one-shot animation must not keep its layer (hit testing went stale). */
 		animation: hm-lift 1.3s var(--hm-ease-out) backwards;
 		animation-delay: calc(var(--hm-depth) * 160ms + 120ms);
+	}
+
+	/*
+	 * The pending page's range (chrome/portfolio-pending.tsx): printed again and again
+	 * while a page loads (keyframes hm-print-0…2 above). Transform only (decision 0201).
+	 */
+	.hm-printing .hm-relief-band {
+		animation: hm-print-0 3.6s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+	}
+
+	.hm-printing .hm-relief-band:nth-child(2) {
+		animation-name: hm-print-1;
+	}
+
+	.hm-printing .hm-relief-band:nth-child(3) {
+		animation-name: hm-print-2;
 	}
 
 	.hm-name-in {
