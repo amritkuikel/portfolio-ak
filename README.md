@@ -121,9 +121,10 @@ Create a Neon database, set the variables above in Vercel (including `VITE_SITE_
 | `pnpm db:check` | Check the migrations in `drizzle/` for consistency. |
 | `pnpm db:studio` | Open Drizzle Studio. |
 | `pnpm db:seed-admin` | Create the first admin user (flags or `ADMIN_*` env vars). |
+| `pnpm db:seed-taskline` | Taskline's demo team: five accounts, every admin as a member, three projects and 60 tasks (`pnpm dev:local` runs it on a fresh database). Safe to rerun. <!-- @taskline --> |
 | `pnpm db:seed-demo` | Development data: editor and viewer roles, three users holding them (one with no role), 30 Test CRUD items. Safe to rerun. |
 | `pnpm new:feature <name> [--public] [--localized]` | Generate a feature in the CRUD standard (table, migration, permissions, functions, routes, messages, tests, stories; public pages, text in both languages); see [docs/guides/crud.md](docs/guides/crud.md). Needs a committed tree. |
-| `pnpm strip-demo` | Remove the portfolio (and later the apps) for a neutral landing page; `--keep-portfolio`, `--keep-apps`; it deletes itself once nothing is left. <!-- @portfolio --> |
+| `pnpm strip-demo` | Remove the portfolio (and later the apps) for a neutral landing page; `--keep-portfolio`, `--keep-apps`, `--keep-taskline`; it deletes itself once nothing is left. <!-- @portfolio --> |
 | `pnpm storybook` | Storybook dev server on http://localhost:6006. |
 | `pnpm build-storybook` | Static Storybook in `storybook-static/`. |
 

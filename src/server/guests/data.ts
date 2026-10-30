@@ -2,9 +2,10 @@ import "@tanstack/react-start/server-only";
 import type { Locale } from "@/paraglide/runtime";
 import { APP_SERVERS } from "@/server/apps/registry"; // @apps
 import type { Tx } from "@/server/db/types";
+import { TASKLINE_GUEST_DATA } from "@/server/taskline/sandbox"; // @taskline
 
 /**
- * What owns rows a guest can make (decision 0186): each showcase app. A new guest
+ * What owns rows a guest can make (decision 0186): each showcase app, and Taskline's sandbox. A new guest
  * gets every owner's sample rows; a guest who signs up or in hands every owner's rows
  * to the account. Both run in one transaction with the rest of the claim or start.
  */
@@ -19,4 +20,5 @@ export type GuestData = {
 
 export const GUEST_DATA: ReadonlyArray<GuestData> = [
 	...APP_SERVERS, // @apps
+	TASKLINE_GUEST_DATA, // @taskline
 ];

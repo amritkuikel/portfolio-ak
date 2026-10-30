@@ -19,8 +19,9 @@ import { todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
-import { type AppServices, lockQuota } from "@/server/apps/ownership";
+import type { AppServices } from "@/server/apps/ownership";
 import { notFound } from "@/server/db/crud";
+import { lockQuota } from "@/server/db/quota";
 import type { Tx } from "@/server/db/types";
 import * as repo from "./repository";
 

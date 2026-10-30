@@ -177,6 +177,57 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 };
 // apps:end
 
+// taskline:start
+/**
+ * Taskline's app files (docs/guides/taskline.md, decision 0204): every function runs
+ * `requireTasklineUser` then `withTasklineServices` first (guests have a sandbox), and
+ * its service resolves the workspace and project before anything else (the access
+ * matrix: tests/server/taskline-access.test.ts). Its admin files (taskline-admin/) are
+ * guarded by permission, in GUARDED_FUNCTIONS.
+ */
+const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
+	"taskline/workspaces.ts": [
+		"listTasklineWorkspaces",
+		"getTasklineWorkspace",
+		"startTasklineSandbox",
+		"listTasklineMembers",
+	],
+	"taskline/projects.ts": [
+		"listTasklineProjects",
+		"getTasklineProject",
+		"createTasklineProject",
+		"updateTasklineProject",
+		"setTasklineProjectState",
+		"setTasklineProjectArchived",
+		"setTasklineProjectStar",
+		"joinTasklineProject",
+		"listTasklineProjectMembers",
+		"setTasklineProjectMember",
+		"removeTasklineProjectMember",
+	],
+	"taskline/workflow.ts": [
+		"createTasklineStatus",
+		"updateTasklineStatus",
+		"deleteTasklineStatus",
+		"createTasklineLabel",
+		"updateTasklineLabel",
+		"deleteTasklineLabel",
+	],
+	"taskline/tasks.ts": [
+		"listTasklineTasks",
+		"getTasklineTask",
+		"createTasklineTask",
+		"updateTasklineTask",
+		"patchTasklineTask",
+		"moveTasklineTask",
+		"setTasklineChecklist",
+		"trashTasklineTask",
+		"restoreTasklineTask",
+		"listTasklineTrash",
+	],
+};
+// taskline:end
+
 /**
  * Files whose functions deliberately don't require a permission, with why, and
  * the functions they hold (adding one to these files also needs a look here).
@@ -293,6 +344,7 @@ describe("guarded server functions", () => {
 			...Object.keys(GUARDED_FUNCTIONS),
 			...Object.keys(UNGUARDED_FILES),
 			...Object.keys(APP_FUNCTIONS), // @apps
+			...Object.keys(TASKLINE_FUNCTIONS), // @taskline
 		];
 		expect(files.filter((file) => !declared.includes(file))).toEqual([]);
 		expect(declared.filter((file) => !files.includes(file))).toEqual([]);
@@ -330,6 +382,20 @@ describe("guarded server functions", () => {
 		});
 	}
 	// apps:end
+
+	// taskline:start
+	for (const [file, expected] of Object.entries(TASKLINE_FUNCTIONS)) {
+		it(`every function in ${file} runs requireTasklineUser and withTasklineServices first`, () => {
+			const functions = serverFunctions(file);
+			expect(functions.map((fn) => fn.name)).toEqual(expected);
+			for (const { definition } of functions) {
+				expect(definition).toMatch(
+					/= createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireTasklineUser, withTasklineServices\]\)/,
+				);
+			}
+		});
+	}
+	// taskline:end
 
 	for (const [file, { functions }] of Object.entries(UNGUARDED_FILES)) {
 		it(`${file} holds only its declared functions`, () => {

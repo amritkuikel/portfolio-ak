@@ -1552,3 +1552,501 @@ Kept, with the reason in 0197 and 0200: the loaders' on-demand import (a chunk b
 - **Loading states:** a navigation line in every section's frame, a pending page that fits each frame, the portfolio's printed panorama, and a spinner on "Try it now".
 - **Still open:** Lighthouse on `/` is 87–97 run to run (≥ 95 in about half); `content-visibility` reached 98–99 but made checkers read the dark fields' text against snow, so it was dropped (0201).
 - **Still as designed:** the loaders' on-demand import (0197) and the results page reading every response (0200). The harness crash of one e2e run didn't recur.
+
+---
+
+## 11. Part 5: Taskline, a standalone project management app (Tasks 46–58, in progress)
+
+Part 5 turns the Kanban showcase app into **Taskline**, a full project management app with its own URL, shell and brand. It serves one team that the admin runs from `/admin`, and keeps a guest sandbox so visitors can try it.
+
+Like section 10, this section is written so that **each task can be done in a fresh session that has read nothing else** but CLAUDE.md, section 10.1 (the procedure) and this section. Where a task says "check", check the code or the docs, because versions move.
+
+### 11.1 How to run a Part 5 task
+
+The procedure is section 10.1's, with these differences:
+- **Read:** CLAUDE.md, 10.1, then this whole section 11: the choices (11.2), the facts (11.4), the architecture (11.5), the rules (11.6) and the task's own section.
+- **Gates (owner, 2026-10-31):** every gate of 10.1 step 5 on every task **except `pnpm test:e2e`**, which runs once when Part 5 is complete (Task 58), not per task: a full run takes several minutes and Taskline's pages and flows are reviewed together then. A task that changes shared pages or flows says so in its summary.
+- **Commit:** `feat: Part 5 Task N, <name>`, one commit on `main`, not pushed.
+- **"Done" summary:** mark the task done in 11.3 and replace its section with a short summary (what changed, numbers, deviations, left for the owner), as Part 4 did.
+- **Architecture changes:** if a task changes 11.5, update 11.5 in the same commit and record why in `docs/decisions.md`.
+
+### 11.2 Owner's choices (2026-10-31)
+
+| Topic | Choice |
+| --- | --- |
+| What it is | A full project management app grown from Kanban. Besides the core: sprints and backlog, time tracking, timeline and dependencies, custom fields and automations |
+| Who uses it | **One team, admin-run.** There is one team workspace. A logged-in admin controls projects, members, workflows, fields, automations, templates, time and settings from `/admin` (RBAC permissions). Members work on the projects they belong to |
+| Visitors | **Guest sandbox kept.** A guest gets a private, seeded sandbox workspace with placeholder teammates, claimed on sign-up like the other apps' data (0186) |
+| Feel | **Standalone.** It must not feel hosted inside another app: no apps header, app switcher or portfolio chrome. It has its own shell (sidebar app), landing, sign-in pages, account page, 404, manifest, title suffix and email branding |
+| Name and URL | **Taskline** at **`/app/taskline`** (a working name; the owner may rename it, so the base path lives in one helper, 11.5) |
+| Look | **Own brand on Graphite:** the Graphite tokens and component kit, its own accent (scoped `data-accent`, default `emerald`), wordmark and shell |
+| Existing Kanban data | Each owner's boards become their Taskline sandbox (same ids). `/apps/kanban` redirects; Kanban's code is removed |
+| Git | As Part 4: commit each task on `main`, no branches, don't push |
+
+### 11.3 Status
+
+| Task | Name | Effort | Status |
+| --- | --- | --- | --- |
+| 46 | Foundation: the `taskline` layer, core tables, access, activity, permissions, sandbox seed and claim | xhigh | Done (decisions 0203–0207) |
+| 47 | The standalone shell: layout, brand, landing, auth pages, home, project directory, palette | high | Planned |
+| 48 | Board, list and the task; Kanban's data migrated, redirected and removed | xhigh | Planned |
+| 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Planned |
+| 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Planned |
+| 51 | More views: calendar, my work, saved views, search, CSV import | high | Planned |
+| 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Planned |
+| 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Planned |
+| 54 | Timeline, milestones and dependencies | xhigh | Planned |
+| 55 | Custom fields | high | Planned |
+| 56 | Automations and recurring tasks | xhigh | Planned |
+| 57 | Templates, reports and project updates | high | Planned |
+| 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
+
+- **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
+- **Decisions:** numbered from the next free one (0208 after Task 46).
+
+### 11.4 What exists today (facts the tasks rely on)
+
+**Kanban (decision 0188), to be replaced:**
+- **Tables** (`src/server/db/schema/apps/kanban.ts`, migration `0012_guests_kanban`):
+  - `kanban_board` (owner_id, name);
+  - `kanban_column` (board_id, name, position);
+  - `kanban_card`: column_id, board_id, title, description, labels `text[]` (5 colours: red, amber, green, blue, violet), due_on `date`, checklist `jsonb` (`{ id, text, done }[]`), position.
+  - Positions are fractional order keys compared with `collate "C"` (`src/lib/fractional-index.ts`: `generateKeysBetween`, `isOrderKey`).
+- **Code:**
+  - `src/server/apps/kanban/{repository,service}.ts`: every query is `ownedBy(table, ownerId)`; quotas of 20 boards, 500 cards and 12 columns per board, under `lockQuota`.
+  - `src/functions/apps/kanban.ts`: 11 functions, `requireAppUser` → `withAppServices`.
+  - `src/features/apps/kanban/`: `types.ts`, `schema.ts` (ids from the browser), `queries.ts`, `collections.ts` (TanStack DB query collections over the board query; handlers save, `refetch()`, `{ refetch: false }`), `moves.ts`.
+  - Components: `board.tsx` (dnd-kit sortables, Space/arrows or Alt+arrows, announcements), `board-page.tsx`, `card-sheet.tsx`, `kanban-home.tsx`.
+  - Routes `src/routes/_apps/apps/kanban/{index,$boardId}.tsx`.
+- **Tests:** `tests/server/apps-kanban.test.ts`, `tests/unit/kanban-moves.test.ts`, `tests/components/apps/kanban-board.test.tsx`, stories `kanban.stories.tsx`, and the flows in `e2e/flows/apps.spec.ts`.
+- **Shared lists that name it:**
+  - `APP_SLUGS` and `APPS` (`src/features/apps/registry.ts`), `APP_SERVERS` (`src/server/apps/registry.ts`, which `GUEST_DATA` in `src/server/guests/data.ts` spreads);
+  - the guard test's `APP_FUNCTIONS`;
+  - `scripts/strip-demo.ts` (apps layer), `e2e/support/pages.ts`, `tests/unit/route-seo.test.ts`;
+  - messages `kanban_*`;
+  - `docs/guides/apps.md` ("Kanban (0188)").
+- **Portfolio link:** portfolio projects link to an app through `portfolio_project.app_slug` (`appSlug: text()` in `src/server/db/schema/portfolio.ts`).
+
+**Platform pieces Taskline uses:**
+- **Guests (0185, 0186):**
+  - `startGuest` seeds every `GUEST_DATA` entry `{ slug, seedGuestData(tx, userId, locale), claim(tx, from, to) }`. Claims run from `onLinkAccount` and from `claimGuestData` (`src/server/guests/`).
+  - Guests have no permissions; `sendEmail` refuses their `.invalid` addresses; `GET /api/cron/guests` deletes unclaimed guests after 7 days (cascade).
+- **App gate:** `requireAppUser` and `withAppServices` (`src/middleware/apps.ts`, the `apps` layer), and `ownedBy`, `AppServices` and `lockQuota` (`src/server/apps/ownership.ts`). `lockQuota` takes a transaction-scoped advisory lock (0199).
+- **RBAC:**
+  - the catalog `PERMISSION_CATALOG` (`src/features/rbac/permissions.ts`, `apps:start/end` markers, `// @new-feature:permissions`) with labels in `features/rbac/labels.ts`;
+  - `canEnterAdmin` = holding any permission;
+  - `requirePermission` → `withServices` in functions, `assertRoutePermission` in `beforeLoad`, `useCan`/`<Can>` in the UI.
+- **Admin:**
+  - `ADMIN_GROUPS` and `ADMIN_SECTIONS` (`src/features/admin/sections.ts`, `// @new-feature:admin-sections`); `AdminShell` with the topbar breadcrumbs and command palette (`src/components/admin-shell/`);
+  - the CRUD standard (`docs/guides/crud.md`: `listSchema`, `createCrudKeys`, `listPage`, `updateVersioned`, `withAudit`, `CrudListPage`, `useCrudMutation`, `useCrudForm`, `loadDetailOr404`, `titleHead`);
+  - `/admin/apps` shows per-app usage only, never the data (`apps:read`).
+- **Kit:**
+  - `DataTable` (bulk actions, `exportName` CSV, `savedViews` in localStorage), `FilterBar` (works without JS);
+  - `Timeline` (`components/data-display/activity-feed.tsx`), `UserAvatar`, `StatCard`, `StatusBadge`, `RelativeTime`;
+  - charts (`CartesianChart`, `DonutChart`, `Sparkline`; Recharts, lazy);
+  - `useConfirm`, `FormDialog`, `AsyncComboboxField`, date fields, `sortable-list`;
+  - `rich-text-field` (TipTap 3: `@tiptap/react`, `@tiptap/starter-kit`; sanitized by `src/server/rich-text/sanitize.ts`).
+- **Patterns in the other apps:**
+  - Notes: image uploads through an app `UploadTransport` (`features/apps/notes/uploads.ts`; attachments with an `entity_type`) and a `simple` tsvector with GIN;
+  - Forms: definitions as data (`fields.ts` → `toZodSchema`, 0195);
+  - Expenses: CSV import (`src/lib/csv.ts`, mapping, preview, idempotency key);
+  - Habits: SVG drawn on the server (heatmap).
+- **Design:**
+  - accent presets `indigo` (default), `violet`, `emerald`, `amber` and `rose` on `data-accent`, which **work on any element** (design-system.md, "Scoped accents");
+  - `tests/unit/design-tokens.test.ts` checks every accent × theme.
+- **Background work:**
+  - `waitUntil` from `@vercel/functions` (as `src/server/apps/links/redirect.ts`);
+  - Vercel Cron runs **daily** jobs (`vercel.json`: `/api/cron/attachments`, `/api/cron/guests`; Nitro routes in `vite.config.ts`, bearer `CRON_SECRET`, listed in `knip.json`).
+  - There is **no SSE or websocket code** in `src/`.
+- **Auth pages:** `src/routes/_auth/{login,register,sign-in-code,forgot-password,upgrade}.tsx` and their components in `src/features/auth/components/` (`login-form.tsx`, `account-page.tsx`…). Email templates are in `src/server/email/templates/emails.tsx` (an `Invite` exists for `users:invite`).
+
+### 11.5 Architecture (every task follows it)
+
+**Layer and folders:** a new strip-demo layer, `taskline`, independent of `apps`.
+
+| Piece | Path |
+| --- | --- |
+| App routes | `src/routes/_taskline/route.tsx` (pathless layout) → `src/routes/_taskline/app/taskline/…` |
+| Admin routes | `src/routes/_admin/admin/taskline/…` |
+| Feature code | `src/features/taskline/` (`links.ts`, `shell/`, `board/`, `list/`, `task/`, `sprints/`, `time/`, `timeline/`, `fields/`, `automations/`, `templates/`, `reports/`, `admin/<section>/`) |
+| Server | `src/server/taskline/` (`access.ts`, `activity.ts`, `rev.ts`, `notify/`, `<module>/{repository,service}.ts`, `admin/`) |
+| Functions | `src/functions/taskline/*.ts` (app), `src/functions/taskline-admin/*.ts` (admin) |
+| Schema | `src/server/db/schema/taskline/*.ts`, exported from the schema index with `// @taskline` |
+| Middleware | `src/middleware/taskline.ts`: `requireTasklineUser`, `withTasklineServices` |
+| Cron | `src/server/routes/cron-taskline.ts` → `GET /api/cron/taskline` |
+
+- **strip-demo:** shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`. `scripts/strip-demo.ts` gains the layer, with `--keep-taskline`. A file two layers use (`src/lib/fractional-index.ts`, apps and taskline until Task 48) is in strip-demo's `SHARED` list: removed only when both go.
+- **`lockQuota`:** moves to core (`src/server/db/quota.ts`); the apps import it from there.
+- **Base path:** `features/taskline/links.ts` has typed `linkOptions` helpers. Every link uses them, so renaming the app is a folder move plus this file.
+
+**Shell and brand:**
+- **`TasklineShell`**, built like `admin-shell` (shadcn sidebar; one header per section, 0161).
+  - **Sidebar:** workspace switcher (only when the user has both Team and Sandbox), Home, Inbox (unread badge), My timesheet, Search (⌘K), starred and recent projects, New task.
+  - **Topbar:** breadcrumbs, the project's view tabs, the running-timer pill, and the user menu (Account, My settings, language, theme, "Admin" when `canEnterAdmin`, sign out).
+  - **Phones:** the sidebar is a sheet.
+- **Brand:** the `TasklineMark` wordmark; `data-accent="emerald"` on the shell root; the title suffix `· Taskline`; favicons and `manifest.webmanifest` (`scope` and `start_url` `/app/taskline`, a Nitro route like `src/server/routes/manifest.ts`); Taskline-branded emails.
+- **The layout:**
+  - mounts `ConfirmProvider` and `<DbScope>` (0189: TanStack DB exists only below it; update `check-bundle.ts`'s rule if it names the `_apps` layout);
+  - reads the session;
+  - makes every inner page `noindex`, with the landing the only indexable page;
+  - shows guests a banner ("Your sandbox is deleted after 7 days" → Taskline sign-up);
+  - renders its own `notFoundComponent` and `errorComponent` inside the frame (portfolio pitfall: a layout's `notFoundComponent` replaces the layout).
+- **Own pages:**
+  - the landing `/app/taskline` (`seo()`, sitemap, JSON-LD `SoftwareApplication`; signed-in visitors, guests included, are redirected to `/app/taskline/home`);
+  - `/app/taskline/sign-in` and `/sign-up` (the shared auth forms in a `TasklineAuthFrame`, redirecting back into Taskline);
+  - `/app/taskline/account` (the `account-page.tsx` sections; a guest goes to sign-up).
+- **The `/apps` gallery:** shows a featured Taskline card (inside taskline markers). Taskline isn't an `APP_SLUGS` entry.
+
+**Tenancy and access** (replaces `ownedBy` for Taskline):
+- **Workspaces:** `tl_workspace.kind` is `team` (exactly one; created by Task 46's migration with default settings) or `sandbox` (one per user; `owner_id` cascades on delete).
+  - URLs carry the workspace as `$ws`: the team's slug (a setting, default `team`) or the literal `sandbox`, which means the caller's own sandbox.
+  - Reserved slugs: `sandbox`, `home`, `inbox`, `settings`, `account`, `sign-in`, `sign-up`.
+- **Members:** `tl_member` (workspace, user, role) is the identity everywhere: assignee, reporter, comment author, time entry, watcher.
+  - `user_id` is nullable: the sandbox's placeholder teammates have none, and when a user is deleted it becomes null (`on delete set null`, with a `display_name` snapshot), so history keeps a name.
+  - Guests are never team members; the admin's member picker excludes `is_anonymous`.
+- **Roles:**
+  - team role: `member` | `viewer`;
+  - project role: `lead` | `member` | `viewer`;
+  - project visibility: `team` | `private`.
+- **RBAC** (catalog, inside taskline markers): `taskline: ["read", "manage", "configure", "time"]`.
+  - `read`: the admin pages, and read-only access to any team project in the app;
+  - `manage`: projects, project members, team members, invitations, and lead-equivalent rights on any team project;
+  - `configure`: workflows, labels, fields, automations, templates, workspace settings;
+  - `time`: every timesheet, editing others' entries, locking periods, exports.
+  - The team role is *not* an RBAC permission: any permission opens `/admin` (`canEnterAdmin`).
+- **One resolver**, `src/server/taskline/access.ts`: `resolveWorkspace(tx, user, ws)` and `resolveProject(tx, user, ws, key)`.
+  - They return `{ workspace, member, projectRole, can: { view, comment, edit, manage, logTime } }`, or throw `notFound`.
+  - What the caller can't see reads as a 404, never a 403: someone else's data is simply not found (0187). What they can see but not change (a viewer pressing "move", an archived project) is FORBIDDEN with a reason (`assertCan`; decided in Task 46, 0204).
+
+| Caller | Team-visible project | Private project |
+| --- | --- | --- |
+| Account not on the team, or a guest | 404 | 404 |
+| Team viewer | view, comment | 404 unless a project member (then their project role) |
+| Team member | view, comment, edit; can join if the settings allow | 404 unless a project member |
+| Project lead | everything, project settings included | same |
+| `taskline:read` / `taskline:manage` | read / lead-equivalent | read / lead-equivalent |
+| Deactivated member | nothing (history kept) | nothing |
+| Sandbox owner | lead on everything in their own sandbox | n/a |
+
+- **Functions:**
+  - App functions run `requireTasklineUser` → `withTasklineServices` (`context.db`, `context.user` with `isGuest` and `permissions`, `context.imageStore`), and every service calls the resolver before anything else.
+  - Admin functions follow the CRUD standard: `requirePermission("taskline:…")` → `withServices` → a service using `withAudit`.
+  - The guard test gets `TASKLINE_FUNCTIONS` (the app list, `// @taskline`); admin files are covered by the existing permission rule.
+- **Quotas** (under `lockQuota`):
+  - sandbox: 5 projects, 1,000 tasks, 20 statuses per project, 500 time entries;
+  - team: limits in the workspace settings, with high defaults.
+  - Comments, invitations and imports are rate limited (recipes.md, "Rate limiting server functions").
+
+**Data model** (`tl_` tables; each task adds its own):
+
+| Table | Columns and notes | Task |
+| --- | --- | --- |
+| `tl_workspace` | kind, slug, name, owner_id?, `settings` jsonb (Zod `workspaceSettings`, below), version. Partial unique: one `team`; unique owner_id | 46 |
+| `tl_member` | workspace_id, user_id? (set null), display_name, role, title, capacity_minutes_week, `notify` jsonb (per kind: instant / digest / off), deactivated_at. Unique (workspace, user) | 46 |
+| `tl_invitation` | workspace_id, email (lowercase), role, invited_by, expires_at, accepted_at | 46 (used in 49) |
+| `tl_project` | workspace_id, key (2–6 `A-Z0-9`, unique per workspace, never reused), name, description html + text, color, icon, visibility, status (active / paused / completed / archived), health? (on track / at risk / off track), lead_id, start_on, target_on, `settings` jsonb (sprints, time, estimation `points` or `time`, block completion while blocked, done-column days), task_seq, rev bigint, version, archived_at | 46 |
+| `tl_project_member` | project_id, member_id, role; primary key on both | 46 |
+| `tl_star` | member_id, project_id | 46 |
+| `tl_status` | project_id, name, category (backlog / unstarted / started / completed / canceled), color, position (order key, `collate "C"`), wip_limit? | 46 |
+| `tl_label`, `tl_task_label` | label: workspace_id, project_id? (null = workspace-wide), name (unique per scope, any case), color | 46 |
+| `tl_task` | workspace_id, project_id, number (unique per project, from `task_seq` under the project's row lock; ref `KEY-12`), type (task / bug / story / epic), title, description html + text, status_id, priority (0 none … 4 urgent), assignee_id?, reporter_id?, parent_id? (depth ≤ 2), position (board), checklist jsonb, start_on, due_on, completed_at (set when the status's category becomes completed or canceled), generated `search` tsvector (`simple`: title A, text B), version, deleted_at (trash) | 46 |
+| `tl_task_watcher` | task_id, member_id | 46 |
+| `tl_activity` | workspace_id, project_id, task_id?, actor_id?, kind, data jsonb (from / to), at; indexes (project, at desc) and (task, at) | 46 |
+| `tl_comment` | task_id, author_id?, body html + text, mentions uuid[], edited_at, deleted_at | 50 |
+| `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data, read_at, emailed_at; index (user, read_at, created desc) | 50 |
+| `tl_saved_view` | workspace_id, project_id?, member_id, name, view, search, shared | 51 |
+| `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, completed_at, committed_points, completed_points; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks. `tl_task` gains sprint_id, points, rank | 52 |
+| `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member. `tl_task` gains estimate_minutes | 53 |
+| `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
+| `tl_field` | workspace_id, project_id?, name, type (text / number / select / multi_select / date / member / checkbox / url), options jsonb (with ids), required, position, archived_at. `tl_task` gains `fields` jsonb (GIN) | 55 |
+| `tl_automation`, `tl_automation_run` | automation: workspace_id, project_id?, name, enabled, trigger, conditions and actions jsonb, version. Run: automation_id, task_id?, outcome (ok / skipped / failed), detail, at. `tl_task` gains recurrence jsonb | 56 |
+| `tl_template`, `tl_project_update` | template: workspace_id, name, description, definition jsonb (built-ins live in code). Update: project_id, author_id, health, body, created_at | 57 |
+
+- **`workspaceSettings`** (Zod, defaults in code):
+  - name and slug;
+  - who creates projects (`admins` / `members`), default visibility, whether team members may join team-visible projects;
+  - working days (default **Sunday–Friday**), week start (**Sunday**), time zone (`APP_TIME_ZONE`, Asia/Kathmandu), digest hour (07:00);
+  - default notification modes, team quotas, trash retention (30 days), timesheet lock date, done-column window (14 days).
+
+**Server patterns:**
+- **Every app write is one transaction:** `resolveProject` → the change → `recordActivity(tx, …)` → `bumpRev(tx, projectId)` → notifications (Task 50) → automations (Task 56).
+- **The audit log and the activity log:** admin-area writes also go through `withAudit` (the admin audit log); app data never goes in the audit log (0186) but always in `tl_activity`.
+- **Concurrency:** title and description save with their version (an integer `version` column, `saveVersioned` in `src/server/taskline/rev.ts`, `StaleVersionAlert`; not `updated_at`, which every patch moves: 0205). Single-field patches (status, assignee, priority, dates, position) are last-write-wins and leave an activity entry.
+- **Freshness without websockets:**
+  - a GET `getProjectRev` is polled every 10 s while the tab is visible, and on focus; a changed `rev` refetches the page's collections;
+  - the inbox's unread count is polled every 60 s.
+  - There is no SSE infrastructure, and Vercel functions with Neon don't suit long connections. Record this as a decision in Task 48.
+- **Client state:**
+  - the board, list and backlog use TanStack DB collections over the loader's query (Kanban's `collections.ts` pattern);
+  - admin writes use `useCrudMutation` (0174);
+  - route files never import a collection module, and loaders import `queries.ts` on demand (0194).
+  - TipTap, Recharts, the timeline and the automation builder load lazily. `node scripts/check-bundle.ts` after every build.
+
+**Notifications and email** (Task 50, extended by later tasks):
+- **Kinds:** assigned, mentioned, comment on a watched task, status change on a watched task, due tomorrow, overdue, added to a project, invited, sprint started or completed, automation "notify", timer stopped automatically. Creating, being assigned or commenting makes you a watcher.
+- **Instant email** (default only for assigned and mentioned) is sent after the commit with `waitUntil`, coalesced per recipient and task within 5 minutes. Everything else goes in the daily digest.
+- **Templates:** `TaskNotification`, `DailyDigest` and `TeamInvite` in the recipient's language, branded Taskline. Guests and placeholders get none.
+- **`GET /api/cron/taskline`** runs daily, about 07:00 Kathmandu (`vercel.json`; daily is all Vercel's free plan allows). Each step is idempotent and independent:
+  - due and overdue notices;
+  - digests;
+  - sprint snapshots (52);
+  - auto-stopping timers older than 12 h (53);
+  - automation time triggers and recurrence catch-up (56);
+  - purging trash past retention;
+  - expiring invitations.
+
+**Routes (app, under `/app/taskline`):**
+- `/` (landing), `/sign-in`, `/sign-up`, `/account`, `/home` (my work), `/inbox`, `/settings` (my notifications)
+- `/$ws/projects`, `/$ws/search`, `/$ws/timesheet`
+- `/$ws/p/$key` (overview), `/$ws/p/$key/{board,list,calendar,timeline,backlog,sprints/$sprintId,milestones,reports,time}`
+- `/$ws/p/$key/settings/{general,members,workflow,labels,fields,automations,trash}` (lead)
+- `/$ws/t/$ref`: the task page (`WEB-12`). Every view opens it as a sheet through route masking (`unmaskOnReload: true`).
+
+**Routes (admin, group `taskline` in `ADMIN_GROUPS`, sections inside markers):**
+
+| Section | Permission | Task |
+| --- | --- | --- |
+| `/admin/taskline` (overview: KPIs, created vs completed, project health, active sprints, sandbox usage as counts only) | read | 49, extended by 52, 53, 57 |
+| `/admin/taskline/projects`, `/projects/$id` (details, members, workflow, labels, fields, automations; archive, transfer lead, delete by typing the key, JSON or CSV export, "Open in Taskline") | read / manage | 49 |
+| `/admin/taskline/members` (add accounts, invite by email, team role, title, capacity, deactivate with reassignment, workload) | read / manage | 49 |
+| `/admin/taskline/settings` (`workspaceSettings`), `/admin/taskline/activity` | configure / read | 49 |
+| `/admin/taskline/workflows` (default statuses, task types, workspace labels) | configure | 49 |
+| `/admin/taskline/timesheets` | time | 53 |
+| `/admin/taskline/fields` | configure | 55 |
+| `/admin/taskline/automations` (with the run log) | configure | 56 |
+| `/admin/taskline/templates`, `/admin/taskline/reports` | configure / read | 57 |
+
+### 11.6 Rules for every Part 5 task
+
+- **Both sides:** a module ships its member UI and its admin UI together, each behind its guard.
+- **The access matrix** (`tests/server/taskline-access.test.ts`) grows with every function. For each new function: a non-member, a viewer, a deactivated member and another user's sandbox are refused; `taskline:read` reads and `taskline:manage` writes.
+- **The sandbox seed and the claim** grow with every module (placeholder teammates' tasks, sprints, time and so on, in both languages). The guest flow in e2e keeps passing.
+- **Every new page:** in `e2e/support/pages.ts` and `tests/unit/route-seo.test.ts` (only the landing is indexable).
+- **Strings:** every string in both message files (`pnpm i18n:translate`, then review the Nepali).
+- **Dates:** calendar days are `YYYY-MM-DD` strings compared with `todayInZone(APP_TIME_ZONE)`. Weeks start on the workspace's week start; working days come from the settings.
+- **Keyboard first:** every drag has a keyboard path, announced (as Kanban's moves). Shortcuts go through `useHotkeys` and are listed in the shortcuts dialog.
+- **Bundle:** no new page grows the entry chunk; heavy parts are route chunks or lazy.
+- **Docs move with the code:** `docs/guides/taskline.md` (created in Task 46, a section per module), decisions, CLAUDE.md (guide table, layout, pitfalls).
+
+### Task 46: Foundation (done)
+
+Taskline's data, access and server core, tested on PGlite, with no UI (decisions 0203–0207; [docs/guides/taskline.md](guides/taskline.md)). Kanban is untouched.
+
+- **Layer:** `taskline` in `scripts/lib/strip-markers.ts` and `scripts/strip-demo.ts` (`--keep-taskline`, CI's template matrix), with a `SHARED` list for `src/lib/fractional-index.ts` (apps and taskline). `lockQuota` moved to `src/server/db/quota.ts` (0206).
+- **Tables:** 12 `tl_` tables in `src/server/db/schema/taskline/{workspace,project,task}.ts`, migration `0016_taskline`, which inserts the team workspace with `{}` settings. Check constraints on every enum-like column and on project keys; partial unique indexes for the one team and for label names per scope.
+- **Server:** `access.ts` (`resolveWorkspace`, `resolveProject`, `projectAccess`, `assertCan`), `activity.ts`, `rev.ts` (`bumpRev`, `nextTaskNumber`, `saveVersioned`), `rules.ts`, `sandbox.ts` (seed, claim and merge, `TASKLINE_GUEST_DATA`), and repository + service pairs for workspaces/members, projects (create with the five default statuses, the versioned form, state, archive, star, join, project members), workflow (statuses with category, order and WIP limit; delete moves tasks; labels) and tasks (create, versioned title and description, patch, move, checklist, subtasks to three levels, trash and restore, `completed_at` by category). `src/middleware/taskline.ts`.
+- **Functions:** 31 in `src/functions/taskline/{workspaces,projects,workflow,tasks}.ts`, in the guard test's `TASKLINE_FUNCTIONS`. **Permissions:** `taskline: [read, manage, configure, time]` with labels in both languages.
+- **Guests:** the `GUEST_DATA` entry; a sandbox with 3 placeholder teammates, the project `WEB`, 3 labels and 10 tasks, in English or Nepali.
+- **Dev data:** `pnpm db:seed-taskline` (`scripts/lib/taskline-seed.ts`, plain SQL): 5 accounts, every admin as a member, 3 projects (one private), 60 tasks. `pnpm dev:local` runs it on a fresh database.
+- **Tests:** 47 on PGlite: the access matrix (23 operations × 8 kinds of caller × team, private and sandbox contexts, 21 cases), workspace and cross-workspace refusals, numbers under 20 concurrent creates, categories and `completed_at`, status deletion, the trash, nesting, versions, activity and watchers, quotas under concurrency, seed (both languages), claim, merge (`WEB` → `WEB2`), cascades, and the demo seed. `pnpm test`: 108 files, 959 tests; `test:storybook` 412; build and bundle green (entry 238.9 kB). `test:e2e` not run per task from here on (11.1, the owner's choice); a run stopped midway had passed 299 checks with none failing.
+- **Deviations:**
+  - Refusals of what the caller can see are FORBIDDEN with a reason, not 404 (0204; 11.5 updated).
+  - `version` is an integer bumped only by form saves (`saveVersioned`), not `updated_at` and `updateVersioned` (0205).
+  - Team member management, settings saves and invitations are left to Task 49, whose section now lists them with the key-reuse rule.
+  - The functions are knip entries until Task 47's pages call them; the e2e harness doesn't seed the demo team yet (both noted in Task 47).
+- **For the owner:** run `pnpm db:migrate` on Neon (migration `0016_taskline`), and `pnpm db:seed-taskline --password …` there if you want the demo team.
+
+### Task 47: The standalone shell (planned)
+
+**Goal:** a signed-in user opens Taskline and it feels like its own app.
+
+- **Frame:** `src/routes/_taskline/route.tsx` and `TasklineShell`, as in 11.5: sidebar, topbar, user menu, workspace switcher, guest banner, `DbScope`, `ConfirmProvider`, 404 and error inside the frame, the navigation line (0201) and a pending view.
+- **Brand:** `TasklineMark`, the scoped accent, the icons and manifest route (Nitro, `vite.config.ts`, `knip.json`), the title suffix.
+- **Pages:**
+  - the landing (product page, "Try the sandbox" → guest sign-in, Sign in / Sign up), in the sitemap with JSON-LD;
+  - the Taskline sign-in and sign-up pages, and the account page;
+  - `/home`, first version: my open tasks by due date, recent projects. An account with no team membership and no sandbox sees "Start a sandbox" and "Ask an admin to add you";
+  - `/$ws/projects`: a directory of cards and a list, star, a create dialog (for those allowed).
+- **Navigation:** `features/taskline/links.ts`; a command palette (projects, go to, actions); a shortcuts dialog.
+- **The gallery card** in `/apps`.
+- **Tests:**
+  - jsdom: shell navigation, the switcher, the guest banner;
+  - stories: the shell in both themes and languages, on a phone and a desktop;
+  - e2e: a guest tries the sandbox from the landing; a member sees the team's projects; every new page in the review.
+- **Decision:** a standalone section (its own frame, brand, auth pages, manifest) inside the same app.
+- **Left by Task 46:** remove `src/functions/taskline/*.ts` from `knip.json`'s `entry` (and strip-demo's `knipEntries`) once the pages call them; the e2e harness doesn't seed the demo team yet (`scripts/lib/taskline-seed.ts`, which `dev:local` runs): add it to `e2e/harness/database.ts` for "a member sees the team's projects" (check the user counts other flows expect).
+
+### Task 48: Board, list and the task; Kanban replaced (planned)
+
+**Goal:** Taskline's daily work, and Kanban's data moved into it.
+
+- **Project layout:** header (name, members, view tabs), a shared `FilterBar` (assignee, label, priority, type, due, status; in the URL), and the overview page (description, progress by category, members, recent activity through `Timeline`).
+- **Board:** a port of Kanban's `board.tsx`, `moves.ts` and `collections.ts`.
+  - Statuses are the columns, with WIP-limit warnings. Done and canceled columns show the last N days. Quick add at a column's foot. Swimlanes by assignee or priority (`?swimlanes=`).
+  - The card face: ref, type, priority icon, assignee avatar, labels, due date (overdue in danger colours), subtask progress.
+  - The keyboard moves and announcements stay.
+- **List:** `DataTable` with the list contract (URL state, sort, pagination through `listPage`), grouping by status or assignee, inline status, assignee and priority cells, bulk actions (status, assignee, priority, labels, trash), and CSV export.
+- **The task:** a sheet over every view (route masking) and the page `/$ws/t/$ref`.
+  - A fields panel; the versioned title and description (TipTap, lazy); subtasks (inline create, progress); the checklist; an activity tab; copying the link.
+- **Lead settings:** general, members, workflow (statuses: create, rename, colour, category, reorder, WIP), labels, trash (restore, delete forever).
+- **Freshness:** `rev` polling.
+- **Kanban replaced:**
+  - a custom migration (`drizzle-kit generate --custom`). For each Kanban owner:
+    1. a sandbox and its owner member;
+    2. boards → projects (same uuid; keys `KB1`, `KB2`…);
+    3. columns → statuses (first unstarted, last completed, the rest started; positions kept);
+    4. cards → tasks (same uuid; numbers by `created_at`; colour labels → project labels; checklist and due date kept);
+    5. `task_seq` set;
+    6. `portfolio_project.app_slug` `kanban` → `taskline`.
+  - A second migration drops the `kanban_*` tables.
+  - 301 redirects: `/apps/kanban` → `/app/taskline`; `/apps/kanban/$boardId` → the project's board, found by id.
+  - Kanban's code, registry entries, `kanban_*` messages, tests, stories, strip-demo paths and the apps.md section are removed. The portfolio's "App" field accepts `taskline` (its link goes to `/app/taskline`).
+- **Tests:**
+  - PGlite: the migration on fixture Kanban rows (owners, guests, labels, checklists), moves, bulk updates, versions;
+  - unit: the moves;
+  - jsdom: keyboard moves on the board, the task sheet's fields;
+  - e2e: a member moves a task by keyboard and opens it by URL; `/apps/kanban/<id>` redirects; review of every page.
+- **Decisions:**
+  - polling `rev`, not websockets;
+  - the Kanban migration and redirects.
+
+### Task 49: Admin control panel I (planned)
+
+**Goal:** the admin runs the team from `/admin`.
+
+- **The group:** `taskline` in `ADMIN_GROUPS` with its sections (11.5), commands in `features/taskline/admin/commands.ts`, and functions in `src/functions/taskline-admin/` (`requirePermission` → `withServices`, audited).
+- **Overview:** `StatCard`s (active projects, open, overdue, done this week), created vs completed over 12 weeks (`CartesianChart`), a project health table, and sandbox usage (counts only).
+- **Projects:**
+  - a `CrudListPage` (filters: status, lead, visibility; search);
+  - create (key, name, lead, visibility, statuses from the workspace default);
+  - a detail page with tabs (details, members, workflow, labels);
+  - archive and unarchive, transfer lead, delete (typing the key to confirm), JSON and CSV export, "Open in Taskline".
+- **Members:**
+  - add accounts (an `AsyncComboboxField` over accounts not in the team, guests excluded);
+  - invite by email: `tl_invitation`, the `TeamInvite` email, auto-join on a verified sign-up or sign-in with that address (a hook next to the guest claim in `src/server/guests/auth-hooks.ts` or the auth after-hooks), resend and revoke;
+  - team role, title and weekly capacity;
+  - deactivate (reassign or unassign their open tasks) and reactivate.
+- **Settings:** `workspaceSettings` with `useCrudForm` (versioned).
+- **Workflows:** default statuses for new projects, task types, workspace labels.
+- **Activity:** `tl_activity` with filters (project, actor, kind, dates).
+- **Tests:**
+  - PGlite: every admin function's guard, audit rows, invitation acceptance (verified address only, expired and revoked refused), deactivation with reassignment;
+  - e2e: an admin creates a project and invites a member, who registers from the email (the fake Resend inbox, `e2e/harness/inbox.ts`) and lands in the project; a deactivated member gets a 404.
+- **Decision:** team membership is Taskline's own (not RBAC), and invitations auto-join.
+- **Left by Task 46:** the services for adding, changing and deactivating team members and for the settings are this task's (Task 46 has `insertMembers`, `setMemberDeactivated` and the settings' Zod only). A deleted project's key must never be reused (refs like `WEB-12` in comments): keep retired keys (e.g. a `retired_keys` column or table) and refuse them on create. Settings validation refuses the reserved slugs (11.5) and checks the team quotas against what exists. Workspace-wide labels: `tl_label_workspace_name_unique`.
+
+### Task 50: Collaboration and notifications (planned)
+
+- **Comments:** on the task (TipTap, lazy), edit and delete (own; leads moderate), rate limited.
+- **@mentions:** add `@tiptap/extension-mention` (check the current version, context7), suggestions from the project's members, and mention nodes allowed by `src/server/rich-text/sanitize.ts`. The server stores the ids it finds in the sanitized HTML, never the client's list.
+- **Watchers:** watch and unwatch, and automatic watching.
+- **Attachments:** files and images on tasks and comments, through a Taskline `UploadTransport` (as Notes; `entity_type` `tl_task` and `tl_comment`; per-hour limits), deleted with their task through the attachments service.
+- **Notifications:**
+  - `notify/produce.ts`, called in the write transactions;
+  - the inbox (filters, read, read all, the unread badge polled every 60 s);
+  - `/settings` (per-kind modes).
+- **Email:** `TaskNotification` (instant, after commit with `waitUntil`, coalesced), `DailyDigest`, and `/api/cron/taskline` with its first steps (due and overdue notices, digests, trash purge, invitation expiry).
+- **Tests:**
+  - PGlite: mentions only of members who can view the task; notifications to the right people (never the actor, never placeholders or guests by email); coalescing; the cron's idempotency;
+  - e2e: assign → the inbox and the email; a mention → the email.
+- **Decision:** instant mail plus a daily digest under the daily-cron limit.
+
+### Task 51: More views and finding things (planned)
+
+- **Calendar:** month and week by due date (or by start), drag and keyboard rescheduling, tasks with no date in a side list.
+- **My work (`/home`):** overdue, today, this week, later and no date; assigned to me or watched; across every project I can see.
+- **Saved views:** `tl_saved_view`, personal or shared with the project, wired into `DataTable`'s `savedViews` (replacing localStorage for Taskline).
+- **Search:** `/$ws/search` with the tsvector ranked, and an exact ref (`WEB-12`) jumping to the task; the palette searches tasks on the server.
+- **CSV import of tasks:** Expenses' pattern (`parseCsv`, a mapping guessed from the header, a preview through the shared schema, an idempotency key, at most 1,000 rows); labels and assignees matched by name.
+- **Tests:** PGlite (search sees only accessible projects, import and its retry), unit (the calendar grid with Sunday-first weeks), e2e (reschedule by keyboard, a saved view, import).
+
+### Task 52: Sprints and backlog (planned)
+
+- **Settings:** per project, sprints on or off, and estimation in points or time. `tl_sprint` and `tl_sprint_snapshot`; `tl_task` gains `sprint_id`, `points` and `rank`.
+- **Backlog page:** the active and planned sprints as sections, then the backlog. Tasks drag between them (and move by keyboard), ordered by rank; points total per section.
+- **Planning:** create a sprint (name, dates, goal), with capacity against the last 3 sprints' velocity.
+- **Start and complete:**
+  - start: one active sprint per project;
+  - complete: the unfinished tasks go to the next sprint, a new one or the backlog; committed and completed points are stored.
+- **Charts:** the burndown and burnup (the cron's daily snapshots plus today, computed live), velocity, and a sprint report page.
+- **Elsewhere:** sprint started and completed notifications; active sprints on `/home` and the admin overview.
+- **Tests:** PGlite (one active sprint, completion and carry-over, snapshot idempotency), unit (burndown series from snapshots), e2e (plan → start → complete).
+- **Decision:** daily snapshots for the burndown.
+
+### Task 53: Time tracking (planned)
+
+- **Estimates:** `tl_time_entry`; `tl_task` gains `estimate_minutes`.
+- **Timer:**
+  - start and stop from a task or the topbar pill;
+  - one running per member; the server stamps the start;
+  - survives a reload;
+  - the cron stops a timer after 12 h and notifies its owner.
+- **Logging:** manual entries on a task (date, duration, note, billable).
+- **My timesheet (`/$ws/timesheet`):** a week grid (rows: tasks, columns: the days from the week start), keyboard editing, totals, copying last week.
+- **Project time page:** estimate vs actual by task and member.
+- **Admin `timesheets` (`taskline:time`):**
+  - every entry, with filters;
+  - edit any entry;
+  - the lock date: the service refuses changes on or before it;
+  - utilization against capacity;
+  - CSV.
+- **Tests:** PGlite (one running timer, the lock, editing others' entries needs `taskline:time`), jsdom (the grid's keyboard), e2e (timer, timesheet, a lock blocks an edit).
+
+### Task 54: Timeline, milestones and dependencies (planned)
+
+- **Milestones:** `tl_milestone` and a milestones page (progress by their tasks); `tl_task` gains `milestone_id`.
+- **Dependencies:**
+  - `tl_task_dependency`: "blocks" and "blocked by" in the task sheet, across projects in one workspace if both are visible to the user;
+  - cycles refused (a recursive CTE);
+  - a "blocked" badge and filter;
+  - the optional project rule "a blocked task can't be completed".
+- **Timeline:** a Gantt drawn as SVG.
+  - Layout: rows grouped by epic, milestone or assignee; day, week or month zoom; a today line; non-working days shaded (settings); milestones as diamonds; dependency arrows; a warning when a blocker ends after the blocked task starts.
+  - Changes: drag, or Alt + ←/→ (move) and Alt + Shift + ←/→ (resize), announced.
+  - Accessibility: a visually hidden table alongside it (as the charts do).
+  - The layout math lives in a pure module, unit tested.
+- **Tests:** PGlite (cycles, the completion rule), unit (bar layout, arrows, working days), e2e (keyboard rescheduling, a blocked task refused).
+
+### Task 55: Custom fields (planned)
+
+- **Definitions:** `tl_field` at workspace level (admin) and project level (lead). The definitions are a Zod union, and `toTaskFieldsSchema(fields)` builds what values must pass, Forms' pattern (0195).
+- **Values:** `tl_task.fields` jsonb keyed by field id, checked by the server on every write; select options stored by id, so renaming keeps values; archiving a field keeps its values.
+- **Where they show:** in the task sheet, as optional list columns, as `FilterBar` filters (by type), and in CSV export and the import mapping.
+- **Admin:** `/admin/taskline/fields`, plus the project settings tab.
+- **Tests:** unit (the schema per type), PGlite (validation, archive, option rename), e2e (a field set and filtered).
+- **Decision:** values in jsonb, checked against their definitions.
+
+### Task 56: Automations and recurring tasks (planned)
+
+- **Engine (`src/server/taskline/automations/`):**
+  - triggers: task created; status or category changed; assignee, priority or label changed; comment added; all subtasks done; sprint started; due soon and overdue (from the cron);
+  - conditions on type, priority, labels, assignee and fields;
+  - actions: set status, assignee, priority, label, sprint or a relative due date; add a comment; notify a member or the lead; create subtasks;
+  - it runs in the write's transaction inside a savepoint: a failed automation is logged in `tl_automation_run` and the user's change stands;
+  - no chaining (automations don't trigger automations), and at most 10 actions.
+- **Builder:** a form in the admin (`/admin/taskline/automations`, workspace rules) and in project settings (project rules), with a "would match N open tasks" preview, enable and disable, and the run log.
+- **Recurrence:** a rule on the task (daily, weekly on chosen days, monthly or yearly; an interval; an end). Completing the task creates the next one (fields, labels and the checklist reset), and the cron catches up missed ones.
+- **Tests:** unit (matching, the next date in Asia/Kathmandu), PGlite (savepoint rollback, no chaining, recurrence), e2e (Done → the automation's action and notification).
+- **Decision:** a savepoint per run, depth 1.
+
+### Task 57: Templates, reports and project updates (planned)
+
+- **Templates:**
+  - built-ins in code: Scrum software, Kanban, Marketing campaign, Client project, Event;
+  - custom templates in `tl_template` (`definition`: statuses, labels, fields, automations, settings, milestones, and sample tasks with dates relative to the start);
+  - admin CRUD with JSON import and export, "Save project as template", and creating from a template in the app and the admin.
+- **Project reports:** status and priority breakdown, created vs completed, cycle and lead time (from the activity's status changes), throughput, overdue trend, workload by assignee, time vs estimate; CSV each.
+- **Admin `reports`:** health across projects (progress, overdue, milestones at risk, last activity), workload against capacity, and time by project and member.
+- **Project updates:** `tl_project_update` (health and a post by the lead), shown on the overview and the admin's project health table.
+- **Tests:** unit (cycle time from activity), PGlite (template round trip, validation), e2e (a project created from a template has its statuses, fields and automation).
+
+### Task 58: Wrap-up (planned)
+
+- **The sandbox, complete:** placeholder teammates with assigned tasks, an active sprint with a burndown, milestones and dependencies on the timeline, a week of time, comments and mentions in the inbox, custom fields, an automation, in both languages. Checked as a guest in both languages.
+- **Docs:** `docs/guides/taskline.md` complete; CLAUDE.md (guide table, "Where things are", the layout, commands, pitfalls); this section's summaries.
+- **The template matrix:** in a scratch clone, strip-demo with every layer and with `--keep-taskline`, plus both `new:feature` runs, typecheck, check, knip, test and the migration check.
+- **Performance:**
+  - `EXPLAIN ANALYZE` of the board, list, my work and search on a 10,000-task seed;
+  - the bundle per page;
+  - Lighthouse on the landing;
+  - the dev-server numbers.
+- **Review:** `/code-review` (high) over Part 5, with fixes, and the measurements as a decision.
+
+**Out of scope for Part 5:**
+- several workspaces per tenant, and billing (the organizations recipe is the way);
+- a client portal or public boards;
+- websockets and presence;
+- Jira and Trello importers;
+- the Bikram Sambat calendar;
+- native and offline apps;
+- AI features.

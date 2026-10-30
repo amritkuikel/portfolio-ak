@@ -13,6 +13,7 @@ export const RESOURCE_LABELS: Record<Resource, () => string> = {
 	media: m.perm_resource_media, // @portfolio
 	apps: m.perm_resource_apps, // @apps
 	links: m.perm_resource_links, // @apps
+	taskline: m.perm_resource_taskline, // @taskline
 	// @new-feature:resource-labels
 };
 
@@ -41,6 +42,12 @@ export const PERMISSION_LABELS: Record<Permission, () => string> = {
 	// portfolio:end
 	"apps:read": m.perm_apps_read, // @apps
 	"links:moderate": m.perm_links_moderate, // @apps
+	// taskline:start
+	"taskline:read": m.perm_taskline_read,
+	"taskline:manage": m.perm_taskline_manage,
+	"taskline:configure": m.perm_taskline_configure,
+	"taskline:time": m.perm_taskline_time,
+	// taskline:end
 	// @new-feature:permission-labels
 };
 

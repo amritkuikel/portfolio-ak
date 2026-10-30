@@ -1,5 +1,5 @@
 /**
- * pnpm strip-demo [--keep-portfolio] [--keep-apps] [--no-build]
+ * pnpm strip-demo [--keep-portfolio] [--keep-apps] [--keep-taskline] [--no-build]
  *
  * Turns the template into a clean starting point (docs/guides/new-project.md) by
  * removing layers, each whole: its files, its marked code in shared files, its
@@ -11,6 +11,7 @@
  * - `portfolio`: the portfolio at `/` (src/routes/_site, features/portfolio). A neutral
  *   landing page takes its place (scripts/templates/landing).
  * - `apps`: the showcase apps under /apps (filled by Task 41).
+ * - `taskline`: Taskline, the project management app at /app/taskline (Part 5, from Task 46).
  *
  * Markers: scripts/lib/strip-markers.ts. Paths per layer are data below, so a
  * task that adds to a layer appends to its lists. Then it removes dependencies
@@ -98,8 +99,6 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/middleware/apps.ts",
 			"src/middleware/short-links.ts",
 			"src/middleware/robots.ts",
-			"src/lib/fractional-index.ts",
-			"tests/unit/fractional-index.test.ts",
 			"tests/unit/kanban-moves.test.ts",
 			"tests/unit/notes-list.test.ts",
 			"tests/unit/habit-streaks.test.ts",
@@ -131,7 +130,39 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/server/db/schema/apps/notes.ts",
 		],
 	},
+	taskline: {
+		// Taskline (Part 5, decisions 0203–0207). Guest sessions stay (core); its sandbox is one of their owners.
+		sentinel: "src/server/taskline",
+		paths: [
+			"src/features/taskline",
+			"src/server/taskline",
+			"src/functions/taskline",
+			"src/middleware/taskline.ts",
+			"src/server/db/schema/taskline",
+			"scripts/seed-taskline.ts",
+			"scripts/lib/taskline-seed.ts",
+			"tests/server/taskline.test.ts",
+			"tests/server/taskline-access.test.ts",
+			"tests/server/taskline-seed.test.ts",
+			"docs/guides/taskline.md",
+		],
+		packageScripts: ["db:seed-taskline"],
+		crons: [],
+		// Its server functions, until Task 47's pages call them.
+		knipEntries: ["src/functions/taskline/*.ts"],
+		schema: [
+			"src/server/db/schema/taskline/project.ts",
+			"src/server/db/schema/taskline/task.ts",
+			"src/server/db/schema/taskline/workspace.ts",
+		],
+	},
 };
+
+/** Files more than one layer uses: removed only when every one of those layers goes. */
+const SHARED: ReadonlyArray<{ paths: string[]; layers: Layer[] }> = [
+	// Order keys: Kanban's cards (apps) and Taskline's statuses and tasks.
+	{ paths: ["src/lib/fractional-index.ts", "tests/unit/fractional-index.test.ts"], layers: ["apps", "taskline"] },
+];
 
 /** Written when the portfolio goes: the home page becomes a neutral landing page. */
 const LANDING = {
@@ -189,7 +220,9 @@ const fail = (message: string): never => {
 	console.error(`strip-demo: ${message}`);
 	process.exit(1);
 };
-if (unknown.length > 0) fail(`unknown option ${unknown.join(" ")} (use --keep-portfolio, --keep-apps, --no-build)`);
+if (unknown.length > 0) {
+	fail(`unknown option ${unknown.join(" ")} (use ${LAYERS.map((layer) => `--keep-${layer}`).join(", ")}, --no-build)`);
+}
 
 const stripped = LAYERS.filter((layer) => !kept.has(layer));
 /** Nothing kept: the script goes too, with what exists only for it (its `strip-demo` markers). */
@@ -207,6 +240,11 @@ const writeJson = (file: string, data: unknown) => {
 for (const layer of stripped) {
 	for (const file of SPECS[layer].paths) rmSync(at(file), { recursive: true, force: true });
 	for (const file of SPECS[layer].schema) rmSync(at(file), { force: true });
+}
+for (const shared of SHARED) {
+	if (shared.layers.every((layer) => stripped.includes(layer))) {
+		for (const file of shared.paths) rmSync(at(file), { recursive: true, force: true });
+	}
 }
 
 // 2. Their marked code in every tracked text file

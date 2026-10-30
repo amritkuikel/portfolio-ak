@@ -30,6 +30,14 @@ export const PERMISSION_CATALOG = {
 	/** Short links of every user (/admin/links): block, unblock and delete them (decision 0191). */
 	links: ["moderate"],
 	// apps:end
+	// taskline:start
+	/**
+	 * Taskline (/app/taskline, decision 0204): read sees /admin/taskline and reads every team project;
+	 * manage runs projects and members (lead rights everywhere); configure the workflows, fields,
+	 * automations, templates and settings; time every timesheet.
+	 */
+	taskline: ["read", "manage", "configure", "time"],
+	// taskline:end
 	// @new-feature:permissions
 } as const;
 

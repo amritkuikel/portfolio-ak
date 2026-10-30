@@ -9,6 +9,7 @@
  * - audit.ts: the audit log of admin actions.
  * - portfolio.ts: the portfolio at `/` and its contact messages (the `portfolio` layer).
  * - apps/<app>.ts: the showcase apps' tables, each row owned by a user (the `apps` layer).
+ * - taskline/*.ts: Taskline, the project management app at /app/taskline (the `taskline` layer).
  * - columns.ts: column helpers (localized text), no tables.
  *
  * `pnpm new:feature` adds its table's file above the marker line.
@@ -25,5 +26,8 @@ export * from "./audit";
 export * from "./auth";
 export * from "./portfolio"; // @portfolio
 export * from "./rbac";
+export * from "./taskline/project"; // @taskline
+export * from "./taskline/task"; // @taskline
+export * from "./taskline/workspace"; // @taskline
 export * from "./test-crud";
 // @new-feature:schema

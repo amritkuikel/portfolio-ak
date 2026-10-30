@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (179 entries)</summary>
+<summary>Index (206 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -207,6 +207,11 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0200](#0200-part-4-measured-task-45): Part 4 measured (Task 45)
 - [0201](#0201-loading-states-in-every-section-guest-sign-ins-per-address-and-the-home-pages-first-layout): Loading states in every section, guest sign-ins per address, and the home page's first layout
 - [0202](#0202-nitro-30261029-rc-h3-208-and-dev-servers-start-on-per-locale-messages): Nitro 3.0.261029-rc (h3 2.0.8), and dev servers start on per-locale messages
+- [0203](#0203-taskline-one-team-workspace-and-a-sandbox-per-user-in-a-layer-of-its-own): Taskline: one team workspace and a sandbox per user, in a layer of its own
+- [0204](#0204-tasklines-access-one-resolver-not-found-for-what-you-cant-see-forbidden-for-what-you-can): Taskline's access: one resolver, not found for what you can't see, forbidden for what you can
+- [0205](#0205-tasklines-history-is-its-own-activity-log-rev-for-freshness-version-for-forms): Taskline's history is its own activity log; `rev` for freshness, `version` for forms
+- [0206](#0206-lockquota-moves-to-core): `lockQuota` moves to core
+- [0207](#0207-tasklines-members-are-the-identity-for-assignment-and-history): Taskline's members are the identity for assignment and history
 </details>
 
 ---
@@ -2486,3 +2491,48 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 - **Nitro:** from 3.0.260610-beta to 3.0.261029-rc, which brings h3 2.0.8. h3 2.0.1-rc.22 ran `decodeURI` on every path while creating the request event, so a malformed path (`/work/%E0`) was an uncaught `URIError` and a request that never got an answer on the Node server. Now it's an immediate 400 (`e2e/flows/health.spec.ts`). The dev server's 503 in the first seconds after start ("Vite environment nitro is unavailable") is gone too: the first request waits for the environment. TanStack Start keeps its own h3 (2.0.1-rc.20) for its helpers; nothing else changed in the lockfile, and every page's JavaScript is 238.8 kB gzip (was 246.4) with Nitro's new client chunking.
 - **Dev messages:** `pnpm build` writes one module per message into `src/paraglide`; a dev server started on those loaded them while the Vite plugin rewrote them ("Failed to load url /src/paraglide/messages/<key>.js"). `pnpm dev`, `dev:local` and `dev:offline` now run `scripts/lib/dev-messages.ts` first, which compiles per locale only when `messages/en.js` is missing, so a normal start pays nothing (a compile on every start cost 7 s).
 - **Alternatives considered:** a pnpm override for h3 alone (Nitro's beta was written against rc.22); a separate output folder for production messages (the app imports one path).
+
+## 0203: Taskline: one team workspace and a sandbox per user, in a layer of its own
+
+*Part 5, Task 46 (docs/guides/taskline.md).*
+
+- **What:** Taskline's tenancy is `tl_workspace` with `kind` `team` (exactly one: a partial unique index, inserted by migration `0016_taskline` with `{}` settings) or `sandbox` (one per user: `owner_id` unique, cascading on delete; a check ties "has an owner" to "is a sandbox"). URLs carry the workspace as `$ws`: the team's slug, or the literal `sandbox`, which always resolves to the caller's own. Guests get a seeded sandbox through `GUEST_DATA` (0186), and an account can start one. On claim, the guest's sandbox becomes the account's, or merges into the one it has (a taken project key gets a suffix, `WEB` → `WEB2`).
+- **Settings are jsonb with defaults in code** (`workspaceSettings`, `projectSettings` in `features/taskline/settings.ts`): the row holds only what changed, so the migration's `{}` is "every default" and a new setting needs no migration.
+- **A layer, `taskline`,** independent of `apps` (`--keep-taskline`; CI's template job gains the matrix entry). `src/lib/fractional-index.ts` is used by both until Kanban goes (Task 48), so strip-demo gained `SHARED`: paths removed only when every layer that uses them is.
+- **Why:** the owner's choices (PLAN 11.2): one admin-run team, and visitors who can still try everything without touching it. A sandbox is a workspace like the team's, so every module works the same in both, and a guest's work survives sign-up.
+- **Alternatives considered:** sandbox rows in the team workspace marked by owner (every query would need a second filter, and one mistake shows a guest's tasks to the team); one workspace per guest without placeholders (an empty sandbox can't show assignment, workload or mentions); many teams (not asked for; the slug in the URL leaves room).
+
+## 0204: Taskline's access: one resolver, not found for what you can't see, forbidden for what you can
+
+*Part 5, Task 46.*
+
+- **What:** every app function runs `requireTasklineUser` (signed in, guests included) → `withTasklineServices`, and its service calls `resolveWorkspace` or `resolveProject` (`src/server/taskline/access.ts`) before anything else. The resolver computes the caller's level in a project as the highest of their project role (lead → manage, member → edit, viewer → comment), their team role on a team-visible project (member → edit, viewer → comment), `taskline:manage` (manage) and `taskline:read` (read), and turns it into `can: { view, comment, edit, manage, logTime }`; an archived project drops edit and logTime. A caller with no level gets NOT_FOUND. `assertCan` refuses a caller who can see the project but not do the thing with FORBIDDEN and a localized reason. RBAC adds `taskline: [read, manage, configure, time]`; the team role stays Taskline data, not a permission.
+- **Deviation from PLAN 11.5,** which said "a refusal reads as a 404, never a 403": that holds for anything the caller can't see. A viewer who has the board open and presses "move" already knows the task exists, and "not found" would read as a bug; "You can see this project but not change it" tells them why. Updated 11.5.
+- **Tested by a matrix,** `tests/server/taskline-access.test.ts`: every operation (23 so far) by every kind of caller (lead, member, viewer, deactivated, outsider, guest, `taskline:read`, `taskline:manage`) against a team-visible project, a private one and a guest's sandbox, with the expected outcome computed from the table. A new function adds one line.
+- **Why one resolver:** access has seven kinds of caller and two visibilities. Spread over services, one forgotten check leaks a private project; in one function, the matrix covers every service at once.
+- **Alternatives considered:** checks in middleware (a function's workspace and project come from its input, which middleware would have to parse twice); NOT_FOUND for everything (above); Postgres row-level security (Neon supports it, but PGlite tests and the pooled connection make the session variable fragile, and the app's rules, e.g. archived projects, aren't row filters).
+
+## 0205: Taskline's history is its own activity log; `rev` for freshness, `version` for forms
+
+*Part 5, Task 46.*
+
+- **What:** every app write records `tl_activity` rows (kind, actor member, `{ field, from, to }` and the like) in its transaction and bumps the project's `rev`. App data stays out of the admin audit log (0186); admin-area writes (Task 49 on) go through `withAudit` as well. An admin acting through `taskline:manage` without a member row is recorded with no actor and `via: "admin"`.
+- **Two counters:** `rev` (on the project) moves with every change and is what open pages poll (Task 48). `version` (an integer on the workspace, the project and the task) moves only when a form saves (a task's title and description, the project form, the settings), checked in the UPDATE's WHERE (`saveVersioned`). Status, position, assignee, priority, dates, labels, parent and the checklist are last-write-wins patches with an activity entry. Bookkeeping updates (`bumpRev`, `nextTaskNumber`) set `updated_at` to itself so Drizzle's `$onUpdate` leaves it.
+- **Why:** members need a readable history of their tasks; the audit log is an admin's record of admin actions, with retention and filters of its own. The CRUD standard's version is `updated_at` (0122), but here a card moved by a teammate would make every open description edit stale.
+- **Alternatives considered:** the audit log for everything (0186 keeps app data out; it would flood the admin's log); `updated_at` as the version (above); a version per field (more columns for little: only two fields are long edits).
+
+## 0206: `lockQuota` moves to core
+
+*Part 5, Task 46.*
+
+- **What:** `lockQuota(tx, scope)` (a transaction-scoped advisory lock before a count, 0199) moves from `src/server/apps/ownership.ts` (the `apps` layer) to `src/server/db/quota.ts`. The apps import it from there; Taskline locks `taskline:<workspace id>` for projects and tasks and `taskline:statuses:<project id>` for statuses.
+- **Why:** Taskline is its own layer and needs it with the apps stripped; it was never about ownership.
+- **Alternatives considered:** a copy in Taskline (two places to fix).
+
+## 0207: Taskline's members are the identity for assignment and history
+
+*Part 5, Task 46.*
+
+- **What:** assignees, reporters, project members, stars, watchers and activity actors point at `tl_member`, not at `user`. `tl_member.user_id` is nullable (`on delete set null`) and `display_name` snapshots the account's name: a deleted account's history keeps its name, and a sandbox's placeholder teammates are members with no account. Unique (workspace, user); a deactivated member (`deactivated_at`) keeps their history and loses all access.
+- **Why:** history must outlive accounts, and the sandbox needs teammates who don't exist; one identity per workspace also holds what is per workspace (role, title, capacity, notification modes).
+- **Alternatives considered:** `user` ids with a soft delete of accounts (Better Auth deletes users, and guests are deleted after 7 days); fake user rows for placeholders (they would sign in, count as users and appear in the admin's user list).

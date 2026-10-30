@@ -1,0 +1,449 @@
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { isAppError } from "@/lib/errors";
+import * as schema from "@/server/db/schema";
+import type { TasklineServices } from "@/server/taskline/access";
+import * as projects from "@/server/taskline/projects/service";
+import { seedSandbox } from "@/server/taskline/sandbox";
+import * as tasks from "@/server/taskline/tasks/service";
+import * as workflow from "@/server/taskline/workflow/service";
+import * as workspaceRepo from "@/server/taskline/workspace/repository";
+import * as workspaces from "@/server/taskline/workspace/service";
+import { createTestDb } from "../utils/test-db";
+
+/**
+ * Taskline's access matrix (decision 0204, the table in docs/guides/taskline.md): every
+ * app service, called by every kind of caller, against a team-visible project, a
+ * private one and a guest's sandbox. Refusals of what the caller can't see are
+ * NOT_FOUND; of what they can see but not change, FORBIDDEN. A new function adds its
+ * operation to OPERATIONS (docs/guides/taskline.md, "Adding to Taskline").
+ */
+let env: Awaited<ReturnType<typeof createTestDb>>;
+
+const USERS = ["lead", "member", "viewer", "spare", "deactivated", "outsider", "reader", "manager"] as const;
+
+beforeAll(async () => {
+	env = await createTestDb("admin-1", async (db) => {
+		await db
+			.insert(schema.user)
+			.values([
+				...USERS.map((id) => ({ id, name: id === "spare" ? "Spare" : id, email: `${id}@example.com` })),
+				{ id: "guest", name: "Guest", email: "guest@anonymous.placeholder.invalid", isAnonymous: true },
+			]);
+		await workspaceRepo.ensureTeamWorkspace(db);
+	});
+}, 60_000);
+afterAll(() => env.close());
+
+type Caller = (typeof USERS)[number] | "guest";
+const as = (id: Caller): TasklineServices => ({
+	db: env.db,
+	user: {
+		id,
+		isGuest: id === "guest",
+		permissions: id === "reader" ? ["taskline:read"] : id === "manager" ? ["taskline:manage", "taskline:read"] : [],
+	},
+});
+
+const code = async (promise: Promise<unknown>) => {
+	try {
+		await promise;
+		return "ok";
+	} catch (error) {
+		if (isAppError(error)) return error.code;
+		throw error;
+	}
+};
+
+/** The team (lead, member, viewer, spare and a deactivated member), its projects WEB (team) and SEC (private), and the guest's sandbox. */
+async function setUp() {
+	await env.reset();
+	const team = await workspaceRepo.ensureTeamWorkspace(env.db);
+	const rows = await env.db.transaction((tx) =>
+		workspaceRepo.insertMembers(
+			tx,
+			(["lead", "member", "viewer", "spare", "deactivated"] as const).map((id) => ({
+				workspaceId: team.id,
+				userId: id,
+				displayName: id === "spare" ? "Spare" : id,
+				role: id === "viewer" ? ("viewer" as const) : ("member" as const),
+			})),
+		),
+	);
+	// Only an admin creates team projects by default; then the lead leads them.
+	await env.db
+		.update(schema.tlWorkspace)
+		.set({ settings: { projectCreation: "members" } })
+		.where(eq(schema.tlWorkspace.id, team.id));
+	await projects.createProject(as("lead"), { ws: "team", key: "WEB", name: "Website" });
+	await projects.createProject(as("lead"), { ws: "team", key: "SEC", name: "Security", visibility: "private" });
+	const deactivated = rows.find((row) => row.userId === "deactivated");
+	if (!deactivated) throw new Error("no deactivated member");
+	await projects.setProjectMember(as("lead"), { ws: "team", key: "SEC", memberId: deactivated.id, role: "member" });
+	await env.db.transaction((tx) => workspaceRepo.setMemberDeactivated(tx, deactivated.id, new Date()));
+	await env.db.update(schema.tlWorkspace).set({ settings: {} }).where(eq(schema.tlWorkspace.id, team.id));
+	await env.db.transaction((tx) => seedSandbox(tx, "guest", "en"));
+	// The outsider has a sandbox of their own, with nothing in it.
+	await env.db.transaction((tx) => workspaceRepo.insertSandbox(tx, "outsider", "Empty"));
+}
+
+type Context = { ws: string; key: string; owner: Caller };
+type Need = "read" | "edit" | "manage";
+type Operation = { name: string; need: Need; run: (context: Context, caller: TasklineServices) => Promise<unknown> };
+
+/** A task the context's owner creates for an operation to act on. */
+const ownerTask = async ({ ws, key, owner }: Context) => tasks.createTask(as(owner), { ws, key, title: "Fixture" });
+const ownerBoard = ({ ws, key, owner }: Context) => tasks.listTasks(as(owner), ws, key);
+/** A member of the context's workspace other than its owner: "Spare" in the team, a placeholder in a sandbox. */
+const otherMember = async ({ ws, owner }: Context) => {
+	const found = (await workspaces.listMembers(as(owner), ws)).find((row) => row.name === "Spare" || row.placeholder);
+	if (!found) throw new Error("no other member");
+	return found.id;
+};
+let counter = 0;
+const unique = (prefix: string) => `${prefix} ${++counter}`;
+
+const OPERATIONS: ReadonlyArray<Operation> = [
+	// Reading
+	{ name: "getProject", need: "read", run: ({ ws, key }, caller) => projects.getProject(caller, ws, key) },
+	{ name: "listTasks", need: "read", run: ({ ws, key }, caller) => tasks.listTasks(caller, ws, key) },
+	{
+		name: "listProjectMembers",
+		need: "read",
+		run: ({ ws, key }, caller) => projects.listProjectMembers(caller, ws, key),
+	},
+	{ name: "listTrash", need: "read", run: ({ ws, key }, caller) => tasks.listTrash(caller, ws, key) },
+	{
+		name: "getTask",
+		need: "read",
+		run: async (context, caller) => tasks.getTask(caller, context.ws, (await ownerTask(context)).ref),
+	},
+	// Editing tasks
+	{
+		name: "createTask",
+		need: "edit",
+		run: ({ ws, key }, caller) => tasks.createTask(caller, { ws, key, title: "New" }),
+	},
+	{
+		name: "updateTask",
+		need: "edit",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			return tasks.updateTask(caller, {
+				ws: context.ws,
+				ref: task.ref,
+				version: task.version,
+				title: "Renamed",
+				description: "<p>Body</p>",
+			});
+		},
+	},
+	{
+		name: "patchTask",
+		need: "edit",
+		run: async (context, caller) =>
+			tasks.patchTask(caller, { ws: context.ws, ref: (await ownerTask(context)).ref, priority: 3 }),
+	},
+	{
+		name: "moveTask",
+		need: "edit",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			const { statuses } = await ownerBoard(context);
+			return tasks.moveTask(caller, {
+				ws: context.ws,
+				ref: task.ref,
+				statusId: statuses[2]?.id ?? "",
+				position: "a5",
+			});
+		},
+	},
+	{
+		name: "setChecklist",
+		need: "edit",
+		run: async (context, caller) =>
+			tasks.setChecklist(caller, {
+				ws: context.ws,
+				ref: (await ownerTask(context)).ref,
+				checklist: [{ id: crypto.randomUUID(), text: "One", done: false }],
+			}),
+	},
+	{
+		name: "trashTask",
+		need: "edit",
+		run: async (context, caller) => tasks.trashTask(caller, context.ws, (await ownerTask(context)).ref),
+	},
+	{
+		name: "restoreTask",
+		need: "edit",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			await tasks.trashTask(as(context.owner), context.ws, task.ref);
+			return tasks.restoreTask(caller, context.ws, task.ref);
+		},
+	},
+	// Running the project (its lead's)
+	{
+		name: "updateProject",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const project = await projects.getProject(as(owner), ws, key);
+			return projects.updateProject(caller, { ws, key, version: project.version, name: "Renamed" });
+		},
+	},
+	{
+		name: "setProjectState",
+		need: "manage",
+		run: ({ ws, key }, caller) => projects.setProjectState(caller, { ws, key, health: "at_risk" }),
+	},
+	{
+		name: "setProjectArchived",
+		need: "manage",
+		run: async ({ ws, key }, caller) => {
+			await projects.setProjectArchived(caller, { ws, key, archived: true });
+			return projects.setProjectArchived(caller, { ws, key, archived: false });
+		},
+	},
+	{
+		name: "setProjectMember",
+		need: "manage",
+		run: async (context, caller) =>
+			projects.setProjectMember(caller, {
+				ws: context.ws,
+				key: context.key,
+				memberId: await otherMember(context),
+				role: "viewer",
+			}),
+	},
+	{
+		name: "removeProjectMember",
+		need: "manage",
+		run: async (context, caller) => {
+			const memberId = await otherMember(context);
+			await projects.setProjectMember(as(context.owner), {
+				ws: context.ws,
+				key: context.key,
+				memberId,
+				role: "member",
+			});
+			return projects.removeProjectMember(caller, { ws: context.ws, key: context.key, memberId });
+		},
+	},
+	{
+		name: "createStatus",
+		need: "manage",
+		run: ({ ws, key }, caller) =>
+			workflow.createStatus(caller, { ws, key, name: unique("Review"), category: "started" }),
+	},
+	{
+		name: "updateStatus",
+		need: "manage",
+		run: async (context, caller) => {
+			const { statuses } = await ownerBoard(context);
+			return workflow.updateStatus(caller, {
+				ws: context.ws,
+				key: context.key,
+				id: statuses[0]?.id ?? "",
+				color: "pink",
+			});
+		},
+	},
+	{
+		name: "deleteStatus",
+		need: "manage",
+		run: async (context, caller) => {
+			const status = await workflow.createStatus(as(context.owner), {
+				ws: context.ws,
+				key: context.key,
+				name: unique("Spare"),
+				category: "started",
+			});
+			return workflow.deleteStatus(caller, { ws: context.ws, key: context.key, id: status.id });
+		},
+	},
+	{
+		name: "createLabel",
+		need: "manage",
+		run: ({ ws, key }, caller) => workflow.createLabel(caller, { ws, key, name: unique("Label") }),
+	},
+	{
+		name: "updateLabel",
+		need: "manage",
+		run: async (context, caller) => {
+			const label = await workflow.createLabel(as(context.owner), {
+				ws: context.ws,
+				key: context.key,
+				name: unique("Label"),
+			});
+			return workflow.updateLabel(caller, { ws: context.ws, key: context.key, id: label.id, color: "green" });
+		},
+	},
+	{
+		name: "deleteLabel",
+		need: "manage",
+		run: async (context, caller) => {
+			const label = await workflow.createLabel(as(context.owner), {
+				ws: context.ws,
+				key: context.key,
+				name: unique("Label"),
+			});
+			return workflow.deleteLabel(caller, { ws: context.ws, key: context.key, id: label.id });
+		},
+	},
+];
+
+type Level = "none" | "read" | "comment" | "edit" | "manage";
+const RANK: Record<Level, number> = { none: 0, read: 1, comment: 2, edit: 3, manage: 4 };
+const expected = (level: Level, need: Need) =>
+	RANK[level] >= RANK[need] ? "ok" : level === "none" ? "NOT_FOUND" : "FORBIDDEN";
+
+/** What each caller may do, per context: the table in docs/guides/taskline.md. */
+const MATRIX: ReadonlyArray<{ context: Context; title: string; levels: Partial<Record<Caller, Level>> }> = [
+	{
+		title: "a team-visible project",
+		context: { ws: "team", key: "WEB", owner: "lead" },
+		levels: {
+			lead: "manage",
+			member: "edit",
+			viewer: "comment",
+			deactivated: "none",
+			outsider: "none",
+			guest: "none",
+			reader: "read",
+			manager: "manage",
+		},
+	},
+	{
+		title: "a private project",
+		context: { ws: "team", key: "SEC", owner: "lead" },
+		levels: {
+			lead: "manage",
+			member: "none",
+			viewer: "none",
+			deactivated: "none",
+			outsider: "none",
+			guest: "none",
+			reader: "read",
+			manager: "manage",
+		},
+	},
+	{
+		title: "a guest's sandbox",
+		context: { ws: "sandbox", key: "WEB", owner: "guest" },
+		levels: { guest: "manage", outsider: "none", lead: "none", reader: "none", manager: "none" },
+	},
+];
+
+describe("the Taskline access matrix", () => {
+	for (const { title, context, levels } of MATRIX) {
+		describe(title, () => {
+			for (const [caller, level] of Object.entries(levels) as Array<[Caller, Level]>) {
+				it(`${caller}: ${level}`, async () => {
+					await setUp();
+					const outcomes: Record<string, string> = {};
+					const wanted: Record<string, string> = {};
+					for (const operation of OPERATIONS) {
+						outcomes[operation.name] = await code(operation.run(context, as(caller)));
+						wanted[operation.name] = expected(level, operation.need);
+					}
+					expect(outcomes).toEqual(wanted);
+				});
+			}
+		});
+	}
+});
+
+describe("the workspace", () => {
+	beforeEach(setUp);
+
+	it("lists the team only for its active members and the taskline: permissions, and each caller's own sandbox", async () => {
+		const segments = async (caller: Caller) =>
+			(await workspaces.listWorkspaces(as(caller))).map((workspace) => workspace.segment);
+		expect(await segments("lead")).toEqual(["team"]);
+		expect(await segments("viewer")).toEqual(["team"]);
+		expect(await segments("reader")).toEqual(["team"]);
+		expect(await segments("deactivated")).toEqual([]);
+		expect(await segments("outsider")).toEqual(["sandbox"]);
+		expect(await segments("guest")).toEqual(["sandbox"]);
+	});
+
+	it("opens the team to members and admins, and to nobody else", async () => {
+		expect((await workspaces.getWorkspace(as("viewer"), "team")).me?.role).toBe("viewer");
+		expect((await workspaces.getWorkspace(as("reader"), "team")).me).toBeNull();
+		for (const caller of ["deactivated", "outsider", "guest"] as const) {
+			expect(await code(workspaces.getWorkspace(as(caller), "team"))).toBe("NOT_FOUND");
+			expect(await code(workspaces.listMembers(as(caller), "team"))).toBe("NOT_FOUND");
+			expect(await code(projects.listProjects(as(caller), { ws: "team" }))).toBe("NOT_FOUND");
+		}
+		expect(await code(workspaces.getWorkspace(as("lead"), "sandbox"))).toBe("NOT_FOUND");
+		expect(await code(workspaces.getWorkspace(as("lead"), "elsewhere"))).toBe("NOT_FOUND");
+	});
+
+	it("lists the projects each caller may see", async () => {
+		const keys = async (caller: Caller) =>
+			(await projects.listProjects(as(caller), { ws: "team" })).map((project) => project.key);
+		expect(await keys("lead")).toEqual(["SEC", "WEB"]);
+		expect(await keys("member")).toEqual(["WEB"]);
+		expect(await keys("viewer")).toEqual(["WEB"]);
+		expect(await keys("reader")).toEqual(["SEC", "WEB"]);
+		expect(await keys("manager")).toEqual(["SEC", "WEB"]);
+	});
+
+	it("lets admins create team projects, and members only when the settings say so", async () => {
+		expect(await code(projects.createProject(as("member"), { ws: "team", key: "NEW", name: "New" }))).toBe("FORBIDDEN");
+		expect(await code(projects.createProject(as("reader"), { ws: "team", key: "NEW", name: "New" }))).toBe("FORBIDDEN");
+		expect(await code(projects.createProject(as("manager"), { ws: "team", key: "NEW", name: "New" }))).toBe("ok");
+		await env.db
+			.update(schema.tlWorkspace)
+			.set({ settings: { projectCreation: "members" } })
+			.where(eq(schema.tlWorkspace.kind, "team"));
+		expect(await code(projects.createProject(as("member"), { ws: "team", key: "MEM", name: "Mine" }))).toBe("ok");
+		expect(await code(projects.createProject(as("viewer"), { ws: "team", key: "VIEW", name: "Mine" }))).toBe(
+			"FORBIDDEN",
+		);
+		expect(await code(projects.createProject(as("guest"), { ws: "sandbox", key: "TRY", name: "Mine" }))).toBe("ok");
+	});
+
+	it("lets team members join team-visible projects when allowed, and stars only for members", async () => {
+		expect((await projects.joinProject(as("member"), { ws: "team", key: "WEB" })).role).toBe("member");
+		expect(await code(projects.joinProject(as("viewer"), { ws: "team", key: "WEB" }))).toBe("FORBIDDEN");
+		expect(await code(projects.joinProject(as("member"), { ws: "team", key: "SEC" }))).toBe("NOT_FOUND");
+		expect(await code(projects.joinProject(as("reader"), { ws: "team", key: "WEB" }))).toBe("FORBIDDEN");
+		await env.db
+			.update(schema.tlWorkspace)
+			.set({ settings: { membersCanJoin: false } })
+			.where(eq(schema.tlWorkspace.kind, "team"));
+		expect(await code(projects.joinProject(as("spare"), { ws: "team", key: "WEB" }))).toBe("FORBIDDEN");
+
+		await projects.setProjectStar(as("viewer"), { ws: "team", key: "WEB", starred: true });
+		expect((await projects.getProject(as("viewer"), "team", "WEB")).starred).toBe(true);
+		expect((await projects.getProject(as("lead"), "team", "WEB")).starred).toBe(false);
+		expect(await code(projects.setProjectStar(as("reader"), { ws: "team", key: "WEB", starred: true }))).toBe(
+			"FORBIDDEN",
+		);
+	});
+
+	it("refuses ids from another project or workspace as not found", async () => {
+		const sandbox = await tasks.listTasks(as("guest"), "sandbox", "WEB");
+		const security = await tasks.listTasks(as("lead"), "team", "SEC");
+		const placeholder = sandbox.members.find((member) => member.placeholder)?.id ?? "";
+		const task = await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Mine" });
+		const foreignTask = sandbox.tasks[0]?.id ?? "";
+		const ws = "team";
+		expect(await code(tasks.patchTask(as("lead"), { ws, ref: task.ref, assigneeId: placeholder }))).toBe("NOT_FOUND");
+		expect(await code(tasks.patchTask(as("lead"), { ws, ref: task.ref, parentId: foreignTask }))).toBe("NOT_FOUND");
+		expect(
+			await code(tasks.patchTask(as("lead"), { ws, ref: task.ref, labelIds: [sandbox.labels[0]?.id ?? ""] })),
+		).toBe("NOT_FOUND");
+		expect(
+			await code(
+				tasks.moveTask(as("lead"), { ws, ref: task.ref, statusId: security.statuses[0]?.id ?? "", position: "a1" }),
+			),
+		).toBe("NOT_FOUND");
+		expect(
+			await code(projects.setProjectMember(as("lead"), { ws, key: "WEB", memberId: placeholder, role: "member" })),
+		).toBe("NOT_FOUND");
+		expect(await code(tasks.getTask(as("lead"), ws, "WEB-999"))).toBe("NOT_FOUND");
+		expect(await code(tasks.getTask(as("lead"), ws, "not-a-ref"))).toBe("NOT_FOUND");
+	});
+});
