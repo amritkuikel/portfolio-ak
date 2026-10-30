@@ -128,7 +128,7 @@
 		"auth": "^1.7.6",
 		"babel-plugin-react-compiler": "1.0.0",
 		"drizzle-kit": "^0.31.11",
-		"jsdom": "^30.1.1",
+		"jsdom": "^30.1.3",
 		"knip": "^6.42.0",
 		"lefthook": "^2.2.2",
 		"playwright": "1.64.0",
