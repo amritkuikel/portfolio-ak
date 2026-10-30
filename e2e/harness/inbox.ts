@@ -61,6 +61,57 @@ async function kanbanBoard(query: DemoQuery, email: string | null) {
 	);
 	return { id: board };
 }
+
+const ownerOf = async (query: DemoQuery, email: string | null) => {
+	const { rows } = await query(`select "id" from "user" where "email" = $1`, [email]);
+	const owner = rows[0]?.id;
+	if (!owner) throw new Error(`no user ${email}`);
+	return owner;
+};
+
+/**
+ * A user's review note, made on first ask: a body with a heading and a list, tags, and
+ * shared (its token is the public page's). For the editor and the shared page's review.
+ */
+async function reviewNote(query: DemoQuery, email: string | null) {
+	const owner = await ownerOf(query, email);
+	const { rows: found } = await query(
+		`select "id", "share_token" as "token" from "note" where "owner_id" = $1 and "title" = 'Review note'`,
+		[owner],
+	);
+	if (found[0]) return found[0];
+	const { rows } = await query(
+		`insert into "note" ("owner_id", "title", "body", "body_text", "tags", "pinned", "share_token")
+		values ($1, 'Review note', '<h2>Packing</h2><ul><li><p>Boots</p></li><li><p>A long line of text that has to wrap on a phone without pushing the page sideways</p></li></ul>', 'Packing
+Boots', '{trek,review}', true, $2)
+		returning "id", "share_token" as "token"`,
+		[owner, randomUUID().replaceAll("-", "")],
+	);
+	return rows[0];
+}
+
+/** A user's review link, made on first ask, with clicks from a few places over the last days. */
+async function reviewLink(query: DemoQuery, email: string | null) {
+	const owner = await ownerOf(query, email);
+	const { rows: found } = await query(
+		`select "id", "slug" from "link" where "owner_id" = $1 and "title" = 'Review link'`,
+		[owner],
+	);
+	if (found[0]) return found[0];
+	const slug = `review-${randomUUID().slice(0, 8)}`;
+	const { rows } = await query(
+		`insert into "link" ("owner_id", "slug", "target", "title") values ($1, $2, 'https://example.com/a/rather/long/path?with=query', 'Review link') returning "id", "slug"`,
+		[owner, slug],
+	);
+	const link = rows[0];
+	await query(
+		`insert into "link_click" ("owner_id", "link_id", "at", "referrer_host", "country", "device")
+		select $1, $2, now() - (n || ' hours')::interval, (array['news.example', null, 'social.example'])[n % 3 + 1], (array['NP', 'IN', null])[n % 3 + 1], (array['mobile', 'desktop', 'tablet'])[n % 3 + 1]
+		from generate_series(1, 24) as n`,
+		[owner, link?.id],
+	);
+	return link;
+}
 // apps:end
 
 export async function serveHarness(port: number, query: DemoQuery) {
@@ -119,6 +170,8 @@ export async function serveHarness(port: number, query: DemoQuery) {
 			// apps:start
 			if (route === "GET /e2e/kanban-board")
 				return send(response, 200, await kanbanBoard(query, url.searchParams.get("email")));
+			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));
+			if (route === "GET /e2e/link") return send(response, 200, await reviewLink(query, url.searchParams.get("email")));
 			// apps:end
 			return send(response, 404, { error: `no route ${route}` });
 		} catch (error) {

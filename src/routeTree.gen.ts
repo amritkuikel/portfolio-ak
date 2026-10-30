@@ -38,9 +38,11 @@ import { Route as DevExamplesRouteRouteImport } from './routes/dev/examples/rout
 import { Route as DevFormsRouteImport } from './routes/dev/forms'
 import { Route as DevStackRouteImport } from './routes/dev/stack'
 import { Route as DevTestCrudRouteRouteImport } from './routes/dev/test-crud/route'
+import { Route as LSlugRouteImport } from './routes/l/$slug'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminAppsRouteImport } from './routes/_admin/admin/apps'
 import { Route as AdminAdminAuditRouteRouteImport } from './routes/_admin/admin/audit/route'
+import { Route as AdminAdminLinksRouteImport } from './routes/_admin/admin/links'
 import { Route as AdminAdminMediaRouteImport } from './routes/_admin/admin/media'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
@@ -95,6 +97,10 @@ import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin
 import { Route as AdminAdminUsersIndexRouteImport } from './routes/_admin/admin/users/index'
 import { Route as AppsAppsKanbanIndexRouteImport } from './routes/_apps/apps/kanban/index'
 import { Route as AppsAppsKanbanBoardIdRouteImport } from './routes/_apps/apps/kanban/$boardId'
+import { Route as AppsAppsLinksIndexRouteImport } from './routes/_apps/apps/links/index'
+import { Route as AppsAppsLinksLinkIdRouteImport } from './routes/_apps/apps/links/$linkId'
+import { Route as AppsAppsNotesIndexRouteImport } from './routes/_apps/apps/notes/index'
+import { Route as AppsAppsNotesNoteIdRouteImport } from './routes/_apps/apps/notes/$noteId'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
 import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
@@ -103,6 +109,7 @@ import { Route as AdminAdminPortfolioJournalNewRouteImport } from './routes/_adm
 import { Route as AdminAdminPortfolioProjectsIndexRouteImport } from './routes/_admin/admin/portfolio/projects/index'
 import { Route as AdminAdminPortfolioProjectsIdRouteImport } from './routes/_admin/admin/portfolio/projects/$id'
 import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_admin/admin/portfolio/projects/new'
+import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -243,6 +250,11 @@ const DevTestCrudRouteRoute = DevTestCrudRouteRouteImport.update({
   path: '/test-crud',
   getParentRoute: () => DevRouteRoute,
 } as any)
+const LSlugRoute = LSlugRouteImport.update({
+  id: '/l/$slug',
+  path: '/l/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -256,6 +268,11 @@ const AdminAdminAppsRoute = AdminAdminAppsRouteImport.update({
 const AdminAdminAuditRouteRoute = AdminAdminAuditRouteRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
+const AdminAdminLinksRoute = AdminAdminLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
 const AdminAdminMediaRoute = AdminAdminMediaRouteImport.update({
@@ -539,6 +556,26 @@ const AppsAppsKanbanBoardIdRoute = AppsAppsKanbanBoardIdRouteImport.update({
   path: '/apps/kanban/$boardId',
   getParentRoute: () => AppsRoute,
 } as any)
+const AppsAppsLinksIndexRoute = AppsAppsLinksIndexRouteImport.update({
+  id: '/apps/links/',
+  path: '/apps/links/',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsLinksLinkIdRoute = AppsAppsLinksLinkIdRouteImport.update({
+  id: '/apps/links/$linkId',
+  path: '/apps/links/$linkId',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsNotesIndexRoute = AppsAppsNotesIndexRouteImport.update({
+  id: '/apps/notes/',
+  path: '/apps/notes/',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AppsAppsNotesNoteIdRoute = AppsAppsNotesNoteIdRouteImport.update({
+  id: '/apps/notes/$noteId',
+  path: '/apps/notes/$noteId',
+  getParentRoute: () => AppsRoute,
+} as any)
 const DevExamplesMaskingIndexRoute = DevExamplesMaskingIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -585,6 +622,11 @@ const AdminAdminPortfolioProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
   } as any)
+const AppsAppsNotesSTokenRoute = AppsAppsNotesSTokenRouteImport.update({
+  id: '/apps/notes/s/$token',
+  path: '/apps/notes/s/$token',
+  getParentRoute: () => AppsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
@@ -609,6 +651,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/l/$slug': typeof LSlugRoute
   '/dev/': typeof DevIndexRoute
   '/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
   '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
@@ -616,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
   '/admin/apps': typeof AdminAdminAppsRoute
+  '/admin/links': typeof AdminAdminLinksRoute
   '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
@@ -662,17 +706,22 @@ export interface FileRoutesByFullPath {
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
+  '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
+  '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
   '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
+  '/apps/links/': typeof AppsAppsLinksIndexRoute
+  '/apps/notes/': typeof AppsAppsNotesIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
 }
@@ -695,8 +744,10 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/l/$slug': typeof LSlugRoute
   '/dev': typeof DevIndexRoute
   '/admin/apps': typeof AdminAdminAppsRoute
+  '/admin/links': typeof AdminAdminLinksRoute
   '/admin/media': typeof AdminAdminMediaRoute
   '/account/delete': typeof AuthedAccountDeleteRoute
   '/journal/$slug': typeof SiteJournalSlugRoute
@@ -741,17 +792,22 @@ export interface FileRoutesByTo {
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
+  '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
+  '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
   '/apps/kanban': typeof AppsAppsKanbanIndexRoute
+  '/apps/links': typeof AppsAppsLinksIndexRoute
+  '/apps/notes': typeof AppsAppsNotesIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
 }
@@ -784,6 +840,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/dev/forms': typeof DevFormsRoute
   '/dev/stack': typeof DevStackRoute
+  '/l/$slug': typeof LSlugRoute
   '/_site/': typeof SiteIndexRoute
   '/dev/': typeof DevIndexRoute
   '/_admin/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
@@ -792,6 +849,7 @@ export interface FileRoutesById {
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
   '/_admin/admin/apps': typeof AdminAdminAppsRoute
+  '/_admin/admin/links': typeof AdminAdminLinksRoute
   '/_admin/admin/media': typeof AdminAdminMediaRoute
   '/_authed/account_/delete': typeof AuthedAccountDeleteRoute
   '/_site/journal/$slug': typeof SiteJournalSlugRoute
@@ -838,17 +896,22 @@ export interface FileRoutesById {
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/_apps/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
+  '/_apps/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
+  '/_apps/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
   '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
+  '/_apps/apps/links/': typeof AppsAppsLinksIndexRoute
+  '/_apps/apps/notes/': typeof AppsAppsNotesIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
 }
@@ -877,6 +940,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/l/$slug'
     | '/dev/'
     | '/admin/audit'
     | '/admin/roles'
@@ -884,6 +948,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/dev/examples/masking'
     | '/admin/apps'
+    | '/admin/links'
     | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
@@ -930,17 +995,22 @@ export interface FileRouteTypes {
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/apps/kanban/$boardId'
+    | '/apps/links/$linkId'
+    | '/apps/notes/$noteId'
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
     | '/admin/roles/'
     | '/admin/test-crud/'
     | '/admin/users/'
     | '/apps/kanban/'
+    | '/apps/links/'
+    | '/apps/notes/'
     | '/dev/examples/masking/'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/apps/notes/s/$token'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
   fileRoutesByTo: FileRoutesByTo
@@ -963,8 +1033,10 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/l/$slug'
     | '/dev'
     | '/admin/apps'
+    | '/admin/links'
     | '/admin/media'
     | '/account/delete'
     | '/journal/$slug'
@@ -1009,17 +1081,22 @@ export interface FileRouteTypes {
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/apps/kanban/$boardId'
+    | '/apps/links/$linkId'
+    | '/apps/notes/$noteId'
     | '/dev/examples/masking/$id'
     | '/admin/audit'
     | '/admin/roles'
     | '/admin/test-crud'
     | '/admin/users'
     | '/apps/kanban'
+    | '/apps/links'
+    | '/apps/notes'
     | '/dev/examples/masking'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/apps/notes/s/$token'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
   id:
@@ -1051,6 +1128,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/dev/forms'
     | '/dev/stack'
+    | '/l/$slug'
     | '/_site/'
     | '/dev/'
     | '/_admin/admin/audit'
@@ -1059,6 +1137,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/users'
     | '/dev/examples/masking'
     | '/_admin/admin/apps'
+    | '/_admin/admin/links'
     | '/_admin/admin/media'
     | '/_authed/account_/delete'
     | '/_site/journal/$slug'
@@ -1105,17 +1184,22 @@ export interface FileRouteTypes {
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
     | '/_apps/apps/kanban/$boardId'
+    | '/_apps/apps/links/$linkId'
+    | '/_apps/apps/notes/$noteId'
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
     | '/_apps/apps/kanban/'
+    | '/_apps/apps/links/'
+    | '/_apps/apps/notes/'
     | '/dev/examples/masking/'
     | '/_admin/admin/portfolio/journal/$id'
     | '/_admin/admin/portfolio/journal/new'
     | '/_admin/admin/portfolio/projects/$id'
     | '/_admin/admin/portfolio/projects/new'
+    | '/_apps/apps/notes/s/$token'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
   fileRoutesById: FileRoutesById
@@ -1132,6 +1216,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  LSlugRoute: typeof LSlugRoute
   ApiAccountExportRoute: typeof ApiAccountExportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -1341,6 +1426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevTestCrudRouteRouteImport
       parentRoute: typeof DevRouteRoute
     }
+    '/l/$slug': {
+      id: '/l/$slug'
+      path: '/l/$slug'
+      fullPath: '/l/$slug'
+      preLoaderRoute: typeof LSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_admin/admin/': {
       id: '/_admin/admin/'
       path: '/'
@@ -1360,6 +1452,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/admin/audit'
       preLoaderRoute: typeof AdminAdminAuditRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/links': {
+      id: '/_admin/admin/links'
+      path: '/links'
+      fullPath: '/admin/links'
+      preLoaderRoute: typeof AdminAdminLinksRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
     '/_admin/admin/media': {
@@ -1740,6 +1839,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppsKanbanBoardIdRouteImport
       parentRoute: typeof AppsRoute
     }
+    '/_apps/apps/links/': {
+      id: '/_apps/apps/links/'
+      path: '/apps/links'
+      fullPath: '/apps/links/'
+      preLoaderRoute: typeof AppsAppsLinksIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/links/$linkId': {
+      id: '/_apps/apps/links/$linkId'
+      path: '/apps/links/$linkId'
+      fullPath: '/apps/links/$linkId'
+      preLoaderRoute: typeof AppsAppsLinksLinkIdRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/notes/': {
+      id: '/_apps/apps/notes/'
+      path: '/apps/notes'
+      fullPath: '/apps/notes/'
+      preLoaderRoute: typeof AppsAppsNotesIndexRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/_apps/apps/notes/$noteId': {
+      id: '/_apps/apps/notes/$noteId'
+      path: '/apps/notes/$noteId'
+      fullPath: '/apps/notes/$noteId'
+      preLoaderRoute: typeof AppsAppsNotesNoteIdRouteImport
+      parentRoute: typeof AppsRoute
+    }
     '/dev/examples/masking/': {
       id: '/dev/examples/masking/'
       path: '/'
@@ -1795,6 +1922,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/portfolio/projects/new'
       preLoaderRoute: typeof AdminAdminPortfolioProjectsNewRouteImport
       parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
+    }
+    '/_apps/apps/notes/s/$token': {
+      id: '/_apps/apps/notes/s/$token'
+      path: '/apps/notes/s/$token'
+      fullPath: '/apps/notes/s/$token'
+      preLoaderRoute: typeof AppsAppsNotesSTokenRouteImport
+      parentRoute: typeof AppsRoute
     }
   }
 }
@@ -1997,6 +2131,7 @@ interface AdminAdminRouteRouteChildren {
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
   AdminAdminAppsRoute: typeof AdminAdminAppsRoute
+  AdminAdminLinksRoute: typeof AdminAdminLinksRoute
   AdminAdminMediaRoute: typeof AdminAdminMediaRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminPortfolioJournalRouteRoute: typeof AdminAdminPortfolioJournalRouteRouteWithChildren
@@ -2016,6 +2151,7 @@ const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
   AdminAdminAppsRoute: AdminAdminAppsRoute,
+  AdminAdminLinksRoute: AdminAdminLinksRoute,
   AdminAdminMediaRoute: AdminAdminMediaRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminPortfolioJournalRouteRoute:
@@ -2048,13 +2184,23 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface AppsRouteChildren {
   AppsAppsIndexRoute: typeof AppsAppsIndexRoute
   AppsAppsKanbanBoardIdRoute: typeof AppsAppsKanbanBoardIdRoute
+  AppsAppsLinksLinkIdRoute: typeof AppsAppsLinksLinkIdRoute
+  AppsAppsNotesNoteIdRoute: typeof AppsAppsNotesNoteIdRoute
   AppsAppsKanbanIndexRoute: typeof AppsAppsKanbanIndexRoute
+  AppsAppsLinksIndexRoute: typeof AppsAppsLinksIndexRoute
+  AppsAppsNotesIndexRoute: typeof AppsAppsNotesIndexRoute
+  AppsAppsNotesSTokenRoute: typeof AppsAppsNotesSTokenRoute
 }
 
 const AppsRouteChildren: AppsRouteChildren = {
   AppsAppsIndexRoute: AppsAppsIndexRoute,
   AppsAppsKanbanBoardIdRoute: AppsAppsKanbanBoardIdRoute,
+  AppsAppsLinksLinkIdRoute: AppsAppsLinksLinkIdRoute,
+  AppsAppsNotesNoteIdRoute: AppsAppsNotesNoteIdRoute,
   AppsAppsKanbanIndexRoute: AppsAppsKanbanIndexRoute,
+  AppsAppsLinksIndexRoute: AppsAppsLinksIndexRoute,
+  AppsAppsNotesIndexRoute: AppsAppsNotesIndexRoute,
+  AppsAppsNotesSTokenRoute: AppsAppsNotesSTokenRoute,
 }
 
 const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
@@ -2139,6 +2285,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
+  LSlugRoute: LSlugRoute,
   ApiAccountExportRoute: ApiAccountExportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

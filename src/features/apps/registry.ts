@@ -1,4 +1,4 @@
-import { type LucideIcon, SquareKanbanIcon } from "lucide-react";
+import { Link2Icon, type LucideIcon, NotebookTextIcon, SquareKanbanIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -10,7 +10,7 @@ import { m } from "@/paraglide/messages";
  * the visitor has a session, its inner pages private. A portfolio project links to it
  * by naming the slug in its "App" field.
  */
-export const APP_SLUGS = ["kanban"] as const;
+export const APP_SLUGS = ["kanban", "notes", "links"] as const;
 export type AppSlug = (typeof APP_SLUGS)[number];
 
 export type AppEntry = {
@@ -33,6 +33,22 @@ export const APPS: ReadonlyArray<AppEntry> = [
 		description: m.kanban_description,
 		icon: SquareKanbanIcon,
 		rows: { boards: m.kanban_usage_boards, cards: m.kanban_usage_cards },
+	},
+	{
+		slug: "notes",
+		name: m.notes_name,
+		tagline: m.notes_tagline,
+		description: m.notes_description,
+		icon: NotebookTextIcon,
+		rows: { notes: m.notes_usage_notes, shared: m.notes_usage_shared, images: m.notes_usage_images },
+	},
+	{
+		slug: "links",
+		name: m.links_name,
+		tagline: m.links_tagline,
+		description: m.links_description,
+		icon: Link2Icon,
+		rows: { links: m.links_usage_links, clicks: m.links_usage_clicks },
 	},
 ];
 

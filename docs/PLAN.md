@@ -933,7 +933,7 @@ The owner runs one task per session and clears the context between tasks. A sess
 | 39 | The dynamic portfolio: tables, admin, media library, public reads | high | Done (decisions 0176–0178) |
 | 40 | "Himal" portfolio redesign at `/` | xhigh | Done (decisions 0179–0184) |
 | 41 | Apps platform (guest sessions, shell, registry) and Kanban | xhigh | Done (decisions 0185–0189) |
-| 42 | Notes and Links | high | |
+| 42 | Notes and Links | high | Done (decisions 0190–0191) |
 | 43 | Expenses and Habits | high | |
 | 44 | Forms (survey builder) | high | |
 | 45 | Wrap-up: guides, measurements, full review | medium | |
@@ -1381,30 +1381,52 @@ The owner runs one task per session and clears the context between tasks. A sess
 - To link Kanban to its case study, write the project and set its "App" field to `kanban`.
 - Scratch copy to delete: `C:\tw7` (no longer a git worktree, just a folder this session couldn't remove).
 
-### Task 42: Notes and Links
+### Task 42: Notes and Links (done)
 
-**Notes** (`/apps/notes`):
-- **Table:** `notes` with title, body (sanitized HTML, `src/server/rich-text`), body text, tags text[], pinned, archived, and `search tsvector` generated from title and body text with the `simple` configuration (it works in PGlite and for Devanagari; Postgres has no Nepali stemmer).
-- **Search:** `websearch_to_tsquery('simple', q)` with a GIN index.
-- **Editor:** Tiptap (the existing `RichTextField`), tags, pin, archive, and image attachments (`entity_type` `note`).
-- **Sharing:** `share_token` (nullable, unique, random, revocable). A public read-only page at `/apps/notes/s/$token` with `noindex` and the `X-Robots-Tag` header; registered users only.
-- **List:** a TanStack DB live list.
+**Notes (0190):**
+- **Table `note`** (**migration `0013_notes_links`**, with Links' tables): title, sanitized body, `body_text`, tags, pinned, archived, `share_token`, and a stored generated `search tsvector` (title A, body text B, the `simple` configuration) with a GIN index. Devanagari words with vowel signs stay whole tokens in PGlite.
+- **Search:** `websearch_to_tsquery('simple', q)` ranked by `ts_rank`; the server returns ids, the list shows those rows of its collection. The search box is the shared `FilterBar`.
+- **List:** a TanStack DB collection (new, pin, archive, delete optimistic, rolled back with a toast); the archive and a tag are links.
+- **Editor:** `useCrudForm` (stale-version check), `RichTextField`, tags, up to 8 images.
+- **Uploads for app users:** `UploadTransport` on `uploadImage` and `ImageGalleryField` (`transport`, the admin's is the default); Notes' functions on the new `notes` scope, 30 uploads per user per hour; `withAppServices` adds `context.imageStore`.
+- **Sharing:** accounts only; a 144-bit token, revoked by clearing it. `/apps/notes/s/$token` is public, shows no owner or tags, and is `noindex` in the head and in `X-Robots-Tag` (route request middleware, `src/middleware/robots.ts`).
+- **Quotas:** 500 notes. **Guest seed:** three notes (one pinned) in the guest's language.
 
-**Links** (`/apps/links`):
-- **Tables:** `links` (slug unique, target URL, title, active, expires at) and `link_clicks` (link, at, referrer host, country from `x-vercel-ip-country`, device class from the user agent; **no IP**).
-- **Validation:**
-  - Slug: `[a-z0-9-]{3,32}`, not in a reserved list.
-  - Target: http(s) only, never this site's origin, at most 2,048 characters.
-  - Create is rate-limited (30 per hour).
-- **Redirect:** a server route `src/routes/l/$slug.ts` (`server.handlers.GET`, 302).
-  - Inactive, expired or guest-owned links get the localized 404.
-  - The click is recorded with `waitUntil` from `@vercel/functions`, so the redirect doesn't wait.
-  - Not indexed; listed in `NOT_REVIEWED` with a flow test.
-- **Analytics:** charts of clicks over time, top referrers and countries.
-- **QR codes:** `uqr` `renderSVG`, with SVG and PNG download.
-- **Moderation:** `/admin/links` (permission `links:moderate`; disable or delete; audited).
+**Links (0191):**
+- **Tables** `link` (slug unique, target, title, `active`, `expires_at`, `blocked_at`) and `link_click` (`at`, `referrer_host`, `country`, `device`; no IP, no user agent).
+- **Rules:** slugs `[a-z0-9-]{3,32}` minus a reserved list, or 7 random characters; targets http(s), no credentials, ≤ 2,048 characters, never this site's host; the slug never changes; 200 links and 30 creates an hour per user.
+- **Redirect `/l/$slug`:** request middleware (`src/middleware/short-links.ts`) finds the link and the handler returns the 302 (`private, no-store`, `x-robots-tag`) or falls through to the localized 404. Only an account's live link redirects (not paused, expired, blocked or a guest's). Clicks are recorded with `waitUntil`; HEAD isn't counted.
+- **Link page:** 30 days by day in Nepal time (a bar chart), top referrers and countries (ranked bars; country names in English, `lang="en"` in Nepali), devices (a donut), the QR code with SVG and PNG downloads.
+- **Moderation `/admin/links`** (group "Apps", `links:moderate`, admins only by default): every link and its owner, search and state filter, block/unblock (confirmed) and delete, audited (`link.block`, `link.unblock`, `link.delete`); a blocked link stays off whatever its owner does.
+- **Guest seed:** two links with 40 sample clicks; they go live when the guest signs up.
 
-Both apps get a registry entry, `claim`, `seedGuestData`, quotas, tests, stories, review pages and an e2e flow ("a short link redirects and is counted").
+**Shared changes:** both apps in the registries (gallery, switcher, sitemap, `/admin/apps`); `richTextToText` (`src/server/rich-text/sanitize.ts`) and `formatDayMonth` (`src/lib/i18n/intl.ts`), both in `apps` markers; 181 messages written by hand in both languages.
+
+**Tests:**
+- PGlite `apps-notes` (19: ownership, sanitizing, the stale save, pin and archive order, quota, ranked search, phrases and exclusions, Devanagari, any query text, images linked and deleted with the note, someone else's upload refused, guest upload limit, share and revoke, guests refused, seed, claim, usage) and `apps-links` (18: ownership, random and taken slugs, a past expiry, the create limit, quota, the redirect and what a click keeps, HEAD, every non-redirecting state, a blocked link turned on, 30 days in Nepal time and rankings, moderation listing and audit, seed, claim makes links live, usage, device and referrer parsing).
+- Unit `notes-list` (which notes the page shows, in which order).
+- Stories `Apps/Links` (new, invalid, edit, states).
+- e2e `notes-links.spec.ts`: a guest writes and searches notes but can't share; a shared note is public, `noindex` and gone when unshared; a short link redirects and is counted; a guest's short link is a 404. Review pages: `/apps/notes` and `/apps/links` (visitor and member), a note's editor, the shared note (signed out), a link's page, `/admin/links`; `/l/$slug` is in `NOT_REVIEWED`.
+
+**Numbers:**
+- `pnpm test`: 97 files, 792 tests. Storybook: 382 story tests (see the deviations for the flake). `pnpm test:e2e`: 1,046 checks, all passed, none flaky, 13.9 min (Task 41: 946).
+- **Bundle:** entry JS 245.6 → 248.9 kB gzip (budget 250): ten new routes bring their options, loaders and search schemas (0151). On top of the root: the notes list 126.1 kB (TanStack DB, as Kanban), the editor 77.5 kB; the link page's charts load on demand.
+- **Template matrix, all layers** (scratch worktree): strip-demo, build, typecheck, check, knip, test (631) and the migration check pass.
+
+**Deviations:**
+- **Singular table names** (`note`, `link`, `link_click`), like the rest of the schema; the plan said `notes`, `links`, `link_clicks`.
+- **Moderation blocks rather than disables:** `blocked_at` is separate from the owner's `active`, so an owner can't undo a moderator.
+- **The redirect is a route with an empty component and request middleware,** not a plain server route: Start's `next()` falls through only to a route with a component, and such a route may not import server code (0191).
+- **Notes' pin and archive live in the list,** not the editor; the editor saves title, body, tags and images against a version.
+- **Country names stay English in Nepali** (marked `lang="en"`): browsers don't ship Nepali region names.
+- **Entry JS grew 3.3 kB gzip** (the plan says new pages shouldn't grow it); still under the 250 kB budget, with 1.1 kB left. Task 45 should look at route options in the entry.
+- **The Storybook overlay flake is more frequent on this machine:** each full run failed one to three overlay stories, a different one each time (the admin shell's user menu, the confirm and dialog stories, Test CRUD's edit dialog), none of them new; the same files pass when run alone. Recorded in Task 41 as 1 run in 3 to 5.
+- **Found on the way:** the link's click total read 0 (an unqualified column in a subquery) and the per-day query failed in Postgres (a parameterized GROUP BY); both caught by the PGlite tests (guide pitfalls). In dev, the first load of the new pages never finished in the browser on this machine (Vite's cold start), so the pages were checked on the production build (the review and the flows).
+
+**Left for the owner:**
+- Run `pnpm db:migrate` against Neon (migrations `0012_guests_kanban` and `0013_notes_links`).
+- Grant `links:moderate` to a role other than admin if someone else should moderate short links.
+- Scratch folder to delete: `C:\tw8` (no longer a git worktree).
 
 ### Task 43: Expenses and Habits
 

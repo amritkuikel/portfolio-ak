@@ -1,8 +1,32 @@
-import { confirmImageUpload, signImageUpload } from "@/functions/attachments";
+import type { Permission } from "@/features/rbac/permissions";
+import { confirmImageUpload, discardImageUpload, getUploadSettings, signImageUpload } from "@/functions/attachments";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "./constants";
-import type { ImageAsset } from "./schema";
+import type { ImageAsset, UploadTicket } from "./schema";
+
+/**
+ * The server calls of an upload. The admin's (`ADMIN_UPLOADS`) need attachments:upload;
+ * an app passes its own, behind its own guard (Notes' images, decision 0190).
+ */
+export type UploadTransport = {
+	/** Who may upload through it, or null for anyone who can open the form. */
+	permission: Permission | null;
+	/** Query options: whether uploads are configured at all. */
+	settings: { queryKey: ReadonlyArray<string>; queryFn: () => Promise<{ enabled: boolean }> };
+	sign: (scope: UploadScope) => Promise<UploadTicket>;
+	confirm: (scope: UploadScope, publicId: string) => Promise<ImageAsset>;
+	/** Deletes an upload that was never saved with an item. */
+	discard: (id: string) => Promise<void>;
+};
+
+export const ADMIN_UPLOADS: UploadTransport = {
+	permission: "attachments:upload",
+	settings: { queryKey: ["attachments", "settings"], queryFn: () => getUploadSettings() },
+	sign: (scope) => signImageUpload({ data: { scope } }),
+	confirm: (scope, publicId) => confirmImageUpload({ data: { scope, publicId } }),
+	discard: (id) => discardImageUpload({ data: { id } }),
+};
 
 /** A failure the user should see (localized message). */
 export class UploadError extends Error {}
@@ -64,11 +88,15 @@ const cloudinaryMessage = (text: string): string | null => {
 export async function uploadImage(
 	file: File,
 	scope: UploadScope,
-	{ onProgress = () => {}, signal }: { onProgress?: (fraction: number) => void; signal: AbortSignal },
+	{
+		onProgress = () => {},
+		signal,
+		transport = ADMIN_UPLOADS,
+	}: { onProgress?: (fraction: number) => void; signal: AbortSignal; transport?: UploadTransport },
 ): Promise<ImageAsset> {
 	const problem = checkImageFile(file, scope);
 	if (problem) throw new UploadError(problem);
-	const ticket = await signImageUpload({ data: { scope } });
+	const ticket = await transport.sign(scope);
 	await send(ticket.url, ticket.fields, file, onProgress, signal);
-	return confirmImageUpload({ data: { scope, publicId: ticket.publicId } });
+	return transport.confirm(scope, ticket.publicId);
 }

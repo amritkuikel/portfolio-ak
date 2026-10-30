@@ -3,6 +3,8 @@ import type { AppSlug } from "@/features/apps/registry";
 import type { Db } from "@/server/db/types";
 import type { GuestData } from "@/server/guests/data";
 import { claimKanban, kanbanUsage, seedKanban } from "./kanban/service";
+import { claimLinks, linksUsage, seedLinks } from "./links/service";
+import { claimNotes, notesUsage, seedNotes } from "./notes/service";
 
 /** /admin/apps' numbers for one app: who has data (accounts, guests) and how many rows of each kind. */
 export type AppUsage = { accounts: number; guests: number; rows: Record<string, number> };
@@ -17,4 +19,6 @@ export type AppServer = GuestData & { slug: AppSlug; usage: (db: Db) => Promise<
 
 export const APP_SERVERS: ReadonlyArray<AppServer> = [
 	{ slug: "kanban", seedGuestData: seedKanban, claim: claimKanban, usage: kanbanUsage },
+	{ slug: "notes", seedGuestData: seedNotes, claim: claimNotes, usage: notesUsage },
+	{ slug: "links", seedGuestData: seedLinks, claim: claimLinks, usage: linksUsage },
 ];

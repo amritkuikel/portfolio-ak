@@ -129,6 +129,22 @@ export class Harness {
 		if (!row.id) throw new Error(`no Kanban board for ${user}`);
 		return row.id;
 	}
+	/** A user's shared review note: its id and the public page's token (the harness makes it on first ask). */
+	async reviewNote(user: E2EUser): Promise<{ id: string; token: string }> {
+		const email = E2E.users[user].email;
+		const response = await fetch(`${E2E.harnessURL}/e2e/note?email=${encodeURIComponent(email)}`);
+		const row = (await response.json()) as { id?: string; token?: string };
+		if (!row.id || !row.token) throw new Error(`no review note for ${user}`);
+		return { id: row.id, token: row.token };
+	}
+	/** A user's review link, with clicks: its id and slug (the harness makes it on first ask). */
+	async reviewLink(user: E2EUser): Promise<{ id: string; slug: string }> {
+		const email = E2E.users[user].email;
+		const response = await fetch(`${E2E.harnessURL}/e2e/link?email=${encodeURIComponent(email)}`);
+		const row = (await response.json()) as { id?: string; slug?: string };
+		if (!row.id || !row.slug) throw new Error(`no review link for ${user}`);
+		return { id: row.id, slug: row.slug };
+	}
 	// apps:end
 }
 

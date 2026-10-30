@@ -49,6 +49,11 @@ export const AUDIT_ACTIONS = [
 	"media.update",
 	"media.delete",
 	// portfolio:end
+	// apps:start
+	"link.block",
+	"link.unblock",
+	"link.delete",
+	// apps:end
 	// @new-feature:audit-actions
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -68,6 +73,7 @@ export const AUDIT_TARGETS = [
 	"message",
 	"media",
 	// portfolio:end
+	"link", // @apps
 	// @new-feature:audit-targets
 ] as const;
 export type AuditTarget = (typeof AUDIT_TARGETS)[number];

@@ -50,6 +50,11 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "kanban-board-id") {
 		return page.route.replace("$boardId", await harness.kanbanBoardId(page.as ?? "member"));
 	}
+	if (page.params.from === "note-id") return page.route.replace("$noteId", (await harness.reviewNote("member")).id);
+	if (page.params.from === "shared-note-token") {
+		return page.route.replace("$token", (await harness.reviewNote("member")).token);
+	}
+	if (page.params.from === "link-id") return page.route.replace("$linkId", (await harness.reviewLink("member")).id);
 	// apps:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));

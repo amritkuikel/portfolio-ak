@@ -27,6 +27,8 @@ export const PERMISSION_CATALOG = {
 	// apps:start
 	/** The showcase apps' usage (/admin/apps): who has data, and how much. Never the data itself. */
 	apps: ["read"],
+	/** Short links of every user (/admin/links): block, unblock and delete them (decision 0191). */
+	links: ["moderate"],
 	// apps:end
 	// @new-feature:permissions
 } as const;

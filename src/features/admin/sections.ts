@@ -7,6 +7,7 @@ import {
 	InboxIcon, // @portfolio
 	KeyRoundIcon,
 	LayoutGridIcon, // @apps
+	Link2Icon, // @apps
 	type LucideIcon,
 	NotebookPenIcon, // @portfolio
 	PaletteIcon,
@@ -159,6 +160,15 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		permission: "apps:read",
 		group: "apps",
 		keywords: m.admin_keywords_apps,
+	},
+	{
+		...linkOptions({ to: "/admin/links" }),
+		label: m.admin_nav_links,
+		description: m.links_moderation_description,
+		icon: Link2Icon,
+		permission: "links:moderate",
+		group: "apps",
+		keywords: m.admin_keywords_links,
 	},
 	// apps:end
 	{

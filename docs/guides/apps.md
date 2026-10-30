@@ -1,6 +1,6 @@
 # The showcase apps
 
-Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189). Kanban is the first and the reference; Notes, Links, Expenses, Habits and Forms follow it (PLAN.md, Tasks 42–44). The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
+Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189). Kanban is the first and the reference; Notes and Links followed (decisions 0190, 0191), and Expenses, Habits and Forms follow it (PLAN.md, Tasks 43–44). The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
 
 ## How a visit goes
 
@@ -51,6 +51,20 @@ The `_apps` layout mounts `<DbScope>`, so DB is available to every app page and 
 - The board (`components/board.tsx`) only reports moves; the page applies them to the collections. Moves come from dnd-kit (pointer, or Space/arrows/Space) or Alt + arrows on a handle, all computed by `moves.ts` and announced.
 - Quotas: 20 boards, 500 cards per user, 12 columns per board.
 
+## Notes (0190)
+
+- **Search:** a generated `search tsvector` (title A, body text B, the `simple` configuration: no stemming, so Nepali works as written) with a GIN index; `websearch_to_tsquery` takes quoted phrases and `-word`. The server returns ranked ids; the list shows those rows of its TanStack DB collection.
+- **Images:** an app user holds no `attachments:upload`, so the editor gives `ImageGalleryField` Notes' own `UploadTransport` (`features/apps/notes/uploads.ts`, the `notes` scope, 30 uploads an hour). Any app that uploads does the same.
+- **Sharing:** accounts only; a random token, revoked by clearing it. The shared page `/apps/notes/s/$token` is public and `noindex` (in the head and in `X-Robots-Tag`, `src/middleware/robots.ts`).
+- **Quotas:** 500 notes per user, 8 images per note.
+
+## Links (0191)
+
+- **Redirect:** `/l/$slug`. Request middleware (`src/middleware/short-links.ts`) finds the link; the handler returns its 302 or falls through to the localized 404. Only an account's active, unblocked, unexpired link redirects; a guest's never does. The click is recorded with `waitUntil` and keeps no IP: the referrer's host, a country, a device class.
+- **Statistics and QR:** 30 days in Nepal time, top referrers, countries and devices; the QR code as SVG or PNG.
+- **Moderation:** `/admin/links` (`links:moderate`): block or delete, audited. A blocked link stays off whatever its owner does.
+- **Quotas:** 200 links per user, 30 creates an hour; slugs unique across everyone, never changed after creation.
+
 ## Turning guest sessions off
 
 Remove `anonymous(…)` from `src/server/auth/auth.ts` and `anonymousClient()` from `src/lib/auth-client.ts`, and the "Try it" buttons. The guards can stay: they never match without guests.
@@ -60,4 +74,6 @@ Remove `anonymous(…)` from `src/server/auth/auth.ts` and `anonymousClient()` f
 - **A scroll region needs `relative`:** an `sr-only` label inside a sideways-scrolling board is absolutely positioned and escapes the region, widening the page on phones (the review's overflow check). The board's region is `relative`.
 - **Route files never import a collection module:** a loader's import is in every page's JavaScript (0151), and a collection brings TanStack DB with it. Constants a loader needs live in `queries.ts`.
 - **Handlers refetch explicitly:** a query collection's automatic refetch after a handler logs a deprecation warning, which fails the browser review.
+- **A server handler falls through only to a page:** `next()` in a route's `server.handlers` throws unless the route has a component, and a route with a component may not import server code. `/l/$slug` has an empty component behind a `beforeLoad` that throws `notFound()`, and does its lookup in request middleware, which hands the answer to the handler in `context`.
+- **Grouping by a parameterized expression:** `group by to_char(at at time zone $4)` doesn't match `select to_char(at at time zone $1)`, because every value in a `sql` template is its own parameter. Group by position: `` .groupBy(sql`1`) ``.
 - **A two-factor sign-in loses the guest's session:** the password step clears the session cookie before the anonymous plugin's hook runs; the `guest_claim` cookie and `claimGuestData` after sign-in are what keep the data.

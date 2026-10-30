@@ -40,6 +40,10 @@ export const UPLOAD_RULES = {
 	"test-crud": IMAGES,
 	examples: IMAGES,
 	media: MEDIA, // @portfolio
+	// apps:start
+	/** A note's images (/apps/notes, decision 0190): any app user, guests included; no permission. */
+	notes: IMAGES,
+	// apps:end
 } as const satisfies Record<string, UploadRule>;
 export type UploadScope = keyof typeof UPLOAD_RULES;
 export const UPLOAD_SCOPES = Object.keys(UPLOAD_RULES) as [UploadScope, ...UploadScope[]];

@@ -19,7 +19,10 @@ export type ReviewedPage = {
 		| { from: "seeded-slug" }
 		| { from: "portfolio-project-id" } // @portfolio
 		| { from: "portfolio-post-id" } // @portfolio
-		| { from: "kanban-board-id" }; // @apps
+		| { from: "kanban-board-id" } // @apps
+		| { from: "note-id" } // @apps
+		| { from: "shared-note-token" } // @apps
+		| { from: "link-id" }; // @apps
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -124,7 +127,16 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/apps/kanban" },
 	{ route: "/apps/kanban", as: "member", label: "boards" },
 	{ route: "/apps/kanban/$boardId", as: "member", params: { from: "kanban-board-id" } },
+	{ route: "/apps/notes" },
+	{ route: "/apps/notes", as: "member", label: "notes" },
+	{ route: "/apps/notes/$noteId", as: "member", params: { from: "note-id" } },
+	// Public to anyone with the link: reviewed signed out.
+	{ route: "/apps/notes/s/$token", params: { from: "shared-note-token" } },
+	{ route: "/apps/links" },
+	{ route: "/apps/links", as: "member", label: "links" },
+	{ route: "/apps/links/$linkId", as: "member", params: { from: "link-id" } },
 	{ route: "/admin/apps", as: "admin" },
+	{ route: "/admin/links", as: "admin" },
 	// apps:end
 	// @new-feature:reviewed-pages
 	// Errors
@@ -139,6 +151,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/health": "JSON for uptime monitors (checked by e2e/flows/health.spec.ts)",
 	"/api/account/export": "a JSON download (checked by e2e/flows/account.spec.ts)",
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
+	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
 	// @new-feature:not-reviewed
 };
 

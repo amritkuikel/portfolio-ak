@@ -15,6 +15,8 @@
  */
 
 export * from "./apps/kanban"; // @apps
+export * from "./apps/links"; // @apps
+export * from "./apps/notes"; // @apps
 export * from "./attachments";
 export * from "./audit";
 export * from "./auth";

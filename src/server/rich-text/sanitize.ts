@@ -47,3 +47,23 @@ const OPTIONS: sanitizeHtml.IOptions = {
  * rows written by older code or directly in the database).
  */
 export const sanitizeRichText = (html: string): SafeHtml => sanitizeHtml(html, OPTIONS).trim() as SafeHtml;
+
+// apps:start
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", nbsp: " " };
+
+/**
+ * The visible text of sanitized rich text, one line per block: for search and
+ * excerpts (decision 0190). Tags go, entities are decoded, whitespace is collapsed
+ * within a line.
+ */
+export const richTextToText = (html: string): string =>
+	sanitizeHtml(html.replace(/<br\s*\/?>|<\/(p|h2|h3|li|blockquote|pre)>/gi, "$&\n"), {
+		allowedTags: [],
+		allowedAttributes: {},
+	})
+		.replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, name: string) => ENTITIES[name] ?? "")
+		.split("\n")
+		.map((line) => line.replace(/\s+/g, " ").trim())
+		.filter(Boolean)
+		.join("\n");
+// apps:end

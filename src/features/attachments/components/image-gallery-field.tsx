@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useCan } from "@/features/rbac/can";
-import { discardImageUpload, getUploadSettings } from "@/functions/attachments";
 import { formatNumber } from "@/lib/i18n/intl";
 import type { Localized } from "@/lib/i18n/localized";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { IMAGE_MAX_BYTES, type UploadScope, uploadRule } from "../constants";
 import type { ImageAsset } from "../schema";
-import { UploadError, uploadImage } from "../upload";
+import { ADMIN_UPLOADS, UploadError, type UploadTransport, uploadImage } from "../upload";
 import { CloudImage } from "./cloud-image";
 
 /** One image in the field's value: an attachment, its alt text (both languages) and its preview. */
@@ -29,12 +28,6 @@ const ALT_LANGUAGES = [
 
 type Upload = { key: string; name: string; progress: number; error?: string; controller: AbortController };
 
-export const uploadSettingsQueryOptions = () => ({
-	queryKey: ["attachments", "settings"] as const,
-	queryFn: () => getUploadSettings(),
-	staleTime: Number.POSITIVE_INFINITY,
-});
-
 /**
  * A gallery of images for a form: upload (pick or drop files, several at once, with
  * progress and cancel), reorder (the kit's SortableList: drag, keyboard drag or
@@ -43,24 +36,28 @@ export const uploadSettingsQueryOptions = () => ({
  * (uploads stay "pending" until then).
  *
  * `onBusyChange` reports whether uploads are in progress (the form refuses to
- * submit meanwhile). Without attachments:upload the existing images can still be
- * ordered, described and removed, but not added.
+ * submit meanwhile). Without the transport's permission (attachments:upload for the
+ * admin's) the existing images can still be ordered, described and removed, but not
+ * added. `transport` swaps the server calls (an app's own, decision 0190).
  */
 export function ImageGalleryField({
 	label,
 	scope,
 	max,
 	onBusyChange,
+	transport = ADMIN_UPLOADS,
 }: {
 	label: string;
 	scope: UploadScope;
 	max: number;
 	onBusyChange?: (busy: boolean) => void;
+	transport?: UploadTransport;
 }) {
 	const field = useFieldContext<FieldImage[]>();
 	const a11y = useFieldA11y(label, { focusId: (id) => `${id}-add` });
-	const canUpload = useCan("attachments:upload");
-	const settings = useQuery({ ...uploadSettingsQueryOptions(), enabled: canUpload });
+	const permitted = useCan(transport.permission ?? "attachments:upload");
+	const canUpload = transport.permission === null || permitted;
+	const settings = useQuery({ ...transport.settings, staleTime: Number.POSITIVE_INFINITY, enabled: canUpload });
 	const [uploads, setUploads] = useState<Upload[]>([]);
 	const [announcement, setAnnouncement] = useState("");
 	const [dropActive, setDropActive] = useState(false);
@@ -99,7 +96,11 @@ export function ImageGalleryField({
 			const key = `${file.name}-${crypto.randomUUID()}`;
 			const controller = new AbortController();
 			setUploads((current) => [...current, { key, name: file.name, progress: 0, controller }]);
-			uploadImage(file, scope, { signal: controller.signal, onProgress: (progress) => update(key, { progress }) })
+			uploadImage(file, scope, {
+				signal: controller.signal,
+				onProgress: (progress) => update(key, { progress }),
+				transport,
+			})
 				.then((preview) => {
 					fresh.current.add(preview.id);
 					setUploads((current) => current.filter((upload) => upload.key !== key));
@@ -127,7 +128,7 @@ export function ImageGalleryField({
 		if (!image) return;
 		setImages(images.filter((_, position) => position !== index));
 		// Never saved: delete now (saved images are removed by the item's save).
-		if (fresh.current.delete(image.id)) void discardImageUpload({ data: { id: image.id } }).catch(() => {});
+		if (fresh.current.delete(image.id)) void transport.discard(image.id).catch(() => {});
 		setAnnouncement(m.attachments_field_removed());
 	};
 	const setAlt = (index: number, language: keyof Localized, text: string) =>

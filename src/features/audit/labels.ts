@@ -42,6 +42,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"media.update": m.audit_action_media_update,
 	"media.delete": m.audit_action_media_delete,
 	// portfolio:end
+	// apps:start
+	"link.block": m.audit_action_link_block,
+	"link.unblock": m.audit_action_link_unblock,
+	"link.delete": m.audit_action_link_delete,
+	// apps:end
 	// @new-feature:audit-action-labels
 };
 
@@ -60,6 +65,7 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	message: m.audit_target_message,
 	media: m.audit_target_media,
 	// portfolio:end
+	link: m.audit_target_link, // @apps
 	// @new-feature:audit-target-labels
 };
 
@@ -92,4 +98,5 @@ export const AUDIT_FIELD_LABELS: Readonly<Record<string, () => string>> = {
 	altNe: m.audit_field_alt_ne,
 	moved: m.audit_field_moved,
 	// portfolio:end
+	target: m.audit_field_target, // @apps
 };

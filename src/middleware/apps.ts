@@ -19,8 +19,9 @@ export const requireAppUser = createMiddleware({ type: "function" })
 	});
 
 /**
- * The showcase apps' services (decisions 0185, 0187): `context.db` and `context.user`
- * (the caller's id and whether they are a guest), after `requireAppUser`:
+ * The showcase apps' services (decisions 0185, 0187): `context.db`, `context.user`
+ * (the caller's id and whether they are a guest) and `context.imageStore` (null when
+ * Cloudinary isn't configured; Notes' images, 0190), after `requireAppUser`:
  *
  *   createServerFn({ method: "POST" })
  *     .middleware([requireAppUser, withAppServices])
@@ -30,6 +31,9 @@ export const requireAppUser = createMiddleware({ type: "function" })
 export const withAppServices = createMiddleware({ type: "function" })
 	.middleware([requireAppUser])
 	.server(async ({ next, context }) => {
-		const { db } = await import("@/server/db/client");
-		return next({ context: { db, user: context.appUser } });
+		const [{ db }, { imageStore }] = await Promise.all([
+			import("@/server/db/client"),
+			import("@/server/attachments/store"),
+		]);
+		return next({ context: { db, imageStore, user: context.appUser } });
 	});

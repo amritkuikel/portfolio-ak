@@ -104,6 +104,11 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 	// portfolio:end
 	// apps:start
 	"apps/admin.ts": [["getAppsUsage", "apps:read"]],
+	"apps/links-admin.ts": [
+		["listLinksForModeration", "links:moderate"],
+		["setLinksBlocked", "links:moderate"],
+		["deleteModeratedLinks", "links:moderate"],
+	],
 	// apps:end
 	// @new-feature:guarded-functions
 };
@@ -129,6 +134,22 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"updateKanbanCard",
 		"deleteKanbanCard",
 	],
+	"apps/notes.ts": [
+		"listNotes",
+		"searchNotes",
+		"getNote",
+		"createNote",
+		"updateNote",
+		"setNoteFlags",
+		"shareNote",
+		"unshareNote",
+		"deleteNote",
+		"getNoteUploadSettings",
+		"signNoteImageUpload",
+		"confirmNoteImageUpload",
+		"discardNoteImageUpload",
+	],
+	"apps/links.ts": ["listLinks", "getLinkStats", "createLink", "updateLink", "deleteLink"],
 };
 // apps:end
 
@@ -176,6 +197,12 @@ const UNGUARDED_FILES: Record<string, { why: string; functions: ReadonlyArray<st
 		],
 	},
 	// portfolio:end
+	// apps:start
+	"apps/notes-public.ts": {
+		why: "the public page of a shared note: only a note its owner (an account) shared, by its random token (decision 0190)",
+		functions: ["getSharedNote"],
+	},
+	// apps:end
 	"test-crud-public.ts": {
 		why: "dev-only /dev/test-crud reads (devOnlyMiddleware); the repository only returns published rows",
 		functions: ["listPublicTestCrud", "getPublicTestCrud"],
