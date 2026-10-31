@@ -26,12 +26,16 @@ import { generateKeysBetween } from "@/lib/fractional-index";
 import { addDays, todayInZone } from "@/lib/i18n/date-only";
 import type { Paged } from "@/lib/list/paging";
 import { m } from "@/paraglide/messages";
+import type { ImageStore } from "@/server/attachments/cloudinary";
 import { notFound } from "@/server/db/crud";
 import { lockQuota } from "@/server/db/quota";
 import { type TlTaskRow, tlTask } from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
+import { sanitizeRichText } from "@/server/rich-text/sanitize";
 import { assertCan, type ProjectAccess, resolveProject, type TasklineServices } from "../access";
 import { type ActivityEntry, fieldChanges, recordActivity, taskActivity } from "../activity";
+import * as collab from "../collab/repository";
+import { actorOf, type NotifyEvent, produce, taskData } from "../notify/produce";
 import * as projects from "../projects/repository";
 import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf, richText } from "../rules";
@@ -49,7 +53,7 @@ import * as repo from "./repository";
 type Resolved = { access: ProjectAccess; task: TlTaskRow };
 
 /** The task `ref` ("WEB-12") of workspace `ws`, with the caller's access; NOT_FOUND unless they may see it. */
-async function resolveTask(db: Db, user: TasklineServices["user"], ws: string, ref: string): Promise<Resolved> {
+export async function resolveTask(db: Db, user: TasklineServices["user"], ws: string, ref: string): Promise<Resolved> {
 	const parsed = parseTaskRef(ref);
 	if (!parsed) throw notFound("Task");
 	const access = await resolveProject(db, user, ws, parsed.key);
@@ -69,12 +73,29 @@ async function resolveEditable(tx: Tx, user: TasklineServices["user"], ws: strin
 const summaryOf = async (db: Db, access: ProjectAccess, row: TlTaskRow): Promise<TaskSummary> =>
 	(await repo.summaries(db, [row], access.project.key))[0] as TaskSummary;
 
-async function detailOf(db: Db, access: ProjectAccess, row: TlTaskRow): Promise<TaskDetail> {
-	const [summary, subtasks, activity] = await Promise.all([
+/** A task as its page shows it: the fields, subtasks, history, and (Task 50) the conversation, files and watchers. */
+export async function taskDetail(
+	db: Db,
+	access: ProjectAccess,
+	row: TlTaskRow,
+	store: ImageStore | null | undefined,
+): Promise<TaskDetail> {
+	const [summary, subtasks, activity, comments, watcherIds, files] = await Promise.all([
 		summaryOf(db, access, row),
 		repo.subtasksOf(db, row.id).then((rows) => repo.summaries(db, rows, access.project.key)),
 		taskActivity(db, row.id),
+		collab.listComments(db, row.id),
+		collab.watcherIds(db, row.id),
+		collab.filesOf(db, store, collab.TASK_FILES, [row.id]),
 	]);
+	const commentFiles = await collab.filesOf(
+		db,
+		store,
+		collab.COMMENT_FILES,
+		comments.map((comment) => comment.id),
+	);
+	const me = access.member?.id ?? null;
+	const open = row.deletedAt === null;
 	return {
 		...summary,
 		description: row.descriptionHtml,
@@ -85,7 +106,44 @@ async function detailOf(db: Db, access: ProjectAccess, row: TlTaskRow): Promise<
 		version: row.version,
 		activity,
 		can: access.can,
+		comments: comments.map((comment) => ({
+			id: comment.id,
+			authorId: comment.authorId,
+			html: sanitizeRichText(comment.bodyHtml),
+			mentions: comment.mentions,
+			attachments: commentFiles.get(comment.id) ?? [],
+			createdAt: comment.createdAt.toISOString(),
+			editedAt: comment.editedAt?.toISOString() ?? null,
+			canEdit: open && access.can.comment && me !== null && comment.authorId === me,
+			canDelete: access.can.comment && ((me !== null && comment.authorId === me) || access.can.manage),
+		})),
+		attachments: files.get(row.id) ?? [],
+		watching: me !== null && watcherIds.includes(me),
+		watcherIds,
 	};
+}
+
+/** Hands a write's instant notifications to the deliverer, after its transaction committed. */
+function deliverAfter(services: TasklineServices, ids: string[]) {
+	if (ids.length > 0) services.deliver?.(ids);
+}
+
+/** The status-change notices of tasks that moved: their watchers hear the new status's name. */
+async function statusEvents(
+	db: Db,
+	access: ProjectAccess,
+	moved: ReadonlyArray<{ task: TlTaskRow; statusName: string }>,
+): Promise<NotifyEvent[]> {
+	const events: NotifyEvent[] = [];
+	for (const { task, statusName } of moved) {
+		events.push({
+			kind: "status",
+			taskId: task.id,
+			to: await collab.watcherIds(db, task.id),
+			data: { ...taskData(access, task), status: statusName },
+		});
+	}
+	return events;
 }
 
 /** An active member of the task's workspace (assignees can't be deactivated members). */
@@ -119,13 +177,6 @@ async function checkParent(db: Db, access: ProjectAccess, parentId: string | nul
 }
 
 const parentError = () => ruleError("CONFLICT", "Taskline: bad parent", m.taskline_error_parent());
-
-/** `completed_at` after a move into `statusId` (kept when it stays closed). */
-async function completedAtFor(db: Db, projectId: string, statusId: string, current: Date | null) {
-	const status = await workflow.getStatus(db, projectId, statusId);
-	if (!status) throw notFound("Status");
-	return isClosedCategory(status.category) ? (current ?? new Date()) : null;
-}
 
 /**
  * The type a task may be given: one the workspace offers (Task 49). Unnamed, it is
@@ -200,14 +251,16 @@ export async function listTaskPage({ db, user }: TasklineServices, input: TaskLi
  * transaction: each task's history gets its entry, and the project's rev moves once.
  * A task that isn't the project's, or is in the trash, is NOT_FOUND (nothing changes).
  */
-export async function bulkUpdate({ db, user }: TasklineServices, input: BulkTasksInput): Promise<BulkResult> {
-	return db.transaction(async (tx) => {
+export async function bulkUpdate(services: TasklineServices, input: BulkTasksInput): Promise<BulkResult> {
+	const { db, user } = services;
+	const { result, notify } = await db.transaction(async (tx) => {
 		const access = await resolveProject(tx, user, input.ws, input.key);
 		assertCan(access, "edit");
 		const rows = await repo.getByIds(tx, access.project.id, input.ids);
 		if (rows.length !== new Set(input.ids).size || rows.some((row) => row.deletedAt)) throw notFound("Task");
 		const ids = rows.map((row) => row.id);
 		const entries: ActivityEntry[] = [];
+		const events: NotifyEvent[] = [];
 		if (input.trash) {
 			const at = new Date();
 			for (const row of rows) {
@@ -228,6 +281,13 @@ export async function bulkUpdate({ db, user }: TasklineServices, input: BulkTask
 				});
 				entries.push({ kind: "task.moved", taskId: row.id, data: { from: row.statusId, to: status.id } });
 			}
+			events.push(
+				...(await statusEvents(
+					tx,
+					access,
+					moving.map((task) => ({ task, statusName: status.name })),
+				)),
+			);
 		} else if (input.assigneeId !== undefined || input.priority !== undefined) {
 			const fields = input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : { priority: input.priority };
 			if (input.assigneeId !== undefined) await checkAssignee(tx, access, input.assigneeId);
@@ -236,6 +296,9 @@ export async function bulkUpdate({ db, user }: TasklineServices, input: BulkTask
 				if (changes.length === 0) continue;
 				await repo.patchTask(tx, row.id, fields);
 				entries.push(...changes);
+				if (input.assigneeId) {
+					events.push({ kind: "assigned", taskId: row.id, to: [input.assigneeId], data: taskData(access, row) });
+				}
 			}
 			if (input.assigneeId) for (const id of ids) await repo.addWatchers(tx, id, [input.assigneeId]);
 		} else {
@@ -254,8 +317,11 @@ export async function bulkUpdate({ db, user }: TasklineServices, input: BulkTask
 		}
 		await recordActivity(tx, access, ...entries);
 		if (entries.length > 0) await bumpRev(tx, access.project.id);
-		return { count: entries.length };
+		const notify = await produce(tx, access, actorOf(access, user.id), events);
+		return { result: { count: entries.length }, notify };
 	});
+	deliverAfter(services, notify);
+	return result;
 }
 
 /**
@@ -267,6 +333,8 @@ export async function purgeTask({ db, user }: TasklineServices, ws: string, ref:
 		const { access, task } = await resolveTask(tx, user, ws, ref);
 		assertCan(access, "manage");
 		if (!task.deletedAt) throw ruleError("CONFLICT", "Taskline: not in trash", m.taskline_error_not_in_trash());
+		const below = await repo.descendantsOf(tx, task.id);
+		await collab.removeTaskFiles(tx, [task.id, ...below.map((row) => row.id)]);
 		await repo.deleteTasks(tx, [task.id]);
 		await recordActivity(tx, access, {
 			kind: "task.deleted",
@@ -293,16 +361,21 @@ export async function getProjectRev({ db, user }: TasklineServices, ws: string, 
 }
 
 /** One task with its subtasks and history; a trashed one too (the trash opens it). */
-export async function getTask({ db, user }: TasklineServices, ws: string, ref: string): Promise<TaskDetail> {
+export async function getTask(
+	{ db, user, imageStore }: TasklineServices,
+	ws: string,
+	ref: string,
+): Promise<TaskDetail> {
 	const { access, task } = await resolveTask(db, user, ws, ref);
-	return detailOf(db, access, task);
+	return taskDetail(db, access, task, imageStore);
 }
 
 export async function createTask(
-	{ db, user }: TasklineServices,
+	services: TasklineServices,
 	{ ws, key, id, labelIds = [], description, ...input }: CreateTaskInput,
 ): Promise<TaskDetail> {
-	return db.transaction(async (tx) => {
+	const { db, user, imageStore } = services;
+	const { detail, notify } = await db.transaction(async (tx) => {
 		const access = await resolveProject(tx, user, ws, key);
 		assertCan(access, "edit");
 		await lockQuota(tx, quotaScope(access.workspace.id));
@@ -341,13 +414,18 @@ export async function createTask(
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
 		await recordActivity(tx, access, { kind: "task.created", taskId: task.id, data: { title: task.title } });
 		await bumpRev(tx, access.project.id);
-		return detailOf(tx, access, task);
+		const notify = await produce(tx, access, actorOf(access, user.id), [
+			{ kind: "assigned", taskId: task.id, to: [task.assigneeId], data: taskData(access, task) },
+		]);
+		return { detail: await taskDetail(tx, access, task, imageStore), notify };
 	});
+	deliverAfter(services, notify);
+	return detail;
 }
 
 /** The title and description, from the version the edit started at. */
 export async function updateTask(
-	{ db, user }: TasklineServices,
+	{ db, user, imageStore }: TasklineServices,
 	{ ws, ref, version, title, description }: UpdateTaskInput,
 ): Promise<TaskDetail> {
 	return db.transaction(async (tx) => {
@@ -372,16 +450,17 @@ export async function updateTask(
 		}
 		await recordActivity(tx, access, ...entries);
 		await bumpRev(tx, access.project.id);
-		return detailOf(tx, access, task);
+		return taskDetail(tx, access, task, imageStore);
 	});
 }
 
 /** Single fields (type, priority, assignee, parent, labels, dates); each change goes in the history. */
 export async function patchTask(
-	{ db, user }: TasklineServices,
+	services: TasklineServices,
 	{ ws, ref, labelIds, ...fields }: PatchTaskInput,
 ): Promise<TaskDetail> {
-	return db.transaction(async (tx) => {
+	const { db, user, imageStore } = services;
+	const { detail, notify } = await db.transaction(async (tx) => {
 		const { access, task: before } = await resolveEditable(tx, user, ws, ref);
 		if (fields.type !== undefined && fields.type !== before.type) taskType(access, fields.type);
 		if (fields.assigneeId !== undefined) await checkAssignee(tx, access, fields.assigneeId);
@@ -404,33 +483,51 @@ export async function patchTask(
 		if (fields.assigneeId) await repo.addWatchers(tx, task.id, [fields.assigneeId]);
 		await recordActivity(tx, access, ...entries);
 		if (entries.length > 0) await bumpRev(tx, access.project.id);
-		return detailOf(tx, access, task);
+		const reassigned = fields.assigneeId && fields.assigneeId !== before.assigneeId ? fields.assigneeId : null;
+		const notify = await produce(tx, access, actorOf(access, user.id), [
+			{ kind: "assigned", taskId: task.id, to: [reassigned], data: taskData(access, task) },
+		]);
+		return { detail: await taskDetail(tx, access, task, imageStore), notify };
 	});
+	deliverAfter(services, notify);
+	return detail;
 }
 
 /** A drop on the board: into a status (closing or reopening the task by its category) at a position. */
 export async function moveTask(
-	{ db, user }: TasklineServices,
+	services: TasklineServices,
 	{ ws, ref, statusId, position }: { ws: string; ref: string; statusId: string; position: string },
 ): Promise<TaskSummary> {
-	return db.transaction(async (tx) => {
+	const { db, user } = services;
+	const { summary, notify } = await db.transaction(async (tx) => {
 		const { access, task: before } = await resolveEditable(tx, user, ws, ref);
-		const completedAt = await completedAtFor(tx, access.project.id, statusId, before.completedAt);
+		const status = await workflow.getStatus(tx, access.project.id, statusId);
+		if (!status) throw notFound("Status");
+		const completedAt = isClosedCategory(status.category) ? (before.completedAt ?? new Date()) : null;
 		const task = await repo.patchTask(tx, before.id, { statusId, position, completedAt });
+		let notify: string[] = [];
 		if (before.statusId !== statusId) {
 			await recordActivity(tx, access, {
 				kind: "task.moved",
 				taskId: task.id,
 				data: { from: before.statusId, to: statusId },
 			});
+			notify = await produce(
+				tx,
+				access,
+				actorOf(access, user.id),
+				await statusEvents(tx, access, [{ task, statusName: status.name }]),
+			);
 		}
 		await bumpRev(tx, access.project.id);
-		return summaryOf(tx, access, task);
+		return { summary: await summaryOf(tx, access, task), notify };
 	});
+	deliverAfter(services, notify);
+	return summary;
 }
 
 export async function setChecklist(
-	{ db, user }: TasklineServices,
+	{ db, user, imageStore }: TasklineServices,
 	{ ws, ref, checklist }: { ws: string; ref: string; checklist: ChecklistItem[] },
 ): Promise<TaskDetail> {
 	return db.transaction(async (tx) => {
@@ -443,7 +540,7 @@ export async function setChecklist(
 			data: { done, total: checklist.length },
 		});
 		await bumpRev(tx, access.project.id);
-		return detailOf(tx, access, task);
+		return taskDetail(tx, access, task, imageStore);
 	});
 }
 
@@ -462,11 +559,15 @@ export async function trashTask({ db, user }: TasklineServices, ws: string, ref:
  * Takes a task out of the trash with the subtasks that went in with it. If its parent
  * is still in the trash, it comes back as a top-level task.
  */
-export async function restoreTask({ db, user }: TasklineServices, ws: string, ref: string): Promise<TaskDetail> {
+export async function restoreTask(
+	{ db, user, imageStore }: TasklineServices,
+	ws: string,
+	ref: string,
+): Promise<TaskDetail> {
 	return db.transaction(async (tx) => {
 		const { access, task } = await resolveTask(tx, user, ws, ref);
 		assertCan(access, "edit");
-		if (!task.deletedAt) return detailOf(tx, access, task);
+		if (!task.deletedAt) return taskDetail(tx, access, task, imageStore);
 		const trashedAt = task.deletedAt.getTime();
 		const together = (await repo.descendantsOf(tx, task.id)).filter((row) => row.deletedAt?.getTime() === trashedAt);
 		await repo.setDeleted(tx, [task.id, ...together.map((row) => row.id)], null);
@@ -477,7 +578,7 @@ export async function restoreTask({ db, user }: TasklineServices, ws: string, re
 		}
 		await recordActivity(tx, access, { kind: "task.restored", taskId: task.id, data: { subtasks: together.length } });
 		await bumpRev(tx, access.project.id);
-		return detailOf(tx, access, restored);
+		return taskDetail(tx, access, restored, imageStore);
 	});
 }
 

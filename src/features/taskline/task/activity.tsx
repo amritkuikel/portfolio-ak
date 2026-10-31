@@ -102,6 +102,14 @@ export function activitySentence(
 				done: formatNumber(Number(data.done) || 0),
 				total: formatNumber(Number(data.total) || 0),
 			});
+		case "comment.added":
+			return m.taskline_activity_commented({ actor });
+		case "comment.deleted":
+			return m.taskline_activity_comment_deleted({ actor });
+		case "attachment.added":
+			return m.taskline_activity_file_added({ actor });
+		case "attachment.removed":
+			return m.taskline_activity_file_removed({ actor });
 		case "task.deleted":
 			return m.taskline_activity_purged({ actor, task: `${text(data.ref)} ${text(data.title)}`.trim() });
 		case "project.created":

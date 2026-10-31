@@ -164,6 +164,10 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/taskline/home", as: "admin" },
 	{ route: "/app/taskline/home", as: "editor", label: "no team" },
 	{ route: "/app/taskline/account", as: "admin" },
+	// The inbox and "My settings" (Task 50).
+	{ route: "/app/taskline/inbox", as: "admin" },
+	{ route: "/app/taskline/inbox", as: "admin", path: "/app/taskline/inbox?filter=all", label: "everything" },
+	{ route: "/app/taskline/settings", as: "admin" },
 	{ route: "/app/taskline/$ws/projects", as: "admin", path: "/app/taskline/team/projects" },
 	{ route: "/app/taskline/$ws/p/$key", as: "admin", path: "/app/taskline/team/p/WEB" },
 	// The views and the task (Task 48): the admin leads nothing but holds taskline:manage, so the lead's settings open.

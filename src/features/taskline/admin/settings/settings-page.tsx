@@ -8,8 +8,9 @@ import { Page, PageHeader } from "@/components/page/page";
 import { formatNumber, formatWeekdayShort } from "@/lib/i18n/intl";
 import { required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { MODE_LABELS, NOTIFY_KIND_LABELS, SENT_KINDS } from "../../notifications";
 import { TEAM_SLUG_PATTERN } from "../../settings";
-import { PROJECT_VISIBILITIES } from "../../types";
+import { NOTIFY_MODES, PROJECT_VISIBILITIES } from "../../types";
 import { ALL_TASKLINE_ADMIN, tasklineAdminKeys } from "../keys";
 import { VISIBILITY_LABELS } from "../labels";
 import { adminWorkspaceQueryOptions, tasklineAdminMutations } from "../queries";
@@ -29,6 +30,7 @@ const formSchema = z.object({
 	weekStart: z.string(),
 	timeZone: z.string().trim().min(1),
 	digestHour: z.number().int().min(0).max(23),
+	notify: z.record(z.string(), z.enum(NOTIFY_MODES)),
 	trashRetentionDays: z.number().int().min(1).max(365),
 	doneColumnDays: z.number().int().min(1).max(365),
 	projects: z.number().int().positive(),
@@ -48,6 +50,7 @@ const valuesOf = ({ name, slug, settings }: AdminWorkspace): Values => ({
 	weekStart: String(settings.weekStart),
 	timeZone: settings.timeZone,
 	digestHour: settings.digestHour,
+	notify: { ...settings.notify },
 	trashRetentionDays: settings.trashRetentionDays,
 	doneColumnDays: settings.doneColumnDays,
 	...settings.quotas,
@@ -181,6 +184,18 @@ function SettingsForm({ workspace }: { workspace: AdminWorkspace }) {
 						/>
 					)}
 				</form.AppField>
+			</FormSection>
+			<FormSection title={m.taskline_admin_section_notify()} description={m.taskline_admin_section_notify_hint()}>
+				{SENT_KINDS.map((kind) => (
+					<form.AppField key={kind} name={`notify.${kind}`}>
+						{(field) => (
+							<field.SelectField
+								label={NOTIFY_KIND_LABELS[kind]()}
+								options={NOTIFY_MODES.map((mode) => ({ value: mode, label: MODE_LABELS[mode]() }))}
+							/>
+						)}
+					</form.AppField>
+				))}
 			</FormSection>
 			<FormSection title={m.taskline_admin_section_quotas()} description={m.taskline_admin_section_quotas_hint()}>
 				<form.AppField name="projects">

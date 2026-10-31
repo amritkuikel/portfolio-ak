@@ -26,8 +26,9 @@ export const requireTasklineUser = createMiddleware({ type: "function" })
 	});
 
 /**
- * Taskline's services: `context.db`, `context.user` (from `requireTasklineUser`) and
- * `context.imageStore` (null when Cloudinary isn't configured):
+ * Taskline's services: `context.db`, `context.user` (from `requireTasklineUser`),
+ * `context.imageStore` (null when Cloudinary isn't configured) and `context.deliver`
+ * (instant notification emails after the write's commit, Task 50):
  *
  *   createServerFn({ method: "POST" })
  *     .middleware([requireTasklineUser, withTasklineServices])
@@ -37,9 +38,10 @@ export const requireTasklineUser = createMiddleware({ type: "function" })
 export const withTasklineServices = createMiddleware({ type: "function" })
 	.middleware([requireTasklineUser])
 	.server(async ({ next, context }) => {
-		const [{ db }, { imageStore }] = await Promise.all([
+		const [{ db }, { imageStore }, { backgroundDelivery }] = await Promise.all([
 			import("@/server/db/client"),
 			import("@/server/attachments/store"),
+			import("@/server/taskline/notify/deliver"),
 		]);
-		return next({ context: { db, imageStore, user: context.tasklineUser } });
+		return next({ context: { db, imageStore, deliver: backgroundDelivery(db), user: context.tasklineUser } });
 	});

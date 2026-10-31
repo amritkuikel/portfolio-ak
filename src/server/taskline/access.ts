@@ -28,7 +28,17 @@ import type { Db } from "@/server/db/types";
 export type TasklineUser = { id: string; isGuest: boolean; permissions: ReadonlyArray<string> };
 
 /** What a Taskline service works with. Tests pass their own. */
-export type TasklineServices = { db: Db; user: TasklineUser; imageStore?: ImageStore | null };
+export type TasklineServices = {
+	db: Db;
+	user: TasklineUser;
+	imageStore?: ImageStore | null;
+	/**
+	 * Sends the instant emails of notifications a write produced, after its commit
+	 * (Task 50). The middleware passes the real one (`waitUntil`); tests pass their
+	 * own or none, and without one nothing is emailed at once (the digest still is).
+	 */
+	deliver?: (notificationIds: string[]) => void;
+};
 
 export type WorkspaceAccess = {
 	workspace: TlWorkspaceRow;
@@ -120,7 +130,7 @@ const canAt = (level: Level, archived: boolean): ProjectCan => ({
 
 /** The caller's level in a project of a workspace they resolved (the table in the guide). */
 export function projectLevel(
-	access: WorkspaceAccess,
+	access: Pick<WorkspaceAccess, "sandboxOwner" | "admin"> & { member: Pick<TlMemberRow, "role"> | null },
 	project: Pick<TlProjectRow, "visibility">,
 	projectRole: ProjectRole | null,
 ): Level {

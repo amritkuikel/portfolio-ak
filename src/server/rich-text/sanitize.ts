@@ -1,6 +1,10 @@
 import sanitizeHtml from "sanitize-html";
 import type { SafeHtml } from "@/lib/safe-html";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isMention = (attribs: Record<string, string>) =>
+	attribs["data-type"] === "mention" && UUID.test(attribs["data-id"] ?? "");
+
 /**
  * Allowlist matching exactly what the RichTextField toolbar can produce
  * (StarterKit with h2/h3 and links). Disallowed tags are unwrapped (their text
@@ -25,10 +29,18 @@ const OPTIONS: sanitizeHtml.IOptions = {
 		"blockquote",
 		"hr",
 		"a",
+		"span",
 	],
 	// rel/target are listed because transformTags runs before attribute filtering;
 	// the transform overwrites any values the input carried.
-	allowedAttributes: { a: ["href", "rel", "target"], ol: ["start"] },
+	// A span is only ever a mention node (Taskline's comments, Task 50): `data-type="mention"`
+	// with a member's id and name; any other span is unwrapped below.
+	allowedAttributes: {
+		a: ["href", "rel", "target"],
+		ol: ["start"],
+		span: ["data-type", "data-id", "data-label", "class"],
+	},
+	allowedClasses: { span: ["mention"] },
 	allowedSchemes: ["http", "https", "mailto"],
 	allowedSchemesAppliedToAttributes: ["href"],
 	allowProtocolRelative: false,
@@ -38,7 +50,11 @@ const OPTIONS: sanitizeHtml.IOptions = {
 		a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer nofollow", target: "_blank" }),
 	},
 	// A link whose href was removed (e.g. javascript:) becomes plain text.
-	exclusiveFilter: (frame) => (frame.tag === "a" && !frame.attribs.href ? "excludeTag" : false),
+	// A span that isn't a well-formed mention keeps its text and loses the tag.
+	exclusiveFilter: (frame) =>
+		(frame.tag === "a" && !frame.attribs.href) || (frame.tag === "span" && !isMention(frame.attribs))
+			? "excludeTag"
+			: false,
 };
 
 /**
@@ -47,6 +63,21 @@ const OPTIONS: sanitizeHtml.IOptions = {
  * rows written by older code or directly in the database).
  */
 export const sanitizeRichText = (html: string): SafeHtml => sanitizeHtml(html, OPTIONS).trim() as SafeHtml;
+
+/**
+ * The member ids a sanitized body mentions, in order, each once. Callers keep only
+ * those who may see what the body is on (Taskline: the task's project, Task 50).
+ */
+export const mentionedIds = (html: SafeHtml): string[] => {
+	const ids = new Set<string>();
+	for (const match of html.matchAll(/<span\s[^>]*>/g)) {
+		const tag = match[0];
+		if (!tag.includes('data-type="mention"')) continue;
+		const id = /\sdata-id="([0-9a-f-]{36})"/i.exec(tag)?.[1];
+		if (id) ids.add(id.toLowerCase());
+	}
+	return [...ids];
+};
 
 // apps:start
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", nbsp: " " };

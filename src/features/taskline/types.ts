@@ -64,9 +64,42 @@ export type TasklineColor = (typeof TASKLINE_COLORS)[number];
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
-/** How a member hears about one kind of event (Task 50). */
+/** How a member hears about one kind of event (Task 50): an email at once, the daily digest, or nothing. */
 export const NOTIFY_MODES = ["instant", "digest", "off"] as const;
 export type NotifyMode = (typeof NOTIFY_MODES)[number];
+
+/**
+ * The kinds of notification a member can tune. Task 50 sends assigned, mentioned,
+ * comment and status (on a watched task), due (tomorrow), overdue and added (to a
+ * project); invited, sprint, automation and timer come with their modules.
+ */
+export const NOTIFY_KINDS = [
+	"assigned",
+	"mentioned",
+	"comment",
+	"status",
+	"due",
+	"overdue",
+	"added",
+	"invited",
+	"sprint",
+	"automation",
+	"timer",
+] as const;
+export type NotifyKind = (typeof NOTIFY_KINDS)[number];
+export type NotificationKind = NotifyKind;
+/** What a notification's row says about email, fixed when it's made from the recipient's mode. */
+export type NotificationEmail = "instant" | "digest" | "none";
+/** A notification's snapshot: what its sentence needs even after the task changes or goes. */
+export type NotificationData = {
+	actor?: string;
+	ref?: string;
+	title?: string;
+	project?: string;
+	status?: string;
+	excerpt?: string;
+	dueOn?: string;
+};
 
 /** Everything `tl_activity.kind` holds; `data` carries the change (`{ from, to }` and the like). */
 export const ACTIVITY_KINDS = [
@@ -91,6 +124,12 @@ export const ACTIVITY_KINDS = [
 	"task.checklist",
 	/** Deleted for good from the trash (Task 48): a project entry with the task's ref and title, its own history gone. */
 	"task.deleted",
+	/** Task 50: `{ commentId }`; the comment's body is in `tl_comment`. */
+	"comment.added",
+	"comment.deleted",
+	/** Task 50: `{ attachmentId, name }`. */
+	"attachment.added",
+	"attachment.removed",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -207,6 +246,33 @@ export type TaskActivity = {
 	at: string;
 };
 
+/** An image on a task or a comment (the attachments service's asset, with what the page needs). */
+export type TaskAttachment = {
+	id: string;
+	/** The original file (a PDF to download). */
+	url: string;
+	/** A 160 px square preview (a PDF's first page). */
+	thumbUrl: string;
+	/** The image at a readable size. */
+	src: string;
+	width: number;
+	height: number;
+	format: string;
+};
+
+export type TaskComment = {
+	id: string;
+	authorId: string | null;
+	html: string;
+	mentions: string[];
+	attachments: TaskAttachment[];
+	createdAt: string;
+	editedAt: string | null;
+	/** The caller's own (they may edit it), or theirs to moderate as the project's lead. */
+	canEdit: boolean;
+	canDelete: boolean;
+};
+
 export type TaskDetail = TaskSummary & {
 	description: string;
 	checklistItems: ChecklistItem[];
@@ -216,6 +282,11 @@ export type TaskDetail = TaskSummary & {
 	version: number;
 	activity: TaskActivity[];
 	can: ProjectCan;
+	/** Task 50: the conversation, oldest first; the images; who watches. */
+	comments: TaskComment[];
+	attachments: TaskAttachment[];
+	watching: boolean;
+	watcherIds: string[];
 };
 
 /** A project's tasks with what draws them: the board, the list and the task sheet start from it. */
@@ -286,3 +357,33 @@ export type MyTask = {
 };
 
 export type MyTasks = { tasks: MyTask[]; today: string };
+
+// ---- Notifications (Task 50) ------------------------------------------------------------------
+
+/** One row of the inbox, with where it points (the workspace's current segment). */
+export type InboxItem = {
+	id: string;
+	kind: NotificationKind;
+	data: NotificationData;
+	ws: string;
+	workspaceKind: WorkspaceKind;
+	projectKey: string;
+	ref: string | null;
+	createdAt: string;
+	read: boolean;
+};
+
+export type InboxPage = { items: InboxItem[]; unread: number; hasMore: boolean; readAt: string };
+
+export type UnreadCount = { unread: number };
+
+/** The caller's notification settings: the modes they chose over the team's defaults, and their email language. */
+export type NotifySettingsView = {
+	defaults: Record<NotifyKind, NotifyMode>;
+	modes: Partial<Record<NotifyKind, NotifyMode>>;
+	locale: "en" | "ne" | null;
+	/** Whether they have a member row anywhere (an account with none has nothing to tune). */
+	member: boolean;
+	/** Whether email can reach them (guests' addresses can't). */
+	email: boolean;
+};

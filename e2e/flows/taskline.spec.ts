@@ -7,6 +7,8 @@
  * signing up (the emailed link) or in (two-factor and the claim cookie); Kanban's old
  * addresses redirect. From the admin, a project is created and someone invited to it, who
  * signs up from the email and lands in it, and gets a 404 once deactivated.
+ * Collaboration (Task 50, 0214): assigning someone reaches their inbox and their email,
+ * and an `@` mention in a comment emails the one mentioned.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -171,6 +173,77 @@ test.describe("Taskline", () => {
 		await open(page, page.url());
 		await expect(page.getByTestId("task-page")).toBeVisible();
 		await expect(page.getByRole("heading", { level: 1 })).toContainText(title);
+	});
+
+	test("assigning reaches the assignee's inbox and email, and a mention in a comment emails the one mentioned", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await signInAs(page, "asha@taskline.example.com");
+		await open(page, "/app/taskline/team/p/WEB/board");
+		const title = `Needs a reviewer ${Date.now()}`;
+		const todo = page
+			.getByTestId("taskline-column")
+			.filter({ has: page.getByRole("heading", { level: 3, name: "To do", exact: true }) });
+		await todo.getByTestId("taskline-add-task-open").click();
+		const field = todo.getByRole("textbox", { name: "New task in To do" });
+		await field.fill(title);
+		const added = nextSave(page);
+		await field.press("Enter");
+		await added;
+		await todo.getByTestId("taskline-card-open").filter({ hasText: title }).click();
+		await expect(page.getByTestId("task-sheet")).toBeVisible();
+		const ref = /\/t\/(WEB-\d+)$/.exec(page.url())?.[1] ?? "";
+		expect(ref).not.toBe("");
+
+		// Assigning Sita: an email at once (her default for being assigned).
+		const assigned = nextSave(page);
+		await page.getByTestId("task-assignee").selectOption({ label: "Sita Rai" });
+		await assigned;
+		await expect
+			.poll(async () =>
+				(await harness.emails("sita@taskline.example.com")).some(
+					(email) => email.tag === "taskline-notification" && email.subject.includes(ref),
+				),
+			)
+			.toBe(true);
+		const sent = (await harness.emails("sita@taskline.example.com")).find((email) => email.subject.includes(ref));
+		expect(sent?.text).toContain(`Asha Gurung assigned you ${ref}`);
+
+		// A comment mentioning Bikash: he's picked from the suggestions, and emailed.
+		await page.getByTestId("task-tab-comments").click();
+		const box = page.getByRole("textbox", { name: "Add a comment" });
+		await box.click();
+		await box.pressSequentially("@Bik");
+		await page.getByTestId("mention-list").getByRole("option", { name: "Bikash Thapa" }).click();
+		await box.pressSequentially("could you review this?");
+		const commented = nextSave(page);
+		await page.getByTestId("comment-box").getByRole("button", { name: "Comment" }).click();
+		await commented;
+		await expect(page.getByTestId("task-comment").last()).toContainText("@Bikash Thapa");
+		await expect
+			.poll(async () =>
+				(await harness.emails("bikash@taskline.example.com")).some(
+					(email) => email.tag === "taskline-notification" && email.text.includes(`mentioned you on ${ref}`),
+				),
+			)
+			.toBe(true);
+
+		// Sita's inbox has it, unread; opening it marks it read.
+		await page.context().clearCookies();
+		await signInAs(page, "sita@taskline.example.com");
+		await expect(page.getByTestId("nav-inbox-badge")).toBeVisible();
+		await page.getByTestId("nav-inbox").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/inbox$/);
+		const item = page.getByTestId("inbox-item").filter({ hasText: `Asha Gurung assigned you ${ref}` });
+		await expect(item).toBeVisible();
+		await item.getByRole("link").click();
+		await expect(page).toHaveURL(new RegExp(`/app/taskline/team/t/${ref}$`));
+		await open(page, "/app/taskline/inbox?filter=all");
+		await expect(page.getByTestId("inbox-item").filter({ hasText: `assigned you ${ref}` })).toHaveCount(1);
+		await open(page, "/app/taskline/inbox");
+		await expect(page.getByTestId("inbox-item").filter({ hasText: `assigned you ${ref}` })).toHaveCount(0);
 	});
 
 	test("Kanban's old addresses redirect to Taskline", async ({ page, harness }) => {

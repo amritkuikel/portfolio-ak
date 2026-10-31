@@ -1,10 +1,13 @@
 import type { ReactElement } from "react";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import {
 	AccountDeleted,
 	type AccountDeletedProps,
 	ContactMessage, // @portfolio
 	type ContactMessageProps, // @portfolio
+	DailyDigest, // @taskline
+	type DailyDigestProps, // @taskline
 	DeleteAccount,
 	type DeleteAccountProps,
 	EmailChanged,
@@ -17,6 +20,8 @@ import {
 	type PasswordResetProps,
 	SecurityNotice,
 	type SecurityNoticeProps,
+	TaskNotification, // @taskline
+	type TaskNotificationProps, // @taskline
 	TeamInvite, // @taskline
 	type TeamInviteProps, // @taskline
 	VerifyEmail,
@@ -39,6 +44,8 @@ export interface EmailPropsMap {
 	"security-notice": SecurityNoticeProps;
 	"contact-message": ContactMessageProps; // @portfolio
 	"taskline-invite": TeamInviteProps; // @taskline
+	"taskline-notification": TaskNotificationProps; // @taskline
+	"taskline-digest": DailyDigestProps; // @taskline
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -130,6 +137,45 @@ export const emailTemplates: EmailRegistry = {
 			project: "Website relaunch",
 			url: "https://example.com/app/taskline/sign-up?redirect=%2Fapp%2Ftaskline%2Fteam%2Fp%2FWEB",
 			expiresInDays: 7,
+		},
+	},
+	"taskline-notification": {
+		component: TaskNotification,
+		subject: ({ locale, siteName, heading }) => m.email_taskline_task_subject({ heading, site: siteName }, { locale }),
+		sample: {
+			heading: "WEB-12 · Write the launch announcement",
+			items: ["Asha Gurung assigned you WEB-12", "Asha Gurung mentioned you on WEB-12"],
+			excerpt: "@Sita could you take this one? The draft is in the shared folder.",
+			url: "https://example.com/app/taskline/team/t/WEB-12",
+			settingsUrl: "https://example.com/app/taskline/settings",
+		},
+	},
+	"taskline-digest": {
+		component: DailyDigest,
+		subject: ({ locale, siteName, items, more }) =>
+			m.email_taskline_digest_subject(
+				{ count: formatNumber(items.length + more, {}, locale), site: siteName },
+				{ locale },
+			),
+		sample: {
+			name: "Sita Sharma",
+			items: [
+				{
+					id: "n1",
+					text: "WEB-7 is due tomorrow",
+					title: "Fix the header on phones",
+					url: "https://example.com/app/taskline/team/t/WEB-7",
+				},
+				{
+					id: "n2",
+					text: "Bikash Rai commented on WEB-3",
+					title: "Choose the fonts",
+					url: "https://example.com/app/taskline/team/t/WEB-3",
+				},
+			],
+			more: 0,
+			url: "https://example.com/app/taskline/inbox",
+			settingsUrl: "https://example.com/app/taskline/settings",
 		},
 	},
 	// taskline:end

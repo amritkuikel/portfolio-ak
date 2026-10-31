@@ -107,6 +107,7 @@ export default defineConfig(async ({ command, mode }) => {
 				routes: {
 					"/api/cron/attachments": { handler: "./src/server/routes/cron-attachments.ts", method: "GET" },
 					"/api/cron/guests": { handler: "./src/server/routes/cron-guests.ts", method: "GET" },
+					"/api/cron/taskline": { handler: "./src/server/routes/cron-taskline.ts", method: "GET" }, // @taskline
 					// Nitro routes so dev serves them to manifest fetches too (see the file). One per locale.
 					"/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
 					"/ne/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },

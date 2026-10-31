@@ -5,6 +5,8 @@ import { m } from "@/paraglide/messages";
 import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
+	NOTIFY_KINDS,
+	NOTIFY_MODES,
 	PROJECT_HEALTHS,
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
@@ -248,6 +250,60 @@ export const bulkTasksInput = z
 		{ error: "One change at a time" },
 	);
 export type BulkTasksInput = z.infer<typeof bulkTasksInput>;
+
+// ---- Comments, watching, files and notifications (Task 50) ---------------------------------
+
+export const COMMENT_MAX = 20_000;
+export const FILES_PER_CHANGE_MAX = 10;
+
+const files = z
+	.array(id)
+	.max(FILES_PER_CHANGE_MAX)
+	.refine((ids) => new Set(ids).size === ids.length);
+
+/** A comment: rich text (mentions are member ids in it, which the server reads itself) and the files uploaded for it. */
+export const addCommentInput = z.strictObject({
+	ws: ws(),
+	ref: taskRef(),
+	body: optionalText({ max: COMMENT_MAX }),
+	attachmentIds: files.optional(),
+});
+export const updateCommentInput = z.strictObject({
+	ws: ws(),
+	ref: taskRef(),
+	id,
+	body: optionalText({ max: COMMENT_MAX }),
+});
+export const deleteCommentInput = z.strictObject({ ws: ws(), ref: taskRef(), id });
+export const watchTaskInput = z.strictObject({ ws: ws(), ref: taskRef(), watching: z.boolean() });
+export const taskFilesInput = z.strictObject({ ws: ws(), ref: taskRef(), ids: files.min(1) });
+export const taskFileInput = z.strictObject({ ws: ws(), ref: taskRef(), id });
+export const confirmFileInput = z.strictObject({ publicId: z.string().min(1).max(255) });
+export const fileIdInput = z.strictObject({ id });
+
+export const INBOX_PAGE = 30;
+export const inboxInput = z.strictObject({
+	filter: z.enum(["unread", "all"]),
+	page: z.number().int().min(1).max(1000),
+});
+/** Marks some of the caller's notifications read (or unread), or all of them read. */
+export const markReadInput = z.union([
+	z.strictObject({ ids: z.array(id).min(1).max(100), read: z.boolean() }),
+	z.strictObject({ all: z.literal(true) }),
+]);
+/** The caller's modes per kind (missing: the team's default) and their email language. */
+export const notifySettingsInput = z.strictObject({
+	modes: z.partialRecord(z.enum(NOTIFY_KINDS), z.enum(NOTIFY_MODES)),
+	locale: z.enum(["en", "ne"]).nullable(),
+});
+
+export type AddCommentInput = z.infer<typeof addCommentInput>;
+export type UpdateCommentInput = z.infer<typeof updateCommentInput>;
+export type DeleteCommentInput = z.infer<typeof deleteCommentInput>;
+export type TaskFilesInput = z.infer<typeof taskFilesInput>;
+export type InboxInput = z.infer<typeof inboxInput>;
+export type MarkReadInput = z.infer<typeof markReadInput>;
+export type NotifySettingsInput = z.infer<typeof notifySettingsInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

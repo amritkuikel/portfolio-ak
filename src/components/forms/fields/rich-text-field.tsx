@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { type FieldBaseProps, FieldLabelText, FieldMessages, useFieldA11y } from "../field-shell";
 import { RICH_TEXT_SURFACE, RICH_TEXT_TOOLBAR } from "./rich-text-frame";
+import type { MentionCandidate } from "./rich-text-mentions";
 
 // Tiptap/ProseMirror need the DOM, so the editor is a separate chunk loaded
 // only in the browser. The server (and the browser until the chunk arrives)
@@ -26,14 +27,17 @@ function RichTextPlaceholder({ id, invalid }: { id: string; invalid: boolean }) 
 	);
 }
 
-export type RichTextFieldProps = FieldBaseProps;
+export type RichTextFieldProps = FieldBaseProps & {
+	/** People `@` suggests; their ids end up in the HTML as mention nodes (the server reads them). */
+	mentions?: ReadonlyArray<MentionCandidate>;
+};
 
 /**
  * Tiptap editor with a formatting toolbar. Stores HTML ("" when empty). The
  * HTML is untrusted: sanitize it on the server (sanitizeRichText) before
  * storing and before rendering, and display it with <RichTextContent>.
  */
-export function RichTextField({ label, description, optional }: RichTextFieldProps) {
+export function RichTextField({ label, description, optional, mentions }: RichTextFieldProps) {
 	const a11y = useFieldA11y(label);
 	const labelId = `${a11y.id}-label`;
 	const placeholder = <RichTextPlaceholder id={a11y.id} invalid={a11y.invalid} />;
@@ -49,6 +53,7 @@ export function RichTextField({ label, description, optional }: RichTextFieldPro
 						labelId={labelId}
 						describedBy={a11y.describedBy(Boolean(description))}
 						invalid={a11y.invalid}
+						mentions={mentions}
 					/>
 				</Suspense>
 			</ClientOnly>

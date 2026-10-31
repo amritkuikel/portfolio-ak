@@ -5,6 +5,7 @@ import {
 	LanguagesIcon,
 	LayoutDashboardIcon,
 	LogOutIcon,
+	SlidersHorizontalIcon,
 	UserIcon,
 	UserPlusIcon,
 } from "lucide-react";
@@ -85,6 +86,12 @@ export function TasklineUserMenu({ variant = "compact" }: { variant?: "compact" 
 							</Link>
 						</DropdownMenuItem>
 					)}
+					<DropdownMenuItem asChild>
+						<Link {...tasklineLinks.mySettings()} data-testid="nav-my-settings">
+							<SlidersHorizontalIcon aria-hidden />
+							{m.taskline_my_settings()}
+						</Link>
+					</DropdownMenuItem>
 					{/* A full load: the server renders the other language (like the language switcher). */}
 					<DropdownMenuItem asChild>
 						<a href={localizeHref(location.href, { locale: other })} hrefLang={other}>

@@ -217,6 +217,25 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
  */
 const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 	"taskline/home.ts": ["getTasklineNav", "listMyTasklineTasks"],
+	"taskline/collab.ts": [
+		"addTasklineComment",
+		"updateTasklineComment",
+		"deleteTasklineComment",
+		"watchTasklineTask",
+		"addTasklineTaskFiles",
+		"removeTasklineTaskFile",
+		"getTasklineUploadSettings",
+		"signTasklineUpload",
+		"confirmTasklineUpload",
+		"discardTasklineUpload",
+	],
+	"taskline/inbox.ts": [
+		"listTasklineInbox",
+		"getTasklineUnread",
+		"markTasklineRead",
+		"getTasklineNotifySettings",
+		"saveTasklineNotifySettings",
+	],
 	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [
 		"listTasklineProjects",

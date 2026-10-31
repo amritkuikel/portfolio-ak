@@ -219,6 +219,7 @@ export const workspaceForm = workspaceSettings.pick({
 	weekStart: true,
 	timeZone: true,
 	digestHour: true,
+	notify: true,
 	trashRetentionDays: true,
 	doneColumnDays: true,
 });

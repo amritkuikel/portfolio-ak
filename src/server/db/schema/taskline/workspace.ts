@@ -53,6 +53,8 @@ export const tlMember = pgTable(
 		capacityMinutesWeek: integer().notNull().default(2400),
 		/** Per notification kind, overrides of the workspace's defaults (Task 50). */
 		notify: jsonb().$type<Partial<Record<string, NotifyMode>>>().notNull().default({}),
+		/** The language of their emails (Task 50); null: the app's base language. */
+		locale: text(),
 		deactivatedAt: timestamp({ withTimezone: true }),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp({ withTimezone: true })

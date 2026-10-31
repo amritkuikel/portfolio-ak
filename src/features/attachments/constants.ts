@@ -44,6 +44,13 @@ export const UPLOAD_RULES = {
 	/** A note's images (/apps/notes, decision 0190): any app user, guests included; no permission. */
 	notes: IMAGES,
 	// apps:end
+	// taskline:start
+	/** A Taskline task's or comment's files (Task 50, decision 0214): images and PDFs; any Taskline user, guests included. */
+	taskline: {
+		formats: [...IMAGE_FORMATS, "pdf"],
+		mimeTypes: [...IMAGE_MIME_TYPES, "application/pdf"],
+	},
+	// taskline:end
 } as const satisfies Record<string, UploadRule>;
 export type UploadScope = keyof typeof UPLOAD_RULES;
 export const UPLOAD_SCOPES = Object.keys(UPLOAD_RULES) as [UploadScope, ...UploadScope[]];

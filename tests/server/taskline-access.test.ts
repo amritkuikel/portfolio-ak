@@ -4,6 +4,7 @@ import { taskList } from "@/features/taskline/search";
 import { isAppError } from "@/lib/errors";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
+import * as collab from "@/server/taskline/collab/service";
 import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
@@ -90,8 +91,36 @@ async function setUp() {
 }
 
 type Context = { ws: string; key: string; owner: Caller };
-type Need = "read" | "edit" | "manage";
-type Operation = { name: string; need: Need; run: (context: Context, caller: TasklineServices) => Promise<unknown> };
+type Need = "read" | "comment" | "edit" | "manage";
+type Operation = {
+	name: string;
+	need: Need;
+	/** Only a workspace member can (comment, watch): an admin reading or managing through RBAC without a member row is FORBIDDEN. */
+	memberOnly?: boolean;
+	run: (context: Context, caller: TasklineServices) => Promise<unknown>;
+};
+
+/** Callers who reach team projects through `taskline:` permissions, with no member row. */
+const NO_MEMBER: ReadonlySet<Caller> = new Set(["reader", "manager"]);
+
+/** A pending upload of `owner`'s (what a confirmed upload leaves), for the file operations. */
+const pendingUpload = async (owner: Caller) => {
+	const [row] = await env.db
+		.insert(schema.attachment)
+		.values({
+			publicId: `test/taskline/${crypto.randomUUID()}`,
+			version: 1,
+			resourceType: "image",
+			format: "png",
+			bytes: 1000,
+			width: 10,
+			height: 10,
+			ownerId: owner,
+		})
+		.returning();
+	if (!row) throw new Error("no attachment");
+	return row.id;
+};
 
 /** A task the context's owner creates for an operation to act on. */
 const ownerTask = async ({ ws, key, owner }: Context) => tasks.createTask(as(owner), { ws, key, title: "Fixture" });
@@ -211,6 +240,61 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 				ids: [(await ownerTask(context)).id],
 				priority: 2,
 			}),
+	},
+	// Collaboration (Task 50)
+	{
+		name: "addComment",
+		need: "comment",
+		memberOnly: true,
+		run: async (context, caller) =>
+			collab.addComment(caller, { ws: context.ws, ref: (await ownerTask(context)).ref, body: "<p>Hello</p>" }),
+	},
+	{
+		name: "updateComment",
+		need: "comment",
+		memberOnly: true,
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			const added = await collab.addComment(caller, { ws: context.ws, ref: task.ref, body: "<p>Draft</p>" });
+			const id = added.comments.at(-1)?.id ?? "";
+			return collab.updateComment(caller, { ws: context.ws, ref: task.ref, id, body: "<p>Final</p>" });
+		},
+	},
+	{
+		name: "deleteComment (someone else's)",
+		need: "manage",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			const added = await collab.addComment(as(context.owner), { ws: context.ws, ref: task.ref, body: "<p>Mine</p>" });
+			return collab.deleteComment(caller, { ws: context.ws, ref: task.ref, id: added.comments.at(-1)?.id ?? "" });
+		},
+	},
+	{
+		name: "watchTask",
+		need: "read",
+		memberOnly: true,
+		run: async (context, caller) =>
+			collab.watchTask(caller, { ws: context.ws, ref: (await ownerTask(context)).ref, watching: true }),
+	},
+	{
+		name: "addTaskFiles",
+		need: "edit",
+		run: async (context, caller) =>
+			collab.addTaskFiles(caller, {
+				ws: context.ws,
+				ref: (await ownerTask(context)).ref,
+				ids: [await pendingUpload(caller.user.id as Caller)],
+			}),
+	},
+	{
+		name: "removeTaskFile",
+		need: "edit",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			const id = await pendingUpload(context.owner);
+			await collab.addTaskFiles(as(context.owner), { ws: context.ws, ref: task.ref, ids: [id] });
+			return collab.removeTaskFile(caller, { ws: context.ws, ref: task.ref, id });
+		},
 	},
 	// Running the project (its lead's)
 	{
@@ -383,7 +467,9 @@ describe("the Taskline access matrix", () => {
 					const wanted: Record<string, string> = {};
 					for (const operation of OPERATIONS) {
 						outcomes[operation.name] = await code(operation.run(context, as(caller)));
-						wanted[operation.name] = expected(level, operation.need);
+						const allowed = expected(level, operation.need);
+						wanted[operation.name] =
+							operation.memberOnly && allowed === "ok" && NO_MEMBER.has(caller) ? "FORBIDDEN" : allowed;
 					}
 					expect(outcomes).toEqual(wanted);
 				});

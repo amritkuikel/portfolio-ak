@@ -3,6 +3,7 @@
 	"framework": "tanstack-start",
 	"crons": [
 		{ "path": "/api/cron/attachments", "schedule": "17 3 * * *" },
-		{ "path": "/api/cron/guests", "schedule": "41 3 * * *" }
+		{ "path": "/api/cron/guests", "schedule": "41 3 * * *" },
+		{ "path": "/api/cron/taskline", "schedule": "15 1 * * *" }
 	]
 }

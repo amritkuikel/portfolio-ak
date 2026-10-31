@@ -45,6 +45,7 @@ import {
 	type TaskType,
 } from "../types";
 import { activityItems } from "./activity";
+import { Comments, TaskFiles, WatchButton } from "./conversation";
 import { LabelChip, StatusName } from "./task-bits";
 
 /**
@@ -146,6 +147,9 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 					</Button>
 				) : null}
 				<div className="ms-auto flex gap-2">
+					{project.members.some((member) => member.userId === userId && !member.deactivated) ? (
+						<WatchButton task={task} userId={userId} ws={ws} />
+					) : null}
 					{task.deletedAt ? (
 						task.can.edit ? (
 							<Button
@@ -196,6 +200,12 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 					<Tabs defaultValue="work">
 						<TabsList>
 							<TabsTrigger value="work">{m.taskline_tab_work()}</TabsTrigger>
+							<TabsTrigger value="comments" data-testid="task-tab-comments">
+								{m.taskline_tab_comments()}
+								{task.comments.length > 0 ? (
+									<span className="text-muted-foreground tabular-nums">{formatNumber(task.comments.length)}</span>
+								) : null}
+							</TabsTrigger>
 							<TabsTrigger value="activity" data-testid="task-tab-activity">
 								{m.taskline_tab_activity()}
 							</TabsTrigger>
@@ -203,6 +213,17 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 						<TabsContent value="work" className="flex flex-col gap-6 pt-2">
 							<Subtasks task={task} project={project} userId={userId} ws={ws} editable={editable} heading={Heading} />
 							<Checklist task={task} editable={editable} onChange={writes.checklist} heading={Heading} />
+							<TaskFiles task={task} userId={userId} ws={ws} editable={editable} heading={Heading} />
+						</TabsContent>
+						<TabsContent value="comments" className="pt-2">
+							<Comments
+								task={task}
+								project={project}
+								userId={userId}
+								ws={ws}
+								readAt={project.readAt}
+								heading={Heading}
+							/>
 						</TabsContent>
 						<TabsContent value="activity" className="pt-2" data-testid="task-activity">
 							<Timeline now={now} items={activityItems(task.activity, project)} />

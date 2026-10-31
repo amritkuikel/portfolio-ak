@@ -138,6 +138,8 @@ import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/not
 import { Route as TasklineAppTasklineShellWsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/route'
 import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_taskline/app/taskline/_shell/account'
 import { Route as TasklineAppTasklineShellHomeRouteImport } from './routes/_taskline/app/taskline/_shell/home'
+import { Route as TasklineAppTasklineShellInboxRouteImport } from './routes/_taskline/app/taskline/_shell/inbox'
+import { Route as TasklineAppTasklineShellSettingsRouteImport } from './routes/_taskline/app/taskline/_shell/settings'
 import { Route as AdminAdminTasklineProjectsIdIndexRouteImport } from './routes/_admin/admin/taskline/projects/$id/index'
 import { Route as AdminAdminTasklineProjectsIdLabelsRouteImport } from './routes/_admin/admin/taskline/projects/$id/labels'
 import { Route as AdminAdminTasklineProjectsIdMembersRouteImport } from './routes/_admin/admin/taskline/projects/$id/members'
@@ -832,6 +834,18 @@ const TasklineAppTasklineShellHomeRoute =
     path: '/home',
     getParentRoute: () => TasklineAppTasklineShellRouteRoute,
   } as any)
+const TasklineAppTasklineShellInboxRoute =
+  TasklineAppTasklineShellInboxRouteImport.update({
+    id: '/inbox',
+    path: '/inbox',
+    getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
+const TasklineAppTasklineShellSettingsRoute =
+  TasklineAppTasklineShellSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
 const AdminAdminTasklineProjectsIdIndexRoute =
   AdminAdminTasklineProjectsIdIndexRouteImport.update({
     id: '/',
@@ -1060,6 +1074,8 @@ export interface FileRoutesByFullPath {
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
+  '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
+  '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1186,6 +1202,8 @@ export interface FileRoutesByTo {
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
+  '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
+  '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1334,6 +1352,8 @@ export interface FileRoutesById {
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
+  '/_taskline/app/taskline/_shell/inbox': typeof TasklineAppTasklineShellInboxRoute
+  '/_taskline/app/taskline/_shell/settings': typeof TasklineAppTasklineShellSettingsRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/_admin/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1478,6 +1498,8 @@ export interface FileRouteTypes {
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
     | '/app/taskline/home'
+    | '/app/taskline/inbox'
+    | '/app/taskline/settings'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
     | '/admin/taskline/projects/'
@@ -1604,6 +1626,8 @@ export interface FileRouteTypes {
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
     | '/app/taskline/home'
+    | '/app/taskline/inbox'
+    | '/app/taskline/settings'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/admin/taskline/projects'
@@ -1751,6 +1775,8 @@ export interface FileRouteTypes {
     | '/_apps/apps/notes/s/$token'
     | '/_taskline/app/taskline/_shell/account'
     | '/_taskline/app/taskline/_shell/home'
+    | '/_taskline/app/taskline/_shell/inbox'
+    | '/_taskline/app/taskline/_shell/settings'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
     | '/_admin/admin/taskline/projects/'
@@ -2699,6 +2725,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellHomeRouteImport
       parentRoute: typeof TasklineAppTasklineShellRouteRoute
     }
+    '/_taskline/app/taskline/_shell/inbox': {
+      id: '/_taskline/app/taskline/_shell/inbox'
+      path: '/inbox'
+      fullPath: '/app/taskline/inbox'
+      preLoaderRoute: typeof TasklineAppTasklineShellInboxRouteImport
+      parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/settings': {
+      id: '/_taskline/app/taskline/_shell/settings'
+      path: '/settings'
+      fullPath: '/app/taskline/settings'
+      preLoaderRoute: typeof TasklineAppTasklineShellSettingsRouteImport
+      parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
     '/_admin/admin/taskline/projects/$id/': {
       id: '/_admin/admin/taskline/projects/$id/'
       path: '/'
@@ -2908,6 +2948,8 @@ interface TasklineAppTasklineShellRouteRouteChildren {
   TasklineAppTasklineShellWsRouteRoute: typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   TasklineAppTasklineShellAccountRoute: typeof TasklineAppTasklineShellAccountRoute
   TasklineAppTasklineShellHomeRoute: typeof TasklineAppTasklineShellHomeRoute
+  TasklineAppTasklineShellInboxRoute: typeof TasklineAppTasklineShellInboxRoute
+  TasklineAppTasklineShellSettingsRoute: typeof TasklineAppTasklineShellSettingsRoute
 }
 
 const TasklineAppTasklineShellRouteRouteChildren: TasklineAppTasklineShellRouteRouteChildren =
@@ -2916,6 +2958,9 @@ const TasklineAppTasklineShellRouteRouteChildren: TasklineAppTasklineShellRouteR
       TasklineAppTasklineShellWsRouteRouteWithChildren,
     TasklineAppTasklineShellAccountRoute: TasklineAppTasklineShellAccountRoute,
     TasklineAppTasklineShellHomeRoute: TasklineAppTasklineShellHomeRoute,
+    TasklineAppTasklineShellInboxRoute: TasklineAppTasklineShellInboxRoute,
+    TasklineAppTasklineShellSettingsRoute:
+      TasklineAppTasklineShellSettingsRoute,
   }
 
 const TasklineAppTasklineShellRouteRouteWithChildren =

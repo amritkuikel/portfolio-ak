@@ -11,6 +11,8 @@ export const richTextClass = cn(
 	"[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono",
 	"[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0",
 	"[&_hr]:my-4 [&_hr]:border-border",
+	// A mention (Taskline's comments): a member's name, set apart.
+	"[&_.mention]:rounded [&_.mention]:bg-accent [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-accent-foreground",
 );
 
 /**

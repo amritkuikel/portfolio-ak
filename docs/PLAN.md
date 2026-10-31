@@ -1591,7 +1591,7 @@ The procedure is section 10.1's, with these differences:
 | 47 | The standalone shell: layout, brand, landing, auth pages, home, project directory, palette | high | Done (decision 0208) |
 | 48 | Board, list and the task; Kanban's data migrated, redirected and removed | xhigh | Done (decisions 0209–0211) |
 | 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Done (decisions 0212–0213) |
-| 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Planned |
+| 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Done (decision 0214) |
 | 51 | More views: calendar, my work, saved views, search, CSV import | high | Planned |
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Planned |
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0214 after Task 49).
+- **Decisions:** numbered from the next free one (0215 after Task 50).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1742,7 +1742,7 @@ The procedure is section 10.1's, with these differences:
 | Table | Columns and notes | Task |
 | --- | --- | --- |
 | `tl_workspace` | kind, slug, name, owner_id?, `settings` jsonb (Zod `workspaceSettings`, below), version. Partial unique: one `team`; unique owner_id | 46 |
-| `tl_member` | workspace_id, user_id? (set null), display_name, role, title, capacity_minutes_week, `notify` jsonb (per kind: instant / digest / off), deactivated_at. Unique (workspace, user) | 46 |
+| `tl_member` | workspace_id, user_id? (set null), display_name, role, title, capacity_minutes_week, `notify` jsonb (per kind: instant / digest / off), locale (the email language, Task 50), deactivated_at. Unique (workspace, user) | 46 |
 | `tl_invitation` | workspace_id, email (lowercase), role, invited_by, project_id? (set null), expires_at, accepted_at, revoked_at; one open per (workspace, email) | 46, 49 |
 | `tl_retired_key` | workspace_id, key, retired_at: a deleted project's key, never handed out again | 49 |
 | `tl_project` | workspace_id, key (2–6 `A-Z0-9`, unique per workspace, never reused), name, description html + text, color, icon, visibility, status (active / paused / completed / archived), health? (on track / at risk / off track), lead_id, start_on, target_on, `settings` jsonb (sprints, time, estimation `points` or `time`, block completion while blocked, done-column days), task_seq, rev bigint, version, archived_at | 46 |
@@ -1753,8 +1753,8 @@ The procedure is section 10.1's, with these differences:
 | `tl_task` | workspace_id, project_id, number (unique per project, from `task_seq` under the project's row lock; ref `KEY-12`), type (task / bug / story / epic), title, description html + text, status_id, priority (0 none … 4 urgent), assignee_id?, reporter_id?, parent_id? (depth ≤ 2), position (board), checklist jsonb, start_on, due_on, completed_at (set when the status's category becomes completed or canceled), generated `search` tsvector (`simple`: title A, text B), version, deleted_at (trash) | 46 |
 | `tl_task_watcher` | task_id, member_id | 46 |
 | `tl_activity` | workspace_id, project_id, task_id?, actor_id?, kind, data jsonb (from / to), at; indexes (project, at desc) and (task, at) | 46 |
-| `tl_comment` | task_id, author_id?, body html + text, mentions uuid[], edited_at, deleted_at | 50 |
-| `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data, read_at, emailed_at; index (user, read_at, created desc) | 50 |
+| `tl_comment` | project_id, task_id, author_id?, body html + text, mentions uuid[], edited_at, deleted_at | 50 |
+| `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data (a snapshot for the sentence), email (instant / digest / none, fixed when made), created_at, read_at, emailed_at; index (user, read_at, created desc), a partial index on the unsent | 50 |
 | `tl_saved_view` | workspace_id, project_id?, member_id, name, view, search, shared | 51 |
 | `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, completed_at, committed_points, completed_points; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks. `tl_task` gains sprint_id, points, rank | 52 |
 | `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member. `tl_task` gains estimate_minutes | 53 |
@@ -1786,9 +1786,9 @@ The procedure is section 10.1's, with these differences:
 
 **Notifications and email** (Task 50, extended by later tasks):
 - **Kinds:** assigned, mentioned, comment on a watched task, status change on a watched task, due tomorrow, overdue, added to a project, invited, sprint started or completed, automation "notify", timer stopped automatically. Creating, being assigned or commenting makes you a watcher.
-- **Instant email** (default only for assigned and mentioned) is sent after the commit with `waitUntil`, coalesced per recipient and task within 5 minutes. Everything else goes in the daily digest.
-- **Templates:** `TaskNotification`, `DailyDigest` and `TeamInvite` in the recipient's language, branded Taskline. Guests and placeholders get none.
-- **`GET /api/cron/taskline`** runs daily, about 07:00 Kathmandu (`vercel.json`; daily is all Vercel's free plan allows). Each step is idempotent and independent:
+- **Instant email** (default only for assigned and mentioned) is sent after the commit with `waitUntil` (the service's `deliver`), one email per recipient and task; a second one about the same task within 5 minutes goes to the digest instead (coalescing, 0214). Everything else goes in the daily digest.
+- **Templates:** `TaskNotification` (`taskline-notification`), `DailyDigest` (`taskline-digest`) and `TeamInvite` (`taskline-invite`) in the recipient's language (`tl_member.locale`), branded Taskline. Guests and placeholders get none.
+- **`GET /api/cron/taskline`** runs daily at 01:15 UTC, 07:00 Kathmandu (`vercel.json`; daily is all Vercel's free plan allows), so the schedule is the digest hour. Each step is idempotent and independent:
   - due and overdue notices;
   - digests;
   - sprint snapshots (52);
@@ -1913,21 +1913,30 @@ The admin runs the team from `/admin/taskline` (decisions 0212–0213; [docs/gui
   - Run `pnpm db:migrate` on Neon (`0019_taskline_admin`).
   - The bundle count is 2 kB under its budget: Task 50 onwards adds routes, whose definitions are in every page (0151). Consider the closure measurement noted under Task 48 before the budget is raised.
 
-### Task 50: Collaboration and notifications (planned)
+### Task 50: Collaboration and notifications (done)
 
-- **Comments:** on the task (TipTap, lazy), edit and delete (own; leads moderate), rate limited.
-- **@mentions:** add `@tiptap/extension-mention` (check the current version, context7), suggestions from the project's members, and mention nodes allowed by `src/server/rich-text/sanitize.ts`. The server stores the ids it finds in the sanitized HTML, never the client's list.
-- **Watchers:** watch and unwatch, and automatic watching.
-- **Attachments:** files and images on tasks and comments, through a Taskline `UploadTransport` (as Notes; `entity_type` `tl_task` and `tl_comment`; per-hour limits), deleted with their task through the attachments service.
-- **Notifications:**
-  - `notify/produce.ts`, called in the write transactions;
-  - the inbox (filters, read, read all, the unread badge polled every 60 s);
-  - `/settings` (per-kind modes).
-- **Email:** `TaskNotification` (instant, after commit with `waitUntil`, coalesced), `DailyDigest`, and `/api/cron/taskline` with its first steps (due and overdue notices, digests, trash purge, invitation expiry).
-- **Tests:**
-  - PGlite: mentions only of members who can view the task; notifications to the right people (never the actor, never placeholders or guests by email); coalescing; the cron's idempotency;
-  - e2e: assign → the inbox and the email; a mention → the email.
-- **Decision:** instant mail plus a daily digest under the daily-cron limit.
+Comments, mentions, watchers, files, the inbox, Taskline's emails and the daily job (decision 0214; [docs/guides/taskline.md](guides/taskline.md), "The conversation and notifications").
+
+- **Schema:** `0020_taskline_collab`: `tl_comment` (project, task, author, sanitized body and its text, `mentions uuid[]`, edited and deleted), `tl_notification` (account, workspace, kind, project, task, actor, a `data` snapshot, `email` instant / digest / none, read and emailed), `tl_member.locale` (the email language). Activity kinds `comment.added`, `comment.deleted`, `attachment.added`, `attachment.removed`.
+- **Server:** `collab/` (comments with mentions read from the sanitized HTML and kept for members who may see the task, edit own, delete own or as lead, 30 per ten minutes; watching; files on tasks and comments through Taskline's upload functions, 60 an hour), `notify/produce.ts` (in the write's transaction: assigned, mentioned, comment and status on watched tasks, added to a project; never the actor, only members with an account who may see the project, once per change, by mode), `notify/deliver.ts` (instant email after the commit through `services.deliver`, coalesced per recipient and task within five minutes into the digest; the digest), `notify/inbox.ts` (inbox, unread count, read and unread, "My settings" saved on every member row), `cron.ts` and `GET /api/cron/taskline` (01:15 UTC: due and overdue notices, digests, trash purge with files, invitation expiry; each step idempotent). Deleting a task for good marks its and its comments' files removed. 15 functions in `src/functions/taskline/{collab,inbox}.ts`, in the guard test; six operations in the access matrix (`comment` is a level of its own there, and commenting and watching need a member row).
+- **Editor:** `@tiptap/extension-mention` 3.32 (Tiptap aligned to 3.32.2); `RichTextField` takes `mentions`; the sanitizer keeps a `<span>` only as a mention node with a UUID id (`mentionedIds` reads them).
+- **Pages:** the task's Comments tab (list, edit, delete, a box with `@` suggestions and files), its Files section, a Watch toggle; `/app/taskline/inbox` (unread or all, more pages, read and unread each, all read) and `/app/taskline/settings` ("My settings": a mode per kind over the team's default, the email language); the sidebar's Inbox with its unread badge (polled every minute) and "My settings" in the user menu. The admin's settings gained the notification defaults.
+- **Email:** `taskline-notification` and `taskline-digest` templates, in the member's email language, signed Taskline.
+- **Sandbox:** a three-comment conversation with a mention of the owner, and the owner's inbox holding it and an assignment (never emailed); the claim moves notifications to the account and remaps comment authors, mentions and notification actors.
+- **Tests:** PGlite `taskline-collab.test.ts` (14: mentions only of viewers and sanitized; watchers and the mentioned-once rule; edit and delete rights and empty comments; files linked and removed on purge; assignees and status changes; nobody who can't see the project, a new project member told; modes off and digest, defaults not stored; placeholders and guests never emailed; one instant email per recipient and task, coalescing into the digest, the digest once; the recipient's language and read rows left out; due and overdue once per due date, the whole job twice; trash purge and invitation expiry; the inbox's own rows only, deactivated hidden, a claim moving them), the access matrix (+6 operations), jsdom (the conversation and watching), stories (`Taskline/Inbox`, the task's conversation), the email template tests. `pnpm test`: 113 files, 1,032 tests; `test:storybook` 92 files, 440 tests. E2E (11.1): `taskline.spec.ts` (10 flows, the new one: assigning reaches the inbox and the email, a mention emails the one mentioned), `apps.spec.ts` and `rbac.spec.ts` (4), and the review of every `/app/taskline` page and `/admin/taskline/settings` (288), all passing.
+- **Numbers:** every page's JavaScript 248.5 kB gzip as `check-bundle.ts` counts it (248.0 before; budget 250): two route definitions. 98 new messages in each language, the Nepali written by hand. Build, `build-storybook`, `i18n:check` green.
+- **Deviations:**
+  - Files are images and PDFs, not any file: the upload flow verifies Cloudinary image assets, and raw uploads need their own signing and checks (0214).
+  - Coalescing doesn't delay the first email; a second one about the same task within five minutes goes to the digest (a function can't wait five minutes).
+  - Notifications caused from the admin (its services run inside `withAudit`'s transaction) are emailed in the digest, not at once.
+  - The `invited` kind isn't produced: an invitation is its own email (0212). `digestHour` stays a setting; with one run a day, the cron's schedule is the hour.
+  - The inbox shows notifications of workspaces the caller still belongs to; a private project they left still shows its old notices' snapshot.
+  - The demo team (`pnpm db:seed-taskline`) has no comments or notifications yet.
+  - `test:storybook` once failed on the admin shell's "User menu open" in ne/dark and passed on both reruns (menu timing; untouched by this task).
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0020_taskline_collab`).
+  - The new Vercel cron needs `CRON_SECRET` (already used by the other two jobs); emails need Resend as before.
+  - The bundle count is 1.5 kB under its budget, and Tasks 51 onwards add routes (0151): consider the closure measurement (Task 48's note) before raising it.
 
 ### Task 51: More views and finding things (planned)
 

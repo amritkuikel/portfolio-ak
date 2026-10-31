@@ -25,6 +25,7 @@ export * from "./audit";
 export * from "./auth";
 export * from "./portfolio"; // @portfolio
 export * from "./rbac";
+export * from "./taskline/collab"; // @taskline
 export * from "./taskline/project"; // @taskline
 export * from "./taskline/task"; // @taskline
 export * from "./taskline/workspace"; // @taskline

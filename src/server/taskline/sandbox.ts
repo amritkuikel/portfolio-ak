@@ -8,11 +8,14 @@ import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
 import {
+	type TlMemberRow,
 	type TlWorkspaceRow,
 	tlActivity,
+	tlComment,
 	tlInvitation,
 	tlLabel,
 	tlMember,
+	tlNotification,
 	tlProject,
 	tlProjectMember,
 	tlStar,
@@ -28,6 +31,7 @@ import { recordActivity } from "./activity";
 import * as projects from "./projects/repository";
 import { insertProjectWithWorkflow } from "./projects/service";
 import { nextTaskNumber } from "./rev";
+import { richText } from "./rules";
 import * as tasks from "./tasks/repository";
 import * as workflow from "./workflow/repository";
 import * as workspaces from "./workspace/repository";
@@ -196,7 +200,109 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 		await tasks.addWatchers(tx, task.id, [owner.id, task.assigneeId]);
 		await recordActivity(tx, created, { kind: "task.created", taskId: task.id, data: { title: task.title } });
 	}
+	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
 	return workspace;
+}
+
+const escapeHtml = (text: string) =>
+	text.replace(
+		/[&<>"']/g,
+		(char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char,
+	);
+
+/**
+ * Task 50: a short conversation on the second task (a teammate mentions the owner, who
+ * then sees it in their inbox) and an assignment notice for the first. Seeded notices
+ * are never emailed.
+ */
+async function seedConversation(
+	tx: Tx,
+	{
+		workspaceId,
+		projectId,
+		owner,
+		teammates,
+		taskIds,
+		t,
+	}: {
+		workspaceId: string;
+		projectId: string;
+		owner: TlMemberRow;
+		teammates: TlMemberRow[];
+		taskIds: string[];
+		t: { locale: Locale };
+	},
+): Promise<void> {
+	const [asha, , sita] = teammates;
+	const [first, second] = taskIds;
+	if (!asha || !sita || !first || !second || !owner.userId) return;
+	const ownerName = owner.displayName || m.taskline_seed_you({}, t);
+	const mention = `<span data-type="mention" class="mention" data-id="${owner.id}" data-label="${escapeHtml(ownerName)}">@${escapeHtml(ownerName)}</span>`;
+	const comments = [
+		{ author: asha, html: `<p>${m.taskline_seed_comment_scope({}, t)}</p>`, mentions: [] as string[], minutes: 90 },
+		{
+			author: asha,
+			html: `<p>${mention} ${m.taskline_seed_comment_mention({}, t)}</p>`,
+			mentions: [owner.id],
+			minutes: 60,
+		},
+		{ author: sita, html: `<p>${m.taskline_seed_comment_reply({}, t)}</p>`, mentions: [] as string[], minutes: 30 },
+	];
+	const now = Date.now();
+	for (const comment of comments) {
+		const safe = richText(comment.html);
+		await tx.insert(tlComment).values({
+			projectId,
+			taskId: second,
+			authorId: comment.author.id,
+			bodyHtml: safe.html,
+			bodyText: safe.text,
+			mentions: comment.mentions,
+			createdAt: new Date(now - comment.minutes * 60_000),
+		});
+	}
+	const [secondTask, firstTask, project] = await Promise.all([
+		tasks.getById(tx, projectId, second),
+		tasks.getById(tx, projectId, first),
+		tx.select().from(tlProject).where(eq(tlProject.id, projectId)),
+	]);
+	const key = project[0]?.key ?? SAMPLE_KEY;
+	const name = project[0]?.name ?? "";
+	await tx.insert(tlNotification).values([
+		{
+			userId: owner.userId,
+			workspaceId,
+			projectId,
+			taskId: second,
+			actorId: asha.id,
+			kind: "mentioned",
+			data: {
+				actor: asha.displayName,
+				ref: tasks.taskRef(key, secondTask?.number ?? 2),
+				title: secondTask?.title ?? "",
+				project: name,
+				excerpt: `@${ownerName} ${m.taskline_seed_comment_mention({}, t)}`,
+			},
+			email: "none",
+			createdAt: new Date(now - 60 * 60_000),
+		},
+		{
+			userId: owner.userId,
+			workspaceId,
+			projectId,
+			taskId: first,
+			actorId: asha.id,
+			kind: "assigned",
+			data: {
+				actor: asha.displayName,
+				ref: tasks.taskRef(key, firstTask?.number ?? 1),
+				title: firstTask?.title ?? "",
+				project: name,
+			},
+			email: "none",
+			createdAt: new Date(now - 120 * 60_000),
+		},
+	]);
 }
 
 /** `base`, or the first of `base2`, `base3`… (shortened to six characters) not in `taken`. */
@@ -225,6 +331,12 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 		sql`insert into ${tlTaskWatcher} (task_id, member_id) select task_id, ${to} from ${tlTaskWatcher} where member_id = ${from} on conflict do nothing`,
 	);
 	await tx.delete(tlTaskWatcher).where(eq(tlTaskWatcher.memberId, from));
+	// Task 50: comments' authors and mentions, and who caused notifications.
+	await tx.update(tlComment).set({ authorId: to }).where(eq(tlComment.authorId, from));
+	await tx.execute(
+		sql`update ${tlComment} set mentions = array_replace(mentions, ${from}::uuid, ${to}::uuid) where ${from}::uuid = any(mentions)`,
+	);
+	await tx.update(tlNotification).set({ actorId: to }).where(eq(tlNotification.actorId, from));
 }
 
 /**
@@ -240,6 +352,8 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 	const guestMember = await workspaces.memberOf(tx, guest.id, fromUserId);
 	const accountName = (await workspaces.userName(tx, toUserId)) ?? "";
 	const target = await workspaces.sandboxOf(tx, toUserId);
+	// The guest's inbox is the account's now (Task 50).
+	await tx.update(tlNotification).set({ userId: toUserId }).where(eq(tlNotification.userId, fromUserId));
 	if (!target) {
 		await tx.update(tlWorkspace).set({ ownerId: toUserId }).where(eq(tlWorkspace.id, guest.id));
 		if (guestMember) {
@@ -268,6 +382,7 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 	}
 	await tx.update(tlTask).set({ workspaceId: target.id }).where(eq(tlTask.workspaceId, guest.id));
 	await tx.update(tlActivity).set({ workspaceId: target.id }).where(eq(tlActivity.workspaceId, guest.id));
+	await tx.update(tlNotification).set({ workspaceId: target.id }).where(eq(tlNotification.workspaceId, guest.id));
 	await tx
 		.update(tlLabel)
 		.set({ workspaceId: target.id })

@@ -27,6 +27,7 @@ import {
 	type WorkspaceAccess,
 } from "../access";
 import { recordActivity } from "../activity";
+import { actorOf, produce } from "../notify/produce";
 import { bumpRev, saveVersioned } from "../rev";
 import { fieldError, notMemberError, quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as members from "../workspace/repository";
@@ -254,22 +255,31 @@ export async function listProjectMembers(
 
 /** Adds a workspace member to the project or changes their role (leads). */
 export async function setProjectMember(
-	{ db, user }: TasklineServices,
+	services: TasklineServices,
 	{ ws, key, memberId, role }: { ws: string; key: string; memberId: string; role: ProjectRole },
 ): Promise<ProjectMemberView[]> {
-	return db.transaction(async (tx) => {
+	const { db, user } = services;
+	const { result, notify } = await db.transaction(async (tx) => {
 		const access = await resolveProject(tx, user, ws, key);
 		assertCan(access, "manage");
 		const member = await members.memberById(tx, access.workspace.id, memberId);
 		if (!member || member.deactivatedAt) throw notFound("Member");
+		const wasMember = (await repo.rolesOf(tx, member.id, [access.project.id])).has(access.project.id);
 		await repo.upsertProjectMember(tx, access.project.id, member.id, role);
 		if (role === "lead" && !access.project.leadId) {
 			await repo.patchProject(tx, access.project.id, { leadId: member.id });
 		}
 		await recordActivity(tx, access, { kind: "project.member_added", data: { memberId: member.id, role } });
 		await bumpRev(tx, access.project.id);
-		return repo.projectMembers(tx, access.project.id);
+		const notify = wasMember
+			? []
+			: await produce(tx, access, actorOf(access, user.id), [
+					{ kind: "added", taskId: null, to: [member.id], data: { project: access.project.name } },
+				]);
+		return { result: await repo.projectMembers(tx, access.project.id), notify };
 	});
+	if (notify.length > 0) services.deliver?.(notify);
+	return result;
 }
 
 export async function removeProjectMember(

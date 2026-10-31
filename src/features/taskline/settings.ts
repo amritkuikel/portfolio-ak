@@ -2,7 +2,10 @@ import { z } from "zod";
 import { isIsoDate } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import {
+	NOTIFY_KINDS,
 	NOTIFY_MODES,
+	type NotifyKind,
+	type NotifyMode,
 	PROJECT_VISIBILITIES,
 	type ProjectSettings,
 	SANDBOX_SEGMENT,
@@ -19,25 +22,10 @@ import {
 
 const day = z.number().int().min(0).max(6);
 
-/** The kinds of notification a member can tune (Task 50 sends them). */
-export const NOTIFY_KINDS = [
-	"assigned",
-	"mentioned",
-	"comment",
-	"status",
-	"due",
-	"overdue",
-	"added",
-	"invited",
-	"sprint",
-	"automation",
-	"timer",
-] as const;
-export type NotifyKind = (typeof NOTIFY_KINDS)[number];
-
-const notifyDefaults = Object.fromEntries(
+/** Instant email only for being assigned or mentioned; everything else waits for the daily digest (11.5). */
+export const NOTIFY_DEFAULTS = Object.fromEntries(
 	NOTIFY_KINDS.map((kind) => [kind, kind === "assigned" || kind === "mentioned" ? "instant" : "digest"]),
-) as Record<NotifyKind, (typeof NOTIFY_MODES)[number]>;
+) as Record<NotifyKind, NotifyMode>;
 
 export const TEAM_QUOTA_DEFAULTS = { projects: 500, tasks: 200_000, statusesPerProject: 50, timeEntries: 1_000_000 };
 
@@ -67,9 +55,9 @@ export const workspaceSettings = z.object({
 	/** The hour (in `timeZone`) the daily digest goes out. */
 	digestHour: z.number().int().min(0).max(23).default(7),
 	notify: z
-		.record(z.enum(NOTIFY_KINDS), z.enum(NOTIFY_MODES))
-		.default(notifyDefaults)
-		.transform((modes) => ({ ...notifyDefaults, ...modes })),
+		.partialRecord(z.enum(NOTIFY_KINDS), z.enum(NOTIFY_MODES))
+		.default(NOTIFY_DEFAULTS)
+		.transform((modes) => ({ ...NOTIFY_DEFAULTS, ...modes })),
 	quotas: z
 		.object({
 			projects: z.number().int().positive(),

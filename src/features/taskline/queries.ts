@@ -1,5 +1,20 @@
 import { keepPreviousData, mutationOptions, type QueryClient, queryOptions } from "@tanstack/react-query";
+import {
+	addTasklineComment,
+	addTasklineTaskFiles,
+	deleteTasklineComment,
+	removeTasklineTaskFile,
+	updateTasklineComment,
+	watchTasklineTask,
+} from "@/functions/taskline/collab";
 import { getTasklineNav, listMyTasklineTasks } from "@/functions/taskline/home";
+import {
+	getTasklineNotifySettings,
+	getTasklineUnread,
+	listTasklineInbox,
+	markTasklineRead,
+	saveTasklineNotifySettings,
+} from "@/functions/taskline/inbox";
 import {
 	createTasklineProject,
 	joinTasklineProject,
@@ -39,14 +54,19 @@ import {
 } from "@/functions/taskline/workflow";
 import { getTasklineWorkspace, listTasklineMembers, startTasklineSandbox } from "@/functions/taskline/workspaces";
 import type {
+	AddCommentInput,
 	BulkTasksInput,
 	CreateLabelInput,
 	CreateProjectInput,
 	CreateStatusInput,
 	CreateTaskInput,
+	InboxInput,
+	MarkReadInput,
+	NotifySettingsInput,
 	PatchTaskInput,
 	SetProjectStateInput,
 	TaskListInput,
+	UpdateCommentInput,
 	UpdateLabelInput,
 	UpdateProjectInput,
 	UpdateStatusInput,
@@ -77,7 +97,30 @@ export const tasklineKeys = {
 	taskPage: (userId: string, input: TaskListInput) =>
 		[...tasklineKeys.project(userId, input.ws, input.key), "list", input] as const,
 	task: (userId: string, ws: string, ref: string) => [...tasklineKeys.workspace(userId, ws), "task", ref] as const,
+	/** Task 50: the inbox (and the sidebar's count, under it) and "My settings". */
+	inbox: (userId: string) => [...tasklineKeys.user(userId), "inbox"] as const,
+	unread: (userId: string) => [...tasklineKeys.inbox(userId), "unread"] as const,
+	notifySettings: (userId: string) => [...tasklineKeys.user(userId), "notify-settings"] as const,
 };
+
+export const inboxQueryOptions = (userId: string, input: InboxInput) =>
+	queryOptions({
+		queryKey: [...tasklineKeys.inbox(userId), input],
+		queryFn: () => listTasklineInbox({ data: input }),
+		placeholderData: keepPreviousData,
+	});
+
+/** The sidebar's unread count: polled every minute while the tab is visible (PLAN 11.5). */
+export const unreadQueryOptions = (userId: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.unread(userId),
+		queryFn: () => getTasklineUnread(),
+		refetchInterval: 60_000,
+		refetchIntervalInBackground: false,
+	});
+
+export const notifySettingsQueryOptions = (userId: string) =>
+	queryOptions({ queryKey: tasklineKeys.notifySettings(userId), queryFn: () => getTasklineNotifySettings() });
 
 export const tasklineNavQueryOptions = (userId: string) =>
 	queryOptions({ queryKey: tasklineKeys.nav(userId), queryFn: () => getTasklineNav() });
@@ -236,4 +279,34 @@ export const tasklineMutations = {
 		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
 			deleteTasklineLabel({ data: input }),
 		),
+	addComment: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: AddCommentInput) => addTasklineComment({ data: input })),
+	updateComment: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateCommentInput) => updateTasklineComment({ data: input })),
+	deleteComment: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; id: string }) =>
+			deleteTasklineComment({ data: input }),
+		),
+	watch: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; watching: boolean }) =>
+			watchTasklineTask({ data: input }),
+		),
+	addFiles: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; ids: string[] }) =>
+			addTasklineTaskFiles({ data: input }),
+		),
+	removeFile: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; id: string }) =>
+			removeTasklineTaskFile({ data: input }),
+		),
+	markRead: (queryClient: QueryClient, userId: string) =>
+		mutationOptions({
+			mutationFn: (input: MarkReadInput) => markTasklineRead({ data: input }),
+			onSettled: () => queryClient.invalidateQueries({ queryKey: tasklineKeys.inbox(userId) }),
+		}),
+	saveNotifySettings: (queryClient: QueryClient, userId: string) =>
+		mutationOptions({
+			mutationFn: (input: NotifySettingsInput) => saveTasklineNotifySettings({ data: input }),
+			onSuccess: (saved) => queryClient.setQueryData(tasklineKeys.notifySettings(userId), saved),
+		}),
 };

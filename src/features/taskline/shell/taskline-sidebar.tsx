@@ -6,6 +6,7 @@ import {
 	FlaskConicalIcon,
 	FolderKanbanIcon,
 	HouseIcon,
+	InboxIcon,
 	PlusIcon,
 	SearchIcon,
 	UsersIcon,
@@ -28,6 +29,7 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail,
@@ -35,10 +37,12 @@ import {
 } from "@/components/ui/sidebar";
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { useHotkeyLabel } from "@/hooks/use-hotkeys";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { TASKLINE_NAME } from "../brand";
 import { tasklineColor } from "../colors";
 import { tasklineLinks } from "../links";
+import { unreadQueryOptions } from "../queries";
 import type { NavProject, NavWorkspace, TasklineNav } from "../types";
 import { TasklineMark } from "./taskline-mark";
 import { TasklineUserMenu } from "./taskline-user-menu";
@@ -66,6 +70,9 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 	const params = useParams({ strict: false });
 	const { data: session } = useQuery(sessionQueryOptions());
 	const [creating, setCreating] = useState(false);
+	// Polled every minute (PLAN 11.5); it appears after hydration, absolutely placed, so nothing moves.
+	const { data: unread } = useQuery({ ...unreadQueryOptions(session?.user.id ?? ""), enabled: Boolean(session) });
+	const unreadCount = unread?.unread ?? 0;
 	return (
 		<Sidebar collapsible="icon" data-testid="taskline-sidebar">
 			<nav aria-label={m.taskline_sidebar_label()} className="flex min-h-0 flex-1 flex-col">
@@ -93,6 +100,32 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 										<Link {...tasklineLinks.home()} {...props}>
 											<HouseIcon aria-hidden />
 											<span>{m.taskline_nav_home()}</span>
+										</Link>
+									)}
+								</NavItem>
+								<NavItem
+									label={m.taskline_inbox()}
+									badge={
+										unreadCount > 0 ? (
+											<SidebarMenuBadge
+												aria-hidden
+												className="pointer-events-none bg-primary text-primary-foreground"
+												data-testid="nav-inbox-badge"
+											>
+												{unreadCount > 99 ? "99+" : formatNumber(unreadCount)}
+											</SidebarMenuBadge>
+										) : null
+									}
+								>
+									{(props) => (
+										<Link {...tasklineLinks.inbox()} {...props} data-testid="nav-inbox">
+											<InboxIcon aria-hidden />
+											<span>{m.taskline_inbox()}</span>
+											{unreadCount > 0 ? (
+												<span className="sr-only">
+													{m.taskline_inbox_unread_count({ count: formatNumber(unreadCount) })}
+												</span>
+											) : null}
 										</Link>
 									)}
 								</NavItem>
@@ -171,13 +204,23 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 /** Props every sidebar link takes: the router marks the current page (data-active); on phones the sheet closes once one is picked. */
 type NavLinkProps = { activeProps: { "data-active": true }; onClick: () => void };
 
-function NavItem({ label, children }: { label: string; children: (props: NavLinkProps) => ReactNode }) {
+function NavItem({
+	label,
+	badge,
+	children,
+}: {
+	label: string;
+	/** A count beside the item (the inbox's unread); the link says it to screen readers itself. */
+	badge?: ReactNode;
+	children: (props: NavLinkProps) => ReactNode;
+}) {
 	const { setOpenMobile } = useSidebar();
 	return (
 		<SidebarMenuItem>
 			<SidebarMenuButton asChild tooltip={label} className="data-[active=true]:[&>svg]:text-primary">
 				{children({ activeProps: { "data-active": true }, onClick: () => setOpenMobile(false) })}
 			</SidebarMenuButton>
+			{badge}
 		</SidebarMenuItem>
 	);
 }

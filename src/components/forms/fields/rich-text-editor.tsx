@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useFieldContext } from "../contexts";
 import { RICH_TEXT_SURFACE, RICH_TEXT_TOOLBAR } from "./rich-text-frame";
+import { type MentionCandidate, mentionExtension } from "./rich-text-mentions";
 
 // Module-level so useEditor's per-render option comparison sees the same instances.
 // The schema matches the server sanitizer's allowlist (src/server/rich-text/sanitize.ts).
@@ -293,19 +294,27 @@ export type RichTextEditorProps = {
 	labelId: string;
 	describedBy: string | undefined;
 	invalid: boolean;
+	/** People `@` suggests (Taskline's comments); without it there are no mentions. */
+	mentions?: ReadonlyArray<MentionCandidate> | undefined;
 };
 
 /** Client-only (loaded lazily by RichTextField). */
-export default function RichTextEditor({ id, labelId, describedBy, invalid }: RichTextEditorProps) {
+export default function RichTextEditor({ id, labelId, describedBy, invalid, mentions }: RichTextEditorProps) {
 	const field = useFieldContext<string>();
 	const value = field.state.value ?? "";
 	const latest = useRef(field);
 	latest.current = field;
+	const people = useRef(mentions);
+	people.current = mentions;
+	// Created once: useEditor compares the extensions on every render.
+	const [extensions] = useState(() =>
+		mentions ? [...EXTENSIONS, mentionExtension(() => people.current ?? [])] : EXTENSIONS,
+	);
 
 	const editor = useEditor({
 		// Required for SSR setups: never create the editor during render.
 		immediatelyRender: false,
-		extensions: EXTENSIONS,
+		extensions,
 		// Only read when the editor is created; later changes go through the resync effect below.
 		content: value,
 		// Without deps, useEditor re-applies these options on every render, so the

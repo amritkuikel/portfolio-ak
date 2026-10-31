@@ -25,7 +25,7 @@ import { sampleProjectTasks, sampleTaskDetail } from "../../../.storybook/mocks/
  * checklist by `setChecklist`), and a reader gets them read-only. The functions modules
  * are replaced: they import server code that only Start's compiler strips.
  */
-const calls = vi.hoisted(() => ({ patch: vi.fn(), move: vi.fn(), checklist: vi.fn() }));
+const calls = vi.hoisted(() => ({ patch: vi.fn(), move: vi.fn(), checklist: vi.fn(), watch: vi.fn() }));
 vi.mock("@/functions/taskline/tasks", () => ({
 	patchTasklineTask: async (options: unknown) => calls.patch(options),
 	moveTasklineTask: async (options: unknown) => calls.move(options),
@@ -35,6 +35,12 @@ vi.mock("@/functions/taskline/projects", () => ({}));
 vi.mock("@/functions/taskline/workflow", () => ({}));
 vi.mock("@/functions/taskline/workspaces", () => ({}));
 vi.mock("@/functions/taskline/home", () => ({}));
+vi.mock("@/functions/taskline/collab", () => ({
+	watchTasklineTask: async (options: unknown) => calls.watch(options),
+	getTasklineUploadSettings: async () => ({ enabled: false }),
+}));
+vi.mock("@/functions/taskline/inbox", () => ({}));
+vi.mock("@/functions/attachments", () => ({}));
 
 async function renderPanel(task: TaskDetail) {
 	const page = () => (
@@ -102,6 +108,21 @@ describe("the task's fields", () => {
 			data: { checklist: Array<{ text: string; done: boolean }> };
 		};
 		expect(sent.data.checklist.find((item) => item.text === "Read the server logs")?.done).toBe(true);
+	});
+
+	it("shows the conversation, and watches or stops watching (Task 50)", async () => {
+		const user = userEvent.setup();
+		await renderPanel(sampleTaskDetail);
+		await user.click(screen.getByTestId("task-tab-comments"));
+		const comments = screen.getAllByTestId("task-comment");
+		expect(comments).toHaveLength(2);
+		// Someone else's comment: the lead may delete it, not edit it; their own: both.
+		expect(within(comments[0] as HTMLElement).queryByRole("button", { name: /edit/i })).toBeNull();
+		expect(within(comments[1] as HTMLElement).getByRole("button", { name: /edit/i })).toBeVisible();
+		const watch = screen.getByTestId("task-watch");
+		expect(watch).toHaveAttribute("aria-pressed", "true");
+		await user.click(watch);
+		expect(calls.watch).toHaveBeenCalledWith({ data: { ws: "team", ref: "WEB-4", watching: false } });
 	});
 
 	it("is read-only for someone who may not edit", async () => {

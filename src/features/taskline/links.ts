@@ -10,6 +10,9 @@ export const tasklineLinks = {
 	signUp: (redirect?: string) => linkOptions({ to: "/app/taskline/sign-up", search: { redirect } }),
 	home: () => linkOptions({ to: "/app/taskline/home" }),
 	account: () => linkOptions({ to: "/app/taskline/account" }),
+	inbox: (filter?: "unread" | "all", page?: number) =>
+		linkOptions({ to: "/app/taskline/inbox", search: { filter: filter ?? "unread", page: page ?? 1 } }),
+	mySettings: () => linkOptions({ to: "/app/taskline/settings" }),
 	projects: (ws: string) => linkOptions({ to: "/app/taskline/$ws/projects", params: { ws } }),
 	project: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key", params: { ws, key } }),
 	board: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/board", params: { ws, key } }),

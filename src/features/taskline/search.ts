@@ -15,6 +15,12 @@ export const projectsSearch = z.object({
 	create: z.literal(1).optional().catch(undefined),
 });
 
+/** The inbox (Task 50): unread or everything, and the page. */
+export const inboxSearch = z.object({
+	filter: z.enum(["unread", "all"]).default("unread").catch("unread"),
+	page: z.coerce.number().int().min(1).max(1000).default(1).catch(1),
+});
+
 /** An id filter: `all`, or one row's id (and, for the assignee, `none` or `me`). */
 const idOr = <const T extends readonly [string, ...string[]]>(...words: T) =>
 	z

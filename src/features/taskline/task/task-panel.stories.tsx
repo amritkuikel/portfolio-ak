@@ -43,6 +43,16 @@ export const Activity: Story = {
 	},
 };
 
+/** Its conversation (Task 50): a mention, an edited comment of one's own, and watching. */
+export const Conversation: Story = {
+	play: async ({ canvas, userEvent }) => {
+		await userEvent.click(canvas.getByTestId("task-tab-comments"));
+		await expect(canvas.getAllByTestId("task-comment")).toHaveLength(2);
+		await expect(canvas.getByTestId("task-comments")).toHaveTextContent("@Asha Gurung");
+		await expect(canvas.getByTestId("task-watch")).toHaveAttribute("aria-pressed", "true");
+	},
+};
+
 /** A viewer reads it: no form, no trash. */
 export const ReadOnly: Story = {
 	args: {

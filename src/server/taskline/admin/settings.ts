@@ -71,6 +71,7 @@ function view({ workspace, settings }: Team, used: AdminWorkspace["usage"]): Adm
 			weekStart: settings.weekStart,
 			timeZone: settings.timeZone,
 			digestHour: settings.digestHour,
+			notify: settings.notify,
 			trashRetentionDays: settings.trashRetentionDays,
 			doneColumnDays: settings.doneColumnDays,
 			quotas: settings.quotas,
