@@ -12,12 +12,14 @@ import {
 	type TlWorkspaceRow,
 	tlActivity,
 	tlComment,
+	tlImport,
 	tlInvitation,
 	tlLabel,
 	tlMember,
 	tlNotification,
 	tlProject,
 	tlProjectMember,
+	tlSavedView,
 	tlStar,
 	tlTask,
 	tlTaskLabel,
@@ -201,6 +203,19 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 		await recordActivity(tx, created, { kind: "task.created", taskId: task.id, data: { title: task.title } });
 	}
 	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
+	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
+	const asha = teammates[0];
+	if (asha) {
+		await tx.insert(tlSavedView).values({
+			workspaceId: workspace.id,
+			projectId: project.id,
+			memberId: asha.id,
+			name: m.taskline_seed_view_due({}, t),
+			view: "list",
+			search: "?due=week&sort=due",
+			shared: true,
+		});
+	}
 	return workspace;
 }
 
@@ -337,6 +352,8 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 		sql`update ${tlComment} set mentions = array_replace(mentions, ${from}::uuid, ${to}::uuid) where ${from}::uuid = any(mentions)`,
 	);
 	await tx.update(tlNotification).set({ actorId: to }).where(eq(tlNotification.actorId, from));
+	// Saved views (Task 51): the guest's projects are distinct from the account's, so names can't collide.
+	await tx.update(tlSavedView).set({ memberId: to }).where(eq(tlSavedView.memberId, from));
 }
 
 /**
@@ -354,6 +371,7 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 	const target = await workspaces.sandboxOf(tx, toUserId);
 	// The guest's inbox is the account's now (Task 50).
 	await tx.update(tlNotification).set({ userId: toUserId }).where(eq(tlNotification.userId, fromUserId));
+	await tx.update(tlImport).set({ userId: toUserId }).where(eq(tlImport.userId, fromUserId));
 	if (!target) {
 		await tx.update(tlWorkspace).set({ ownerId: toUserId }).where(eq(tlWorkspace.id, guest.id));
 		if (guestMember) {
@@ -383,6 +401,7 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 	await tx.update(tlTask).set({ workspaceId: target.id }).where(eq(tlTask.workspaceId, guest.id));
 	await tx.update(tlActivity).set({ workspaceId: target.id }).where(eq(tlActivity.workspaceId, guest.id));
 	await tx.update(tlNotification).set({ workspaceId: target.id }).where(eq(tlNotification.workspaceId, guest.id));
+	await tx.update(tlSavedView).set({ workspaceId: target.id }).where(eq(tlSavedView.workspaceId, guest.id));
 	await tx
 		.update(tlLabel)
 		.set({ workspaceId: target.id })

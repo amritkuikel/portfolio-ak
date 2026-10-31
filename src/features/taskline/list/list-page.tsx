@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Trash2Icon } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { FileUpIcon, Trash2Icon } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useConfirm } from "@/components/dialogs/confirm";
@@ -20,6 +20,7 @@ import { filtersOf, hasFilters } from "../filters";
 import { PRIORITY_LABELS } from "../labels";
 import { TaskFilterBar } from "../projects/task-filters";
 import { projectTasksQueryOptions, tasklineMutations, taskPageQueryOptions, workspaceQueryOptions } from "../queries";
+import { useSavedViews } from "../saved-views";
 import type { BulkTasksInput } from "../schema";
 import { LIST_GROUPS, type ListGroup, TASKS_TABLE_ID } from "../search";
 import { DueDate, LabelChip, StatusName, TaskTypeIcon } from "../task/task-bits";
@@ -27,6 +28,7 @@ import { TaskSheetLink } from "../task/task-link";
 import { isClosedCategory, type ProjectTasks, TASK_PRIORITIES, type TaskPriority, type TaskSummary } from "../types";
 
 const TaskSheet = lazy(() => import("../task/task-sheet"));
+const ImportDialog = lazy(() => import("./import-dialog"));
 
 const route = getRouteApi("/_taskline/app/taskline/_shell/$ws/p/$key/list");
 
@@ -200,7 +202,8 @@ function taskColumns(project: ProjectTasks, ws: string, edits: Edits): DataTable
 /**
  * /app/taskline/$ws/p/$key/list: the project's tasks as a table on the list contract
  * (the URL holds the filters, the sort, the page and the grouping; the server pages
- * them), with inline status, assignee and priority, bulk changes and CSV export.
+ * them), with inline status, assignee and priority, bulk changes, CSV export, saved
+ * views (the member's and the project's, Task 51) and a CSV import for editors.
  */
 export function ListPage() {
 	const { session } = route.useRouteContext();
@@ -222,6 +225,8 @@ export function ListPage() {
 	const move = useMutation({ ...tasklineMutations.moveTask(queryClient, userId), onError: fail });
 	const bulk = useMutation(tasklineMutations.bulk(queryClient, userId));
 	const canEdit = project.project.can.edit;
+	const views = useSavedViews(userId, ws, key, "list");
+	const [importing, setImporting] = useState(false);
 
 	const columns = taskColumns(project, ws, {
 		canEdit,
@@ -266,6 +271,14 @@ export function ListPage() {
 				context={project}
 				member={workspace.me !== null}
 				preserve={["sort", "pageSize", "group"]}
+				tools={
+					canEdit ? (
+						<Button variant="outline" onClick={() => setImporting(true)} data-testid="import-open">
+							<FileUpIcon aria-hidden />
+							{m.taskline_import_open()}
+						</Button>
+					) : null
+				}
 				extra={
 					<SelectFilter
 						name="group"
@@ -287,7 +300,7 @@ export function ListPage() {
 						busy={busy}
 						groupOf={groupOf}
 						exportName={`${key.toLowerCase()}-tasks`}
-						savedViews
+						savedViews={views}
 						data-testid="task-table"
 						bulkActions={
 							canEdit
@@ -322,6 +335,9 @@ export function ListPage() {
 			<Suspense fallback={null}>
 				{openTask ? (
 					<TaskSheet userId={userId} ws={ws} projectKey={key} taskRef={openTask} onClose={closeTask} />
+				) : null}
+				{importing ? (
+					<ImportDialog userId={userId} ws={ws} project={project} onClose={() => setImporting(false)} />
 				) : null}
 			</Suspense>
 		</div>

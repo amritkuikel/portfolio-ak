@@ -7,6 +7,14 @@ import {
 	updateTasklineComment,
 	watchTasklineTask,
 } from "@/functions/taskline/collab";
+import {
+	deleteTasklineSavedView,
+	findTasklineTasks,
+	importTasklineTasks,
+	listTasklineSavedViews,
+	saveTasklineSavedView,
+	searchTasklineTasks,
+} from "@/functions/taskline/find";
 import { getTasklineNav, listMyTasklineTasks } from "@/functions/taskline/home";
 import {
 	getTasklineNotifySettings,
@@ -60,10 +68,12 @@ import type {
 	CreateProjectInput,
 	CreateStatusInput,
 	CreateTaskInput,
+	ImportTasksInput,
 	InboxInput,
 	MarkReadInput,
 	NotifySettingsInput,
 	PatchTaskInput,
+	SaveViewInput,
 	SetProjectStateInput,
 	TaskListInput,
 	UpdateCommentInput,
@@ -72,7 +82,7 @@ import type {
 	UpdateStatusInput,
 	UpdateTaskInput,
 } from "./schema";
-import type { ChecklistItem, ProjectRole } from "./types";
+import type { ChecklistItem, ProjectRole, SavedViewKind } from "./types";
 
 /**
  * Taskline's reads and writes (Query; the board's TanStack DB collection reads the
@@ -101,7 +111,38 @@ export const tasklineKeys = {
 	inbox: (userId: string) => [...tasklineKeys.user(userId), "inbox"] as const,
 	unread: (userId: string) => [...tasklineKeys.inbox(userId), "unread"] as const,
 	notifySettings: (userId: string) => [...tasklineKeys.user(userId), "notify-settings"] as const,
+	/** Task 51: a project's saved views of one kind, the search page, the palette's results. */
+	views: (userId: string, ws: string, key: string, view: SavedViewKind) =>
+		[...tasklineKeys.project(userId, ws, key), "views", view] as const,
+	search: (userId: string, ws: string, q: string, page: number) =>
+		[...tasklineKeys.workspace(userId, ws), "search", { q, page }] as const,
+	find: (userId: string, q: string) => [...tasklineKeys.user(userId), "find", q] as const,
 };
+
+/** A project's saved views of one kind (the list's, the board's, the calendar's "Views" menu). */
+export const savedViewsQueryOptions = (userId: string, ws: string, key: string, view: SavedViewKind) =>
+	queryOptions({
+		queryKey: tasklineKeys.views(userId, ws, key, view),
+		queryFn: () => listTasklineSavedViews({ data: { ws, key, view } }),
+	});
+
+/** /$ws/search's page of results (an empty question asks nothing). */
+export const searchQueryOptions = (userId: string, ws: string, q: string, page: number) =>
+	queryOptions({
+		queryKey: tasklineKeys.search(userId, ws, q, page),
+		queryFn: () => searchTasklineTasks({ data: { ws, q, page } }),
+		placeholderData: keepPreviousData,
+	});
+
+/** The palette's tasks for what's typed (two characters at least). */
+export const findTasksQueryOptions = (userId: string, q: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.find(userId, q),
+		queryFn: () => findTasklineTasks({ data: { q } }),
+		enabled: q.trim().length >= 2,
+		staleTime: 30_000,
+		placeholderData: keepPreviousData,
+	});
 
 export const inboxQueryOptions = (userId: string, input: InboxInput) =>
 	queryOptions({
@@ -304,6 +345,21 @@ export const tasklineMutations = {
 			mutationFn: (input: MarkReadInput) => markTasklineRead({ data: input }),
 			onSettled: () => queryClient.invalidateQueries({ queryKey: tasklineKeys.inbox(userId) }),
 		}),
+	saveView: (queryClient: QueryClient, userId: string) =>
+		mutationOptions({
+			mutationFn: (input: SaveViewInput) => saveTasklineSavedView({ data: input }),
+			onSettled: (_data, _error, input) =>
+				queryClient.invalidateQueries({ queryKey: tasklineKeys.views(userId, input.ws, input.key, input.view) }),
+		}),
+	deleteView: (queryClient: QueryClient, userId: string) =>
+		mutationOptions({
+			mutationFn: (input: { ws: string; key: string; id: string; view: SavedViewKind }) =>
+				deleteTasklineSavedView({ data: { ws: input.ws, key: input.key, id: input.id } }),
+			onSettled: (_data, _error, input) =>
+				queryClient.invalidateQueries({ queryKey: tasklineKeys.views(userId, input.ws, input.key, input.view) }),
+		}),
+	importTasks: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: ImportTasksInput) => importTasklineTasks({ data: input })),
 	saveNotifySettings: (queryClient: QueryClient, userId: string) =>
 		mutationOptions({
 			mutationFn: (input: NotifySettingsInput) => saveTasklineNotifySettings({ data: input }),

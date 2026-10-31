@@ -1,4 +1,4 @@
-import { isIsoDate } from "@/lib/i18n/date-only";
+import { type CsvDateFormat, parseCsvDay } from "@/lib/csv";
 import { formatNumber, parseLocaleNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { type ImportRow, importRowSchema } from "./schema";
@@ -11,10 +11,6 @@ import { EXPENSES_QUOTAS, type ExpenseCurrency, isExpenseCurrency, MINOR_UNITS }
  * preview is unit-tested and the server's check can never disagree with it.
  */
 
-/** How the date column is written. */
-export const DATE_FORMATS = ["ymd", "dmy", "mdy"] as const;
-export type DateFormat = (typeof DATE_FORMATS)[number];
-
 export const IMPORT_FIELDS = ["date", "amount", "category", "note", "currency"] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -24,7 +20,7 @@ export type ImportMapping = Record<ImportField, number | null>;
 export type ImportOptions = {
 	/** The first row names the columns (it isn't imported). */
 	header: boolean;
-	dateFormat: DateFormat;
+	dateFormat: CsvDateFormat;
 	/** The currency of rows without a currency column (or with an empty cell). */
 	currency: ExpenseCurrency;
 };
@@ -38,17 +34,6 @@ export type PreviewRow = {
 	row: ImportRow | null;
 	problems: ImportProblem[];
 };
-
-/** "2026-10-30", "30/10/2026" or "10/30/2026" (also with - or . between) -> "YYYY-MM-DD", or null. */
-export function parseDay(text: string, format: DateFormat): string | null {
-	const parts = text.trim().split(/[-/.]/);
-	if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
-	const [a = "", b = "", c = ""] = parts;
-	const [year, month, day] = format === "ymd" ? [a, b, c] : format === "dmy" ? [c, b, a] : [c, a, b];
-	if (year.length !== 4) return null;
-	const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-	return isIsoDate(iso) ? iso : null;
-}
 
 /**
  * "1,250.50", "रु १२,५००", "$ 12" -> minor units (125050, 1250000, 1200); NaN when it
@@ -120,7 +105,7 @@ export function previewImport(
 		if (!currency) problems.push({ field: "currency", message: m.expenses_import_error_currency() });
 		const dateText = cell(mapping.date);
 		const candidate = {
-			occurredOn: parseDay(dateText, options.dateFormat) ?? dateText,
+			occurredOn: parseCsvDay(dateText, options.dateFormat) ?? dateText,
 			amountMinor: parseAmount(cell(mapping.amount)),
 			currency: currency ?? options.currency,
 			category: cell(mapping.category),

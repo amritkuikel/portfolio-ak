@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-	guessMapping,
-	parseAmount,
-	parseCurrency,
-	parseDay,
-	previewImport,
-	tableProblem,
-} from "@/features/apps/expenses/import";
-import { parseCsv } from "@/lib/csv";
+import { guessMapping, parseAmount, parseCurrency, previewImport, tableProblem } from "@/features/apps/expenses/import";
+import { parseCsv, parseCsvDay } from "@/lib/csv";
 
 /**
  * Expenses' CSV import (decision 0192): the mapping step's guess, how dates, amounts
@@ -18,13 +11,13 @@ const options = { header: true, dateFormat: "ymd" as const, currency: "NPR" as c
 
 describe("reading cells", () => {
 	it("reads dates in the chosen order, and nothing that isn't a real day", () => {
-		expect(parseDay("2026-10-30", "ymd")).toBe("2026-10-30");
-		expect(parseDay("30/10/2026", "dmy")).toBe("2026-10-30");
-		expect(parseDay("10/30/2026", "mdy")).toBe("2026-10-30");
-		expect(parseDay("1.2.2026", "dmy")).toBe("2026-02-01");
-		expect(parseDay("2026-02-30", "ymd")).toBeNull();
-		expect(parseDay("30/10/26", "dmy")).toBeNull();
-		expect(parseDay("yesterday", "ymd")).toBeNull();
+		expect(parseCsvDay("2026-10-30", "ymd")).toBe("2026-10-30");
+		expect(parseCsvDay("30/10/2026", "dmy")).toBe("2026-10-30");
+		expect(parseCsvDay("10/30/2026", "mdy")).toBe("2026-10-30");
+		expect(parseCsvDay("1.2.2026", "dmy")).toBe("2026-02-01");
+		expect(parseCsvDay("2026-02-30", "ymd")).toBeNull();
+		expect(parseCsvDay("30/10/26", "dmy")).toBeNull();
+		expect(parseCsvDay("yesterday", "ymd")).toBeNull();
 	});
 
 	it("reads amounts with symbols, grouping and Devanagari digits, in minor units", () => {

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { getRouteApi, Outlet } from "@tanstack/react-router";
 import {
 	ArchiveIcon,
+	CalendarDaysIcon,
 	ColumnsIcon,
 	LayoutDashboardIcon,
 	ListIcon,
@@ -35,7 +36,7 @@ const FACES = 5;
 
 /**
  * A project's frame (PLAN 11.5): its name, who is on it, and the view tabs (overview,
- * board, list, and the lead's settings) around the view. It owns the page's <main>
+ * board, list, calendar, and the lead's settings) around the view. It owns the page's <main>
  * and keeps the project fresh while it's open (rev polling, decision 0209).
  */
 export function ProjectLayout() {
@@ -136,6 +137,10 @@ export function ProjectLayout() {
 						<PageTab {...tasklineLinks.list(ws, key)} data-testid="view-list">
 							<ListIcon aria-hidden />
 							{m.taskline_view_list()}
+						</PageTab>
+						<PageTab {...tasklineLinks.calendar(ws, key)} data-testid="view-calendar">
+							<CalendarDaysIcon aria-hidden />
+							{m.taskline_view_calendar()}
 						</PageTab>
 						{project.can.manage ? (
 							<PageTab to="/app/taskline/$ws/p/$key/settings" params={{ ws, key }} data-testid="view-settings">

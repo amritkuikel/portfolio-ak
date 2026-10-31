@@ -8,7 +8,9 @@ import * as collab from "@/server/taskline/collab/service";
 import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
+import * as imports from "@/server/taskline/tasks/import";
 import * as tasks from "@/server/taskline/tasks/service";
+import * as views from "@/server/taskline/views/service";
 import * as workflow from "@/server/taskline/workflow/service";
 import * as workspaceRepo from "@/server/taskline/workspace/repository";
 import * as workspaces from "@/server/taskline/workspace/service";
@@ -295,6 +297,64 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 			await collab.addTaskFiles(as(context.owner), { ws: context.ws, ref: task.ref, ids: [id] });
 			return collab.removeTaskFile(caller, { ws: context.ws, ref: task.ref, id });
 		},
+	},
+	// Finding things (Task 51)
+	{
+		name: "listSavedViews",
+		need: "read",
+		run: ({ ws, key }, caller) => views.listViews(caller, { ws, key, view: "list" }),
+	},
+	{
+		name: "saveView (own)",
+		need: "read",
+		memberOnly: true,
+		run: ({ ws, key }, caller) =>
+			views.saveView(caller, { ws, key, view: "list", name: unique("Mine"), search: "?due=week", shared: false }),
+	},
+	{
+		name: "saveView (shared)",
+		need: "edit",
+		memberOnly: true,
+		run: ({ ws, key }, caller) =>
+			views.saveView(caller, { ws, key, view: "board", name: unique("Ours"), search: "", shared: true }),
+	},
+	{
+		name: "deleteView (someone else's shared)",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const view = await views.saveView(as(owner), {
+				ws,
+				key,
+				view: "calendar",
+				name: unique("Team"),
+				search: "?mode=week",
+				shared: true,
+			});
+			return views.deleteView(caller, { ws, key, id: view.id });
+		},
+	},
+	{
+		name: "importTasks",
+		need: "edit",
+		run: ({ ws, key }, caller) =>
+			imports.importTasks(caller, {
+				ws,
+				key,
+				idempotencyKey: crypto.randomUUID(),
+				rows: [
+					{
+						title: "Imported",
+						description: "",
+						type: null,
+						status: "",
+						assignee: "",
+						priority: 0,
+						labels: [],
+						startOn: null,
+						dueOn: null,
+					},
+				],
+			}),
 	},
 	// Running the project (its lead's)
 	{
@@ -636,7 +696,12 @@ describe("home and the shell's navigation", () => {
 		const mine = await home.listMyTasks(as("member"));
 		expect(mine.tasks.map((task) => task.title)).toEqual(["Sooner", "Later", "Undated"]);
 		expect(mine.tasks[1]).toMatchObject({ ref: later.ref, project: { key: "WEB", ws: "team" } });
-		expect((await home.listMyTasks(as("lead"))).tasks.map((task) => task.title)).toEqual(["Secret"]);
+		// My work (Task 51): the lead's own task, and the open ones they watch (they created them), soonest due first.
+		const leads = (await home.listMyTasks(as("lead"))).tasks;
+		expect(leads.filter((task) => task.assigned).map((task) => task.title)).toEqual(["Secret"]);
+		expect(leads.filter((task) => !task.assigned).map((task) => task.title)).toEqual(["Sooner", "Later", "Undated"]);
+		expect(leads.every((task) => task.watching)).toBe(true);
+		expect(mine.weekEnd >= mine.today).toBe(true);
 		expect((await home.listMyTasks(as("reader"))).tasks).toEqual([]);
 		expect((await home.listMyTasks(as("deactivated"))).tasks).toEqual([]);
 		const sandbox = await home.listMyTasks(as("guest"));

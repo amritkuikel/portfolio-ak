@@ -55,6 +55,7 @@ export function TasklineShell({ nav, children }: { nav: TasklineNav; children: R
 					{children}
 				</SidebarInset>
 				<TasklinePalette
+					userId={session?.user.id ?? ""}
 					nav={nav}
 					open={paletteOpen}
 					onOpenChange={setPaletteOpen}

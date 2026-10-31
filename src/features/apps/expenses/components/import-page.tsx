@@ -4,22 +4,19 @@ import { AlertCircleIcon, ArrowLeftIcon, CheckCircle2Icon, FileUpIcon } from "lu
 import { type ReactNode, useId, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/components/errors/error-page";
+import { type CsvSource, CsvSourcePicker, csvColumnNames } from "@/components/forms/csv-source";
 import { Page, PageHeader } from "@/components/page/page";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Textarea } from "@/components/ui/textarea";
-import { CsvParseError, parseCsv } from "@/lib/csv";
+import { CSV_DATE_FORMATS, type CsvDateFormat } from "@/lib/csv";
 import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { formatMoney } from "../format";
 import {
-	DATE_FORMATS,
-	type DateFormat,
 	guessMapping,
 	IMPORT_FIELDS,
 	type ImportField,
@@ -34,8 +31,6 @@ import { EXPENSE_CURRENCIES, isExpenseCurrency } from "../types";
 
 const route = getRouteApi("/_apps/apps/expenses/import");
 
-/** The largest file read: a thousand rows of CSV fit easily. */
-const MAX_FILE_BYTES = 1024 * 1024;
 /** Rows shown in the preview table (every problem is listed below it). */
 const PREVIEW_ROWS = 20;
 /** Problems listed before "and N more". */
@@ -49,13 +44,11 @@ const FIELD_LABELS: Record<ImportField, () => string> = {
 	currency: m.expenses_field_currency,
 };
 
-const DATE_FORMAT_LABELS: Record<DateFormat, () => string> = {
-	ymd: m.expenses_import_format_ymd,
-	dmy: m.expenses_import_format_dmy,
-	mdy: m.expenses_import_format_mdy,
+const DATE_FORMAT_LABELS: Record<CsvDateFormat, () => string> = {
+	ymd: m.csv_format_ymd,
+	dmy: m.csv_format_dmy,
+	mdy: m.csv_format_mdy,
 };
-
-type Source = { name: string; table: string[][] };
 
 /**
  * /apps/expenses/import (decision 0192): a CSV file (or pasted text) into expenses in
@@ -69,38 +62,16 @@ export function ExpensesImportPage() {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const save = useMutation(expenseMutations.import(queryClient, session.user.id));
-	const [source, setSource] = useState<Source | null>(null);
-	const [error, setError] = useState<string | null>(null);
+	const [source, setSource] = useState<CsvSource | null>(null);
 	const [mapping, setMapping] = useState<ImportMapping | null>(null);
 	const [options, setOptions] = useState<ImportOptions>({ header: true, dateFormat: "ymd", currency: "NPR" });
 	// One key per preview: anything that changes the rows makes a new one (an import of other rows).
 	const [key, setKey] = useState(() => crypto.randomUUID());
 
-	const load = (name: string, text: string) => {
-		try {
-			const table = parseCsv(text);
-			setSource({ name, table });
-			setMapping(guessMapping(table[0] ?? []));
-			setError(null);
-		} catch (problem) {
-			setSource(null);
-			setError(
-				problem instanceof CsvParseError
-					? m.expenses_import_error_parse({ line: formatNumber(problem.line) })
-					: errorMessage(problem),
-			);
-		}
+	const load = (loaded: CsvSource | null) => {
+		setSource(loaded);
+		setMapping(loaded ? guessMapping(loaded.table[0] ?? []) : null);
 		setKey(crypto.randomUUID());
-	};
-
-	const readFile = async (file: File | undefined) => {
-		if (!file) return;
-		if (file.size > MAX_FILE_BYTES) {
-			setSource(null);
-			setError(m.expenses_import_error_size());
-			return;
-		}
-		load(file.name, await file.text());
 	};
 
 	const changeMapping = (field: ImportField, column: number | null) => {
@@ -145,22 +116,11 @@ export function ExpensesImportPage() {
 			</Button>
 			<PageHeader title={m.expenses_import_title()} description={m.expenses_import_description()} />
 			<Step number={1} title={m.expenses_import_step_file()}>
-				<SourcePicker
-					onFile={(file) => void readFile(file)}
-					onPaste={(text) => load(m.expenses_import_pasted(), text)}
+				<CsvSourcePicker
+					hint={m.expenses_import_file_hint()}
+					placeholder={"date,amount,category\n2026-10-01,450,Food"}
+					onLoad={load}
 				/>
-				{error ? (
-					<Alert variant="destructive" data-testid="import-error">
-						<AlertCircleIcon aria-hidden />
-						<AlertTitle>{m.expenses_import_error_title()}</AlertTitle>
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				) : null}
-				{source ? (
-					<p className="text-muted-foreground text-sm" data-testid="import-source">
-						{m.expenses_import_loaded({ name: source.name, rows: formatNumber(source.table.length) })}
-					</p>
-				) : null}
 			</Step>
 			{source && mapping ? (
 				<Step number={2} title={m.expenses_import_step_columns()}>
@@ -220,64 +180,6 @@ function Step({ number, title, children }: { number: number; title: string; chil
 	);
 }
 
-function SourcePicker({
-	onFile,
-	onPaste,
-}: {
-	onFile: (file: File | undefined) => void;
-	onPaste: (text: string) => void;
-}) {
-	const fileId = useId();
-	const pasteId = useId();
-	const [text, setText] = useState("");
-	return (
-		<div className="grid gap-4 md:grid-cols-2">
-			<div className="flex flex-col gap-2">
-				<Label htmlFor={fileId}>{m.expenses_import_file()}</Label>
-				<Input
-					id={fileId}
-					type="file"
-					accept=".csv,text/csv"
-					onChange={(event) => onFile(event.target.files?.[0])}
-					data-testid="import-file"
-				/>
-				<p className="text-caption text-muted-foreground">{m.expenses_import_file_hint()}</p>
-			</div>
-			<div className="flex flex-col gap-2">
-				<Label htmlFor={pasteId}>{m.expenses_import_paste()}</Label>
-				<Textarea
-					id={pasteId}
-					rows={3}
-					value={text}
-					onChange={(event) => setText(event.target.value)}
-					placeholder={"date,amount,category\n2026-10-01,450,Food"}
-					className="font-mono text-caption"
-					data-testid="import-paste"
-				/>
-				<Button
-					variant="outline"
-					size="sm"
-					className="w-fit"
-					disabled={text.trim() === ""}
-					onClick={() => onPaste(text)}
-					data-testid="import-paste-read"
-				>
-					{m.expenses_import_paste_read()}
-				</Button>
-			</div>
-		</div>
-	);
-}
-
-/** Column names for the selects: the header's, or "Column 3". */
-const columnNames = (table: ReadonlyArray<ReadonlyArray<string>>, header: boolean) => {
-	const width = Math.max(0, ...table.map((row) => row.length));
-	return Array.from({ length: width }, (_, index) => {
-		const fallback = m.expenses_import_column({ number: formatNumber(index + 1) });
-		return header ? table[0]?.[index]?.trim() || fallback : fallback;
-	});
-};
-
 function ColumnsStep({
 	table,
 	mapping,
@@ -292,7 +194,7 @@ function ColumnsStep({
 	onOptions: (patch: Partial<ImportOptions>) => void;
 }) {
 	const id = useId();
-	const names = columnNames(table, options.header);
+	const names = csvColumnNames(table, options.header);
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center gap-2">
@@ -302,7 +204,7 @@ function ColumnsStep({
 					onCheckedChange={(checked) => onOptions({ header: checked === true })}
 				/>
 				<Label htmlFor={`${id}-header`} className="font-normal">
-					{m.expenses_import_header()}
+					{m.csv_header()}
 				</Label>
 			</div>
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -320,7 +222,7 @@ function ColumnsStep({
 								onChange={(event) => onMapping(field, event.target.value === "" ? null : Number(event.target.value))}
 								data-testid={`import-map-${field}`}
 							>
-								<option value="">{required ? m.select_placeholder() : m.expenses_import_not_in_file()}</option>
+								<option value="">{required ? m.select_placeholder() : m.csv_not_in_file()}</option>
 								{names.map((name, index) => (
 									// biome-ignore lint/suspicious/noArrayIndexKey: columns are positions; names may repeat.
 									<option key={index} value={index}>
@@ -332,16 +234,16 @@ function ColumnsStep({
 					);
 				})}
 				<div className="flex flex-col gap-2">
-					<Label htmlFor={`${id}-format`}>{m.expenses_import_date_format()}</Label>
+					<Label htmlFor={`${id}-format`}>{m.csv_date_format()}</Label>
 					<NativeSelect
 						id={`${id}-format`}
 						value={options.dateFormat}
 						onChange={(event) => {
-							const value = DATE_FORMATS.find((format) => format === event.target.value);
+							const value = CSV_DATE_FORMATS.find((format) => format === event.target.value);
 							if (value) onOptions({ dateFormat: value });
 						}}
 					>
-						{DATE_FORMATS.map((format) => (
+						{CSV_DATE_FORMATS.map((format) => (
 							<option key={format} value={format}>
 								{DATE_FORMAT_LABELS[format]()}
 							</option>

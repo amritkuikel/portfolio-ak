@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { toast } from "sonner";
+import { SavedViewsMenu } from "@/components/data-table/saved-views";
 import { errorMessage } from "@/components/errors/error-page";
 import { SelectFilter } from "@/components/filters/filters";
 import { useCloseOverlay } from "@/components/navigation/use-close-overlay";
@@ -13,6 +14,7 @@ import { filtersOf, hasFilters, matchesFilters } from "../filters";
 import { PRIORITY_LABELS } from "../labels";
 import { TaskFilterBar } from "../projects/task-filters";
 import { projectTasksQueryOptions, workspaceQueryOptions } from "../queries";
+import { useSavedViews } from "../saved-views";
 import { SWIMLANES, type Swimlanes } from "../search";
 import { TaskSheetLink } from "../task/task-link";
 import { isClosedCategory, type ProjectTasks, TASK_PRIORITIES, type TaskSummary } from "../types";
@@ -79,6 +81,7 @@ export function BoardPage() {
 	const collection = dbClient.collection(projectTaskCollection(userId, ws, key));
 	const { data: tasks } = useLiveSuspenseQuery((q) => q.from({ task: collection }), [collection]);
 	const closeTask = useCloseOverlay({ task: undefined });
+	const views = useSavedViews(userId, ws, key, "board");
 
 	const filters = filtersOf(search);
 	const context = { me: workspace.me?.id ?? null, today: project.today };
@@ -102,6 +105,7 @@ export function BoardPage() {
 				context={project}
 				member={workspace.me !== null}
 				preserve={["swimlanes"]}
+				tools={<SavedViewsMenu tableId="taskline-board" store={views} />}
 				extra={
 					<SelectFilter
 						name="swimlanes"

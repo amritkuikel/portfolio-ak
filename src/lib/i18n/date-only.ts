@@ -95,7 +95,6 @@ const dateParts = (value: IsoDate): [number, number, number] => {
 	return [year ?? 1970, (month ?? 1) - 1, day ?? 1];
 };
 
-// apps:start
 /** Today's calendar day in a time zone, as "YYYY-MM-DD" (en-CA formats dates that way). */
 export const todayInZone = (timeZone: string, now: Date = new Date()): IsoDate =>
 	new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
@@ -122,4 +121,3 @@ export const monthDays = (month: IsoMonth): { first: IsoDate; last: IsoDate } =>
 	first: `${month}-01`,
 	last: addDays(`${addMonths(month, 1)}-01`, -1),
 });
-// apps:end

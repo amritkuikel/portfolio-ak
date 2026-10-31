@@ -11,6 +11,7 @@ import {
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
 	PROJECT_VISIBILITIES,
+	SAVED_VIEW_KINDS,
 	STATUS_CATEGORIES,
 	TASK_TYPES,
 	TASKLINE_COLORS,
@@ -304,6 +305,70 @@ export type TaskFilesInput = z.infer<typeof taskFilesInput>;
 export type InboxInput = z.infer<typeof inboxInput>;
 export type MarkReadInput = z.infer<typeof markReadInput>;
 export type NotifySettingsInput = z.infer<typeof notifySettingsInput>;
+
+// ---- Saved views, search and the CSV import (Task 51) ---------------------------------------
+
+export const SAVED_VIEW_NAME_MAX = 60;
+/** Views one member keeps per project (shared ones included). */
+export const SAVED_VIEWS_MAX = 50;
+/** A view's search string: "" or "?…", no fragment, no spaces. */
+export const VIEW_SEARCH_PATTERN = /^(?:\?[^#\s]{0,1999})?$/;
+
+export const savedViewsInput = z.strictObject({ ws: ws(), key: projectKey(), view: z.enum(SAVED_VIEW_KINDS) });
+export const saveViewInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	view: z.enum(SAVED_VIEW_KINDS),
+	name: required({ max: SAVED_VIEW_NAME_MAX }),
+	search: z.string().regex(VIEW_SEARCH_PATTERN),
+	shared: z.boolean(),
+});
+export const deleteViewInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+
+/** /$ws/search's question: words (ranked full-text search) or a reference ("WEB-12"). */
+export const searchTasksInput = z.strictObject({
+	ws: ws(),
+	q: z.string().trim().min(1).max(80),
+	page: z.number().int().min(1).max(50),
+});
+/** The palette's question: across the caller's workspaces, the best few. */
+export const findTasksInput = z.strictObject({ q: z.string().trim().min(2).max(80) });
+
+export const IMPORT_ROWS_MAX = 1000;
+export const IMPORT_DESCRIPTION_MAX = 5000;
+export const IMPORT_NAME_MAX = 120;
+
+const importName = z.string().trim().max(IMPORT_NAME_MAX);
+
+/**
+ * One row of a CSV import of tasks, as the import dialog sends it after mapping (and
+ * the server checks again): names (a status, an assignee, labels) are matched on the
+ * server without case; one that matches nothing is left blank and reported.
+ */
+export const importTaskRow = z.object({
+	title: required({ max: TASK_TITLE_MAX }),
+	/** Plain text: the server escapes it into paragraphs. */
+	description: z.string().max(IMPORT_DESCRIPTION_MAX),
+	type: z.enum(TASK_TYPES).nullable(),
+	status: importName,
+	assignee: importName,
+	priority: z.number().int().min(0).max(4),
+	labels: z.array(z.string().trim().min(1).max(LABEL_NAME_MAX)).max(LABELS_PER_TASK_MAX),
+	startOn: isoDate().nullable(),
+	dueOn: isoDate().nullable(),
+});
+export type ImportTaskRow = z.infer<typeof importTaskRow>;
+
+export const importTasksInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	/** One key per import the user means to make (docs/guides/routing-data.md, "Idempotency keys"). */
+	idempotencyKey: id,
+	rows: z.array(importTaskRow).min(1).max(IMPORT_ROWS_MAX),
+});
+
+export type SaveViewInput = z.infer<typeof saveViewInput>;
+export type ImportTasksInput = z.infer<typeof importTasksInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

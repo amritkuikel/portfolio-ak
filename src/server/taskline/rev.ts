@@ -45,6 +45,17 @@ export async function nextTaskNumber(tx: Tx, projectId: string): Promise<number>
 	return row.taskSeq;
 }
 
+/** `count` consecutive task numbers (the CSV import), under the same row lock: the first of them. */
+export async function reserveTaskNumbers(tx: Tx, projectId: string, count: number): Promise<number> {
+	const [row] = await tx
+		.update(tlProject)
+		.set({ taskSeq: sql`${tlProject.taskSeq} + ${count}`, updatedAt: keepUpdatedAt() })
+		.where(eq(tlProject.id, projectId))
+		.returning({ taskSeq: tlProject.taskSeq });
+	if (!row) throw notFound("Project");
+	return row.taskSeq - count + 1;
+}
+
 type WithVersion = PgTable & { id: AnyPgColumn; version: AnyPgColumn };
 
 /**

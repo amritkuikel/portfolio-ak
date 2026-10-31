@@ -185,6 +185,17 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		path: "/app/taskline/team/p/WEB/list?group=status",
 		label: "grouped",
 	},
+	// More views and finding things (Task 51)
+	{ route: "/app/taskline/$ws/p/$key/calendar", as: "admin", path: "/app/taskline/team/p/WEB/calendar" },
+	{
+		route: "/app/taskline/$ws/p/$key/calendar",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/calendar?mode=week&by=start",
+		label: "a week by start date",
+	},
+	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search" },
+	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search?q=design", label: "results" },
+	{ route: "/app/taskline/home", as: "admin", path: "/app/taskline/home?show=all", label: "assigned and watched" },
 	{ route: "/app/taskline/$ws/t/$ref", as: "admin", path: "/app/taskline/team/t/WEB-1" },
 	{
 		route: "/app/taskline/$ws/p/$key/settings/general",

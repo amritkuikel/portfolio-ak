@@ -5,5 +5,5 @@ import { sampleProjectTasks, sampleTasklineNav } from "../../taskline";
 // Stand-ins for src/functions/taskline/home.ts.
 export const getTasklineNav = fn(async (): Promise<TasklineNav> => sampleTasklineNav).mockName("getTasklineNav");
 export const listMyTasklineTasks = fn(
-	async (): Promise<MyTasks> => ({ tasks: [], today: sampleProjectTasks.today }),
+	async (): Promise<MyTasks> => ({ tasks: [], today: sampleProjectTasks.today, weekEnd: sampleProjectTasks.today }),
 ).mockName("listMyTasklineTasks");

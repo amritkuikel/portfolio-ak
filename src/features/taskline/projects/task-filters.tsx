@@ -54,6 +54,7 @@ export function TaskFilterBar({
 	member,
 	preserve,
 	extra,
+	tools,
 }: {
 	search: TaskFilters & Readonly<Record<string, unknown>>;
 	context: Context;
@@ -62,67 +63,72 @@ export function TaskFilterBar({
 	/** The view's params the form keeps on a no-JS submit (sort, page size, swimlanes). */
 	preserve: ReadonlyArray<string>;
 	extra?: React.ReactNode;
+	/** Beside the filters, outside their form: the view's "Views" menu (Task 51). */
+	tools?: React.ReactNode;
 }) {
 	const all: FilterOption = { value: "all", label: m.filters_any() };
 	const applied = taskFilterChips.applied(search, context);
 	return (
 		<div className="flex flex-col gap-2" data-testid="task-filters">
-			<FilterBar values={search} preserve={preserve} label={m.taskline_filters_label()}>
-				<SearchFilter name="q" label={m.crud_search()} value={search.q} placeholder={m.taskline_filter_search()} />
-				<SelectFilter
-					name="status"
-					label={m.taskline_field_status()}
-					value={search.status}
-					options={[all, ...context.statuses.map((status) => ({ value: status.id, label: status.name }))]}
-				/>
-				<SelectFilter
-					name="assignee"
-					label={m.taskline_field_assignee()}
-					value={search.assignee}
-					options={[
-						all,
-						...(member ? [{ value: "me", label: m.taskline_filter_assignee_me() }] : []),
-						{ value: "none", label: m.taskline_unassigned() },
-						...context.members
-							.filter((each) => !each.deactivated)
-							.map((each) => ({ value: each.id, label: each.name })),
-					]}
-				/>
-				<SelectFilter
-					name="label"
-					label={m.taskline_field_labels()}
-					value={search.label}
-					options={[all, ...context.labels.map((label) => ({ value: label.id, label: label.name }))]}
-				/>
-				<SelectFilter
-					name="priority"
-					label={m.taskline_field_priority()}
-					value={search.priority}
-					options={[
-						all,
-						...[...TASK_PRIORITIES].reverse().map((priority) => ({
-							value: String(priority),
-							label: PRIORITY_LABELS[priority](),
-						})),
-					]}
-				/>
-				<SelectFilter
-					name="type"
-					label={m.taskline_field_type()}
-					value={search.type}
-					options={[all, ...TASK_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type]() }))]}
-				/>
-				<SelectFilter
-					name="due"
-					label={m.taskline_field_due()}
-					value={search.due}
-					options={[
-						all,
-						...DUE_FILTERS.filter((due) => due !== "all").map((due) => ({ value: due, label: DUE_LABELS[due]() })),
-					]}
-				/>
-				{extra}
-			</FilterBar>
+			<div className="flex flex-wrap items-end justify-between gap-3">
+				<FilterBar values={search} preserve={preserve} label={m.taskline_filters_label()}>
+					<SearchFilter name="q" label={m.crud_search()} value={search.q} placeholder={m.taskline_filter_search()} />
+					<SelectFilter
+						name="status"
+						label={m.taskline_field_status()}
+						value={search.status}
+						options={[all, ...context.statuses.map((status) => ({ value: status.id, label: status.name }))]}
+					/>
+					<SelectFilter
+						name="assignee"
+						label={m.taskline_field_assignee()}
+						value={search.assignee}
+						options={[
+							all,
+							...(member ? [{ value: "me", label: m.taskline_filter_assignee_me() }] : []),
+							{ value: "none", label: m.taskline_unassigned() },
+							...context.members
+								.filter((each) => !each.deactivated)
+								.map((each) => ({ value: each.id, label: each.name })),
+						]}
+					/>
+					<SelectFilter
+						name="label"
+						label={m.taskline_field_labels()}
+						value={search.label}
+						options={[all, ...context.labels.map((label) => ({ value: label.id, label: label.name }))]}
+					/>
+					<SelectFilter
+						name="priority"
+						label={m.taskline_field_priority()}
+						value={search.priority}
+						options={[
+							all,
+							...[...TASK_PRIORITIES].reverse().map((priority) => ({
+								value: String(priority),
+								label: PRIORITY_LABELS[priority](),
+							})),
+						]}
+					/>
+					<SelectFilter
+						name="type"
+						label={m.taskline_field_type()}
+						value={search.type}
+						options={[all, ...TASK_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type]() }))]}
+					/>
+					<SelectFilter
+						name="due"
+						label={m.taskline_field_due()}
+						value={search.due}
+						options={[
+							all,
+							...DUE_FILTERS.filter((due) => due !== "all").map((due) => ({ value: due, label: DUE_LABELS[due]() })),
+						]}
+					/>
+					{extra}
+				</FilterBar>
+				{tools ? <div className="ms-auto flex items-center gap-2">{tools}</div> : null}
+			</div>
 			<ActiveFilters chips={applied.chips} clearAll={applied.clearAll} />
 		</div>
 	);

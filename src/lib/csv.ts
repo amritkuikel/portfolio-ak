@@ -1,3 +1,5 @@
+import { isIsoDate } from "@/lib/i18n/date-only";
+
 /**
  * Recipe (docs/guides/recipes.md, "CSV export"; decision 0148): rows to CSV
  * (RFC 4180) and a browser download. Columns pick and label the values, so the
@@ -106,4 +108,19 @@ export function parseCsv(text: string, delimiter = ","): string[][] {
 	}
 	if (field !== "" || row.length > 0) endRow();
 	return rows;
+}
+
+/** How a CSV's date column is written (the imports' "Date format"). */
+export const CSV_DATE_FORMATS = ["ymd", "dmy", "mdy"] as const;
+export type CsvDateFormat = (typeof CSV_DATE_FORMATS)[number];
+
+/** "2026-10-30", "30/10/2026" or "10/30/2026" (also with - or . between) -> "YYYY-MM-DD", or null. */
+export function parseCsvDay(text: string, format: CsvDateFormat): string | null {
+	const parts = text.trim().split(/[-/.]/);
+	if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
+	const [a = "", b = "", c = ""] = parts;
+	const [year, month, day] = format === "ymd" ? [a, b, c] : format === "dmy" ? [c, b, a] : [c, a, b];
+	if (year.length !== 4) return null;
+	const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+	return isIsoDate(iso) ? iso : null;
 }

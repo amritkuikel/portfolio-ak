@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
  * one is submitted before hydration (a slow device, a click during load), the
  * browser posts the fields in the body instead of putting them, passwords
  * included, in the URL, the history and server logs. GET is only for forms whose
- * values belong in the URL (FilterBar).
+ * values belong in the URL: FilterBar, and Taskline's search page (Task 51), which
+ * searches only when submitted.
  */
 const sourceFiles = (dir: string): string[] =>
 	readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -34,12 +35,12 @@ describe("<form> method", () => {
 		expect(forms.length).toBeGreaterThanOrEqual(11);
 	});
 
-	it("every form sets method; only FilterBar uses GET", () => {
+	it("every form sets method; only FilterBar and Taskline's search use GET", () => {
 		const missing = forms.filter(({ tag }) => !/\bmethod="(post|get)"/.test(tag));
 		expect(missing).toEqual([]);
 		const gets = forms
 			.filter(({ tag }) => tag.includes('method="get"'))
 			.map(({ file }) => file.split(path.sep).join("/"));
-		expect(gets).toEqual(["src/components/filters/filter-bar.tsx"]);
+		expect(gets).toEqual(["src/components/filters/filter-bar.tsx", "src/features/taskline/find/search-page.tsx"]);
 	});
 });

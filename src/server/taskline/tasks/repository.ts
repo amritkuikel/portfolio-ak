@@ -149,6 +149,33 @@ export async function insertTask(tx: Tx, values: typeof tlTask.$inferInsert): Pr
 	return row;
 }
 
+/** Many tasks at once (the CSV import), in batches far under Postgres' parameter limit. */
+export async function insertTasks(tx: Tx, values: ReadonlyArray<typeof tlTask.$inferInsert>): Promise<void> {
+	for (let start = 0; start < values.length; start += 200) {
+		await tx.insert(tlTask).values(values.slice(start, start + 200));
+	}
+}
+
+/** Labels and watchers of many new tasks at once (the CSV import). */
+export async function linkTasks(
+	tx: Tx,
+	labels: ReadonlyArray<{ taskId: string; labelId: string }>,
+	watchers: ReadonlyArray<{ taskId: string; memberId: string }>,
+): Promise<void> {
+	for (let start = 0; start < labels.length; start += 1000) {
+		await tx
+			.insert(tlTaskLabel)
+			.values(labels.slice(start, start + 1000))
+			.onConflictDoNothing();
+	}
+	for (let start = 0; start < watchers.length; start += 1000) {
+		await tx
+			.insert(tlTaskWatcher)
+			.values(watchers.slice(start, start + 1000))
+			.onConflictDoNothing();
+	}
+}
+
 export type TaskPatch = Partial<
 	Pick<
 		TlTaskRow,

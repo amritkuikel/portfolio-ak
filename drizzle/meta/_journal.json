@@ -148,6 +148,13 @@
 			"when": 1793456732943,
 			"tag": "0020_taskline_collab",
 			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "7",
+			"when": 1793485054857,
+			"tag": "0021_taskline_views",
+			"breakpoints": true
 		}
 	]
 }

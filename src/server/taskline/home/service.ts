@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { endOfWeek } from "@/features/taskline/calendar/grid";
 import type { MyTasks, NavProject, ProjectRole, TasklineNav, WorkspaceSummary } from "@/features/taskline/types";
 import { todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE } from "@/lib/i18n/intl";
@@ -16,30 +17,44 @@ import * as repo from "./repository";
  */
 
 const RECENT_MAX = 5;
-const MY_TASKS_MAX = 50;
+/** My work's tasks, across workspaces (assigned and watched together). */
+const MY_TASKS_MAX = 200;
 
-type Visible = { access: WorkspaceAccess; summary: WorkspaceSummary; projects: TlProjectRow[] };
+export type Visible = { access: WorkspaceAccess; summary: WorkspaceSummary; projects: TlProjectRow[] };
 
-/** Each of the caller's workspaces, with the active projects they may see in it. */
-async function visibleProjects(db: Db, services: TasklineServices): Promise<Visible[]> {
+/** The projects of a resolved workspace the caller may see: the active ones, or (search, Task 51) the archived ones too. */
+export async function visibleProjectRows(
+	db: Db,
+	access: WorkspaceAccess,
+	{ archived }: { archived: boolean },
+): Promise<TlProjectRow[]> {
+	const rows = await projects.listProjectRows(db, access.workspace.id, { archived: false });
+	if (archived) rows.push(...(await projects.listProjectRows(db, access.workspace.id, { archived: true })));
+	const roles = access.member
+		? await projects.rolesOf(
+				db,
+				access.member.id,
+				rows.map((row) => row.id),
+			)
+		: new Map<string, ProjectRole>();
+	return rows.filter((row) => projectLevel(access, row, roles.get(row.id) ?? null) !== "none");
+}
+
+/** Each of the caller's workspaces, with the projects they may see in it (the active ones unless `archived`). */
+export async function visibleProjects(
+	db: Db,
+	services: TasklineServices,
+	{ archived = false }: { archived?: boolean } = {},
+): Promise<Visible[]> {
 	const found: Visible[] = [];
 	for (const summary of await listWorkspaces(services)) {
 		const access = await resolveWorkspace(db, services.user, summary.segment);
-		const rows = await projects.listProjectRows(db, access.workspace.id, { archived: false });
-		const roles = access.member
-			? await projects.rolesOf(
-					db,
-					access.member.id,
-					rows.map((row) => row.id),
-				)
-			: new Map<string, ProjectRole>();
-		const visible = rows.filter((row) => projectLevel(access, row, roles.get(row.id) ?? null) !== "none");
-		found.push({ access, summary, projects: visible });
+		found.push({ access, summary, projects: await visibleProjectRows(db, access, { archived }) });
 	}
 	return found;
 }
 
-const navProject = (row: TlProjectRow, summary: WorkspaceSummary): NavProject => ({
+export const navProject = (row: TlProjectRow, summary: WorkspaceSummary): NavProject => ({
 	id: row.id,
 	key: row.key,
 	name: row.name,
@@ -87,14 +102,19 @@ export async function getNav(services: TasklineServices): Promise<TasklineNav> {
 	};
 }
 
-/** Open tasks assigned to the caller in every workspace, soonest due first. */
+/**
+ * My work (Task 51): open tasks assigned to the caller or watched by them, in every
+ * workspace, soonest due first. Today and the week's last day come from the first
+ * workspace's calendar (the team's, when they're on it), so the page groups them the
+ * way the team counts weeks.
+ */
 export async function listMyTasks(services: TasklineServices): Promise<MyTasks> {
 	const { db } = services;
 	const visible = await visibleProjects(db, services);
 	const tasks: MyTasks["tasks"] = [];
-	let timeZone: string | undefined;
+	let calendar: { timeZone: string; weekStart: number } | undefined;
 	for (const { access, summary, projects: rows } of visible) {
-		timeZone ??= access.settings.timeZone;
+		calendar ??= access.settings;
 		if (!access.member) continue;
 		const byId = new Map(rows.map((row) => [row.id, row]));
 		const found = await repo.openTasksOf(
@@ -115,6 +135,8 @@ export async function listMyTasks(services: TasklineServices): Promise<MyTasks> 
 				dueOn: row.dueOn,
 				status: { name: row.statusName, category: row.statusCategory, color: row.statusColor },
 				project: navProject(project, summary),
+				assigned: row.assigned,
+				watching: row.watching,
 			});
 		}
 	}
@@ -125,5 +147,6 @@ export async function listMyTasks(services: TasklineServices): Promise<MyTasks> 
 			b.priority - a.priority ||
 			a.ref.localeCompare(b.ref),
 	);
-	return { tasks: tasks.slice(0, MY_TASKS_MAX), today: todayInZone(timeZone ?? APP_TIME_ZONE) };
+	const today = todayInZone(calendar?.timeZone ?? APP_TIME_ZONE);
+	return { tasks: tasks.slice(0, MY_TASKS_MAX), today, weekEnd: endOfWeek(today, calendar?.weekStart ?? 0) };
 }

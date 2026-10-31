@@ -146,10 +146,12 @@ import { Route as AdminAdminTasklineProjectsIdMembersRouteImport } from './route
 import { Route as AdminAdminTasklineProjectsIdWorkflowRouteImport } from './routes/_admin/admin/taskline/projects/$id/workflow'
 import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
 import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
+import { Route as TasklineAppTasklineShellWsSearchRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/search'
 import { Route as TasklineAppTasklineShellWsPKeyRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/route'
 import { Route as TasklineAppTasklineShellWsTRefRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/t/$ref'
 import { Route as TasklineAppTasklineShellWsPKeyIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/index'
 import { Route as TasklineAppTasklineShellWsPKeyBoardRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/board'
+import { Route as TasklineAppTasklineShellWsPKeyCalendarRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
 import { Route as TasklineAppTasklineShellWsPKeyListRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/list'
 import { Route as TasklineAppTasklineShellWsPKeySettingsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/route'
 import { Route as TasklineAppTasklineShellWsPKeySettingsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/index'
@@ -882,6 +884,12 @@ const TasklineAppTasklineShellWsProjectsRoute =
     path: '/projects',
     getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsSearchRoute =
+  TasklineAppTasklineShellWsSearchRouteImport.update({
+    id: '/search',
+    path: '/search',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeyRouteRoute =
   TasklineAppTasklineShellWsPKeyRouteRouteImport.update({
     id: '/p/$key',
@@ -904,6 +912,12 @@ const TasklineAppTasklineShellWsPKeyBoardRoute =
   TasklineAppTasklineShellWsPKeyBoardRouteImport.update({
     id: '/board',
     path: '/board',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyCalendarRoute =
+  TasklineAppTasklineShellWsPKeyCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
     getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
 const TasklineAppTasklineShellWsPKeyListRoute =
@@ -1084,12 +1098,14 @@ export interface FileRoutesByFullPath {
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/app/taskline/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
@@ -1212,10 +1228,12 @@ export interface FileRoutesByTo {
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
@@ -1362,12 +1380,14 @@ export interface FileRoutesById {
   '/_admin/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/_admin/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/_taskline/app/taskline/_shell/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/_admin/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/_taskline/app/taskline/_shell/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
@@ -1508,12 +1528,14 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
+    | '/app/taskline/$ws/search'
     | '/admin/taskline/projects/$id/'
     | '/app/taskline/$ws/'
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/t/$ref'
     | '/app/taskline/$ws/p/$key/settings'
     | '/app/taskline/$ws/p/$key/board'
+    | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
     | '/app/taskline/$ws/p/$key/'
     | '/app/taskline/$ws/p/$key/settings/general'
@@ -1636,10 +1658,12 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
+    | '/app/taskline/$ws/search'
     | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
     | '/app/taskline/$ws/t/$ref'
     | '/app/taskline/$ws/p/$key/board'
+    | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/p/$key/settings/general'
@@ -1785,12 +1809,14 @@ export interface FileRouteTypes {
     | '/_admin/admin/taskline/projects/$id/members'
     | '/_admin/admin/taskline/projects/$id/workflow'
     | '/_taskline/app/taskline/_shell/$ws/projects'
+    | '/_taskline/app/taskline/_shell/$ws/search'
     | '/_admin/admin/taskline/projects/$id/'
     | '/_taskline/app/taskline/_shell/$ws/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key'
     | '/_taskline/app/taskline/_shell/$ws/t/$ref'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/board'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/list'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
@@ -2781,6 +2807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsProjectsRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/search': {
+      id: '/_taskline/app/taskline/_shell/$ws/search'
+      path: '/search'
+      fullPath: '/app/taskline/$ws/search'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsSearchRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key'
       path: '/p/$key'
@@ -2807,6 +2840,13 @@ declare module '@tanstack/react-router' {
       path: '/board'
       fullPath: '/app/taskline/$ws/p/$key/board'
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyBoardRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/calendar': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
+      path: '/calendar'
+      fullPath: '/app/taskline/$ws/p/$key/calendar'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyCalendarRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
     }
     '/_taskline/app/taskline/_shell/$ws/p/$key/list': {
@@ -2901,6 +2941,7 @@ const TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren =
 interface TasklineAppTasklineShellWsPKeyRouteRouteChildren {
   TasklineAppTasklineShellWsPKeySettingsRouteRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
   TasklineAppTasklineShellWsPKeyBoardRoute: typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  TasklineAppTasklineShellWsPKeyCalendarRoute: typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   TasklineAppTasklineShellWsPKeyListRoute: typeof TasklineAppTasklineShellWsPKeyListRoute
   TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
 }
@@ -2911,6 +2952,8 @@ const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShell
       TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren,
     TasklineAppTasklineShellWsPKeyBoardRoute:
       TasklineAppTasklineShellWsPKeyBoardRoute,
+    TasklineAppTasklineShellWsPKeyCalendarRoute:
+      TasklineAppTasklineShellWsPKeyCalendarRoute,
     TasklineAppTasklineShellWsPKeyListRoute:
       TasklineAppTasklineShellWsPKeyListRoute,
     TasklineAppTasklineShellWsPKeyIndexRoute:
@@ -2924,6 +2967,7 @@ const TasklineAppTasklineShellWsPKeyRouteRouteWithChildren =
 
 interface TasklineAppTasklineShellWsRouteRouteChildren {
   TasklineAppTasklineShellWsProjectsRoute: typeof TasklineAppTasklineShellWsProjectsRoute
+  TasklineAppTasklineShellWsSearchRoute: typeof TasklineAppTasklineShellWsSearchRoute
   TasklineAppTasklineShellWsIndexRoute: typeof TasklineAppTasklineShellWsIndexRoute
   TasklineAppTasklineShellWsPKeyRouteRoute: typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   TasklineAppTasklineShellWsTRefRoute: typeof TasklineAppTasklineShellWsTRefRoute
@@ -2933,6 +2977,8 @@ const TasklineAppTasklineShellWsRouteRouteChildren: TasklineAppTasklineShellWsRo
   {
     TasklineAppTasklineShellWsProjectsRoute:
       TasklineAppTasklineShellWsProjectsRoute,
+    TasklineAppTasklineShellWsSearchRoute:
+      TasklineAppTasklineShellWsSearchRoute,
     TasklineAppTasklineShellWsIndexRoute: TasklineAppTasklineShellWsIndexRoute,
     TasklineAppTasklineShellWsPKeyRouteRoute:
       TasklineAppTasklineShellWsPKeyRouteRouteWithChildren,

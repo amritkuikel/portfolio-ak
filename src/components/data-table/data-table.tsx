@@ -30,7 +30,7 @@ import { useTablePreferences } from "@/lib/stores/hooks";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { type RowAction, RowActionItems, RowActionsMenu, usePermittedActions } from "./row-actions";
-import { SavedViewsMenu } from "./saved-views";
+import { SavedViewsMenu, type SavedViewsStore } from "./saved-views";
 
 /** One column of a DataTable. Define a feature's columns once, next to its schema. */
 export type DataTableColumn<Row> = {
@@ -73,8 +73,8 @@ export type DataTableProps<Row> = {
 	activeFilters?: ReactNode;
 	/** Adds "Export CSV" for the rows on screen (the columns with a `csv` value), saved as `{exportName}.csv`. */
 	exportName?: string;
-	/** Adds a "Views" menu: named searches for this table, kept in this browser. */
-	savedViews?: boolean;
+	/** Adds a "Views" menu: named searches for this table, kept in this browser (`true`) or in the store given. */
+	savedViews?: boolean | SavedViewsStore;
 	/** Shown instead of the table when there are no rows (the toolbar stays). */
 	empty?: ReactNode;
 	/** New rows are loading (a filter or page change); the current ones are dimmed meanwhile. */
@@ -197,7 +197,9 @@ export function DataTable<Row extends RowData>({
 
 	const tools = (
 		<>
-			{savedViews ? <SavedViewsMenu tableId={tableId} /> : null}
+			{savedViews ? (
+				<SavedViewsMenu tableId={tableId} store={typeof savedViews === "object" ? savedViews : undefined} />
+			) : null}
 			{exportName && csvColumns.length > 0 ? (
 				<Button
 					variant="outline"
@@ -234,7 +236,7 @@ export function DataTable<Row extends RowData>({
 			) : null}
 		</>
 	);
-	const hasTools = savedViews || Boolean(exportName && csvColumns.length > 0) || hideable.length > 0;
+	const hasTools = Boolean(savedViews) || Boolean(exportName && csvColumns.length > 0) || hideable.length > 0;
 
 	return (
 		<div className="flex min-w-0 flex-col gap-3">

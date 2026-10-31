@@ -1592,7 +1592,7 @@ The procedure is section 10.1's, with these differences:
 | 48 | Board, list and the task; Kanban's data migrated, redirected and removed | xhigh | Done (decisions 0209–0211) |
 | 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Done (decisions 0212–0213) |
 | 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Done (decision 0214) |
-| 51 | More views: calendar, my work, saved views, search, CSV import | high | Planned |
+| 51 | More views: calendar, my work, saved views, search, CSV import | high | Done (decision 0215) |
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Planned |
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Planned |
 | 54 | Timeline, milestones and dependencies | xhigh | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0215 after Task 50).
+- **Decisions:** numbered from the next free one (0216 after Task 51).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1755,7 +1755,7 @@ The procedure is section 10.1's, with these differences:
 | `tl_activity` | workspace_id, project_id, task_id?, actor_id?, kind, data jsonb (from / to), at; indexes (project, at desc) and (task, at) | 46 |
 | `tl_comment` | project_id, task_id, author_id?, body html + text, mentions uuid[], edited_at, deleted_at | 50 |
 | `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data (a snapshot for the sentence), email (instant / digest / none, fixed when made), created_at, read_at, emailed_at; index (user, read_at, created desc), a partial index on the unsent | 50 |
-| `tl_saved_view` | workspace_id, project_id?, member_id, name, view, search, shared | 51 |
+| `tl_saved_view`, `tl_import` | saved view: workspace_id, project_id (required, 0215), member_id, name (unique per project, member and view, any case), view (list / board / calendar), search, shared. Import: key (the idempotency key), project_id, user_id, fingerprint, result | 51 |
 | `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, completed_at, committed_points, completed_points; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks. `tl_task` gains sprint_id, points, rank | 52 |
 | `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member. `tl_task` gains estimate_minutes | 53 |
 | `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
@@ -1938,14 +1938,29 @@ Comments, mentions, watchers, files, the inbox, Taskline's emails and the daily 
   - The new Vercel cron needs `CRON_SECRET` (already used by the other two jobs); emails need Resend as before.
   - The bundle count is 1.5 kB under its budget, and Tasks 51 onwards add routes (0151): consider the closure measurement (Task 48's note) before raising it.
 
-### Task 51: More views and finding things (planned)
+### Task 51: More views and finding things (done)
 
-- **Calendar:** month and week by due date (or by start), drag and keyboard rescheduling, tasks with no date in a side list.
-- **My work (`/home`):** overdue, today, this week, later and no date; assigned to me or watched; across every project I can see.
-- **Saved views:** `tl_saved_view`, personal or shared with the project, wired into `DataTable`'s `savedViews` (replacing localStorage for Taskline).
-- **Search:** `/$ws/search` with the tsvector ranked, and an exact ref (`WEB-12`) jumping to the task; the palette searches tasks on the server.
-- **CSV import of tasks:** Expenses' pattern (`parseCsv`, a mapping guessed from the header, a preview through the shared schema, an idempotency key, at most 1,000 rows); labels and assignees matched by name.
-- **Tests:** PGlite (search sees only accessible projects, import and its retry), unit (the calendar grid with Sunday-first weeks), e2e (reschedule by keyboard, a saved view, import).
+The calendar, My work, saved views, search and the CSV import (decision 0215; [docs/guides/taskline.md](guides/taskline.md), "Finding things").
+
+- **Schema:** `0021_taskline_views`: `tl_saved_view` (unique per project, member, view and name in any case; checks on the kind and the search string) and `tl_import` (idempotency keys).
+- **Calendar** (`$ws/p/$key/calendar`, a view tab): month or week by due or start date (`?mode`, `?by`, `?date`, the filters), over the board's collection; weeks from the workspace's week start, days off shaded, "No date" beside it; drag, keyboard drag, or Alt + arrows (a day, a week; an undated task goes to the day shown), announced, the focus following the task. A pure grid in `calendar/grid.ts`.
+- **My work** (Home): open tasks assigned or watched, in every workspace (`?show=assigned|watching|all`), grouped overdue, today, this week, later, no date; `listMyTasklineTasks` returns `assigned`, `watching` and `weekEnd`.
+- **Saved views** on the list, the board and the calendar: per member, shared by editors, replaced by name, 50 per project; `DataTable`'s `savedViews` takes a `SavedViewsStore` (localStorage stays the default), and the menu shows who shared a view.
+- **Search:** `/$ws/search` (a GET form that searches on submit; a ranked prefix tsquery over the tsvector, open before closed, archived projects included; an exact reference redirects from the loader) and the palette's task results across workspaces with "Search every task for …".
+- **CSV import** (the list's "Import CSV", editors; a lazy dialog): Expenses' steps, with the picker moved to `components/forms/csv-source.tsx` and `parseCsvDay` to `lib/csv.ts` (Expenses uses both; its picker's messages became `csv_*`); names matched without case, unmatched ones reported; once per key; 1,000 rows, 10 an hour, the task quota; no notifications.
+- **Server:** `views/`, `search/`, `tasks/import.ts`; `reserveTaskNumbers`, batch inserts; six functions in `src/functions/taskline/find.ts` (in the guard test; five in the access matrix: search reads a workspace and is tested on its own). **Sandbox:** Asha's shared view "Due this week"; the claim moves views and import keys.
+- **Tests:** PGlite `taskline-find.test.ts` (11: prefix queries; search only of visible projects, ranks, open before closed, no trash; references; Devanagari and the palette across workspaces; views own, shared, replaced, rights, the cap, seed and claim; the import's matching, numbering, escaping, watchers and activity; once per key, concurrency, other rows and accounts refused; readers, outsiders and the quota), the access matrix (+5 operations), Home's test for watched tasks; unit `taskline-calendar.test.ts` (Sunday-first and Monday-first grids, steps, groups) and `taskline-import.test.ts`; jsdom `calendar.test.tsx` (keyboard moves, undated, readers); stories `Taskline/Calendar` (month, week, keyboard, reader; both themes). `pnpm test`: 117 files, 1,055 tests; `test:storybook` 94 files, 448 tests. E2E (11.1): `taskline.spec.ts` (11 flows, the new one: import, keyboard reschedule, a view shared and opened by another member, search and a reference), `expenses-habits.spec.ts` and `no-js.spec.ts` (the shared picker, forms), `apps.spec.ts`, and the review of every `/app/taskline` page with the new calendar (month; a week by start date), search (empty; results) and My work (both): 720 checks passed, then the calendar's 24 after its handle grew to 24 px (axe target-size). The palette flow caught server task results outranking a project; they now come after the projects.
+- **Numbers:** every page's JavaScript 249.2 kB gzip as `check-bundle.ts` counts it (248.5 before; budget 250): two route definitions; the import dialog, the calendar and the search page load with their routes or on demand. 107 new messages in each language (15 renamed from `expenses_import_*` to `csv_*`, one removed), the Nepali written by hand. Build, `build-storybook`, `i18n:check` green.
+- **Deviations:**
+  - `tl_saved_view.project_id` is required (11.5 updated): every view is a project's.
+  - The import is a dialog on the list, not a page (one route definition fewer in every page, 0151); imports notify nobody.
+  - Search isn't in the per-project access matrix (it reads a workspace and keeps only visible projects); its own tests cover outsiders, guests and private projects.
+  - The saved views' list loads after hydration (it's inside a closed menu): no loader, no route bytes.
+  - Fixed on the way: `todayInZone`, `addDays`, `weekdayOf`, `addMonths` and `monthDays` sat inside `apps` markers, so CI's `--keep-taskline` template job would have stripped what Taskline imports; they are core now.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0021_taskline_views`).
+  - The bundle count is 0.8 kB under its budget, and Tasks 52 onwards add routes (backlog, sprints, time, timeline…): decide on the closure measurement (Task 48's note) or a new budget before Task 52.
+  - `suggestKey` in `features/taskline/schema.ts` splits names on `/s+/` (the letter s), not `/\s+/`, so "Website relaunch" suggests "WEB", not "WR" as its comment says. Left as it is (flows may rely on it); a one-character fix.
 
 ### Task 52: Sprints and backlog (planned)
 

@@ -5,8 +5,8 @@ import { m } from "@/paraglide/messages";
 
 /**
  * Every keyboard shortcut in Taskline (PLAN 11.6: shortcuts go through `useHotkeys`
- * and are listed here). `?` opens it. Later modules add their rows (the board's
- * moves, the task sheet).
+ * and are listed here). `?` opens it. Each module adds its rows: the board's moves
+ * (a task's handle), the calendar's (Task 51: a day, a week).
  */
 export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
 	const palette = useHotkeyLabel("mod+k");
@@ -17,6 +17,9 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
 		{ keys: ["?"], label: m.taskline_shortcut_help() },
 		{ keys: ["↑", "↓", "↵"], label: m.taskline_shortcut_palette_pick() },
 		{ keys: ["Esc"], label: m.taskline_shortcut_close() },
+		{ keys: ["Alt", "↑↓←→"], label: m.taskline_shortcut_board_move() },
+		{ keys: ["Alt", "←→"], label: m.taskline_shortcut_calendar_day() },
+		{ keys: ["Alt", "↑↓"], label: m.taskline_shortcut_calendar_week() },
 	];
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

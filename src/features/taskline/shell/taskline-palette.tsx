@@ -1,5 +1,16 @@
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { FolderKanbanIcon, HouseIcon, KeyboardIcon, LanguagesIcon, LogOutIcon, PlusIcon, UserIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import {
+	FolderKanbanIcon,
+	HouseIcon,
+	KeyboardIcon,
+	LanguagesIcon,
+	LogOutIcon,
+	PlusIcon,
+	SearchIcon,
+	UserIcon,
+} from "lucide-react";
+import { useState } from "react";
 import { THEME_ICONS, THEME_LABELS } from "@/components/layout/theme";
 import {
 	CommandDialog,
@@ -11,11 +22,14 @@ import {
 	CommandSeparator,
 } from "@/components/ui/command";
 import { useAuthNavigation } from "@/features/auth/use-auth-actions";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useTheme } from "@/lib/stores/hooks";
 import { THEMES } from "@/lib/stores/preferences";
 import { m } from "@/paraglide/messages";
 import { getLocale, type Locale, locales, localizeHref } from "@/paraglide/runtime";
 import { TASKLINE_PATHS, tasklineLinks } from "../links";
+import { findTasksQueryOptions } from "../queries";
+import { StatusName, TaskTypeIcon } from "../task/task-bits";
 import type { TasklineNav } from "../types";
 import { ProjectDot, WORKSPACE_ICONS } from "./taskline-sidebar";
 
@@ -23,17 +37,20 @@ const LANGUAGE_NAMES: Record<Locale, () => string> = { en: m.language_en, ne: m.
 
 /**
  * Taskline's command palette (cmdk, Ctrl/⌘ K): every project the caller may see, the
- * pages to go to, the actions they may take (a new project where they may create
+ * tasks matching what's typed (searched on the server, Task 51, with "search all" for
+ * the search page), the pages to go to, the actions they may take (a new project where they may create
  * one, the shortcuts), theme, language and sign out. Routes and server functions
  * check again.
  */
 export function TasklinePalette({
+	userId,
 	nav,
 	open,
 	onOpenChange,
 	onOpenShortcuts,
 	guest,
 }: {
+	userId: string;
 	nav: TasklineNav;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -46,8 +63,15 @@ export function TasklinePalette({
 	const { signOut } = useAuthNavigation({ signedOutTo: TASKLINE_PATHS.landing });
 	const href = useRouterState({ select: (state) => state.location.href });
 	const several = nav.workspaces.length > 1;
+	const params = useParams({ strict: false });
+	const [typed, setTyped] = useState("");
+	const q = useDebouncedValue(typed.trim(), 200);
+	const { data: tasks = [] } = useQuery({ ...findTasksQueryOptions(userId, q), enabled: open && q.length >= 2 });
+	// Search all: in the workspace on screen, else the first.
+	const searchWs = nav.workspaces.find((workspace) => workspace.segment === params.ws) ?? nav.workspaces[0];
 	const run = (action: () => void) => {
 		onOpenChange(false);
+		setTyped("");
 		action();
 	};
 	/** Closes the palette, then navigates (each call site builds its typed link). */
@@ -56,12 +80,20 @@ export function TasklinePalette({
 	return (
 		<CommandDialog
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={(next) => {
+				if (!next) setTyped("");
+				onOpenChange(next);
+			}}
 			title={m.command_title()}
 			description={m.command_description()}
 			className="top-[18%] translate-y-0 sm:max-w-xl"
 		>
-			<CommandInput placeholder={m.taskline_palette_placeholder()} data-testid="command-input" />
+			<CommandInput
+				placeholder={m.taskline_palette_placeholder()}
+				value={typed}
+				onValueChange={setTyped}
+				data-testid="command-input"
+			/>
 			<CommandList>
 				<CommandEmpty>{m.command_empty()}</CommandEmpty>
 				{nav.projects.length > 0 ? (
@@ -84,6 +116,37 @@ export function TasklinePalette({
 						))}
 					</CommandGroup>
 				) : null}
+				{q.length >= 2 && tasks.length > 0 ? (
+					<CommandGroup heading={m.taskline_palette_tasks()} data-testid="palette-tasks">
+						{tasks.map((task) => (
+							<CommandItem
+								key={task.id}
+								value={`task ${task.project.ws} ${task.ref}`}
+								// The server matched it: what's typed always matches it here too.
+								keywords={[typed, task.title, task.ref]}
+								onSelect={() => go(() => navigate(tasklineLinks.task(task.project.ws, task.ref)))}
+							>
+								<TaskTypeIcon type={task.type} />
+								<span className="font-mono text-caption text-muted-foreground">{task.ref}</span>
+								<span className="min-w-0 truncate">{task.title}</span>
+								<StatusName status={task.status} className="ms-auto shrink-0 text-caption text-muted-foreground" />
+							</CommandItem>
+						))}
+					</CommandGroup>
+				) : null}
+				{typed.trim() !== "" && searchWs ? (
+					<CommandGroup heading={m.taskline_palette_search()}>
+						<CommandItem
+							value="search all tasks"
+							keywords={[typed]}
+							onSelect={() => go(() => navigate(tasklineLinks.search(searchWs.segment, typed.trim())))}
+							data-testid="palette-search-all"
+						>
+							<SearchIcon aria-hidden />
+							<span className="truncate">{m.taskline_palette_search_all({ q: typed.trim() })}</span>
+						</CommandItem>
+					</CommandGroup>
+				) : null}
 				<CommandGroup heading={m.command_group_pages()}>
 					<CommandItem
 						value="go home"
@@ -93,6 +156,19 @@ export function TasklinePalette({
 						<HouseIcon aria-hidden />
 						<span>{m.taskline_nav_home()}</span>
 					</CommandItem>
+					{nav.workspaces.map((workspace) => (
+						<CommandItem
+							key={workspace.id}
+							value={`go search ${workspace.segment}`}
+							keywords={[m.taskline_nav_search()]}
+							onSelect={() => go(() => navigate(tasklineLinks.search(workspace.segment)))}
+						>
+							<SearchIcon aria-hidden />
+							<span>
+								{several ? m.taskline_palette_search_in({ workspace: workspace.name }) : m.taskline_nav_search()}
+							</span>
+						</CommandItem>
+					))}
 					{nav.workspaces.map((workspace) => {
 						const Icon = several ? WORKSPACE_ICONS[workspace.kind] : FolderKanbanIcon;
 						const label = several

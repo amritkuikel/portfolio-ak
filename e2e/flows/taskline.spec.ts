@@ -8,7 +8,9 @@
  * addresses redirect. From the admin, a project is created and someone invited to it, who
  * signs up from the email and lands in it, and gets a 404 once deactivated.
  * Collaboration (Task 50, 0214): assigning someone reaches their inbox and their email,
- * and an `@` mention in a comment emails the one mentioned.
+ * and an `@` mention in a comment emails the one mentioned. Finding things (Task 51):
+ * tasks imported from CSV, one rescheduled on the calendar by keyboard, a view shared
+ * with the project and opened by another member, search and an exact reference.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -173,6 +175,73 @@ test.describe("Taskline", () => {
 		await open(page, page.url());
 		await expect(page.getByTestId("task-page")).toBeVisible();
 		await expect(page.getByRole("heading", { level: 1 })).toContainText(title);
+	});
+
+	test("a member imports tasks, reschedules one on the calendar by keyboard, shares a view and finds them", async ({
+		page,
+		browser,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await signInAs(page, "asha@taskline.example.com");
+		// Not all digits: a numeric `?q=` would be read as a number by the router and dropped.
+		const stamp = `k${Date.now()}`;
+		const day = (offset: number) =>
+			new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kathmandu" }).format(
+				new Date(Date.now() + offset * 86_400_000),
+			);
+
+		// The import: pasted CSV, previewed, imported once.
+		await open(page, "/app/taskline/team/p/WEB/list");
+		await page.getByTestId("import-open").click();
+		const dialog = page.getByTestId("import-dialog");
+		await dialog
+			.getByTestId("import-paste")
+			.fill(`Title,Due date,Labels\nImported A ${stamp},${day(0)},\nImported B ${stamp},,`);
+		await dialog.getByTestId("import-paste-read").click();
+		await expect(dialog.getByTestId("import-summary")).toContainText("Ready to import: 2");
+		const imported = nextSave(page);
+		await dialog.getByTestId("import-submit").click();
+		await imported;
+		await expect(page.getByText("Tasks imported: 2")).toBeVisible();
+		await expect(dialog).toHaveCount(0);
+
+		// The calendar: Alt + → moves the dated one a day later, saved.
+		await open(page, `/app/taskline/team/p/WEB/calendar?date=${day(0)}`);
+		const handle = page.getByRole("button", { name: `Reschedule Imported A ${stamp}` });
+		await handle.focus();
+		const moved = nextSave(page);
+		await page.keyboard.press("Alt+ArrowRight");
+		await expect(page.getByTestId("taskline-announcement")).toContainText(`Imported A ${stamp} moved to`);
+		await moved;
+		await expect(page.getByTestId("calendar-undated")).toContainText(`Imported B ${stamp}`);
+		await open(page, `/app/taskline/team/p/WEB/calendar?date=${day(1)}`);
+		await expect(page.locator(`[data-day="${day(1)}"]`)).toContainText(`Imported A ${stamp}`);
+
+		// A view shared with the project: another member opens it from their menu.
+		await open(page, `/app/taskline/team/p/WEB/list?q=${stamp}`);
+		await page.getByTestId("saved-views").click();
+		await page.getByTestId("saved-view-name").fill(`Imports ${stamp}`);
+		await page.getByTestId("saved-view-share").click();
+		const saved = nextSave(page);
+		await page.getByTestId("saved-view-save").click();
+		await saved;
+		await expect(page.getByTestId("saved-views-list")).toContainText(`Imports ${stamp}`);
+		const other = await browser.newPage();
+		await signInAs(other, "bikash@taskline.example.com");
+		await open(other, "/app/taskline/team/p/WEB/list");
+		await other.getByTestId("saved-views").click();
+		await other.getByRole("button", { name: new RegExp(`Imports ${stamp}`) }).click();
+		await expect(other).toHaveURL(/[?&]q=/);
+		await expect(other.getByTestId("task-row-open")).toHaveText([`Imported A ${stamp}`, `Imported B ${stamp}`]);
+		await other.close();
+
+		// Search: words find both; an exact reference goes straight to the task.
+		await open(page, `/app/taskline/team/search?q=${encodeURIComponent(`imported ${stamp}`)}`);
+		await expect(page.getByTestId("search-result")).toHaveCount(2);
+		await page.getByTestId("search-input").fill("web-1");
+		await page.getByTestId("search-submit").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/team\/t\/WEB-1$/);
 	});
 
 	test("assigning reaches the assignee's inbox and email, and a mention in a comment emails the one mentioned", async ({

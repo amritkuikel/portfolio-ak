@@ -1,35 +1,63 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { FlaskConicalIcon, FolderKanbanIcon, ListTodoIcon, UsersIcon } from "lucide-react";
+import { EyeIcon, FlaskConicalIcon, FolderKanbanIcon, ListTodoIcon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { errorMessage } from "@/components/errors/error-page";
 import { EmptyState } from "@/components/page/empty-state";
 import { Page, PageHeader } from "@/components/page/page";
+import { PageTab, PageTabs } from "@/components/page/page-tabs";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { isoDateInstant } from "@/lib/i18n/date-only";
-import { formatDate } from "@/lib/i18n/intl";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { bucketOf, MY_WORK_BUCKETS, type MyWorkBucket } from "../calendar/grid";
 import { tasklineColor } from "../colors";
 import { tasklineLinks } from "../links";
 import { myTasksQueryOptions, startSandboxMutation, tasklineNavQueryOptions } from "../queries";
+import type { MyWorkShow } from "../search";
 import { ProjectDot } from "../shell/taskline-sidebar";
 import type { MyTask, NavProject } from "../types";
+
+const BUCKET_LABELS: Record<MyWorkBucket, () => string> = {
+	overdue: m.taskline_my_work_overdue,
+	today: m.taskline_my_work_today,
+	week: m.taskline_my_work_week,
+	later: m.taskline_my_work_later,
+	none: m.taskline_my_work_none,
+};
+
+const SHOW_LABELS: Record<MyWorkShow, () => string> = {
+	assigned: m.taskline_my_work_assigned,
+	watching: m.taskline_my_work_watching,
+	all: m.taskline_my_work_all,
+};
+
+const shows = (task: MyTask, show: MyWorkShow) =>
+	show === "all" || (show === "assigned" ? task.assigned : task.watching && !task.assigned);
 
 const route = getRouteApi("/_taskline/app/taskline/_shell/home");
 
 /**
- * /app/taskline/home, first version (PLAN Task 47): the caller's open tasks across
- * their workspaces by due date, and the projects they last worked on. Someone with
- * no workspace at all is offered a sandbox, and told how to join the team.
+ * /app/taskline/home: My work (Task 51): the caller's open tasks across their
+ * workspaces, assigned to them, watched by them, or both (`?show=`), grouped by when
+ * they're due (overdue, today, the rest of this week, later, no date); and the
+ * projects they last worked on. Someone with no workspace at all is offered a
+ * sandbox, and told how to join the team.
  */
 export function TasklineHome() {
 	const { session } = route.useRouteContext();
 	const userId = session.user.id;
 	const { data: nav } = useSuspenseQuery(tasklineNavQueryOptions(userId));
 	const { data: mine } = useSuspenseQuery(myTasksQueryOptions(userId));
+	const { show } = route.useSearch();
 	const guest = session.isAnonymous === true;
+	const listed = mine.tasks.filter((task) => shows(task, show));
+	const groups = MY_WORK_BUCKETS.map((bucket) => ({
+		bucket,
+		tasks: listed.filter((task) => bucketOf(task.dueOn, mine.today, mine.weekEnd) === bucket),
+	})).filter((group) => group.tasks.length > 0);
 	const hasSandbox = nav.workspaces.some((workspace) => workspace.kind === "sandbox");
 
 	if (nav.workspaces.length === 0) {
@@ -56,16 +84,55 @@ export function TasklineHome() {
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 				<section aria-labelledby="home-tasks" className="flex min-w-0 flex-col gap-3">
 					<h2 id="home-tasks" className="text-heading">
-						{m.taskline_home_tasks()}
+						{m.taskline_my_work()}
 					</h2>
-					{mine.tasks.length === 0 ? (
-						<EmptyState icon={ListTodoIcon} description={m.taskline_home_tasks_empty()} />
+					<PageTabs label={m.taskline_my_work_show()}>
+						{(["assigned", "watching", "all"] as const).map((each) => (
+							<PageTab
+								key={each}
+								{...tasklineLinks.home(each)}
+								activeOptions={{ includeSearch: true }}
+								data-testid={`my-work-${each}`}
+							>
+								{each === "watching" ? <EyeIcon aria-hidden /> : <ListTodoIcon aria-hidden />}
+								{SHOW_LABELS[each]()}
+							</PageTab>
+						))}
+					</PageTabs>
+					{groups.length === 0 ? (
+						<EmptyState
+							icon={show === "watching" ? EyeIcon : ListTodoIcon}
+							description={show === "watching" ? m.taskline_my_work_watching_empty() : m.taskline_home_tasks_empty()}
+						/>
 					) : (
-						<ul className="flex flex-col divide-y rounded-lg border bg-surface-1" data-testid="my-tasks">
-							{mine.tasks.map((task) => (
-								<MyTaskRow key={task.id} task={task} today={mine.today} />
+						<div className="flex flex-col gap-5" data-testid="my-tasks">
+							{groups.map((group) => (
+								<section
+									key={group.bucket}
+									aria-labelledby={`my-work-${group.bucket}`}
+									className="flex flex-col gap-2"
+									data-testid={`my-work-group-${group.bucket}`}
+								>
+									<h3
+										id={`my-work-${group.bucket}`}
+										className={cn(
+											"flex items-baseline gap-2 font-medium text-body",
+											group.bucket === "overdue" && "text-danger",
+										)}
+									>
+										{BUCKET_LABELS[group.bucket]()}
+										<span className="text-caption text-muted-foreground tabular-nums">
+											{formatNumber(group.tasks.length)}
+										</span>
+									</h3>
+									<ul className="flex flex-col divide-y rounded-lg border bg-surface-1">
+										{group.tasks.map((task) => (
+											<MyTaskRow key={task.id} task={task} today={mine.today} />
+										))}
+									</ul>
+								</section>
 							))}
-						</ul>
+						</div>
 					)}
 				</section>
 				<section aria-labelledby="home-recent" className="flex flex-col gap-3">
@@ -100,7 +167,19 @@ function MyTaskRow({ task, today }: { task: MyTask; today: string }) {
 	return (
 		<li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
 			<span className="w-20 shrink-0 font-mono text-caption text-muted-foreground">{task.ref}</span>
-			<span className="min-w-0 flex-1 truncate font-medium text-body">{task.title}</span>
+			<Link
+				{...tasklineLinks.task(task.project.ws, task.ref)}
+				className="min-w-0 flex-1 truncate font-medium text-body underline-offset-4 hover:underline"
+				data-testid="my-task-open"
+			>
+				{task.title}
+			</Link>
+			{task.watching && !task.assigned ? (
+				<span className="flex items-center gap-1 text-caption text-muted-foreground">
+					<EyeIcon className="size-3" aria-hidden />
+					{m.taskline_my_work_watched()}
+				</span>
+			) : null}
 			<span className="flex items-center gap-1.5 text-caption text-muted-foreground">
 				<span
 					aria-hidden

@@ -344,7 +344,7 @@ export type TasklineNav = {
 	recent: NavProject[];
 };
 
-/** An open task assigned to the caller, for Home (every workspace at once). */
+/** An open task assigned to the caller or watched by them, for Home ("My work", every workspace at once). */
 export type MyTask = {
 	id: string;
 	ref: string;
@@ -354,9 +354,65 @@ export type MyTask = {
 	dueOn: string | null;
 	status: { name: string; category: StatusCategory; color: TasklineColor };
 	project: NavProject;
+	/** Task 51: assigned to the caller, and whether they watch it. */
+	assigned: boolean;
+	watching: boolean;
 };
 
-export type MyTasks = { tasks: MyTask[]; today: string };
+/** My work: the tasks, and the days they're grouped by (today and the last day of this week, in the first workspace's calendar). */
+export type MyTasks = { tasks: MyTask[]; today: string; weekEnd: string };
+
+// ---- Finding things (Task 51) -----------------------------------------------------------------
+
+/** The views a saved view can belong to. */
+export const SAVED_VIEW_KINDS = ["list", "board", "calendar"] as const;
+export type SavedViewKind = (typeof SAVED_VIEW_KINDS)[number];
+
+/** A saved view of a project: a search string for one of its views. */
+export type SavedViewDto = {
+	id: string;
+	name: string;
+	view: SavedViewKind;
+	search: string;
+	shared: boolean;
+	/** Whose it is, for a shared one's "by Asha". */
+	author: string;
+	mine: boolean;
+	/** The author, or the project's lead for a shared one. */
+	canDelete: boolean;
+};
+
+/** A project's saved views of one kind, and whether the caller may save (a member row) and share (an editor). */
+export type SavedViews = { views: SavedViewDto[]; canSave: boolean; canShare: boolean };
+
+/** A task found by search, with where it lives. */
+export type FoundTask = {
+	id: string;
+	ref: string;
+	title: string;
+	type: TaskType;
+	priority: TaskPriority;
+	status: { name: string; category: StatusCategory; color: TasklineColor };
+	project: NavProject;
+	/** The start of its description's text, for the results' second line. */
+	excerpt: string;
+	closed: boolean;
+};
+
+/** A page of search results; `jump` is the task an exact reference ("WEB-12") names, when the caller may see it. */
+export type TaskSearchPage = {
+	items: FoundTask[];
+	total: number;
+	page: number;
+	pageSize: number;
+	jump: string | null;
+};
+
+/** What an import did: tasks made, and the names in the file that matched nothing (left blank). */
+export type TaskImportResult = {
+	inserted: number;
+	unmatched: { statuses: string[]; assignees: string[]; labels: string[] };
+};
 
 // ---- Notifications (Task 50) ------------------------------------------------------------------
 

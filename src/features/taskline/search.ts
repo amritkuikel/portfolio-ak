@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { listSchema } from "@/lib/crud/schema";
-import { enumParam, searchParam } from "@/lib/list/params";
+import { enumParam, pageParam, searchParam } from "@/lib/list/params";
 import { TASK_TYPES } from "./types";
 
 /**
@@ -90,6 +90,37 @@ export const taskList = listSchema({
 export const taskListSearch = taskList.search.extend({ task: taskParam });
 /** The list's table: its saved page size, hidden columns and views. */
 export const TASKS_TABLE_ID = "taskline-tasks";
+
+// ---- Task 51: the calendar, search and My work ---------------------------------------------------
+
+export const CALENDAR_MODES = ["month", "week"] as const;
+export type CalendarMode = (typeof CALENDAR_MODES)[number];
+/** Which date places a task on the calendar. */
+export const CALENDAR_DATES = ["due", "start"] as const;
+export type CalendarDate = (typeof CALENDAR_DATES)[number];
+
+/** The calendar: the filters, month or week, by due or start date, the day it shows (omitted: today), and the open task. */
+export const calendarSearch = z.object({
+	q: searchParam(),
+	...taskFilterParams,
+	mode: enumParam(CALENDAR_MODES, "month"),
+	by: enumParam(CALENDAR_DATES, "due"),
+	date: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/)
+		.optional()
+		.catch(undefined),
+	task: taskParam,
+});
+
+/** /$ws/search: the words (or a reference) and the page of results. */
+export const SEARCH_PAGE_SIZE = 20;
+export const taskSearchSearch = z.object({ q: searchParam(), page: pageParam(50) });
+
+/** My work (Home): the tasks assigned to the caller, the ones they watch, or both. */
+export const MY_WORK_SHOWS = ["assigned", "watching", "all"] as const;
+export type MyWorkShow = (typeof MY_WORK_SHOWS)[number];
+export const homeSearch = z.object({ show: enumParam(MY_WORK_SHOWS, "assigned") });
 
 /** The project key of a task reference ("WEB-12" → "WEB"), or null when it isn't one (route files can't import schema.ts). */
 export const keyOfRef = (ref: string): string | null => /^([A-Z][A-Z0-9]{1,5})-[1-9][0-9]{0,8}$/.exec(ref)?.[1] ?? null;
