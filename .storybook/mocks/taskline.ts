@@ -204,6 +204,7 @@ export const sampleProjectTasks: ProjectTasks = {
 	tasks: sampleTasks,
 	today: "2026-10-31",
 	doneColumnDays: 14,
+	taskTypes: ["task", "bug", "story", "epic"],
 	readAt: "2026-10-31T06:00:00.000Z",
 };
 

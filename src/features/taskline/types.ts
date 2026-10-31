@@ -228,6 +228,8 @@ export type ProjectTasks = {
 	today: string;
 	/** Days a closed task stays on the board: the project's setting, else the workspace's. */
 	doneColumnDays: number;
+	/** The types a task can be given (the workspace's setting); a task keeps one turned off later. */
+	taskTypes: TaskType[];
 	/** When the server read it: relative times ("5 minutes ago") start from here, so both renders agree. */
 	readAt: string;
 };

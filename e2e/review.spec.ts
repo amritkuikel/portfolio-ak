@@ -46,6 +46,11 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 		return page.route.replace("$id", await harness.portfolioId("post", "server-render-everything"));
 	}
 	// portfolio:end
+	// taskline:start
+	if (page.params.from === "taskline-project-id") {
+		return page.route.replace("$id", await harness.tasklineProjectId("WEB"));
+	}
+	// taskline:end
 	// apps:start
 	if (page.params.from === "note-id") return page.route.replace("$noteId", (await harness.reviewNote("member")).id);
 	if (page.params.from === "shared-note-token") {

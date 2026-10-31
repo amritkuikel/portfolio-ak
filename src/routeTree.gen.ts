@@ -47,6 +47,7 @@ import { Route as AdminAdminAuditRouteRouteImport } from './routes/_admin/admin/
 import { Route as AdminAdminLinksRouteImport } from './routes/_admin/admin/links'
 import { Route as AdminAdminMediaRouteImport } from './routes/_admin/admin/media'
 import { Route as AdminAdminRolesRouteRouteImport } from './routes/_admin/admin/roles/route'
+import { Route as AdminAdminTasklineRouteRouteImport } from './routes/_admin/admin/taskline/route'
 import { Route as AdminAdminTestCrudRouteRouteImport } from './routes/_admin/admin/test-crud/route'
 import { Route as AdminAdminUsersRouteRouteImport } from './routes/_admin/admin/users/route'
 import { Route as AppsAppsIndexRouteImport } from './routes/_apps/apps/index'
@@ -93,6 +94,13 @@ import { Route as AdminAdminPortfolioTestimonialsRouteImport } from './routes/_a
 import { Route as AdminAdminRolesIndexRouteImport } from './routes/_admin/admin/roles/index'
 import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/admin/roles/permissions'
 import { Route as AdminAdminSettingsAppearanceRouteImport } from './routes/_admin/admin/settings.appearance'
+import { Route as AdminAdminTasklineIndexRouteImport } from './routes/_admin/admin/taskline/index'
+import { Route as AdminAdminTasklineActivityRouteImport } from './routes/_admin/admin/taskline/activity'
+import { Route as AdminAdminTasklineInvitationsRouteImport } from './routes/_admin/admin/taskline/invitations'
+import { Route as AdminAdminTasklineMembersRouteImport } from './routes/_admin/admin/taskline/members'
+import { Route as AdminAdminTasklineProjectsRouteRouteImport } from './routes/_admin/admin/taskline/projects/route'
+import { Route as AdminAdminTasklineSettingsRouteImport } from './routes/_admin/admin/taskline/settings'
+import { Route as AdminAdminTasklineWorkflowsRouteImport } from './routes/_admin/admin/taskline/workflows'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
 import { Route as AdminAdminTestCrudNewRouteImport } from './routes/_admin/admin/test-crud/new'
@@ -121,12 +129,19 @@ import { Route as AdminAdminPortfolioJournalNewRouteImport } from './routes/_adm
 import { Route as AdminAdminPortfolioProjectsIndexRouteImport } from './routes/_admin/admin/portfolio/projects/index'
 import { Route as AdminAdminPortfolioProjectsIdRouteImport } from './routes/_admin/admin/portfolio/projects/$id'
 import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_admin/admin/portfolio/projects/new'
+import { Route as AdminAdminTasklineProjectsIndexRouteImport } from './routes/_admin/admin/taskline/projects/index'
+import { Route as AdminAdminTasklineProjectsIdRouteRouteImport } from './routes/_admin/admin/taskline/projects/$id/route'
+import { Route as AdminAdminTasklineProjectsNewRouteImport } from './routes/_admin/admin/taskline/projects/new'
 import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
 import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
 import { Route as TasklineAppTasklineShellWsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/route'
 import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_taskline/app/taskline/_shell/account'
 import { Route as TasklineAppTasklineShellHomeRouteImport } from './routes/_taskline/app/taskline/_shell/home'
+import { Route as AdminAdminTasklineProjectsIdIndexRouteImport } from './routes/_admin/admin/taskline/projects/$id/index'
+import { Route as AdminAdminTasklineProjectsIdLabelsRouteImport } from './routes/_admin/admin/taskline/projects/$id/labels'
+import { Route as AdminAdminTasklineProjectsIdMembersRouteImport } from './routes/_admin/admin/taskline/projects/$id/members'
+import { Route as AdminAdminTasklineProjectsIdWorkflowRouteImport } from './routes/_admin/admin/taskline/projects/$id/workflow'
 import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
 import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
 import { Route as TasklineAppTasklineShellWsPKeyRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/route'
@@ -323,6 +338,11 @@ const AdminAdminMediaRoute = AdminAdminMediaRouteImport.update({
 const AdminAdminRolesRouteRoute = AdminAdminRolesRouteRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => AdminAdminRouteRoute,
+} as any)
+const AdminAdminTasklineRouteRoute = AdminAdminTasklineRouteRouteImport.update({
+  id: '/taskline',
+  path: '/taskline',
   getParentRoute: () => AdminAdminRouteRoute,
 } as any)
 const AdminAdminTestCrudRouteRoute = AdminAdminTestCrudRouteRouteImport.update({
@@ -566,6 +586,47 @@ const AdminAdminSettingsAppearanceRoute =
     path: '/settings/appearance',
     getParentRoute: () => AdminAdminRouteRoute,
   } as any)
+const AdminAdminTasklineIndexRoute = AdminAdminTasklineIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminTasklineRouteRoute,
+} as any)
+const AdminAdminTasklineActivityRoute =
+  AdminAdminTasklineActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
+const AdminAdminTasklineInvitationsRoute =
+  AdminAdminTasklineInvitationsRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
+const AdminAdminTasklineMembersRoute =
+  AdminAdminTasklineMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsRouteRoute =
+  AdminAdminTasklineProjectsRouteRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
+const AdminAdminTasklineSettingsRoute =
+  AdminAdminTasklineSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
+const AdminAdminTasklineWorkflowsRoute =
+  AdminAdminTasklineWorkflowsRouteImport.update({
+    id: '/workflows',
+    path: '/workflows',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
 const AdminAdminTestCrudIndexRoute = AdminAdminTestCrudIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -718,6 +779,24 @@ const AdminAdminPortfolioProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AdminAdminPortfolioProjectsRouteRoute,
   } as any)
+const AdminAdminTasklineProjectsIndexRoute =
+  AdminAdminTasklineProjectsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminTasklineProjectsRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsIdRouteRoute =
+  AdminAdminTasklineProjectsIdRouteRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminTasklineProjectsRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsNewRoute =
+  AdminAdminTasklineProjectsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminTasklineProjectsRouteRoute,
+  } as any)
 const AppsAppsFormsFormIdIndexRoute =
   AppsAppsFormsFormIdIndexRouteImport.update({
     id: '/apps/forms/$formId/',
@@ -752,6 +831,30 @@ const TasklineAppTasklineShellHomeRoute =
     id: '/home',
     path: '/home',
     getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsIdIndexRoute =
+  AdminAdminTasklineProjectsIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminTasklineProjectsIdRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsIdLabelsRoute =
+  AdminAdminTasklineProjectsIdLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => AdminAdminTasklineProjectsIdRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsIdMembersRoute =
+  AdminAdminTasklineProjectsIdMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AdminAdminTasklineProjectsIdRouteRoute,
+  } as any)
+const AdminAdminTasklineProjectsIdWorkflowRoute =
+  AdminAdminTasklineProjectsIdWorkflowRouteImport.update({
+    id: '/workflow',
+    path: '/workflow',
+    getParentRoute: () => AdminAdminTasklineProjectsIdRouteRoute,
   } as any)
 const TasklineAppTasklineShellWsIndexRoute =
   TasklineAppTasklineShellWsIndexRouteImport.update({
@@ -866,6 +969,7 @@ export interface FileRoutesByFullPath {
   '/dev/': typeof DevIndexRoute
   '/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
   '/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
+  '/admin/taskline': typeof AdminAdminTasklineRouteRouteWithChildren
   '/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
@@ -906,6 +1010,7 @@ export interface FileRoutesByFullPath {
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/app/taskline': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
@@ -915,6 +1020,11 @@ export interface FileRoutesByFullPath {
   '/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
+  '/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
+  '/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
+  '/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
+  '/admin/taskline/workflows': typeof AdminAdminTasklineWorkflowsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
@@ -928,6 +1038,7 @@ export interface FileRoutesByFullPath {
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
+  '/admin/taskline/': typeof AdminAdminTasklineIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/admin/users/': typeof AdminAdminUsersIndexRoute
   '/apps/expenses/': typeof AppsAppsExpensesIndexRoute
@@ -938,19 +1049,26 @@ export interface FileRoutesByFullPath {
   '/app/taskline/': typeof TasklineAppTasklineIndexRoute
   '/apps/kanban/': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
   '/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
+  '/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
+  '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
+  '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
@@ -1031,6 +1149,11 @@ export interface FileRoutesByTo {
   '/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
+  '/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
+  '/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
+  '/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
+  '/admin/taskline/workflows': typeof AdminAdminTasklineWorkflowsRoute
   '/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
@@ -1044,6 +1167,7 @@ export interface FileRoutesByTo {
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
+  '/admin/taskline': typeof AdminAdminTasklineIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
   '/admin/users': typeof AdminAdminUsersIndexRoute
   '/apps/expenses': typeof AppsAppsExpensesIndexRoute
@@ -1057,14 +1181,20 @@ export interface FileRoutesByTo {
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/admin/taskline/projects': typeof AdminAdminTasklineProjectsIndexRoute
   '/apps/forms/$formId': typeof AppsAppsFormsFormIdIndexRoute
+  '/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
+  '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
+  '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
@@ -1113,6 +1243,7 @@ export interface FileRoutesById {
   '/dev/': typeof DevIndexRoute
   '/_admin/admin/audit': typeof AdminAdminAuditRouteRouteWithChildren
   '/_admin/admin/roles': typeof AdminAdminRolesRouteRouteWithChildren
+  '/_admin/admin/taskline': typeof AdminAdminTasklineRouteRouteWithChildren
   '/_admin/admin/test-crud': typeof AdminAdminTestCrudRouteRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRouteRouteWithChildren
   '/dev/examples/masking': typeof DevExamplesMaskingRouteRouteWithChildren
@@ -1153,6 +1284,7 @@ export interface FileRoutesById {
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/_admin/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/_admin/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/_taskline/app/taskline/_shell': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/_admin/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/_admin/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
@@ -1162,6 +1294,11 @@ export interface FileRoutesById {
   '/_admin/admin/portfolio/testimonials': typeof AdminAdminPortfolioTestimonialsRoute
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
+  '/_admin/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/_admin/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
+  '/_admin/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
+  '/_admin/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
+  '/_admin/admin/taskline/workflows': typeof AdminAdminTasklineWorkflowsRoute
   '/_admin/admin/test-crud/$id': typeof AdminAdminTestCrudIdRoute
   '/_admin/admin/test-crud/new': typeof AdminAdminTestCrudNewRoute
   '/_apps/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
@@ -1175,6 +1312,7 @@ export interface FileRoutesById {
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
+  '/_admin/admin/taskline/': typeof AdminAdminTasklineIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
   '/_admin/admin/users/': typeof AdminAdminUsersIndexRoute
   '/_apps/apps/expenses/': typeof AppsAppsExpensesIndexRoute
@@ -1185,19 +1323,26 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/': typeof TasklineAppTasklineIndexRoute
   '/_taskline/apps/kanban/': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/_admin/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
+  '/_admin/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
   '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
+  '/_admin/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
   '/_apps/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
+  '/_admin/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
+  '/_admin/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
+  '/_admin/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/_admin/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/_taskline/app/taskline/_shell/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
@@ -1242,6 +1387,7 @@ export interface FileRouteTypes {
     | '/dev/'
     | '/admin/audit'
     | '/admin/roles'
+    | '/admin/taskline'
     | '/admin/test-crud'
     | '/admin/users'
     | '/dev/examples/masking'
@@ -1282,6 +1428,7 @@ export interface FileRouteTypes {
     | '/dev/test-crud/'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
+    | '/admin/taskline/projects'
     | '/app/taskline'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
@@ -1291,6 +1438,11 @@ export interface FileRouteTypes {
     | '/admin/portfolio/testimonials'
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
+    | '/admin/taskline/activity'
+    | '/admin/taskline/invitations'
+    | '/admin/taskline/members'
+    | '/admin/taskline/settings'
+    | '/admin/taskline/workflows'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/apps/expenses/categories'
@@ -1304,6 +1456,7 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
     | '/admin/roles/'
+    | '/admin/taskline/'
     | '/admin/test-crud/'
     | '/admin/users/'
     | '/apps/expenses/'
@@ -1314,19 +1467,26 @@ export interface FileRouteTypes {
     | '/app/taskline/'
     | '/apps/kanban/'
     | '/dev/examples/masking/'
+    | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/admin/taskline/projects/new'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
     | '/app/taskline/home'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
+    | '/admin/taskline/projects/'
     | '/apps/forms/$formId/'
+    | '/admin/taskline/projects/$id/labels'
+    | '/admin/taskline/projects/$id/members'
+    | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
+    | '/admin/taskline/projects/$id/'
     | '/app/taskline/$ws/'
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/t/$ref'
@@ -1407,6 +1567,11 @@ export interface FileRouteTypes {
     | '/admin/portfolio/testimonials'
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
+    | '/admin/taskline/activity'
+    | '/admin/taskline/invitations'
+    | '/admin/taskline/members'
+    | '/admin/taskline/settings'
+    | '/admin/taskline/workflows'
     | '/admin/test-crud/$id'
     | '/admin/test-crud/new'
     | '/apps/expenses/categories'
@@ -1420,6 +1585,7 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/$id'
     | '/admin/audit'
     | '/admin/roles'
+    | '/admin/taskline'
     | '/admin/test-crud'
     | '/admin/users'
     | '/apps/expenses'
@@ -1433,14 +1599,20 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
+    | '/admin/taskline/projects/new'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
     | '/app/taskline/home'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
+    | '/admin/taskline/projects'
     | '/apps/forms/$formId'
+    | '/admin/taskline/projects/$id/labels'
+    | '/admin/taskline/projects/$id/members'
+    | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
+    | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
     | '/app/taskline/$ws/t/$ref'
     | '/app/taskline/$ws/p/$key/board'
@@ -1488,6 +1660,7 @@ export interface FileRouteTypes {
     | '/dev/'
     | '/_admin/admin/audit'
     | '/_admin/admin/roles'
+    | '/_admin/admin/taskline'
     | '/_admin/admin/test-crud'
     | '/_admin/admin/users'
     | '/dev/examples/masking'
@@ -1528,6 +1701,7 @@ export interface FileRouteTypes {
     | '/dev/test-crud/'
     | '/_admin/admin/portfolio/journal'
     | '/_admin/admin/portfolio/projects'
+    | '/_admin/admin/taskline/projects'
     | '/_taskline/app/taskline/_shell'
     | '/_admin/admin/portfolio/experience'
     | '/_admin/admin/portfolio/messages'
@@ -1537,6 +1711,11 @@ export interface FileRouteTypes {
     | '/_admin/admin/portfolio/testimonials'
     | '/_admin/admin/roles/permissions'
     | '/_admin/admin/settings/appearance'
+    | '/_admin/admin/taskline/activity'
+    | '/_admin/admin/taskline/invitations'
+    | '/_admin/admin/taskline/members'
+    | '/_admin/admin/taskline/settings'
+    | '/_admin/admin/taskline/workflows'
     | '/_admin/admin/test-crud/$id'
     | '/_admin/admin/test-crud/new'
     | '/_apps/apps/expenses/categories'
@@ -1550,6 +1729,7 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
+    | '/_admin/admin/taskline/'
     | '/_admin/admin/test-crud/'
     | '/_admin/admin/users/'
     | '/_apps/apps/expenses/'
@@ -1560,19 +1740,26 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/'
     | '/_taskline/apps/kanban/'
     | '/dev/examples/masking/'
+    | '/_admin/admin/taskline/projects/$id'
     | '/_taskline/app/taskline/_shell/$ws'
     | '/_admin/admin/portfolio/journal/$id'
     | '/_admin/admin/portfolio/journal/new'
     | '/_admin/admin/portfolio/projects/$id'
     | '/_admin/admin/portfolio/projects/new'
+    | '/_admin/admin/taskline/projects/new'
     | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
     | '/_taskline/app/taskline/_shell/account'
     | '/_taskline/app/taskline/_shell/home'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
+    | '/_admin/admin/taskline/projects/'
     | '/_apps/apps/forms/$formId/'
+    | '/_admin/admin/taskline/projects/$id/labels'
+    | '/_admin/admin/taskline/projects/$id/members'
+    | '/_admin/admin/taskline/projects/$id/workflow'
     | '/_taskline/app/taskline/_shell/$ws/projects'
+    | '/_admin/admin/taskline/projects/$id/'
     | '/_taskline/app/taskline/_shell/$ws/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key'
     | '/_taskline/app/taskline/_shell/$ws/t/$ref'
@@ -1873,6 +2060,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AdminAdminRolesRouteRouteImport
+      parentRoute: typeof AdminAdminRouteRoute
+    }
+    '/_admin/admin/taskline': {
+      id: '/_admin/admin/taskline'
+      path: '/taskline'
+      fullPath: '/admin/taskline'
+      preLoaderRoute: typeof AdminAdminTasklineRouteRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
     '/_admin/admin/test-crud': {
@@ -2197,6 +2391,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminSettingsAppearanceRouteImport
       parentRoute: typeof AdminAdminRouteRoute
     }
+    '/_admin/admin/taskline/': {
+      id: '/_admin/admin/taskline/'
+      path: '/'
+      fullPath: '/admin/taskline/'
+      preLoaderRoute: typeof AdminAdminTasklineIndexRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/activity': {
+      id: '/_admin/admin/taskline/activity'
+      path: '/activity'
+      fullPath: '/admin/taskline/activity'
+      preLoaderRoute: typeof AdminAdminTasklineActivityRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/invitations': {
+      id: '/_admin/admin/taskline/invitations'
+      path: '/invitations'
+      fullPath: '/admin/taskline/invitations'
+      preLoaderRoute: typeof AdminAdminTasklineInvitationsRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/members': {
+      id: '/_admin/admin/taskline/members'
+      path: '/members'
+      fullPath: '/admin/taskline/members'
+      preLoaderRoute: typeof AdminAdminTasklineMembersRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/projects': {
+      id: '/_admin/admin/taskline/projects'
+      path: '/projects'
+      fullPath: '/admin/taskline/projects'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsRouteRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/settings': {
+      id: '/_admin/admin/taskline/settings'
+      path: '/settings'
+      fullPath: '/admin/taskline/settings'
+      preLoaderRoute: typeof AdminAdminTasklineSettingsRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
+    '/_admin/admin/taskline/workflows': {
+      id: '/_admin/admin/taskline/workflows'
+      path: '/workflows'
+      fullPath: '/admin/taskline/workflows'
+      preLoaderRoute: typeof AdminAdminTasklineWorkflowsRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
     '/_admin/admin/test-crud/': {
       id: '/_admin/admin/test-crud/'
       path: '/'
@@ -2393,6 +2636,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminPortfolioProjectsNewRouteImport
       parentRoute: typeof AdminAdminPortfolioProjectsRouteRoute
     }
+    '/_admin/admin/taskline/projects/': {
+      id: '/_admin/admin/taskline/projects/'
+      path: '/'
+      fullPath: '/admin/taskline/projects/'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIndexRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsRouteRoute
+    }
+    '/_admin/admin/taskline/projects/$id': {
+      id: '/_admin/admin/taskline/projects/$id'
+      path: '/$id'
+      fullPath: '/admin/taskline/projects/$id'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIdRouteRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsRouteRoute
+    }
+    '/_admin/admin/taskline/projects/new': {
+      id: '/_admin/admin/taskline/projects/new'
+      path: '/new'
+      fullPath: '/admin/taskline/projects/new'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsNewRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsRouteRoute
+    }
     '/_apps/apps/forms/$formId/': {
       id: '/_apps/apps/forms/$formId/'
       path: '/apps/forms/$formId'
@@ -2434,6 +2698,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/taskline/home'
       preLoaderRoute: typeof TasklineAppTasklineShellHomeRouteImport
       parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
+    '/_admin/admin/taskline/projects/$id/': {
+      id: '/_admin/admin/taskline/projects/$id/'
+      path: '/'
+      fullPath: '/admin/taskline/projects/$id/'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIdIndexRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsIdRouteRoute
+    }
+    '/_admin/admin/taskline/projects/$id/labels': {
+      id: '/_admin/admin/taskline/projects/$id/labels'
+      path: '/labels'
+      fullPath: '/admin/taskline/projects/$id/labels'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIdLabelsRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsIdRouteRoute
+    }
+    '/_admin/admin/taskline/projects/$id/members': {
+      id: '/_admin/admin/taskline/projects/$id/members'
+      path: '/members'
+      fullPath: '/admin/taskline/projects/$id/members'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIdMembersRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsIdRouteRoute
+    }
+    '/_admin/admin/taskline/projects/$id/workflow': {
+      id: '/_admin/admin/taskline/projects/$id/workflow'
+      path: '/workflow'
+      fullPath: '/admin/taskline/projects/$id/workflow'
+      preLoaderRoute: typeof AdminAdminTasklineProjectsIdWorkflowRouteImport
+      parentRoute: typeof AdminAdminTasklineProjectsIdRouteRoute
     }
     '/_taskline/app/taskline/_shell/$ws/': {
       id: '/_taskline/app/taskline/_shell/$ws/'
@@ -2780,6 +3072,76 @@ const AdminAdminRolesRouteRouteChildren: AdminAdminRolesRouteRouteChildren = {
 const AdminAdminRolesRouteRouteWithChildren =
   AdminAdminRolesRouteRoute._addFileChildren(AdminAdminRolesRouteRouteChildren)
 
+interface AdminAdminTasklineProjectsIdRouteRouteChildren {
+  AdminAdminTasklineProjectsIdLabelsRoute: typeof AdminAdminTasklineProjectsIdLabelsRoute
+  AdminAdminTasklineProjectsIdMembersRoute: typeof AdminAdminTasklineProjectsIdMembersRoute
+  AdminAdminTasklineProjectsIdWorkflowRoute: typeof AdminAdminTasklineProjectsIdWorkflowRoute
+  AdminAdminTasklineProjectsIdIndexRoute: typeof AdminAdminTasklineProjectsIdIndexRoute
+}
+
+const AdminAdminTasklineProjectsIdRouteRouteChildren: AdminAdminTasklineProjectsIdRouteRouteChildren =
+  {
+    AdminAdminTasklineProjectsIdLabelsRoute:
+      AdminAdminTasklineProjectsIdLabelsRoute,
+    AdminAdminTasklineProjectsIdMembersRoute:
+      AdminAdminTasklineProjectsIdMembersRoute,
+    AdminAdminTasklineProjectsIdWorkflowRoute:
+      AdminAdminTasklineProjectsIdWorkflowRoute,
+    AdminAdminTasklineProjectsIdIndexRoute:
+      AdminAdminTasklineProjectsIdIndexRoute,
+  }
+
+const AdminAdminTasklineProjectsIdRouteRouteWithChildren =
+  AdminAdminTasklineProjectsIdRouteRoute._addFileChildren(
+    AdminAdminTasklineProjectsIdRouteRouteChildren,
+  )
+
+interface AdminAdminTasklineProjectsRouteRouteChildren {
+  AdminAdminTasklineProjectsIdRouteRoute: typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
+  AdminAdminTasklineProjectsNewRoute: typeof AdminAdminTasklineProjectsNewRoute
+  AdminAdminTasklineProjectsIndexRoute: typeof AdminAdminTasklineProjectsIndexRoute
+}
+
+const AdminAdminTasklineProjectsRouteRouteChildren: AdminAdminTasklineProjectsRouteRouteChildren =
+  {
+    AdminAdminTasklineProjectsIdRouteRoute:
+      AdminAdminTasklineProjectsIdRouteRouteWithChildren,
+    AdminAdminTasklineProjectsNewRoute: AdminAdminTasklineProjectsNewRoute,
+    AdminAdminTasklineProjectsIndexRoute: AdminAdminTasklineProjectsIndexRoute,
+  }
+
+const AdminAdminTasklineProjectsRouteRouteWithChildren =
+  AdminAdminTasklineProjectsRouteRoute._addFileChildren(
+    AdminAdminTasklineProjectsRouteRouteChildren,
+  )
+
+interface AdminAdminTasklineRouteRouteChildren {
+  AdminAdminTasklineProjectsRouteRoute: typeof AdminAdminTasklineProjectsRouteRouteWithChildren
+  AdminAdminTasklineActivityRoute: typeof AdminAdminTasklineActivityRoute
+  AdminAdminTasklineInvitationsRoute: typeof AdminAdminTasklineInvitationsRoute
+  AdminAdminTasklineMembersRoute: typeof AdminAdminTasklineMembersRoute
+  AdminAdminTasklineSettingsRoute: typeof AdminAdminTasklineSettingsRoute
+  AdminAdminTasklineWorkflowsRoute: typeof AdminAdminTasklineWorkflowsRoute
+  AdminAdminTasklineIndexRoute: typeof AdminAdminTasklineIndexRoute
+}
+
+const AdminAdminTasklineRouteRouteChildren: AdminAdminTasklineRouteRouteChildren =
+  {
+    AdminAdminTasklineProjectsRouteRoute:
+      AdminAdminTasklineProjectsRouteRouteWithChildren,
+    AdminAdminTasklineActivityRoute: AdminAdminTasklineActivityRoute,
+    AdminAdminTasklineInvitationsRoute: AdminAdminTasklineInvitationsRoute,
+    AdminAdminTasklineMembersRoute: AdminAdminTasklineMembersRoute,
+    AdminAdminTasklineSettingsRoute: AdminAdminTasklineSettingsRoute,
+    AdminAdminTasklineWorkflowsRoute: AdminAdminTasklineWorkflowsRoute,
+    AdminAdminTasklineIndexRoute: AdminAdminTasklineIndexRoute,
+  }
+
+const AdminAdminTasklineRouteRouteWithChildren =
+  AdminAdminTasklineRouteRoute._addFileChildren(
+    AdminAdminTasklineRouteRouteChildren,
+  )
+
 interface AdminAdminTestCrudRouteRouteChildren {
   AdminAdminTestCrudIdRoute: typeof AdminAdminTestCrudIdRoute
   AdminAdminTestCrudNewRoute: typeof AdminAdminTestCrudNewRoute
@@ -2849,6 +3211,7 @@ const AdminAdminPortfolioProjectsRouteRouteWithChildren =
 interface AdminAdminRouteRouteChildren {
   AdminAdminAuditRouteRoute: typeof AdminAdminAuditRouteRouteWithChildren
   AdminAdminRolesRouteRoute: typeof AdminAdminRolesRouteRouteWithChildren
+  AdminAdminTasklineRouteRoute: typeof AdminAdminTasklineRouteRouteWithChildren
   AdminAdminTestCrudRouteRoute: typeof AdminAdminTestCrudRouteRouteWithChildren
   AdminAdminUsersRouteRoute: typeof AdminAdminUsersRouteRouteWithChildren
   AdminAdminAppsRoute: typeof AdminAdminAppsRoute
@@ -2869,6 +3232,7 @@ interface AdminAdminRouteRouteChildren {
 const AdminAdminRouteRouteChildren: AdminAdminRouteRouteChildren = {
   AdminAdminAuditRouteRoute: AdminAdminAuditRouteRouteWithChildren,
   AdminAdminRolesRouteRoute: AdminAdminRolesRouteRouteWithChildren,
+  AdminAdminTasklineRouteRoute: AdminAdminTasklineRouteRouteWithChildren,
   AdminAdminTestCrudRouteRoute: AdminAdminTestCrudRouteRouteWithChildren,
   AdminAdminUsersRouteRoute: AdminAdminUsersRouteRouteWithChildren,
   AdminAdminAppsRoute: AdminAdminAppsRoute,

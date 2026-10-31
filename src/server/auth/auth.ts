@@ -30,6 +30,7 @@ import type { SecurityNoticeKind } from "../email/templates/emails";
 import { serverEnv } from "../env";
 import { linkGuest, startGuest } from "../guests/auth-hooks";
 import { errorFields, log } from "../log";
+import { acceptOnSignIn } from "../taskline/admin/invitations"; // @taskline
 import { CLIENT_IP_HEADER } from "./client-ip";
 import { DISABLED_ADMIN_PATHS, DISABLED_GUEST_PATHS } from "./disabled-paths";
 import {
@@ -218,6 +219,16 @@ export const auth = betterAuth({
 	},
 
 	databaseHooks: {
+		// taskline:start
+		session: {
+			create: {
+				// A verified account's first session joins the Taskline team it was invited to (0212).
+				after: async (session) => {
+					await acceptOnSignIn(db, session);
+				},
+			},
+		},
+		// taskline:end
 		user: {
 			update: {
 				// Two-factor turned on (the setup code was confirmed) or off.

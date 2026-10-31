@@ -131,6 +131,8 @@ export const tlActivity = pgTable(
 	},
 	(table) => [
 		index("tl_activity_project_idx").on(table.projectId, table.at.desc()),
+		/** The admin's activity page reads the whole team's, newest first (Task 49). */
+		index("tl_activity_workspace_idx").on(table.workspaceId, table.at.desc()),
 		index("tl_activity_task_idx").on(table.taskId, table.at),
 	],
 );

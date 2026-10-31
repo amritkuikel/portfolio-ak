@@ -1,15 +1,16 @@
 /**
- * Taskline (decisions 0208–0210): a visitor tries the sandbox from the landing and
+ * Taskline (decisions 0208–0213): a visitor tries the sandbox from the landing and
  * works in it as a guest; a team member signs in on Taskline's own page and sees the
  * team's projects, but not a private one they aren't on; a workspace's address opens
  * its projects, and an unknown one is a 404 inside the frame. On the board a task
  * moves by keyboard and opens by its own address; a guest keeps their sandbox on
  * signing up (the emailed link) or in (two-factor and the claim cookie); Kanban's old
- * addresses redirect.
+ * addresses redirect. From the admin, a project is created and someone invited to it, who
+ * signs up from the email and lands in it, and gets a 404 once deactivated.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
-import { authFetch, expect, RESOURCE_STATUS, test } from "../support/fixtures.ts";
+import { authFetch, expect, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
 import { totp } from "../support/totp.ts";
 import { createVerifiedUser, linkIn, uniqueEmail } from "../support/users.ts";
 
@@ -245,5 +246,72 @@ test.describe("Taskline", () => {
 		await expect(page).toHaveURL(new URL("/app/taskline/home", E2E.baseURL).href);
 
 		await sandboxKept(page, "Kept after two-factor");
+	});
+});
+
+test.describe("Taskline from the admin", () => {
+	test.use(signedIn("admin"));
+
+	test("an admin creates a project and invites someone, who signs up from the email and lands in it; once deactivated, it's a 404", async ({
+		page,
+		browser,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		// A key of its own, so a retry against the same server doesn't meet the first attempt's project.
+		const key = `L${Date.now().toString(36).slice(-4).toUpperCase()}`;
+		const name = `Launch plan ${key}`;
+		// A private project with no lead yet.
+		await open(page, "/admin/taskline/projects/new");
+		await page.getByLabel("Name").fill(name);
+		await page.getByLabel("Key").fill(key);
+		await page.getByRole("combobox", { name: "Who can see it" }).click();
+		await page.getByRole("option", { name: "Private", exact: true }).click();
+		await page.getByRole("button", { name: "Create project" }).click();
+		await expect(page).toHaveURL(/\/admin\/taskline\/projects\/[0-9a-f-]{36}$/);
+		await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+
+		// Invite a new address onto it.
+		const email = uniqueEmail("tl-invite");
+		await open(page, "/admin/taskline/members");
+		await page.getByTestId("invite-member").click();
+		const dialog = page.getByTestId("invite-member-dialog");
+		await dialog.getByLabel("Email").fill(email);
+		await dialog.getByRole("combobox", { name: "Start on a project" }).click();
+		await page.getByRole("option", { name: `${key} · ${name}` }).click();
+		await dialog.getByRole("button", { name: "Send invitation" }).click();
+		await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
+		await open(page, "/admin/taskline/invitations");
+		await expect(page.getByTestId("taskline-admin-invitations")).toContainText(email);
+
+		// The invitee, in a browser of their own: the email's link, sign-up, the verification link, Continue.
+		const invite = await harness.nextEmail(email, "taskline-invite");
+		// Not the admin: the test's signed-in state would otherwise apply to this context too.
+		const context = await browser.newContext({ baseURL: E2E.baseURL, storageState: { cookies: [], origins: [] } });
+		const invitee = await context.newPage();
+		await open(invitee, linkIn(invite.text));
+		await expect(invitee).toHaveURL(/\/app\/taskline\/sign-up\?redirect=/);
+		await invitee.getByLabel("Name").fill("Invited Ira");
+		await invitee.getByLabel("Email").fill(email);
+		await invitee.getByLabel("Password", { exact: true }).fill(E2E.password);
+		await invitee.getByLabel("Confirm password").fill(E2E.password);
+		await invitee.getByRole("button", { name: "Create account" }).click();
+		await expect(invitee.getByRole("heading", { name: "Check your email" })).toBeVisible();
+		const verification = await harness.nextEmail(email, "verify-email");
+		await open(invitee, linkIn(verification.text));
+		await invitee.getByRole("link", { name: "Continue" }).click();
+		await expect(invitee).toHaveURL(new RegExp(`/app/taskline/team/p/${key}$`));
+		await expect(invitee.getByRole("heading", { level: 1, name })).toBeVisible();
+
+		// Deactivated, the project is simply not found for them.
+		await open(page, "/admin/taskline/members");
+		await page.getByRole("button", { name: "Actions for Invited Ira" }).click();
+		await page.getByRole("menuitem", { name: "Deactivate" }).click();
+		const deactivate = page.getByTestId("deactivate-member-dialog");
+		await deactivate.getByRole("button", { name: "Deactivate" }).click();
+		await expect(page.getByText(/Invited Ira deactivated/)).toBeVisible();
+		const response = await invitee.goto(`/app/taskline/team/p/${key}`);
+		expect(response?.status()).toBe(404);
+		await context.close();
 	});
 });

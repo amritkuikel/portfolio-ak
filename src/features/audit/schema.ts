@@ -54,6 +54,30 @@ export const AUDIT_ACTIONS = [
 	"link.unblock",
 	"link.delete",
 	// apps:end
+	// taskline:start
+	"taskline.project.create",
+	"taskline.project.update",
+	"taskline.project.state",
+	"taskline.project.archive",
+	"taskline.project.unarchive",
+	"taskline.project.lead",
+	"taskline.project.delete",
+	"taskline.project.export",
+	"taskline.project.member",
+	"taskline.project.member-remove",
+	"taskline.member.add",
+	"taskline.member.update",
+	"taskline.member.deactivate",
+	"taskline.member.reactivate",
+	"taskline.invite",
+	"taskline.invite.resend",
+	"taskline.invite.revoke",
+	"taskline.settings.update",
+	"taskline.workflows.update",
+	"taskline.label.create",
+	"taskline.label.update",
+	"taskline.label.delete",
+	// taskline:end
 	// @new-feature:audit-actions
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -74,6 +98,13 @@ export const AUDIT_TARGETS = [
 	"media",
 	// portfolio:end
 	"link", // @apps
+	// taskline:start
+	"taskline-project",
+	"taskline-member",
+	"taskline-invitation",
+	"taskline-workspace",
+	"taskline-label",
+	// taskline:end
 	// @new-feature:audit-targets
 ] as const;
 export type AuditTarget = (typeof AUDIT_TARGETS)[number];

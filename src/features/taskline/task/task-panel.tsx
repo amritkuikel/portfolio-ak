@@ -376,7 +376,7 @@ function TaskFields({
 					onChange={(event) => writes.patch({ type: event.target.value as TaskType })}
 					data-testid="task-type"
 				>
-					{TASK_TYPES.map((type) => (
+					{TASK_TYPES.filter((type) => type === task.type || project.taskTypes.includes(type)).map((type) => (
 						<option key={type} value={type}>
 							{TYPE_LABELS[type]()}
 						</option>

@@ -17,6 +17,8 @@ import {
 	type PasswordResetProps,
 	SecurityNotice,
 	type SecurityNoticeProps,
+	TeamInvite, // @taskline
+	type TeamInviteProps, // @taskline
 	VerifyEmail,
 	type VerifyEmailProps,
 	Welcome,
@@ -36,6 +38,7 @@ export interface EmailPropsMap {
 	"account-deleted": AccountDeletedProps;
 	"security-notice": SecurityNoticeProps;
 	"contact-message": ContactMessageProps; // @portfolio
+	"taskline-invite": TeamInviteProps; // @taskline
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -117,6 +120,19 @@ export const emailTemplates: EmailRegistry = {
 		},
 	},
 	// portfolio:end
+	// taskline:start
+	"taskline-invite": {
+		component: TeamInvite,
+		subject: ({ locale, siteName, team }) => m.email_team_invite_subject({ team, site: siteName }, { locale }),
+		sample: {
+			inviter: "Ram Thapa",
+			team: "Himal Studio",
+			project: "Website relaunch",
+			url: "https://example.com/app/taskline/sign-up?redirect=%2Fapp%2Ftaskline%2Fteam%2Fp%2FWEB",
+			expiresInDays: 7,
+		},
+	},
+	// taskline:end
 };
 
 export const EMAIL_TEMPLATE_IDS = Object.keys(emailTemplates) as EmailTemplateId[];

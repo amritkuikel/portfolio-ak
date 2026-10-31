@@ -17,6 +17,7 @@ import {
 	tlMember,
 	tlProject,
 	tlProjectMember,
+	tlRetiredKey,
 	tlStar,
 	tlStatus,
 	tlTask,
@@ -154,20 +155,34 @@ export const DEFAULT_STATUSES: ReadonlyArray<{ category: StatusCategory; color: 
 	{ category: "canceled", color: "red" },
 ];
 
-export async function insertDefaultStatuses(tx: Tx, projectId: string, names: ReadonlyArray<string>) {
-	const positions = generateKeysBetween(null, null, DEFAULT_STATUSES.length);
+/** A new project's statuses, in order: the workspace's defaults, or DEFAULT_STATUSES named in a language. */
+export async function insertStatuses(
+	tx: Tx,
+	projectId: string,
+	statuses: ReadonlyArray<{ name: string; category: StatusCategory; color: TasklineColor }>,
+) {
+	const positions = generateKeysBetween(null, null, statuses.length);
 	return tx
 		.insert(tlStatus)
 		.values(
-			DEFAULT_STATUSES.map((status, index) => ({
+			statuses.map((status, index) => ({
 				projectId,
-				name: names[index] ?? status.category,
+				name: status.name,
 				category: status.category,
 				color: status.color,
 				position: positions[index] ?? `a${index}`,
 			})),
 		)
 		.returning();
+}
+
+/** Whether a key was a deleted project's: keys are never handed out again (Task 49). */
+export async function isKeyRetired(db: Db, workspaceId: string, key: string): Promise<boolean> {
+	const [row] = await db
+		.select({ key: tlRetiredKey.key })
+		.from(tlRetiredKey)
+		.where(and(eq(tlRetiredKey.workspaceId, workspaceId), eq(tlRetiredKey.key, key)));
+	return row !== undefined;
 }
 
 export async function projectMembers(db: Db, projectId: string): Promise<ProjectMemberView[]> {

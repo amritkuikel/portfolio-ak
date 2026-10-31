@@ -3,23 +3,30 @@ import {
 	BriefcaseIcon, // @portfolio
 	DatabaseIcon,
 	FolderKanbanIcon, // @portfolio
+	GaugeIcon, // @taskline
+	HistoryIcon, // @taskline
 	ImagesIcon, // @portfolio
 	InboxIcon, // @portfolio
 	KeyRoundIcon,
 	LayoutGridIcon, // @apps
 	Link2Icon, // @apps
+	ListChecksIcon, // @taskline
 	type LucideIcon,
 	NotebookPenIcon, // @portfolio
 	PaletteIcon,
 	QuoteIcon, // @portfolio
 	ScrollTextIcon,
+	SettingsIcon, // @taskline
 	ShieldCheckIcon,
+	SquareKanbanIcon, // @taskline
 	UserRoundIcon, // @portfolio
 	UsersIcon,
+	UsersRoundIcon, // @taskline
 	WorkflowIcon, // @portfolio
 	WrenchIcon, // @portfolio
 } from "lucide-react";
 import type { Permission } from "@/features/rbac/permissions";
+import { TASKLINE_NAME } from "@/features/taskline/brand"; // @taskline
 import { m } from "@/paraglide/messages";
 import type { FileRouteTypes } from "@/routeTree.gen";
 
@@ -27,13 +34,21 @@ import type { FileRouteTypes } from "@/routeTree.gen";
 export type AdminPath = Exclude<Extract<FileRouteTypes["to"], `/admin/${string}`>, `${string}$${string}`>;
 
 /** Sidebar groups, in order. The portfolio and the apps fill theirs in later tasks. */
-export const ADMIN_GROUPS = ["overview", "portfolio", "apps", "access", "system"] as const;
+export const ADMIN_GROUPS = [
+	"overview",
+	"portfolio",
+	"apps",
+	"taskline", // @taskline
+	"access",
+	"system",
+] as const;
 export type AdminGroup = (typeof ADMIN_GROUPS)[number];
 
 export const ADMIN_GROUP_LABELS: Record<AdminGroup, () => string> = {
 	overview: m.admin_group_overview,
 	portfolio: m.admin_group_portfolio,
 	apps: m.admin_group_apps,
+	taskline: () => TASKLINE_NAME, // @taskline
 	access: m.admin_group_access,
 	system: m.admin_group_system,
 };
@@ -171,6 +186,62 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_links,
 	},
 	// apps:end
+	// taskline:start
+	{
+		// Only on this exact path: the other Taskline sections are under it.
+		...linkOptions({ to: "/admin/taskline", activeOptions: { exact: true } }),
+		label: m.admin_nav_taskline,
+		description: m.taskline_admin_overview_description,
+		icon: GaugeIcon,
+		permission: "taskline:read",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/projects" }),
+		label: m.admin_nav_taskline_projects,
+		description: m.taskline_admin_projects_description,
+		icon: SquareKanbanIcon,
+		permission: "taskline:read",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_projects,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/members" }),
+		label: m.admin_nav_taskline_members,
+		description: m.taskline_admin_members_description,
+		icon: UsersRoundIcon,
+		permission: "taskline:read",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_members,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/workflows" }),
+		label: m.admin_nav_taskline_workflows,
+		description: m.taskline_admin_workflows_description,
+		icon: ListChecksIcon,
+		permission: "taskline:configure",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_workflows,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/activity" }),
+		label: m.admin_nav_taskline_activity,
+		description: m.taskline_admin_activity_description,
+		icon: HistoryIcon,
+		permission: "taskline:read",
+		group: "taskline",
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/settings" }),
+		label: m.admin_nav_taskline_settings,
+		description: m.taskline_admin_settings_description,
+		icon: SettingsIcon,
+		permission: "taskline:configure",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_settings,
+	},
+	// taskline:end
 	{
 		...linkOptions({ to: "/admin/users" }),
 		label: m.admin_nav_users,

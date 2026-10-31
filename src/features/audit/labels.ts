@@ -47,6 +47,30 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"link.unblock": m.audit_action_link_unblock,
 	"link.delete": m.audit_action_link_delete,
 	// apps:end
+	// taskline:start
+	"taskline.project.create": m.audit_action_taskline_project_create,
+	"taskline.project.update": m.audit_action_taskline_project_update,
+	"taskline.project.state": m.audit_action_taskline_project_state,
+	"taskline.project.archive": m.audit_action_taskline_project_archive,
+	"taskline.project.unarchive": m.audit_action_taskline_project_unarchive,
+	"taskline.project.lead": m.audit_action_taskline_project_lead,
+	"taskline.project.delete": m.audit_action_taskline_project_delete,
+	"taskline.project.export": m.audit_action_taskline_project_export,
+	"taskline.project.member": m.audit_action_taskline_project_member,
+	"taskline.project.member-remove": m.audit_action_taskline_project_member_remove,
+	"taskline.member.add": m.audit_action_taskline_member_add,
+	"taskline.member.update": m.audit_action_taskline_member_update,
+	"taskline.member.deactivate": m.audit_action_taskline_member_deactivate,
+	"taskline.member.reactivate": m.audit_action_taskline_member_reactivate,
+	"taskline.invite": m.audit_action_taskline_invite,
+	"taskline.invite.resend": m.audit_action_taskline_invite_resend,
+	"taskline.invite.revoke": m.audit_action_taskline_invite_revoke,
+	"taskline.settings.update": m.audit_action_taskline_settings_update,
+	"taskline.workflows.update": m.audit_action_taskline_workflows_update,
+	"taskline.label.create": m.audit_action_taskline_label_create,
+	"taskline.label.update": m.audit_action_taskline_label_update,
+	"taskline.label.delete": m.audit_action_taskline_label_delete,
+	// taskline:end
 	// @new-feature:audit-action-labels
 };
 
@@ -66,6 +90,13 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	media: m.audit_target_media,
 	// portfolio:end
 	link: m.audit_target_link, // @apps
+	// taskline:start
+	"taskline-project": m.audit_target_taskline_project,
+	"taskline-member": m.audit_target_taskline_member,
+	"taskline-invitation": m.audit_target_taskline_invitation,
+	"taskline-workspace": m.audit_target_taskline_workspace,
+	"taskline-label": m.audit_target_taskline_label,
+	// taskline:end
 	// @new-feature:audit-target-labels
 };
 
@@ -99,4 +130,23 @@ export const AUDIT_FIELD_LABELS: Readonly<Record<string, () => string>> = {
 	moved: m.audit_field_moved,
 	// portfolio:end
 	target: m.audit_field_target, // @apps
+	// taskline:start
+	key: m.audit_field_key,
+	visibility: m.audit_field_visibility,
+	color: m.audit_field_color,
+	startOn: m.audit_field_start_on,
+	targetOn: m.audit_field_target_on,
+	health: m.audit_field_health,
+	leadId: m.audit_field_lead_id,
+	lead: m.audit_field_lead,
+	member: m.audit_field_member,
+	role: m.audit_field_role,
+	capacityMinutesWeek: m.audit_field_capacity_minutes_week,
+	reassigned: m.audit_field_reassigned,
+	reassignTo: m.audit_field_reassign_to,
+	project: m.audit_field_project,
+	format: m.audit_field_format,
+	tasks: m.audit_field_tasks,
+	taskTypes: m.audit_field_task_types,
+	// taskline:end
 };

@@ -1,0 +1,59 @@
+import { defineStatuses } from "@/components/data-display/status-badge";
+import { m } from "@/paraglide/messages";
+import type { ActivityKind, ProjectHealth, ProjectStatus, ProjectVisibility, TeamRole } from "../types";
+
+/** /admin/taskline's enum labels and badges (the app's own are in ../labels.ts). */
+
+export const PROJECT_STATUS = defineStatuses<ProjectStatus>({
+	active: { tone: "success", label: m.taskline_project_status_active },
+	paused: { tone: "warning", label: m.taskline_project_status_paused },
+	completed: { tone: "info", label: m.taskline_project_status_completed },
+	archived: { tone: "neutral", label: m.taskline_admin_status_archived },
+});
+
+export const PROJECT_HEALTH = defineStatuses<ProjectHealth>({
+	on_track: { tone: "success", label: m.taskline_health_on_track },
+	at_risk: { tone: "warning", label: m.taskline_health_at_risk },
+	off_track: { tone: "danger", label: m.taskline_health_off_track },
+});
+
+export const VISIBILITY_LABELS: Record<ProjectVisibility, () => string> = {
+	team: m.taskline_visibility_team,
+	private: m.taskline_visibility_private,
+};
+
+export const TEAM_ROLE_LABELS: Record<TeamRole, () => string> = {
+	member: m.taskline_role_member,
+	viewer: m.taskline_role_viewer,
+};
+
+export const MEMBER_STATE = defineStatuses<"active" | "deactivated">({
+	active: { tone: "success", label: m.taskline_admin_member_active },
+	deactivated: { tone: "neutral", label: m.taskline_admin_member_deactivated },
+});
+
+export const ACTIVITY_KIND_LABELS: Record<ActivityKind, () => string> = {
+	"project.created": m.taskline_admin_kind_project_created,
+	"project.updated": m.taskline_admin_kind_project_updated,
+	"project.state": m.taskline_admin_kind_project_state,
+	"project.archived": m.taskline_admin_kind_project_archived,
+	"project.restored": m.taskline_admin_kind_project_restored,
+	"project.member_added": m.taskline_admin_kind_member_added,
+	"project.member_removed": m.taskline_admin_kind_member_removed,
+	"status.created": m.taskline_admin_kind_status_created,
+	"status.updated": m.taskline_admin_kind_status_updated,
+	"status.deleted": m.taskline_admin_kind_status_deleted,
+	"label.created": m.taskline_admin_kind_label_created,
+	"label.updated": m.taskline_admin_kind_label_updated,
+	"label.deleted": m.taskline_admin_kind_label_deleted,
+	"task.created": m.taskline_admin_kind_task_created,
+	"task.updated": m.taskline_admin_kind_task_updated,
+	"task.moved": m.taskline_admin_kind_task_moved,
+	"task.trashed": m.taskline_admin_kind_task_trashed,
+	"task.restored": m.taskline_admin_kind_task_restored,
+	"task.checklist": m.taskline_admin_kind_task_checklist,
+	"task.deleted": m.taskline_admin_kind_task_deleted,
+};
+
+/** A week's capacity in hours, from the stored minutes. */
+export const capacityHours = (minutes: number) => Math.round((minutes / 60) * 10) / 10;

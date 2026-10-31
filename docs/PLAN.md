@@ -1590,7 +1590,7 @@ The procedure is section 10.1's, with these differences:
 | 46 | Foundation: the `taskline` layer, core tables, access, activity, permissions, sandbox seed and claim | xhigh | Done (decisions 0203–0207) |
 | 47 | The standalone shell: layout, brand, landing, auth pages, home, project directory, palette | high | Done (decision 0208) |
 | 48 | Board, list and the task; Kanban's data migrated, redirected and removed | xhigh | Done (decisions 0209–0211) |
-| 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Planned |
+| 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Done (decisions 0212–0213) |
 | 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Planned |
 | 51 | More views: calendar, my work, saved views, search, CSV import | high | Planned |
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0212 after Task 48).
+- **Decisions:** numbered from the next free one (0214 after Task 49).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1743,7 +1743,8 @@ The procedure is section 10.1's, with these differences:
 | --- | --- | --- |
 | `tl_workspace` | kind, slug, name, owner_id?, `settings` jsonb (Zod `workspaceSettings`, below), version. Partial unique: one `team`; unique owner_id | 46 |
 | `tl_member` | workspace_id, user_id? (set null), display_name, role, title, capacity_minutes_week, `notify` jsonb (per kind: instant / digest / off), deactivated_at. Unique (workspace, user) | 46 |
-| `tl_invitation` | workspace_id, email (lowercase), role, invited_by, expires_at, accepted_at | 46 (used in 49) |
+| `tl_invitation` | workspace_id, email (lowercase), role, invited_by, project_id? (set null), expires_at, accepted_at, revoked_at; one open per (workspace, email) | 46, 49 |
+| `tl_retired_key` | workspace_id, key, retired_at: a deleted project's key, never handed out again | 49 |
 | `tl_project` | workspace_id, key (2–6 `A-Z0-9`, unique per workspace, never reused), name, description html + text, color, icon, visibility, status (active / paused / completed / archived), health? (on track / at risk / off track), lead_id, start_on, target_on, `settings` jsonb (sprints, time, estimation `points` or `time`, block completion while blocked, done-column days), task_seq, rev bigint, version, archived_at | 46 |
 | `tl_project_member` | project_id, member_id, role; primary key on both | 46 |
 | `tl_star` | member_id, project_id | 46 |
@@ -1766,7 +1767,8 @@ The procedure is section 10.1's, with these differences:
   - name and slug;
   - who creates projects (`admins` / `members`), default visibility, whether team members may join team-visible projects;
   - working days (default **Sunday–Friday**), week start (**Sunday**), time zone (`APP_TIME_ZONE`, Asia/Kathmandu), digest hour (07:00);
-  - default notification modes, team quotas, trash retention (30 days), timesheet lock date, done-column window (14 days).
+  - default notification modes, team quotas, trash retention (30 days), timesheet lock date, done-column window (14 days);
+  - the statuses new projects start with (`defaultStatuses`, null for the built-in five) and the task types offered (`taskTypes`) (Task 49).
 
 **Server patterns:**
 - **Every app write is one transaction:** `resolveProject` → the change → `recordActivity(tx, …)` → `bumpRev(tx, projectId)` → notifications (Task 50) → automations (Task 56).
@@ -1807,8 +1809,8 @@ The procedure is section 10.1's, with these differences:
 | Section | Permission | Task |
 | --- | --- | --- |
 | `/admin/taskline` (overview: KPIs, created vs completed, project health, active sprints, sandbox usage as counts only) | read | 49, extended by 52, 53, 57 |
-| `/admin/taskline/projects`, `/projects/$id` (details, members, workflow, labels, fields, automations; archive, transfer lead, delete by typing the key, JSON or CSV export, "Open in Taskline") | read / manage | 49 |
-| `/admin/taskline/members` (add accounts, invite by email, team role, title, capacity, deactivate with reassignment, workload) | read / manage | 49 |
+| `/admin/taskline/projects`, `/projects/new`, `/projects/$id` with tabs as routes `/{members,workflow,labels}` (details, members, workflow, labels, fields, automations; archive, transfer lead, delete by typing the key, JSON or CSV export, "Open in Taskline") | read / manage | 49 |
+| `/admin/taskline/members` (add accounts, team role, title, capacity, deactivate with reassignment, workload) and `/admin/taskline/invitations` (invite by email, resend, revoke) | read / manage | 49 |
 | `/admin/taskline/settings` (`workspaceSettings`), `/admin/taskline/activity` | configure / read | 49 |
 | `/admin/taskline/workflows` (default statuses, task types, workspace labels) | configure | 49 |
 | `/admin/taskline/timesheets` | time | 53 |
@@ -1888,30 +1890,28 @@ Taskline's daily work, and Kanban's data moved into it (decisions 0209–0211; [
   - Run `pnpm db:migrate` on Neon (`0017_kanban_to_taskline`, then `0018_drop_kanban`; `0016_taskline` too if it isn't applied yet): Kanban's boards become sandbox projects and its tables go.
   - `check-bundle.ts` counts the root's direct preloads, not the chunks they import: counted that way, every page loads 260.7 kB (258.0 before this task). Consider measuring the full closure and setting the budget on it.
 
-### Task 49: Admin control panel I (planned)
+### Task 49: Admin control panel I (done)
 
-**Goal:** the admin runs the team from `/admin`.
+The admin runs the team from `/admin/taskline` (decisions 0212–0213; [docs/guides/taskline.md](guides/taskline.md), "The admin").
 
-- **The group:** `taskline` in `ADMIN_GROUPS` with its sections (11.5), commands in `features/taskline/admin/commands.ts`, and functions in `src/functions/taskline-admin/` (`requirePermission` → `withServices`, audited).
-- **Overview:** `StatCard`s (active projects, open, overdue, done this week), created vs completed over 12 weeks (`CartesianChart`), a project health table, and sandbox usage (counts only).
-- **Projects:**
-  - a `CrudListPage` (filters: status, lead, visibility; search);
-  - create (key, name, lead, visibility, statuses from the workspace default);
-  - a detail page with tabs (details, members, workflow, labels);
-  - archive and unarchive, transfer lead, delete (typing the key to confirm), JSON and CSV export, "Open in Taskline".
-- **Members:**
-  - add accounts (an `AsyncComboboxField` over accounts not in the team, guests excluded);
-  - invite by email: `tl_invitation`, the `TeamInvite` email, auto-join on a verified sign-up or sign-in with that address (a hook next to the guest claim in `src/server/guests/auth-hooks.ts` or the auth after-hooks), resend and revoke;
-  - team role, title and weekly capacity;
-  - deactivate (reassign or unassign their open tasks) and reactivate.
-- **Settings:** `workspaceSettings` with `useCrudForm` (versioned).
-- **Workflows:** default statuses for new projects, task types, workspace labels.
-- **Activity:** `tl_activity` with filters (project, actor, kind, dates).
-- **Tests:**
-  - PGlite: every admin function's guard, audit rows, invitation acceptance (verified address only, expired and revoked refused), deactivation with reassignment;
-  - e2e: an admin creates a project and invites a member, who registers from the email (the fake Resend inbox, `e2e/harness/inbox.ts`) and lands in the project; a deactivated member gets a 404.
-- **Decision:** team membership is Taskline's own (not RBAC), and invitations auto-join.
-- **Left by Task 46:** the services for adding, changing and deactivating team members and for the settings are this task's (Task 46 has `insertMembers`, `setMemberDeactivated` and the settings' Zod only). A deleted project's key must never be reused (refs like `WEB-12` in comments): keep retired keys (e.g. a `retired_keys` column or table) and refuse them on create. Settings validation refuses the reserved slugs (11.5) and checks the team quotas against what exists. Workspace-wide labels: `tl_label_workspace_name_unique`.
+- **The group:** "Taskline" in `ADMIN_GROUPS` with six sections (overview, projects, members, workflows, activity, settings), the palette's "New Taskline project", functions in `src/functions/taskline-admin/` (33, in the guard test) and services in `src/server/taskline/admin/`, every change audited (22 audit actions, 5 targets). A project change runs the app's own service inside `withAudit`'s transaction, as the admin seen as a lead-equivalent Taskline caller.
+- **Overview:** active projects, open, overdue, done this week, created against completed over twelve weeks (`BarChart`), project health, the people, sandboxes as counts.
+- **Projects:** a `CrudListPage` (status, visibility, lead, search; CSV, saved views; archive at once), `/projects/new` (key checked while typing, lead, visibility, colour), and `/projects/$id` with tabs as routes: details (the versioned form, status and health, "Make lead"), members (add, role, remove), workflow and labels (shown; edited in Taskline). Archive and restore, JSON or CSV export, delete by typing the key, "Open in Taskline".
+- **Members:** the team with role, title, weekly capacity, open and overdue tasks and projects; "Add people" (a `RelationField` over accounts not on the team, guests excluded); edit; deactivate with reassignment or unassigning (activity per task); reactivate. **Invitations** on their own page (a tab beside Members): invite by email with a role and an optional project, resend, revoke; the `taskline-invite` email (signed Taskline); acceptance in Better Auth's `session.create.after` hook for a verified, non-guest account (expired and revoked refused, a deactivated member reactivated, impersonated sessions skipped); 30 sends an hour per admin.
+- **Settings:** name, slug (reserved segments refused), project creation, default visibility, joining, done-column and trash days, working days, week start, time zone (checked), digest hour, quotas (never below what exists), with `useCrudForm` against the workspace's `version`.
+- **Workflows:** default statuses for new projects (`workspaceSettings.defaultStatuses`), task types (`taskTypes`, enforced by the tasks service; the panel offers only those), workspace labels (unique by name, every project's `rev` moves).
+- **Activity:** `tl_activity` with filters (project, actor, kind, days), as the app's sentences.
+- **Schema:** `0019_taskline_admin`: `tl_retired_key`; `tl_invitation` gains `project_id`, `revoked_at` and a partial unique index on open invitations (it moved to `schema/taskline/project.ts` to reference projects); `tl_activity_workspace_idx`. `insertProjectWithWorkflow` refuses retired keys and takes a lead; `ProjectTasks` gained `taskTypes`; `suggestKey` moved to `features/taskline/schema.ts` (two forms use it); `sendEmail` takes a `siteName`.
+- **Tests:** PGlite `taskline-admin.test.ts` (19: create, list, delete with the retired key, a stale edit, the lead's transfer, archive and export; adding members and guests refused, deactivation with and without reassignment, edits; invitations accepted, duplicated, unverified, expired, revoked, resent, reactivating; settings with a reserved slug, a bad zone, a quota below usage, a stale save and a new slug; workflows' statuses and task types; workspace labels; the overview and the activity; week starts), the guard test (33 admin functions); stories `Taskline/Admin` (overview, settings, workflows; both themes); e2e: an admin creates a project and invites someone, who signs up from the email, verifies and lands in it, and gets a 404 once deactivated. `pnpm test`: 112 files, 1,011 tests; `test:storybook` 90 files, 434 tests. E2E (11.1): `taskline.spec.ts` and `rbac.spec.ts` (12 flows) and the review of `/admin/taskline/*` and `/admin` (156), all passing.
+- **Numbers:** every page's JavaScript 248.0 kB gzip as `check-bundle.ts` counts it (244.9 before; budget 250): fifteen route definitions; the pages and their queries load with their routes. 289 messages in each language (the brand name is `TASKLINE_NAME`, not a message), the Nepali written by hand. Build, `build-storybook`, `i18n:check` green.
+- **Deviations:**
+  - A project's workflow and labels are shown in the admin and edited in Taskline's lead settings (which `taskline:manage` opens): one editor each (0213).
+  - The project page's tabs are routes (`/projects/$id/members`…), as `PageTabs` links, not `?tab=`; invitations have their own page beside Members.
+  - Notification defaults aren't on the settings form yet: nothing sends notifications before Task 50.
+  - The invitation is accepted at session start, not on a page with a token (0212).
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0019_taskline_admin`).
+  - The bundle count is 2 kB under its budget: Task 50 onwards adds routes, whose definitions are in every page (0151). Consider the closure measurement noted under Task 48 before the budget is raised.
 
 ### Task 50: Collaboration and notifications (planned)
 

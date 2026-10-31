@@ -12,6 +12,8 @@ export type SendEmailOptions<K extends EmailTemplateId> = {
 	data: EmailTemplateData<K>;
 	/** The recipient's language (e.g. their saved preference), not necessarily the request's. */
 	locale: Locale;
+	/** The name the email is signed with: a product's own (Taskline's) instead of the app's. */
+	siteName?: string;
 };
 
 /**
@@ -31,7 +33,7 @@ export const sendEmail = async <K extends EmailTemplateId>(
 	if (isUndeliverable(options.to)) throw new Error(`Refused to email an undeliverable address (${options.template})`);
 	const email = await renderEmail(options.template, options.data, {
 		locale: options.locale,
-		siteName: clientEnv.VITE_APP_TITLE,
+		siteName: options.siteName ?? clientEnv.VITE_APP_TITLE,
 	});
 	return provider.send({ to: options.to, ...email, tag: options.template });
 };

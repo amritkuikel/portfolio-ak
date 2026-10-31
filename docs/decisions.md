@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (206 entries)</summary>
+<summary>Index (208 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -216,6 +216,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0209](#0209-open-taskline-pages-poll-the-projects-rev-no-websockets): Open Taskline pages poll the project's `rev`; no websockets
 - [0210](#0210-kanbans-boards-became-taskline-projects-by-migration-with-the-same-ids-and-its-addresses-redirect): Kanban's boards became Taskline projects by migration, with the same ids, and its addresses redirect
 - [0211](#0211-tasklines-views-one-project-query-a-board-over-a-db-collection-a-list-on-the-list-contract-the-task-as-a-masked-sheet): Taskline's views: one project query, a board over a DB collection, a list on the list contract, the task as a masked sheet
+- [0212](#0212-tasklines-team-is-its-own-list-invitations-join-on-the-first-verified-sign-in): Taskline's team is its own list; invitations join on the first verified sign-in
+- [0213](#0213-the-admin-acts-through-the-apps-services-deleted-keys-are-retired-workflows-and-task-types-are-workspace-settings): The admin acts through the app's services; deleted keys are retired; workflows and task types are workspace settings
 </details>
 
 ---
@@ -2584,3 +2586,23 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 - **Functions added:** `listTasklineTaskPage`, `bulkUpdateTasklineTasks`, `purgeTasklineTask` (the lead's; trashed tasks only, their history replaced by one `task.deleted` project entry), `listTasklineProjectActivity`, `getTasklineProjectRev` (0209), `locateTasklineProject` (0210). Two wrappers no page needed (`getTasklineProject`, `listTasklineWorkspaces`) were removed; their services stay.
 - **Cost:** every page's JavaScript, as `check-bundle.ts` counts it (the root's direct preloads), 242.1 → 244.8 kB gzip: thirteen route definitions. Rolldown had first moved clsx into tailwind-merge's chunk, which the entry then imported directly, adding 8.7 kB to the count while every page already loaded tailwind-merge through `cn`; a `clsx` code-splitting group in `vite.config.ts` keeps the earlier layout. Counted with the chunks those preloads import, every page loads 258.0 kB before this task and 260.6 kB after: the budget's number is below what pages load (noted for the owner in PLAN 11).
 - **Alternatives considered:** the list's grouping in the browser (wrong across pages); a board column reorder by drag (the workflow page has it, keyboard first); a separate route per task open from a view without masking (the board would unmount, losing scroll and filters).
+
+## 0212: Taskline's team is its own list; invitations join on the first verified sign-in
+
+*Part 5, Task 49 (docs/guides/taskline.md, "The admin").*
+
+- **What:** who is on the team is `tl_member`, managed from `/admin/taskline/members` (`taskline:manage`), not an RBAC role. An admin adds existing accounts (guests never) or invites an address. An invitation (`tl_invitation`, now with `project_id` and `revoked_at`, one open per address) is accepted by Better Auth's `session.create.after` hook (`acceptOnSignIn`, `src/server/taskline/admin/invitations.ts`): the first session of a verified, non-guest account with that address makes it a member with the invitation's role (a deactivated member is reactivated) and puts it on the named project. Expired and revoked invitations do nothing; an impersonated session accepts nothing. The email (`taskline-invite`, signed "Taskline") links to Taskline's sign-up with `?redirect=` the project, so the verification link's "Continue" lands in it.
+- **Why:** RBAC permissions say what someone may do in the admin; the team says who works in Taskline, with a role, a title, a capacity and a history that outlives the account (0207). Accepting at session start covers every way in (password after verification, Google, an email code, a sign-in on another day) without a token to keep or a page to build, and only the address's verified owner can get there.
+- **Deactivating** sets `deactivated_at`: access ends everywhere (a 404, 0204) and the name stays in the history. Their open tasks go to another active member or are left unassigned, each with a `task.updated` entry marked `via: "admin"` when the admin isn't on the team, and the projects' `rev` moves.
+- **Alternatives considered:** a token in the email accepted on a page (another page, another expiry, and a forwarded email would let someone else in); accepting in the user-create hook (unverified addresses, and existing accounts would never accept); team membership as an RBAC role (the admin's permissions and the team's people are different questions).
+
+## 0213: The admin acts through the app's services; deleted keys are retired; workflows and task types are workspace settings
+
+*Part 5, Task 49.*
+
+- **What:** `/admin/taskline` (overview, projects, members, invitations, workflows, settings, activity) has functions in `src/functions/taskline-admin/` (`requirePermission("taskline:…")` → `withServices`) and services in `src/server/taskline/admin/`. A change to a project runs the app's own service inside `withAudit`'s transaction, as the admin seen as a Taskline caller holding `taskline:manage` (lead-equivalent, 0204; the nested transaction is a savepoint), so the rules, the activity and `rev` are the app's and the audit row is in the same transaction.
+- **Deleting a project** takes its key typed again and inserts the key into `tl_retired_key`; `insertProjectWithWorkflow` refuses a retired key for every creator (refs like `WEB-12` live on in emails and comments). Archiving stays the reversible way out.
+- **Workflows:** `workspaceSettings` gains `defaultStatuses` (null: the built-in five, named in the creator's language) and `taskTypes` (all four by default). New projects start with the defaults; the tasks service refuses a type turned off (a task keeps one it already has; an unnamed type is `task`, or the first offered). Workspace labels (`project_id` null) are created, renamed and deleted by the admin and appear in every project; their changes move every open project's `rev`.
+- **A project's own workflow and labels** are shown in the admin and edited in Taskline (its settings, which `taskline:manage` opens): one editor for each thing.
+- **Settings** save against the workspace's `version` (the forms' `updatedAt` carries it as a string). The slug can't be one of the reserved segments, the time zone must be one the server knows, and the quotas can't go below what exists; each refusal is on its field. Notification defaults stay as they are until Task 50 sends notifications.
+- **Alternatives considered:** admin services with their own SQL (two sets of rules to keep in step); soft-deleted projects to keep keys (the table of keys is smaller, and a deleted project is meant to be gone); a project's workflow editor in the admin too (a second copy of the lead's page).

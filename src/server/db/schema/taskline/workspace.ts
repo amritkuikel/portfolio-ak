@@ -67,26 +67,5 @@ export const tlMember = pgTable(
 	],
 );
 
-export const tlInvitation = pgTable(
-	"tl_invitation",
-	{
-		id: uuid().primaryKey().defaultRandom(),
-		workspaceId: uuid()
-			.notNull()
-			.references(() => tlWorkspace.id, { onDelete: "cascade" }),
-		/** Lowercase. */
-		email: text().notNull(),
-		role: text().$type<"member" | "viewer">().notNull().default("member"),
-		invitedById: uuid().references(() => tlMember.id, { onDelete: "set null" }),
-		expiresAt: timestamp({ withTimezone: true }).notNull(),
-		acceptedAt: timestamp({ withTimezone: true }),
-		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
-	},
-	(table) => [
-		index("tl_invitation_email_idx").on(table.workspaceId, table.email),
-		check("tl_invitation_email_lowercase", sql`${table.email} = lower(${table.email})`),
-	],
-);
-
 export type TlWorkspaceRow = typeof tlWorkspace.$inferSelect;
 export type TlMemberRow = typeof tlMember.$inferSelect;

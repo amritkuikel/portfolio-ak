@@ -28,7 +28,7 @@ import {
 } from "../access";
 import { recordActivity } from "../activity";
 import { bumpRev, saveVersioned } from "../rev";
-import { notMemberError, quotaError, quotaScope, quotasOf, richText } from "../rules";
+import { fieldError, notMemberError, quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
 
@@ -89,25 +89,36 @@ export async function getProject({ db, user }: TasklineServices, ws: string, key
 	return detailOf(db, await resolveProject(db, user, ws, key));
 }
 
+/** The statuses a new project of the workspace starts with: the admin's defaults, else the built-in five in `locale`. */
+export const startingStatuses = (access: WorkspaceAccess, locale?: Locale) => {
+	if (access.settings.defaultStatuses) return access.settings.defaultStatuses;
+	const names = defaultStatusNames(locale);
+	return repo.DEFAULT_STATUSES.map((status, index) => ({ ...status, name: names[index] ?? status.category }));
+};
+
 /**
- * A project and its rows, inside the caller's transaction: the default statuses (in
- * `locale`), the creator as its lead, and the "created" entry. For the service and
- * for seeds (which pass the guest's language).
+ * A project and its rows, inside the caller's transaction: the workspace's starting
+ * statuses (built-in ones in `locale`), its lead (the creator unless `leadId` says
+ * otherwise: an admin picks one) and the "created" entry. A deleted project's key is
+ * refused (never reused). For the services and for seeds (which pass the guest's language).
  */
 export async function insertProjectWithWorkflow(
 	tx: Tx,
 	access: WorkspaceAccess,
 	input: Omit<repo.NewProject, "workspaceId" | "leadId">,
 	locale?: Locale,
+	{ leadId = access.member?.id ?? null }: { leadId?: string | null } = {},
 ): Promise<ProjectAccess> {
-	const leadId = access.member?.id ?? null;
+	if (await repo.isKeyRetired(tx, access.workspace.id, input.key)) {
+		throw fieldError("CONFLICT", "key", m.taskline_error_key_retired());
+	}
 	let project: TlProjectRow;
 	try {
 		project = await repo.insertProject(tx, { ...input, workspaceId: access.workspace.id, leadId });
 	} catch (error) {
 		throw uniqueViolation(error, keyTaken());
 	}
-	await repo.insertDefaultStatuses(tx, project.id, defaultStatusNames(locale));
+	await repo.insertStatuses(tx, project.id, startingStatuses(access, locale));
 	if (leadId) await repo.upsertProjectMember(tx, project.id, leadId, "lead");
 	const created = await projectAccess(tx, access, project);
 	await recordActivity(tx, created, { kind: "project.created", data: { key: project.key, name: project.name } });

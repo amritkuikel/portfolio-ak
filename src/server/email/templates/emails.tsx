@@ -95,6 +95,29 @@ export function Invite({ locale, siteName, name, url, inviter, expiresInDays }: 
 	);
 }
 
+// taskline:start
+/** Taskline (decision 0212): an admin invited this address to the team; signing up or in with it joins. */
+export type TeamInviteProps = EmailBaseProps &
+	WithUrl & { inviter: string; team: string; project?: string | undefined; expiresInDays: number };
+
+export function TeamInvite({ locale, siteName, inviter, team, project, url, expiresInDays }: TeamInviteProps) {
+	return (
+		<EmailLayout locale={locale} siteName={siteName} preview={m.email_team_invite_preview({ team }, { locale })}>
+			<Heading as="h1" style={styles.heading}>
+				{m.email_team_invite_heading({ team }, { locale })}
+			</Heading>
+			<Text style={styles.text}>{m.email_team_invite_body({ inviter, team, site: siteName }, { locale })}</Text>
+			{project ? <Text style={styles.text}>{m.email_team_invite_project({ project }, { locale })}</Text> : null}
+			<ActionButton locale={locale} href={url} label={m.email_team_invite_button({}, { locale })} />
+			<Text style={styles.muted}>
+				{m.email_team_invite_expires({ days: formatNumber(expiresInDays, {}, locale) }, { locale })}
+			</Text>
+			<Text style={styles.muted}>{m.email_invite_ignore({}, { locale })}</Text>
+		</EmailLayout>
+	);
+}
+// taskline:end
+
 export type DeleteAccountProps = EmailBaseProps & WithName & WithUrl & WithExpiry;
 export type AccountDeletedProps = EmailBaseProps & WithName;
 

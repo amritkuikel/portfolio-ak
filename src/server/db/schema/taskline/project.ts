@@ -157,6 +157,55 @@ export const tlLabel = pgTable(
 	],
 );
 
+/**
+ * A project's key, kept once the project is deleted: task refs (`WEB-12`) live on in
+ * comments, emails and links, so a key is never handed out again (Task 49).
+ */
+export const tlRetiredKey = pgTable(
+	"tl_retired_key",
+	{
+		workspaceId: uuid()
+			.notNull()
+			.references(() => tlWorkspace.id, { onDelete: "cascade" }),
+		key: text().notNull(),
+		retiredAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.workspaceId, table.key] })],
+);
+
+/**
+ * An invitation to the team by email (Task 49, decision 0212): accepted by signing in
+ * with that address once it is verified, which makes the account a member (and puts
+ * it on `project_id`, when set). Revoked and accepted ones stay, as the record.
+ */
+export const tlInvitation = pgTable(
+	"tl_invitation",
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		workspaceId: uuid()
+			.notNull()
+			.references(() => tlWorkspace.id, { onDelete: "cascade" }),
+		/** Lowercase. */
+		email: text().notNull(),
+		role: text().$type<"member" | "viewer">().notNull().default("member"),
+		invitedById: uuid().references(() => tlMember.id, { onDelete: "set null" }),
+		/** The project they join with it, if any. */
+		projectId: uuid().references(() => tlProject.id, { onDelete: "set null" }),
+		expiresAt: timestamp({ withTimezone: true }).notNull(),
+		acceptedAt: timestamp({ withTimezone: true }),
+		revokedAt: timestamp({ withTimezone: true }),
+		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		index("tl_invitation_email_idx").on(table.workspaceId, table.email),
+		uniqueIndex("tl_invitation_pending_unique")
+			.on(table.workspaceId, table.email)
+			.where(sql`${table.acceptedAt} is null and ${table.revokedAt} is null`),
+		check("tl_invitation_email_lowercase", sql`${table.email} = lower(${table.email})`),
+	],
+);
+
 export type TlProjectRow = typeof tlProject.$inferSelect;
+export type TlInvitationRow = typeof tlInvitation.$inferSelect;
 export type TlStatusRow = typeof tlStatus.$inferSelect;
 export type TlLabelRow = typeof tlLabel.$inferSelect;

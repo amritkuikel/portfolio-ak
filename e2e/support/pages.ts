@@ -19,6 +19,7 @@ export type ReviewedPage = {
 		| { from: "seeded-slug" }
 		| { from: "portfolio-project-id" } // @portfolio
 		| { from: "portfolio-post-id" } // @portfolio
+		| { from: "taskline-project-id" } // @taskline
 		| { from: "note-id" } // @apps
 		| { from: "shared-note-token" } // @apps
 		| { from: "link-id" } // @apps
@@ -212,6 +213,19 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		status: 404,
 		label: "unknown workspace",
 	},
+	// The admin's Taskline (Task 49).
+	{ route: "/admin/taskline", as: "admin" },
+	{ route: "/admin/taskline/projects", as: "admin" },
+	{ route: "/admin/taskline/projects/new", as: "admin" },
+	{ route: "/admin/taskline/projects/$id", as: "admin", params: { from: "taskline-project-id" } },
+	{ route: "/admin/taskline/projects/$id/members", as: "admin", params: { from: "taskline-project-id" } },
+	{ route: "/admin/taskline/projects/$id/workflow", as: "admin", params: { from: "taskline-project-id" } },
+	{ route: "/admin/taskline/projects/$id/labels", as: "admin", params: { from: "taskline-project-id" } },
+	{ route: "/admin/taskline/members", as: "admin" },
+	{ route: "/admin/taskline/invitations", as: "admin" },
+	{ route: "/admin/taskline/workflows", as: "admin" },
+	{ route: "/admin/taskline/settings", as: "admin" },
+	{ route: "/admin/taskline/activity", as: "admin" },
 	// taskline:end
 	// @new-feature:reviewed-pages
 	// Errors

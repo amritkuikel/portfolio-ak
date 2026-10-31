@@ -18,6 +18,7 @@ import {
 	type ProjectTasks,
 	type TaskDetail,
 	type TaskSummary,
+	type TaskType,
 	type TrashedTask,
 } from "@/features/taskline/types";
 import { ruleError } from "@/lib/errors";
@@ -33,7 +34,7 @@ import { assertCan, type ProjectAccess, resolveProject, type TasklineServices } 
 import { type ActivityEntry, fieldChanges, recordActivity, taskActivity } from "../activity";
 import * as projects from "../projects/repository";
 import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
-import { quotaError, quotaScope, quotasOf, richText } from "../rules";
+import { fieldError, quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as workflow from "../workflow/repository";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
@@ -126,6 +127,17 @@ async function completedAtFor(db: Db, projectId: string, statusId: string, curre
 	return isClosedCategory(status.category) ? (current ?? new Date()) : null;
 }
 
+/**
+ * The type a task may be given: one the workspace offers (Task 49). Unnamed, it is
+ * `task`, or the first one offered when the admin turned `task` off.
+ */
+function taskType(access: ProjectAccess, type: TaskType | undefined): TaskType {
+	const offered = access.settings.taskTypes;
+	if (type === undefined) return offered.includes("task") ? "task" : (offered[0] ?? "task");
+	if (!offered.includes(type)) throw fieldError("BAD_REQUEST", "type", m.taskline_error_type_off());
+	return type;
+}
+
 export async function listTasks({ db, user }: TasklineServices, ws: string, key: string): Promise<ProjectTasks> {
 	const access = await resolveProject(db, user, ws, key);
 	const [statuses, labels, memberRows, rows, stars, counts] = await Promise.all([
@@ -149,6 +161,7 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		tasks: await repo.summaries(db, rows, access.project.key),
 		today: todayInZone(access.settings.timeZone),
 		doneColumnDays: projectSettings.parse(access.project.settings).doneColumnDays ?? access.settings.doneColumnDays,
+		taskTypes: access.settings.taskTypes,
 		readAt: new Date().toISOString(),
 	};
 }
@@ -300,6 +313,7 @@ export async function createTask(
 			? statuses.find((row) => row.id === input.statusId)
 			: (statuses.find((row) => row.category === "unstarted") ?? statuses[0]);
 		if (!status) throw notFound("Status");
+		const type = taskType(access, input.type);
 		await checkAssignee(tx, access, input.assigneeId);
 		await checkParent(tx, access, input.parentId);
 		await checkLabels(tx, access, labelIds);
@@ -312,7 +326,7 @@ export async function createTask(
 			title: input.title,
 			descriptionHtml: text.html,
 			descriptionText: text.text,
-			type: input.type,
+			type,
 			statusId: status.id,
 			position: input.position ?? (await repo.endOfStatus(tx, status.id)),
 			priority: input.priority,
@@ -369,6 +383,7 @@ export async function patchTask(
 ): Promise<TaskDetail> {
 	return db.transaction(async (tx) => {
 		const { access, task: before } = await resolveEditable(tx, user, ws, ref);
+		if (fields.type !== undefined && fields.type !== before.type) taskType(access, fields.type);
 		if (fields.assigneeId !== undefined) await checkAssignee(tx, access, fields.assigneeId);
 		if (fields.parentId !== undefined) await checkParent(tx, access, fields.parentId, before);
 		const entries: ActivityEntry[] = [];

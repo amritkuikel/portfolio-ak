@@ -110,6 +110,49 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["deleteModeratedLinks", "links:moderate"],
 	],
 	// apps:end
+	// taskline:start
+	"taskline-admin/overview.ts": [["getTasklineOverview", "taskline:read"]],
+	"taskline-admin/projects.ts": [
+		["listTasklineAdminProjects", "taskline:read"],
+		["getTasklineAdminProject", "taskline:read"],
+		["isTasklineProjectKeyFree", "taskline:manage"],
+		["createTasklineAdminProject", "taskline:manage"],
+		["updateTasklineAdminProject", "taskline:manage"],
+		["setTasklineAdminProjectState", "taskline:manage"],
+		["setTasklineAdminProjectArchived", "taskline:manage"],
+		["transferTasklineProjectLead", "taskline:manage"],
+		["deleteTasklineAdminProject", "taskline:manage"],
+		["exportTasklineAdminProject", "taskline:read"],
+		["setTasklineAdminProjectMember", "taskline:manage"],
+		["removeTasklineAdminProjectMember", "taskline:manage"],
+	],
+	"taskline-admin/members.ts": [
+		["listTasklineMembers", "taskline:read"],
+		["listTasklineMemberOptions", "taskline:read"],
+		["searchTasklineAccounts", "taskline:manage"],
+		["addTasklineMembers", "taskline:manage"],
+		["updateTasklineMember", "taskline:manage"],
+		["deactivateTasklineMember", "taskline:manage"],
+		["reactivateTasklineMember", "taskline:manage"],
+		["listTasklineInvitations", "taskline:read"],
+		["inviteTasklineMember", "taskline:manage"],
+		["resendTasklineInvitation", "taskline:manage"],
+		["revokeTasklineInvitation", "taskline:manage"],
+	],
+	"taskline-admin/settings.ts": [
+		["getTasklineWorkspace", "taskline:configure"],
+		["updateTasklineWorkspace", "taskline:configure"],
+		["getTasklineWorkflows", "taskline:configure"],
+		["updateTasklineWorkflows", "taskline:configure"],
+		["createTasklineWorkspaceLabel", "taskline:configure"],
+		["updateTasklineWorkspaceLabel", "taskline:configure"],
+		["deleteTasklineWorkspaceLabel", "taskline:configure"],
+	],
+	"taskline-admin/activity.ts": [
+		["listTasklineActivity", "taskline:read"],
+		["getTasklineActivityOptions", "taskline:read"],
+	],
+	// taskline:end
 	// @new-feature:guarded-functions
 };
 

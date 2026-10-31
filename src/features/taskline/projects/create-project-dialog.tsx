@@ -9,7 +9,7 @@ import { m } from "@/paraglide/messages";
 import { TASKLINE_COLOR_LABELS } from "../colors";
 import { tasklineLinks } from "../links";
 import { createProjectMutation } from "../queries";
-import { PROJECT_NAME_MAX, projectKey } from "../schema";
+import { PROJECT_NAME_MAX, projectKey, suggestKey } from "../schema";
 import {
 	PROJECT_VISIBILITIES,
 	type ProjectVisibility,
@@ -24,19 +24,6 @@ const formSchema = z.object({
 	visibility: z.enum(PROJECT_VISIBILITIES),
 	color: z.enum(TASKLINE_COLORS),
 });
-
-/** A key from a name: its initials, or its first letters ("Website relaunch" → "WR", "Operations" → "OPE"). */
-export const suggestKey = (name: string): string => {
-	const words = name
-		.normalize("NFKD")
-		.toUpperCase()
-		.replace(/[^A-Z0-9 ]/g, "")
-		.split(/\s+/)
-		.filter(Boolean);
-	const initials = words.length > 1 ? words.map((word) => word[0]).join("") : (words[0] ?? "").slice(0, 3);
-	const key = initials.replace(/^[0-9]+/, "").slice(0, 6);
-	return key.length >= 2 ? key : "";
-};
 
 /**
  * "New project" (loaded on click, decision 0168): a name, the key its tasks are

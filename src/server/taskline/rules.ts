@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { SANDBOX_QUOTAS, type TasklineQuotas } from "@/features/taskline/types";
-import { ruleError } from "@/lib/errors";
+import { AppError, type AppErrorCode, ruleError } from "@/lib/errors";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { richTextToText, sanitizeRichText } from "@/server/rich-text/sanitize";
@@ -34,3 +34,7 @@ export const richText = (html: string | undefined) => {
 	const safe = sanitizeRichText(html ?? "");
 	return { html: safe as string, text: richTextToText(safe) };
 };
+
+/** A refusal about one field of a form (`field` is its name), shown under it. */
+export const fieldError = (code: AppErrorCode, field: string, message: string) =>
+	new AppError(code, `Taskline: ${field} refused`, { fieldErrors: { [field]: [message] } });
