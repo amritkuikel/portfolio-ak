@@ -47,9 +47,6 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	}
 	// portfolio:end
 	// apps:start
-	if (page.params.from === "kanban-board-id") {
-		return page.route.replace("$boardId", await harness.kanbanBoardId(page.as ?? "member"));
-	}
 	if (page.params.from === "note-id") return page.route.replace("$noteId", (await harness.reviewNote("member")).id);
 	if (page.params.from === "shared-note-token") {
 		return page.route.replace("$token", (await harness.reviewNote("member")).token);

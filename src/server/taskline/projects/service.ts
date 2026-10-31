@@ -1,7 +1,14 @@
 import "@tanstack/react-start/server-only";
 import type { CreateProjectInput, SetProjectStateInput, UpdateProjectInput } from "@/features/taskline/schema";
 import { projectSettings } from "@/features/taskline/settings";
-import type { ProjectDetail, ProjectMemberView, ProjectRole, ProjectSummary } from "@/features/taskline/types";
+import {
+	type ProjectDetail,
+	type ProjectLocation,
+	type ProjectMemberView,
+	type ProjectRole,
+	type ProjectSummary,
+	SANDBOX_SEGMENT,
+} from "@/features/taskline/types";
 import { ruleError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
@@ -294,4 +301,19 @@ export async function joinProject(
 		await bumpRev(tx, access.project.id);
 		return detailOf(tx, next);
 	});
+}
+
+/**
+ * Where a project is, from its id alone: the redirect of an old Kanban board's link
+ * (decision 0210; a board became a project with the same id). NOT_FOUND unless the
+ * caller may see it: someone else's sandbox never resolves.
+ */
+export async function locateProject({ db, user }: TasklineServices, id: string): Promise<ProjectLocation> {
+	const found = await repo.projectWithWorkspace(db, id);
+	if (!found) throw notFound("Project");
+	const { project, workspace } = found;
+	const ws = workspace.kind === "team" ? workspace.slug : workspace.ownerId === user.id ? SANDBOX_SEGMENT : null;
+	if (!ws) throw notFound("Project");
+	await resolveProject(db, user, ws, project.key);
+	return { ws, key: project.key };
 }

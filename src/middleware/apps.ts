@@ -26,7 +26,7 @@ export const requireAppUser = createMiddleware({ type: "function" })
  *   createServerFn({ method: "POST" })
  *     .middleware([requireAppUser, withAppServices])
  *     .validator(zodInput(createCardInput))
- *     .handler(({ data, context }) => kanban.createCard(context, data));
+ *     .handler(({ data, context }) => notes.createNote(context, data));
  */
 export const withAppServices = createMiddleware({ type: "function" })
 	.middleware([requireAppUser])

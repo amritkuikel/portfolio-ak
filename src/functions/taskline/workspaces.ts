@@ -10,10 +10,6 @@ import * as workspaces from "@/server/taskline/workspace/service";
  * (`requireTasklineUser`); the service resolves what the caller may see.
  */
 
-export const listTasklineWorkspaces = createServerFn({ method: "GET" })
-	.middleware([requireTasklineUser, withTasklineServices])
-	.handler(({ context }): Promise<WorkspaceSummary[]> => workspaces.listWorkspaces(context));
-
 export const getTasklineWorkspace = createServerFn({ method: "GET" })
 	.middleware([requireTasklineUser, withTasklineServices])
 	.validator(zodInput(wsInput))

@@ -99,13 +99,11 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/middleware/apps.ts",
 			"src/middleware/short-links.ts",
 			"src/middleware/robots.ts",
-			"tests/unit/kanban-moves.test.ts",
 			"tests/unit/notes-list.test.ts",
 			"tests/unit/habit-streaks.test.ts",
 			"tests/unit/expenses-import.test.ts",
 			"tests/unit/forms-fields.test.ts",
 			"tests/unit/links-target.test.ts",
-			"tests/server/apps-kanban.test.ts",
 			"tests/server/apps-notes.test.ts",
 			"tests/server/apps-links.test.ts",
 			"tests/server/apps-expenses.test.ts",
@@ -125,7 +123,6 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/server/db/schema/apps/expenses.ts",
 			"src/server/db/schema/apps/forms.ts",
 			"src/server/db/schema/apps/habits.ts",
-			"src/server/db/schema/apps/kanban.ts",
 			"src/server/db/schema/apps/links.ts",
 			"src/server/db/schema/apps/notes.ts",
 		],
@@ -142,6 +139,8 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/server/routes/taskline-manifest.ts",
 			"public/taskline",
 			".storybook/mocks/taskline.ts",
+			".storybook/mocks/functions/taskline",
+			"src/features/portfolio/components/case-study/taskline-link.tsx",
 			"tests/components/taskline",
 			"e2e/flows/taskline.spec.ts",
 			"src/server/db/schema/taskline",
@@ -150,12 +149,17 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/server/taskline.test.ts",
 			"tests/server/taskline-access.test.ts",
 			"tests/server/taskline-seed.test.ts",
+			"tests/server/taskline-views.test.ts",
+			"tests/server/taskline-kanban-migration.test.ts",
+			"tests/unit/taskline-moves.test.ts",
+			"tests/unit/taskline-filters.test.ts",
+			"src/lib/fractional-index.ts",
+			"tests/unit/fractional-index.test.ts",
 			"docs/guides/taskline.md",
 		],
 		packageScripts: ["db:seed-taskline"],
 		crons: [],
-		// Its server functions the pages don't call yet (the board, list and lead settings of Task 48).
-		knipEntries: ["src/functions/taskline/*.ts"],
+		knipEntries: [],
 		schema: [
 			"src/server/db/schema/taskline/project.ts",
 			"src/server/db/schema/taskline/task.ts",
@@ -166,8 +170,7 @@ const SPECS: Record<Layer, LayerSpec> = {
 
 /** Files more than one layer uses: removed only when every one of those layers goes. */
 const SHARED: ReadonlyArray<{ paths: string[]; layers: Layer[] }> = [
-	// Order keys: Kanban's cards (apps) and Taskline's statuses and tasks.
-	{ paths: ["src/lib/fractional-index.ts", "tests/unit/fractional-index.test.ts"], layers: ["apps", "taskline"] },
+	// None at the moment: Taskline took Kanban's order keys (src/lib/fractional-index.ts) with it (Task 48).
 ];
 
 /** Written when the portfolio goes: the home page becomes a neutral landing page. */

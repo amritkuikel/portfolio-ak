@@ -1,20 +1,64 @@
-import { mutationOptions, type QueryClient, queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, mutationOptions, type QueryClient, queryOptions } from "@tanstack/react-query";
 import { getTasklineNav, listMyTasklineTasks } from "@/functions/taskline/home";
 import {
 	createTasklineProject,
+	joinTasklineProject,
 	listTasklineProjectMembers,
 	listTasklineProjects,
+	removeTasklineProjectMember,
+	setTasklineProjectArchived,
+	setTasklineProjectMember,
 	setTasklineProjectStar,
+	setTasklineProjectState,
+	updateTasklineProject,
 } from "@/functions/taskline/projects";
-import { listTasklineTasks } from "@/functions/taskline/tasks";
-import { getTasklineWorkspace, startTasklineSandbox } from "@/functions/taskline/workspaces";
-import type { CreateProjectInput } from "./schema";
+import {
+	bulkUpdateTasklineTasks,
+	createTasklineTask,
+	getTasklineProjectRev,
+	getTasklineTask,
+	listTasklineProjectActivity,
+	listTasklineTaskPage,
+	listTasklineTasks,
+	listTasklineTrash,
+	moveTasklineTask,
+	patchTasklineTask,
+	purgeTasklineTask,
+	restoreTasklineTask,
+	setTasklineChecklist,
+	trashTasklineTask,
+	updateTasklineTask,
+} from "@/functions/taskline/tasks";
+import {
+	createTasklineLabel,
+	createTasklineStatus,
+	deleteTasklineLabel,
+	deleteTasklineStatus,
+	updateTasklineLabel,
+	updateTasklineStatus,
+} from "@/functions/taskline/workflow";
+import { getTasklineWorkspace, listTasklineMembers, startTasklineSandbox } from "@/functions/taskline/workspaces";
+import type {
+	BulkTasksInput,
+	CreateLabelInput,
+	CreateProjectInput,
+	CreateStatusInput,
+	CreateTaskInput,
+	PatchTaskInput,
+	SetProjectStateInput,
+	TaskListInput,
+	UpdateLabelInput,
+	UpdateProjectInput,
+	UpdateStatusInput,
+	UpdateTaskInput,
+} from "./schema";
+import type { ChecklistItem, ProjectRole } from "./types";
 
 /**
- * Taskline's reads and the writes the shell's pages make (Query; the board and list
- * of Task 48 add TanStack DB collections over these). Keys carry the user's id, so
- * another account signing in on the same tab never sees cached data, and every
- * write refreshes everything under it: the sidebar's stars and recent projects too.
+ * Taskline's reads and writes (Query; the board's TanStack DB collection reads the
+ * project query, board/collections.ts). Keys carry the user's id, so another account
+ * signing in on the same tab never sees cached data, and every write refreshes
+ * everything under it: the sidebar, Home and the open views too.
  */
 export const tasklineKeys = {
 	all: ["taskline"] as const,
@@ -22,10 +66,17 @@ export const tasklineKeys = {
 	nav: (userId: string) => [...tasklineKeys.user(userId), "nav"] as const,
 	myTasks: (userId: string) => [...tasklineKeys.user(userId), "my-tasks"] as const,
 	workspace: (userId: string, ws: string) => [...tasklineKeys.user(userId), "ws", ws] as const,
+	members: (userId: string, ws: string) => [...tasklineKeys.workspace(userId, ws), "members"] as const,
 	projects: (userId: string, ws: string, archived: boolean) =>
 		[...tasklineKeys.workspace(userId, ws), "projects", { archived }] as const,
 	project: (userId: string, ws: string, key: string) =>
 		[...tasklineKeys.workspace(userId, ws), "project", key] as const,
+	/** The project's own data (statuses, members, tasks): what the board's collection reads. */
+	projectTasks: (userId: string, ws: string, key: string) =>
+		[...tasklineKeys.project(userId, ws, key), "tasks"] as const,
+	taskPage: (userId: string, input: TaskListInput) =>
+		[...tasklineKeys.project(userId, input.ws, input.key), "list", input] as const,
+	task: (userId: string, ws: string, ref: string) => [...tasklineKeys.workspace(userId, ws), "task", ref] as const,
 };
 
 export const tasklineNavQueryOptions = (userId: string) =>
@@ -40,16 +91,23 @@ export const workspaceQueryOptions = (userId: string, ws: string) =>
 		queryFn: () => getTasklineWorkspace({ data: { ws } }),
 	});
 
+/** The workspace's active members (pickers: a project's new member, an assignee). */
+export const workspaceMembersQueryOptions = (userId: string, ws: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.members(userId, ws),
+		queryFn: () => listTasklineMembers({ data: { ws } }),
+	});
+
 export const projectsQueryOptions = (userId: string, ws: string, archived: boolean) =>
 	queryOptions({
 		queryKey: tasklineKeys.projects(userId, ws, archived),
 		queryFn: () => listTasklineProjects({ data: { ws, archived } }),
 	});
 
-/** A project with its statuses, members and tasks (what the overview counts). */
+/** A project with its statuses, labels, members and tasks: the layout loads it for every view. */
 export const projectTasksQueryOptions = (userId: string, ws: string, key: string) =>
 	queryOptions({
-		queryKey: tasklineKeys.project(userId, ws, key),
+		queryKey: tasklineKeys.projectTasks(userId, ws, key),
 		queryFn: () => listTasklineTasks({ data: { ws, key } }),
 	});
 
@@ -59,23 +117,123 @@ export const projectMembersQueryOptions = (userId: string, ws: string, key: stri
 		queryFn: () => listTasklineProjectMembers({ data: { ws, key } }),
 	});
 
-const refresh = (queryClient: QueryClient, userId: string) =>
+export const projectActivityQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: [...tasklineKeys.project(userId, ws, key), "activity"],
+		queryFn: () => listTasklineProjectActivity({ data: { ws, key } }),
+	});
+
+export const projectTrashQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: [...tasklineKeys.project(userId, ws, key), "trash"],
+		queryFn: () => listTasklineTrash({ data: { ws, key } }),
+	});
+
+/** The list view's page; the previous page stays on screen while the next loads. */
+export const taskPageQueryOptions = (userId: string) => (input: TaskListInput) =>
+	queryOptions({
+		queryKey: tasklineKeys.taskPage(userId, input),
+		queryFn: () => listTasklineTaskPage({ data: input }),
+		placeholderData: keepPreviousData,
+	});
+
+export const taskQueryOptions = (userId: string, ws: string, ref: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.task(userId, ws, ref),
+		queryFn: () => getTasklineTask({ data: { ws, ref } }),
+	});
+
+/**
+ * The project's rev, polled while the page is visible (decision 0209): 10 s, and on
+ * focus. Never cached for long: it's the question "did anything change?".
+ */
+export const projectRevQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: [...tasklineKeys.project(userId, ws, key), "rev"],
+		queryFn: () => getTasklineProjectRev({ data: { ws, key } }),
+		refetchInterval: 10_000,
+		refetchIntervalInBackground: false,
+		refetchOnWindowFocus: "always",
+		staleTime: 0,
+	});
+
+/** After any write: everything of the user's in Taskline is stale (active queries refetch). */
+export const refreshTaskline = (queryClient: QueryClient, userId: string) =>
 	queryClient.invalidateQueries({ queryKey: tasklineKeys.user(userId) });
 
+const write = <TInput, TResult>(
+	queryClient: QueryClient,
+	userId: string,
+	mutationFn: (input: TInput) => Promise<TResult>,
+) => mutationOptions({ mutationFn, onSettled: () => refreshTaskline(queryClient, userId) });
+
 export const starProjectMutation = (queryClient: QueryClient, userId: string) =>
-	mutationOptions({
-		mutationFn: (input: { ws: string; key: string; starred: boolean }) => setTasklineProjectStar({ data: input }),
-		onSettled: () => refresh(queryClient, userId),
-	});
+	write(queryClient, userId, (input: { ws: string; key: string; starred: boolean }) =>
+		setTasklineProjectStar({ data: input }),
+	);
 
 export const createProjectMutation = (queryClient: QueryClient, userId: string) =>
-	mutationOptions({
-		mutationFn: (input: CreateProjectInput) => createTasklineProject({ data: input }),
-		onSettled: () => refresh(queryClient, userId),
-	});
+	write(queryClient, userId, (input: CreateProjectInput) => createTasklineProject({ data: input }));
 
 export const startSandboxMutation = (queryClient: QueryClient, userId: string) =>
-	mutationOptions({
-		mutationFn: () => startTasklineSandbox(),
-		onSettled: () => refresh(queryClient, userId),
-	});
+	write(queryClient, userId, () => startTasklineSandbox());
+
+/** Every write the views, the task and the lead's settings make. */
+export const tasklineMutations = {
+	createTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateTaskInput) => createTasklineTask({ data: input })),
+	updateTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateTaskInput) => updateTasklineTask({ data: input })),
+	patchTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: PatchTaskInput) => patchTasklineTask({ data: input })),
+	moveTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; statusId: string; position: string }) =>
+			moveTasklineTask({ data: input }),
+		),
+	setChecklist: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string; checklist: ChecklistItem[] }) =>
+			setTasklineChecklist({ data: input }),
+		),
+	trashTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string }) => trashTasklineTask({ data: input })),
+	restoreTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string }) => restoreTasklineTask({ data: input })),
+	purgeTask: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string }) => purgeTasklineTask({ data: input })),
+	bulk: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: BulkTasksInput) => bulkUpdateTasklineTasks({ data: input })),
+	updateProject: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateProjectInput) => updateTasklineProject({ data: input })),
+	setProjectState: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: SetProjectStateInput) => setTasklineProjectState({ data: input })),
+	joinProject: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string }) => joinTasklineProject({ data: input })),
+	setArchived: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; archived: boolean }) =>
+			setTasklineProjectArchived({ data: input }),
+		),
+	setProjectMember: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; memberId: string; role: ProjectRole }) =>
+			setTasklineProjectMember({ data: input }),
+		),
+	removeProjectMember: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; memberId: string }) =>
+			removeTasklineProjectMember({ data: input }),
+		),
+	createStatus: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateStatusInput) => createTasklineStatus({ data: input })),
+	updateStatus: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateStatusInput) => updateTasklineStatus({ data: input })),
+	deleteStatus: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string; moveTo?: string }) =>
+			deleteTasklineStatus({ data: input }),
+		),
+	createLabel: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateLabelInput) => createTasklineLabel({ data: input })),
+	updateLabel: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateLabelInput) => updateTasklineLabel({ data: input })),
+	deleteLabel: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			deleteTasklineLabel({ data: input }),
+		),
+};

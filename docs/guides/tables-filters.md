@@ -40,6 +40,7 @@ const columns = (): DataTableColumn<Thing>[] => [            // built at render 
 - **Selection** is local to the page; the bulk bar appears when rows are selected.
 - **Long pages** (more than 15 rows) scroll inside a focusable frame under a sticky header. On phones the first column (and the checkboxes) stay pinned while the table scrolls sideways.
 - **Wide tables of plain text** (no link or button in the rows, e.g. a column per survey question): pass `scrollRegion` so the frame is a labelled tab stop and keyboard users can scroll it sideways (axe: scrollable-region-focusable).
+- **Grouped rows:** `groupOf(row) => { id, label }` draws a heading row (`<th scope="rowgroup">`) before each run of rows of one group, each run its own `<tbody>`. The server sorts by the group first, so a page's rows of one group are together (Taskline's list, `?group=status|assignee`, 0211).
 - **Density** follows the preference: cells use `--row-padding`.
 - **Destructive actions** confirm with `useConfirm()` (`components/dialogs/confirm.tsx`; focus starts on Cancel).
 - **Column resizing and row expansion** aren't built in: see [recipes.md](recipes.md), "Resizable columns and expandable rows".

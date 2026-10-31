@@ -1,10 +1,10 @@
 # The showcase apps
 
-Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189). Kanban is the first and the reference; Notes and Links (decisions 0190, 0191), then Expenses and Habits (0192, 0193) and Forms (0195) followed. The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
+Small, complete apps under `/apps/<slug>` that visitors try without an account (decisions 0185–0189): Notes and Links (decisions 0190, 0191), Expenses and Habits (0192, 0193) and Forms (0195). Kanban, the first (0188), grew into Taskline and moved there in Part 5 Task 48 ([taskline.md](taskline.md), 0210); `/apps/kanban` redirects to it. The whole folder is the `apps` layer of `pnpm strip-demo`; guest sessions stay with the core.
 
 ## How a visit goes
 
-1. `/apps` lists the apps; `/apps/kanban` is Kanban's landing: what it does, **Try it now** and **Sign in**. Both pages are indexable and in the sitemap.
+1. `/apps` lists the apps; `/apps/notes` is Notes' landing: what it does, **Try it now** and **Sign in**. Both pages are indexable and in the sitemap.
 2. **Try it now** calls `authClient.signIn.anonymous()`. Better Auth creates a guest (a user row with `is_anonymous`, the name "Guest", a `…@anonymous.placeholder.invalid` address) and a session; an after hook gives the guest every app's sample rows in the page's language and the signed `guest_claim` cookie (0186). The landing re-renders as the app.
 3. A banner on every app page says the guest's data is deleted after 7 days and links to sign-up. Account pages send a guest to `/upgrade`.
 4. Signing up (and verifying) or signing in moves the guest's rows to the account: the anonymous plugin's `onLinkAccount` when the browser still holds the guest's session, otherwise `claimGuestData` with the cookie (after a two-factor sign-in, or on the verify-email landing). Both are one transaction, and idempotent.
@@ -16,16 +16,16 @@ Nothing in the admin area (no permissions, not even the baseline role's), no acc
 
 ## The shape of an app
 
-| Piece | Where | Kanban |
+| Piece | Where | Notes |
 | --- | --- | --- |
 | Client registry entry | `src/features/apps/registry.ts` (`APP_SLUGS`, `APPS`) | name, tagline, description, icon, usage labels |
 | Server registry entry | `src/server/apps/registry.ts` (`APP_SERVERS`) | `seedGuestData`, `claim`, `usage` |
-| Tables | `src/server/db/schema/apps/<app>.ts`, exported from the schema index with `// @apps` | `kanban_board`, `kanban_column`, `kanban_card` |
-| Feature code | `src/features/apps/<app>/` | `types.ts`, `schema.ts`, `search.ts`, `queries.ts`, `collections.ts`, `moves.ts`, `components/` |
+| Tables | `src/server/db/schema/apps/<app>.ts`, exported from the schema index with `// @apps` | `note`, with its images as attachments |
+| Feature code | `src/features/apps/<app>/` | `types.ts`, `schema.ts`, `search.ts`, `queries.ts`, `collections.ts`, `uploads.ts`, `components/` |
 | Repository and service | `src/server/apps/<app>/` | every query takes the owner (`ownedBy`); quotas in the service, counted under `lockQuota` (0199) |
 | Server functions | `src/functions/apps/<app>.ts` | `.middleware([requireAppUser, withAppServices])`, then one service call |
-| Routes | `src/routes/_apps/apps/<app>/` | `index.tsx` (landing or boards), `$boardId.tsx` (private); loaders import `queries.ts` on demand (0194) |
-| Admin usage | `usage(db)` on the server entry | accounts and guests with boards, boards and cards |
+| Routes | `src/routes/_apps/apps/<app>/` | `index.tsx` (landing or notes), `$noteId.tsx` (private), `s/$token.tsx` (shared); loaders import `queries.ts` on demand (0194) |
+| Admin usage | `usage(db)` on the server entry | accounts and guests with notes, notes, shared notes and images |
 
 **Ownership (0187):** every table has `owner_id text not null references user(id) on delete cascade`. A repository function takes the owner and adds `ownedBy(table, ownerId)` to every query, so someone else's row is simply not found. There is no permission on app functions; the guard test checks that every function in `src/functions/apps/` runs `requireAppUser` then `withAppServices`.
 
@@ -44,12 +44,6 @@ Nothing in the admin area (no permissions, not even the baseline role's), no acc
 ## TanStack DB in the apps (0189)
 
 The `_apps` layout mounts `<DbScope>`, so DB is available to every app page and to no other page. A loader fills the Query cache (`ensureQuery`); the collections read that query (`select`); the page uses `useLiveSuspenseQuery`, which renders on the server and hydrates from the same cache. Handlers save, then `await collection.utils.refetch()` and return `{ refetch: false }`. See [state.md](state.md).
-
-## Kanban (0188)
-
-- Positions are fractional order keys (`src/lib/fractional-index.ts`): a move writes one row. They compare by code unit (`collate "C"` in SQL).
-- The board (`components/board.tsx`) only reports moves; the page applies them to the collections. Moves come from dnd-kit (pointer, or Space/arrows/Space) or Alt + arrows on a handle, all computed by `moves.ts` and announced.
-- Quotas: 20 boards, 500 cards per user, 12 columns per board.
 
 ## Notes (0190)
 

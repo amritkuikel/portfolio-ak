@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { taskList } from "@/features/taskline/search";
 import { isAppError } from "@/lib/errors";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
@@ -115,6 +116,23 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 	},
 	{ name: "listTrash", need: "read", run: ({ ws, key }, caller) => tasks.listTrash(caller, ws, key) },
 	{
+		name: "listTaskPage",
+		need: "read",
+		run: ({ ws, key }, caller) => tasks.listTaskPage(caller, { ...taskList.defaults, pageSize: 20, ws, key }),
+	},
+	{
+		name: "listProjectActivity",
+		need: "read",
+		run: ({ ws, key }, caller) => tasks.listProjectActivity(caller, ws, key),
+	},
+	{ name: "getProjectRev", need: "read", run: ({ ws, key }, caller) => tasks.getProjectRev(caller, ws, key) },
+	{
+		name: "locateProject",
+		need: "read",
+		run: async ({ ws, key, owner }, caller) =>
+			projects.locateProject(caller, (await projects.getProject(as(owner), ws, key)).id),
+	},
+	{
 		name: "getTask",
 		need: "read",
 		run: async (context, caller) => tasks.getTask(caller, context.ws, (await ownerTask(context)).ref),
@@ -183,7 +201,27 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 			return tasks.restoreTask(caller, context.ws, task.ref);
 		},
 	},
+	{
+		name: "bulkUpdate",
+		need: "edit",
+		run: async (context, caller) =>
+			tasks.bulkUpdate(caller, {
+				ws: context.ws,
+				key: context.key,
+				ids: [(await ownerTask(context)).id],
+				priority: 2,
+			}),
+	},
 	// Running the project (its lead's)
+	{
+		name: "purgeTask",
+		need: "manage",
+		run: async (context, caller) => {
+			const task = await ownerTask(context);
+			await tasks.trashTask(as(context.owner), context.ws, task.ref);
+			return tasks.purgeTask(caller, context.ws, task.ref);
+		},
+	},
 	{
 		name: "updateProject",
 		need: "manage",

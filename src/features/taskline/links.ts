@@ -12,6 +12,11 @@ export const tasklineLinks = {
 	account: () => linkOptions({ to: "/app/taskline/account" }),
 	projects: (ws: string) => linkOptions({ to: "/app/taskline/$ws/projects", params: { ws } }),
 	project: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key", params: { ws, key } }),
+	board: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/board", params: { ws, key } }),
+	list: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/list", params: { ws, key } }),
+	settings: (ws: string, key: string, section: "general" | "members" | "workflow" | "labels" | "trash" = "general") =>
+		linkOptions({ to: `/app/taskline/$ws/p/$key/settings/${section}` as const, params: { ws, key } }),
+	task: (ws: string, ref: string) => linkOptions({ to: "/app/taskline/$ws/t/$ref", params: { ws, ref } }),
 };
 
 /** De-localized paths for redirects and `?redirect=` targets. */

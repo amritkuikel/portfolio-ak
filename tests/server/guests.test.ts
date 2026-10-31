@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { userList } from "@/features/rbac/search";
 import { getDashboard } from "@/server/admin/dashboard";
-import * as kanban from "@/server/apps/kanban/service"; // @apps
 import { isGuestRefusedPath } from "@/server/auth/policy";
 import * as schema from "@/server/db/schema";
 import { isUndeliverable, sendEmail } from "@/server/email/send";
@@ -50,8 +49,10 @@ afterAll(() => env.close());
 beforeEach(() => env.reset());
 
 // apps:start
-const boardsOf = async (userId: string) =>
-	(await kanban.listBoards({ db: env.db, user: { id: userId, isGuest: false } })).boards;
+const notesOf = async (userId: string) =>
+	(await env.db.select({ title: schema.note.title }).from(schema.note).where(eq(schema.note.ownerId, userId)))
+		.map((row) => row.title)
+		.sort();
 // apps:end
 
 describe("guest permissions", () => {
@@ -192,12 +193,14 @@ describe("seed and claim", () => {
 	});
 
 	// apps:start
-	it("hands the apps' rows over (Kanban's sample board)", async () => {
-		expect(GUEST_DATA.map((owner) => owner.slug)).toContain("kanban");
+	it("hands the apps' rows over (Notes' sample notes)", async () => {
+		expect(GUEST_DATA.map((owner) => owner.slug)).toContain("notes");
 		await seedGuest(env.db, "guest-new", "en");
-		expect((await boardsOf("guest-new")).map((board) => board.name)).toEqual(["Getting started"]);
+		const seeded = await notesOf("guest-new");
+		expect(seeded.length).toBeGreaterThan(0);
 		expect(await claimGuest(env.db, "guest-new", "member")).toBe(true);
-		expect((await boardsOf("member")).map((board) => board.name)).toEqual(["Getting started"]);
+		expect(await notesOf("member")).toEqual(seeded);
+		expect(await notesOf("guest-new")).toEqual([]);
 	});
 	// apps:end
 });
@@ -232,8 +235,8 @@ describe("the daily cleanup", () => {
 		await seedGuest(env.db, "guest-old", "en");
 		await seedGuest(env.db, "guest-new", "en");
 		await deleteExpiredGuests(env.db, null, NOW);
-		const boards = await env.db.select().from(schema.kanbanBoard);
-		expect(boards.map((board) => board.ownerId)).toEqual(["guest-new"]);
+		const notes = await env.db.selectDistinct({ ownerId: schema.note.ownerId }).from(schema.note);
+		expect(notes.map((row) => row.ownerId)).toEqual(["guest-new"]);
 	});
 	// apps:end
 });

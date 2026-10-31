@@ -103,8 +103,6 @@ import { Route as AppsAppsExpensesImportRouteImport } from './routes/_apps/apps/
 import { Route as AppsAppsFormsIndexRouteImport } from './routes/_apps/apps/forms/index'
 import { Route as AppsAppsHabitsIndexRouteImport } from './routes/_apps/apps/habits/index'
 import { Route as AppsAppsHabitsHabitIdRouteImport } from './routes/_apps/apps/habits/$habitId'
-import { Route as AppsAppsKanbanIndexRouteImport } from './routes/_apps/apps/kanban/index'
-import { Route as AppsAppsKanbanBoardIdRouteImport } from './routes/_apps/apps/kanban/$boardId'
 import { Route as AppsAppsLinksIndexRouteImport } from './routes/_apps/apps/links/index'
 import { Route as AppsAppsLinksLinkIdRouteImport } from './routes/_apps/apps/links/$linkId'
 import { Route as AppsAppsNotesIndexRouteImport } from './routes/_apps/apps/notes/index'
@@ -113,6 +111,8 @@ import { Route as TasklineAppTasklineIndexRouteImport } from './routes/_taskline
 import { Route as TasklineAppTasklineShellRouteRouteImport } from './routes/_taskline/app/taskline/_shell/route'
 import { Route as TasklineAppTasklineSignInRouteImport } from './routes/_taskline/app/taskline/sign-in'
 import { Route as TasklineAppTasklineSignUpRouteImport } from './routes/_taskline/app/taskline/sign-up'
+import { Route as TasklineAppsKanbanIndexRouteImport } from './routes/_taskline/apps/kanban/index'
+import { Route as TasklineAppsKanbanBoardIdRouteImport } from './routes/_taskline/apps/kanban/$boardId'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
 import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
@@ -129,7 +129,18 @@ import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_t
 import { Route as TasklineAppTasklineShellHomeRouteImport } from './routes/_taskline/app/taskline/_shell/home'
 import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
 import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
+import { Route as TasklineAppTasklineShellWsPKeyRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/route'
+import { Route as TasklineAppTasklineShellWsTRefRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/t/$ref'
 import { Route as TasklineAppTasklineShellWsPKeyIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/index'
+import { Route as TasklineAppTasklineShellWsPKeyBoardRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/board'
+import { Route as TasklineAppTasklineShellWsPKeyListRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/list'
+import { Route as TasklineAppTasklineShellWsPKeySettingsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/route'
+import { Route as TasklineAppTasklineShellWsPKeySettingsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/index'
+import { Route as TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
+import { Route as TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
+import { Route as TasklineAppTasklineShellWsPKeySettingsMembersRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
+import { Route as TasklineAppTasklineShellWsPKeySettingsTrashRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash'
+import { Route as TasklineAppTasklineShellWsPKeySettingsWorkflowRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -606,16 +617,6 @@ const AppsAppsHabitsHabitIdRoute = AppsAppsHabitsHabitIdRouteImport.update({
   path: '/apps/habits/$habitId',
   getParentRoute: () => AppsRoute,
 } as any)
-const AppsAppsKanbanIndexRoute = AppsAppsKanbanIndexRouteImport.update({
-  id: '/apps/kanban/',
-  path: '/apps/kanban/',
-  getParentRoute: () => AppsRoute,
-} as any)
-const AppsAppsKanbanBoardIdRoute = AppsAppsKanbanBoardIdRouteImport.update({
-  id: '/apps/kanban/$boardId',
-  path: '/apps/kanban/$boardId',
-  getParentRoute: () => AppsRoute,
-} as any)
 const AppsAppsLinksIndexRoute = AppsAppsLinksIndexRouteImport.update({
   id: '/apps/links/',
   path: '/apps/links/',
@@ -658,6 +659,17 @@ const TasklineAppTasklineSignUpRoute =
   TasklineAppTasklineSignUpRouteImport.update({
     id: '/app/taskline/sign-up',
     path: '/app/taskline/sign-up',
+    getParentRoute: () => TasklineRouteRoute,
+  } as any)
+const TasklineAppsKanbanIndexRoute = TasklineAppsKanbanIndexRouteImport.update({
+  id: '/apps/kanban/',
+  path: '/apps/kanban/',
+  getParentRoute: () => TasklineRouteRoute,
+} as any)
+const TasklineAppsKanbanBoardIdRoute =
+  TasklineAppsKanbanBoardIdRouteImport.update({
+    id: '/apps/kanban/$boardId',
+    path: '/apps/kanban/$boardId',
     getParentRoute: () => TasklineRouteRoute,
   } as any)
 const DevExamplesMaskingIndexRoute = DevExamplesMaskingIndexRouteImport.update({
@@ -753,11 +765,77 @@ const TasklineAppTasklineShellWsProjectsRoute =
     path: '/projects',
     getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsPKeyRouteRoute =
+  TasklineAppTasklineShellWsPKeyRouteRouteImport.update({
+    id: '/p/$key',
+    path: '/p/$key',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsTRefRoute =
+  TasklineAppTasklineShellWsTRefRouteImport.update({
+    id: '/t/$ref',
+    path: '/t/$ref',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeyIndexRoute =
   TasklineAppTasklineShellWsPKeyIndexRouteImport.update({
-    id: '/p/$key/',
-    path: '/p/$key/',
-    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyBoardRoute =
+  TasklineAppTasklineShellWsPKeyBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyListRoute =
+  TasklineAppTasklineShellWsPKeyListRouteImport.update({
+    id: '/list',
+    path: '/list',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsRouteRoute =
+  TasklineAppTasklineShellWsPKeySettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsIndexRoute =
+  TasklineAppTasklineShellWsPKeySettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsGeneralRoute =
+  TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsLabelsRoute =
+  TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsMembersRoute =
+  TasklineAppTasklineShellWsPKeySettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsTrashRoute =
+  TasklineAppTasklineShellWsPKeySettingsTrashRouteImport.update({
+    id: '/trash',
+    path: '/trash',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySettingsWorkflowRoute =
+  TasklineAppTasklineShellWsPKeySettingsWorkflowRouteImport.update({
+    id: '/workflow',
+    path: '/workflow',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -842,11 +920,11 @@ export interface FileRoutesByFullPath {
   '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
   '/apps/expenses/import': typeof AppsAppsExpensesImportRoute
   '/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
-  '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
   '/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
+  '/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
@@ -855,10 +933,10 @@ export interface FileRoutesByFullPath {
   '/apps/expenses/': typeof AppsAppsExpensesIndexRoute
   '/apps/forms/': typeof AppsAppsFormsIndexRoute
   '/apps/habits/': typeof AppsAppsHabitsIndexRoute
-  '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/apps/links/': typeof AppsAppsLinksIndexRoute
   '/apps/notes/': typeof AppsAppsNotesIndexRoute
   '/app/taskline/': typeof TasklineAppTasklineIndexRoute
+  '/apps/kanban/': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
@@ -874,7 +952,18 @@ export interface FileRoutesByFullPath {
   '/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
+  '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
+  '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
+  '/app/taskline/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
+  '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
+  '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
+  '/app/taskline/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
+  '/app/taskline/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/app/taskline/$ws/p/$key/settings/': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof SiteIndexRoute
@@ -947,11 +1036,11 @@ export interface FileRoutesByTo {
   '/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
   '/apps/expenses/import': typeof AppsAppsExpensesImportRoute
   '/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
-  '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
   '/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
+  '/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
@@ -960,9 +1049,9 @@ export interface FileRoutesByTo {
   '/apps/expenses': typeof AppsAppsExpensesIndexRoute
   '/apps/forms': typeof AppsAppsFormsIndexRoute
   '/apps/habits': typeof AppsAppsHabitsIndexRoute
-  '/apps/kanban': typeof AppsAppsKanbanIndexRoute
   '/apps/links': typeof AppsAppsLinksIndexRoute
   '/apps/notes': typeof AppsAppsNotesIndexRoute
+  '/apps/kanban': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
@@ -977,7 +1066,16 @@ export interface FileRoutesByTo {
   '/apps/forms/$formId': typeof AppsAppsFormsFormIdIndexRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
+  '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
+  '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
+  '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
+  '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
+  '/app/taskline/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
+  '/app/taskline/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/app/taskline/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1069,11 +1167,11 @@ export interface FileRoutesById {
   '/_apps/apps/expenses/categories': typeof AppsAppsExpensesCategoriesRoute
   '/_apps/apps/expenses/import': typeof AppsAppsExpensesImportRoute
   '/_apps/apps/habits/$habitId': typeof AppsAppsHabitsHabitIdRoute
-  '/_apps/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/_apps/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/_apps/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/_taskline/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
   '/_taskline/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
+  '/_taskline/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
@@ -1082,10 +1180,10 @@ export interface FileRoutesById {
   '/_apps/apps/expenses/': typeof AppsAppsExpensesIndexRoute
   '/_apps/apps/forms/': typeof AppsAppsFormsIndexRoute
   '/_apps/apps/habits/': typeof AppsAppsHabitsIndexRoute
-  '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/_apps/apps/links/': typeof AppsAppsLinksIndexRoute
   '/_apps/apps/notes/': typeof AppsAppsNotesIndexRoute
   '/_taskline/app/taskline/': typeof TasklineAppTasklineIndexRoute
+  '/_taskline/apps/kanban/': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/_taskline/app/taskline/_shell/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
@@ -1101,7 +1199,18 @@ export interface FileRoutesById {
   '/_apps/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
   '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/_taskline/app/taskline/_shell/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
+  '/_taskline/app/taskline/_shell/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  '/_taskline/app/taskline/_shell/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1187,11 +1296,11 @@ export interface FileRouteTypes {
     | '/apps/expenses/categories'
     | '/apps/expenses/import'
     | '/apps/habits/$habitId'
-    | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
     | '/app/taskline/sign-in'
     | '/app/taskline/sign-up'
+    | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
     | '/admin/roles/'
@@ -1200,10 +1309,10 @@ export interface FileRouteTypes {
     | '/apps/expenses/'
     | '/apps/forms/'
     | '/apps/habits/'
-    | '/apps/kanban/'
     | '/apps/links/'
     | '/apps/notes/'
     | '/app/taskline/'
+    | '/apps/kanban/'
     | '/dev/examples/masking/'
     | '/app/taskline/$ws'
     | '/admin/portfolio/journal/$id'
@@ -1219,7 +1328,18 @@ export interface FileRouteTypes {
     | '/apps/forms/$formId/'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws/'
+    | '/app/taskline/$ws/p/$key'
+    | '/app/taskline/$ws/t/$ref'
+    | '/app/taskline/$ws/p/$key/settings'
+    | '/app/taskline/$ws/p/$key/board'
+    | '/app/taskline/$ws/p/$key/list'
     | '/app/taskline/$ws/p/$key/'
+    | '/app/taskline/$ws/p/$key/settings/general'
+    | '/app/taskline/$ws/p/$key/settings/labels'
+    | '/app/taskline/$ws/p/$key/settings/members'
+    | '/app/taskline/$ws/p/$key/settings/trash'
+    | '/app/taskline/$ws/p/$key/settings/workflow'
+    | '/app/taskline/$ws/p/$key/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1292,11 +1412,11 @@ export interface FileRouteTypes {
     | '/apps/expenses/categories'
     | '/apps/expenses/import'
     | '/apps/habits/$habitId'
-    | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
     | '/app/taskline/sign-in'
     | '/app/taskline/sign-up'
+    | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit'
     | '/admin/roles'
@@ -1305,9 +1425,9 @@ export interface FileRouteTypes {
     | '/apps/expenses'
     | '/apps/forms'
     | '/apps/habits'
-    | '/apps/kanban'
     | '/apps/links'
     | '/apps/notes'
+    | '/apps/kanban'
     | '/dev/examples/masking'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
@@ -1322,7 +1442,16 @@ export interface FileRouteTypes {
     | '/apps/forms/$formId'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws'
+    | '/app/taskline/$ws/t/$ref'
+    | '/app/taskline/$ws/p/$key/board'
+    | '/app/taskline/$ws/p/$key/list'
     | '/app/taskline/$ws/p/$key'
+    | '/app/taskline/$ws/p/$key/settings/general'
+    | '/app/taskline/$ws/p/$key/settings/labels'
+    | '/app/taskline/$ws/p/$key/settings/members'
+    | '/app/taskline/$ws/p/$key/settings/trash'
+    | '/app/taskline/$ws/p/$key/settings/workflow'
+    | '/app/taskline/$ws/p/$key/settings'
   id:
     | '__root__'
     | '/_taskline'
@@ -1413,11 +1542,11 @@ export interface FileRouteTypes {
     | '/_apps/apps/expenses/categories'
     | '/_apps/apps/expenses/import'
     | '/_apps/apps/habits/$habitId'
-    | '/_apps/apps/kanban/$boardId'
     | '/_apps/apps/links/$linkId'
     | '/_apps/apps/notes/$noteId'
     | '/_taskline/app/taskline/sign-in'
     | '/_taskline/app/taskline/sign-up'
+    | '/_taskline/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
@@ -1426,10 +1555,10 @@ export interface FileRouteTypes {
     | '/_apps/apps/expenses/'
     | '/_apps/apps/forms/'
     | '/_apps/apps/habits/'
-    | '/_apps/apps/kanban/'
     | '/_apps/apps/links/'
     | '/_apps/apps/notes/'
     | '/_taskline/app/taskline/'
+    | '/_taskline/apps/kanban/'
     | '/dev/examples/masking/'
     | '/_taskline/app/taskline/_shell/$ws'
     | '/_admin/admin/portfolio/journal/$id'
@@ -1445,7 +1574,18 @@ export interface FileRouteTypes {
     | '/_apps/apps/forms/$formId/'
     | '/_taskline/app/taskline/_shell/$ws/projects'
     | '/_taskline/app/taskline/_shell/$ws/'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key'
+    | '/_taskline/app/taskline/_shell/$ws/t/$ref'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/board'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/list'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2127,20 +2267,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppsHabitsHabitIdRouteImport
       parentRoute: typeof AppsRoute
     }
-    '/_apps/apps/kanban/': {
-      id: '/_apps/apps/kanban/'
-      path: '/apps/kanban'
-      fullPath: '/apps/kanban/'
-      preLoaderRoute: typeof AppsAppsKanbanIndexRouteImport
-      parentRoute: typeof AppsRoute
-    }
-    '/_apps/apps/kanban/$boardId': {
-      id: '/_apps/apps/kanban/$boardId'
-      path: '/apps/kanban/$boardId'
-      fullPath: '/apps/kanban/$boardId'
-      preLoaderRoute: typeof AppsAppsKanbanBoardIdRouteImport
-      parentRoute: typeof AppsRoute
-    }
     '/_apps/apps/links/': {
       id: '/_apps/apps/links/'
       path: '/apps/links'
@@ -2195,6 +2321,20 @@ declare module '@tanstack/react-router' {
       path: '/app/taskline/sign-up'
       fullPath: '/app/taskline/sign-up'
       preLoaderRoute: typeof TasklineAppTasklineSignUpRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
+    '/_taskline/apps/kanban/': {
+      id: '/_taskline/apps/kanban/'
+      path: '/apps/kanban'
+      fullPath: '/apps/kanban/'
+      preLoaderRoute: typeof TasklineAppsKanbanIndexRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
+    '/_taskline/apps/kanban/$boardId': {
+      id: '/_taskline/apps/kanban/$boardId'
+      path: '/apps/kanban/$boardId'
+      fullPath: '/apps/kanban/$boardId'
+      preLoaderRoute: typeof TasklineAppsKanbanBoardIdRouteImport
       parentRoute: typeof TasklineRouteRoute
     }
     '/dev/examples/masking/': {
@@ -2309,20 +2449,152 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsProjectsRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/p/$key': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key'
+      path: '/p/$key'
+      fullPath: '/app/taskline/$ws/p/$key'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyRouteRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/t/$ref': {
+      id: '/_taskline/app/taskline/_shell/$ws/t/$ref'
+      path: '/t/$ref'
+      fullPath: '/app/taskline/$ws/t/$ref'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsTRefRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key/': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key/'
-      path: '/p/$key'
+      path: '/'
       fullPath: '/app/taskline/$ws/p/$key/'
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyIndexRouteImport
-      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/board': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/board'
+      path: '/board'
+      fullPath: '/app/taskline/$ws/p/$key/board'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyBoardRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/list': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/list'
+      path: '/list'
+      fullPath: '/app/taskline/$ws/p/$key/list'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyListRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings'
+      path: '/settings'
+      fullPath: '/app/taskline/$ws/p/$key/settings'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/'
+      path: '/'
+      fullPath: '/app/taskline/$ws/p/$key/settings/'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsIndexRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
+      path: '/general'
+      fullPath: '/app/taskline/$ws/p/$key/settings/general'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
+      path: '/labels'
+      fullPath: '/app/taskline/$ws/p/$key/settings/labels'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
+      path: '/members'
+      fullPath: '/app/taskline/$ws/p/$key/settings/members'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsMembersRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash'
+      path: '/trash'
+      fullPath: '/app/taskline/$ws/p/$key/settings/trash'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsTrashRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow'
+      path: '/workflow'
+      fullPath: '/app/taskline/$ws/p/$key/settings/workflow'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
     }
   }
 }
 
+interface TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren {
+  TasklineAppTasklineShellWsPKeySettingsGeneralRoute: typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
+  TasklineAppTasklineShellWsPKeySettingsLabelsRoute: typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
+  TasklineAppTasklineShellWsPKeySettingsMembersRoute: typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
+  TasklineAppTasklineShellWsPKeySettingsTrashRoute: typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
+  TasklineAppTasklineShellWsPKeySettingsWorkflowRoute: typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  TasklineAppTasklineShellWsPKeySettingsIndexRoute: typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
+}
+
+const TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren: TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren =
+  {
+    TasklineAppTasklineShellWsPKeySettingsGeneralRoute:
+      TasklineAppTasklineShellWsPKeySettingsGeneralRoute,
+    TasklineAppTasklineShellWsPKeySettingsLabelsRoute:
+      TasklineAppTasklineShellWsPKeySettingsLabelsRoute,
+    TasklineAppTasklineShellWsPKeySettingsMembersRoute:
+      TasklineAppTasklineShellWsPKeySettingsMembersRoute,
+    TasklineAppTasklineShellWsPKeySettingsTrashRoute:
+      TasklineAppTasklineShellWsPKeySettingsTrashRoute,
+    TasklineAppTasklineShellWsPKeySettingsWorkflowRoute:
+      TasklineAppTasklineShellWsPKeySettingsWorkflowRoute,
+    TasklineAppTasklineShellWsPKeySettingsIndexRoute:
+      TasklineAppTasklineShellWsPKeySettingsIndexRoute,
+  }
+
+const TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren =
+  TasklineAppTasklineShellWsPKeySettingsRouteRoute._addFileChildren(
+    TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren,
+  )
+
+interface TasklineAppTasklineShellWsPKeyRouteRouteChildren {
+  TasklineAppTasklineShellWsPKeySettingsRouteRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  TasklineAppTasklineShellWsPKeyBoardRoute: typeof TasklineAppTasklineShellWsPKeyBoardRoute
+  TasklineAppTasklineShellWsPKeyListRoute: typeof TasklineAppTasklineShellWsPKeyListRoute
+  TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
+}
+
+const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShellWsPKeyRouteRouteChildren =
+  {
+    TasklineAppTasklineShellWsPKeySettingsRouteRoute:
+      TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren,
+    TasklineAppTasklineShellWsPKeyBoardRoute:
+      TasklineAppTasklineShellWsPKeyBoardRoute,
+    TasklineAppTasklineShellWsPKeyListRoute:
+      TasklineAppTasklineShellWsPKeyListRoute,
+    TasklineAppTasklineShellWsPKeyIndexRoute:
+      TasklineAppTasklineShellWsPKeyIndexRoute,
+  }
+
+const TasklineAppTasklineShellWsPKeyRouteRouteWithChildren =
+  TasklineAppTasklineShellWsPKeyRouteRoute._addFileChildren(
+    TasklineAppTasklineShellWsPKeyRouteRouteChildren,
+  )
+
 interface TasklineAppTasklineShellWsRouteRouteChildren {
   TasklineAppTasklineShellWsProjectsRoute: typeof TasklineAppTasklineShellWsProjectsRoute
   TasklineAppTasklineShellWsIndexRoute: typeof TasklineAppTasklineShellWsIndexRoute
-  TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  TasklineAppTasklineShellWsPKeyRouteRoute: typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
+  TasklineAppTasklineShellWsTRefRoute: typeof TasklineAppTasklineShellWsTRefRoute
 }
 
 const TasklineAppTasklineShellWsRouteRouteChildren: TasklineAppTasklineShellWsRouteRouteChildren =
@@ -2330,8 +2602,9 @@ const TasklineAppTasklineShellWsRouteRouteChildren: TasklineAppTasklineShellWsRo
     TasklineAppTasklineShellWsProjectsRoute:
       TasklineAppTasklineShellWsProjectsRoute,
     TasklineAppTasklineShellWsIndexRoute: TasklineAppTasklineShellWsIndexRoute,
-    TasklineAppTasklineShellWsPKeyIndexRoute:
-      TasklineAppTasklineShellWsPKeyIndexRoute,
+    TasklineAppTasklineShellWsPKeyRouteRoute:
+      TasklineAppTasklineShellWsPKeyRouteRouteWithChildren,
+    TasklineAppTasklineShellWsTRefRoute: TasklineAppTasklineShellWsTRefRoute,
   }
 
 const TasklineAppTasklineShellWsRouteRouteWithChildren =
@@ -2362,7 +2635,9 @@ interface TasklineRouteRouteChildren {
   TasklineAppTasklineShellRouteRoute: typeof TasklineAppTasklineShellRouteRouteWithChildren
   TasklineAppTasklineSignInRoute: typeof TasklineAppTasklineSignInRoute
   TasklineAppTasklineSignUpRoute: typeof TasklineAppTasklineSignUpRoute
+  TasklineAppsKanbanBoardIdRoute: typeof TasklineAppsKanbanBoardIdRoute
   TasklineAppTasklineIndexRoute: typeof TasklineAppTasklineIndexRoute
+  TasklineAppsKanbanIndexRoute: typeof TasklineAppsKanbanIndexRoute
 }
 
 const TasklineRouteRouteChildren: TasklineRouteRouteChildren = {
@@ -2370,7 +2645,9 @@ const TasklineRouteRouteChildren: TasklineRouteRouteChildren = {
     TasklineAppTasklineShellRouteRouteWithChildren,
   TasklineAppTasklineSignInRoute: TasklineAppTasklineSignInRoute,
   TasklineAppTasklineSignUpRoute: TasklineAppTasklineSignUpRoute,
+  TasklineAppsKanbanBoardIdRoute: TasklineAppsKanbanBoardIdRoute,
   TasklineAppTasklineIndexRoute: TasklineAppTasklineIndexRoute,
+  TasklineAppsKanbanIndexRoute: TasklineAppsKanbanIndexRoute,
 }
 
 const TasklineRouteRouteWithChildren = TasklineRouteRoute._addFileChildren(
@@ -2630,13 +2907,11 @@ interface AppsRouteChildren {
   AppsAppsExpensesCategoriesRoute: typeof AppsAppsExpensesCategoriesRoute
   AppsAppsExpensesImportRoute: typeof AppsAppsExpensesImportRoute
   AppsAppsHabitsHabitIdRoute: typeof AppsAppsHabitsHabitIdRoute
-  AppsAppsKanbanBoardIdRoute: typeof AppsAppsKanbanBoardIdRoute
   AppsAppsLinksLinkIdRoute: typeof AppsAppsLinksLinkIdRoute
   AppsAppsNotesNoteIdRoute: typeof AppsAppsNotesNoteIdRoute
   AppsAppsExpensesIndexRoute: typeof AppsAppsExpensesIndexRoute
   AppsAppsFormsIndexRoute: typeof AppsAppsFormsIndexRoute
   AppsAppsHabitsIndexRoute: typeof AppsAppsHabitsIndexRoute
-  AppsAppsKanbanIndexRoute: typeof AppsAppsKanbanIndexRoute
   AppsAppsLinksIndexRoute: typeof AppsAppsLinksIndexRoute
   AppsAppsNotesIndexRoute: typeof AppsAppsNotesIndexRoute
   AppsAppsFormsFormIdResultsRoute: typeof AppsAppsFormsFormIdResultsRoute
@@ -2649,13 +2924,11 @@ const AppsRouteChildren: AppsRouteChildren = {
   AppsAppsExpensesCategoriesRoute: AppsAppsExpensesCategoriesRoute,
   AppsAppsExpensesImportRoute: AppsAppsExpensesImportRoute,
   AppsAppsHabitsHabitIdRoute: AppsAppsHabitsHabitIdRoute,
-  AppsAppsKanbanBoardIdRoute: AppsAppsKanbanBoardIdRoute,
   AppsAppsLinksLinkIdRoute: AppsAppsLinksLinkIdRoute,
   AppsAppsNotesNoteIdRoute: AppsAppsNotesNoteIdRoute,
   AppsAppsExpensesIndexRoute: AppsAppsExpensesIndexRoute,
   AppsAppsFormsIndexRoute: AppsAppsFormsIndexRoute,
   AppsAppsHabitsIndexRoute: AppsAppsHabitsIndexRoute,
-  AppsAppsKanbanIndexRoute: AppsAppsKanbanIndexRoute,
   AppsAppsLinksIndexRoute: AppsAppsLinksIndexRoute,
   AppsAppsNotesIndexRoute: AppsAppsNotesIndexRoute,
   AppsAppsFormsFormIdResultsRoute: AppsAppsFormsFormIdResultsRoute,

@@ -120,15 +120,17 @@ export class Harness {
 	}
 	// portfolio:end
 
-	// apps:start
-	/** A user's first Kanban board (the harness makes one on first ask). */
-	async kanbanBoardId(user: E2EUser): Promise<string> {
-		const email = E2E.users[user].email;
-		const response = await fetch(`${E2E.harnessURL}/e2e/kanban-board?email=${encodeURIComponent(email)}`);
+	// taskline:start
+	/** A team project's id, by key (the old Kanban board URLs redirect by id, decision 0210). */
+	async tasklineProjectId(key: string): Promise<string> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/taskline-project?key=${encodeURIComponent(key)}`);
 		const row = (await response.json()) as { id?: string };
-		if (!row.id) throw new Error(`no Kanban board for ${user}`);
+		if (!row.id) throw new Error(`no Taskline project ${key}`);
 		return row.id;
 	}
+	// taskline:end
+
+	// apps:start
 	/** A user's shared review note: its id and the public page's token (the harness makes it on first ask). */
 	async reviewNote(user: E2EUser): Promise<{ id: string; token: string }> {
 		const email = E2E.users[user].email;

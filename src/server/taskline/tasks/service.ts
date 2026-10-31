@@ -1,21 +1,29 @@
 import "@tanstack/react-start/server-only";
 import {
+	type BulkTasksInput,
 	type CreateTaskInput,
 	type PatchTaskInput,
 	parseTaskRef,
+	type TaskListInput,
 	type UpdateTaskInput,
 } from "@/features/taskline/schema";
+import { projectSettings } from "@/features/taskline/settings";
 import {
+	type BulkResult,
 	type ChecklistItem,
 	isClosedCategory,
 	MAX_TASK_DEPTH,
+	type ProjectActivity,
+	type ProjectRev,
 	type ProjectTasks,
 	type TaskDetail,
 	type TaskSummary,
 	type TrashedTask,
 } from "@/features/taskline/types";
 import { ruleError } from "@/lib/errors";
-import { todayInZone } from "@/lib/i18n/date-only";
+import { generateKeysBetween } from "@/lib/fractional-index";
+import { addDays, todayInZone } from "@/lib/i18n/date-only";
+import type { Paged } from "@/lib/list/paging";
 import { m } from "@/paraglide/messages";
 import { notFound } from "@/server/db/crud";
 import { lockQuota } from "@/server/db/quota";
@@ -140,7 +148,135 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		members: memberRows.map(members.memberDto),
 		tasks: await repo.summaries(db, rows, access.project.key),
 		today: todayInZone(access.settings.timeZone),
+		doneColumnDays: projectSettings.parse(access.project.settings).doneColumnDays ?? access.settings.doneColumnDays,
+		readAt: new Date().toISOString(),
 	};
+}
+
+/** The list view's filters for the server: `me` is the caller's member row, dates are the workspace's. */
+function listFilters(access: ProjectAccess, input: TaskListInput): repo.TaskListFilters {
+	const today = todayInZone(access.settings.timeZone);
+	return {
+		q: input.q,
+		statusId: input.status === "all" ? undefined : input.status,
+		assignee:
+			input.assignee === "all" ? undefined : input.assignee === "me" ? (access.member?.id ?? "nobody") : input.assignee,
+		labelId: input.label === "all" ? undefined : input.label,
+		priority: input.priority === "all" ? undefined : Number(input.priority),
+		type: input.type === "all" ? undefined : input.type,
+		due: input.due === "all" ? undefined : input.due,
+		today,
+		weekEnd: addDays(today, 6),
+	};
+}
+
+/** A page of the list view (the list contract: filters, sort, grouping, page). */
+export async function listTaskPage({ db, user }: TasklineServices, input: TaskListInput): Promise<Paged<TaskSummary>> {
+	const access = await resolveProject(db, user, input.ws, input.key);
+	return repo.listPage(db, access.project.id, access.project.key, {
+		filters: listFilters(access, input),
+		sort: input.sort,
+		group: input.group,
+		page: input.page,
+		pageSize: input.pageSize,
+	});
+}
+
+/**
+ * One change to many tasks of a project (the list's bulk actions), in one
+ * transaction: each task's history gets its entry, and the project's rev moves once.
+ * A task that isn't the project's, or is in the trash, is NOT_FOUND (nothing changes).
+ */
+export async function bulkUpdate({ db, user }: TasklineServices, input: BulkTasksInput): Promise<BulkResult> {
+	return db.transaction(async (tx) => {
+		const access = await resolveProject(tx, user, input.ws, input.key);
+		assertCan(access, "edit");
+		const rows = await repo.getByIds(tx, access.project.id, input.ids);
+		if (rows.length !== new Set(input.ids).size || rows.some((row) => row.deletedAt)) throw notFound("Task");
+		const ids = rows.map((row) => row.id);
+		const entries: ActivityEntry[] = [];
+		if (input.trash) {
+			const at = new Date();
+			for (const row of rows) {
+				const below = (await repo.descendantsOf(tx, row.id)).filter((child) => !child.deletedAt);
+				await repo.setDeleted(tx, [row.id, ...below.map((child) => child.id)], at);
+				entries.push({ kind: "task.trashed", taskId: row.id, data: { subtasks: below.length } });
+			}
+		} else if (input.statusId) {
+			const status = await workflow.getStatus(tx, access.project.id, input.statusId);
+			if (!status) throw notFound("Status");
+			const moving = rows.filter((row) => row.statusId !== status.id);
+			const keys = generateKeysBetween(await repo.lastInStatus(tx, status.id), null, moving.length);
+			for (const [index, row] of moving.entries()) {
+				await repo.patchTask(tx, row.id, {
+					statusId: status.id,
+					position: keys[index] ?? row.position,
+					completedAt: isClosedCategory(status.category) ? (row.completedAt ?? new Date()) : null,
+				});
+				entries.push({ kind: "task.moved", taskId: row.id, data: { from: row.statusId, to: status.id } });
+			}
+		} else if (input.assigneeId !== undefined || input.priority !== undefined) {
+			const fields = input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : { priority: input.priority };
+			if (input.assigneeId !== undefined) await checkAssignee(tx, access, input.assigneeId);
+			for (const row of rows) {
+				const changes = fieldChanges(row.id, row, fields);
+				if (changes.length === 0) continue;
+				await repo.patchTask(tx, row.id, fields);
+				entries.push(...changes);
+			}
+			if (input.assigneeId) for (const id of ids) await repo.addWatchers(tx, id, [input.assigneeId]);
+		} else {
+			const labelId = input.addLabelId ?? input.removeLabelId;
+			if (!labelId) throw notFound("Label");
+			await checkLabels(tx, access, [labelId]);
+			const before = await repo.labelIdsOf(tx, ids);
+			if (input.addLabelId) await repo.addLabel(tx, ids, labelId);
+			else await repo.removeLabel(tx, ids, labelId);
+			for (const id of ids) {
+				const from = before.get(id) ?? [];
+				const to = input.addLabelId ? [...new Set([...from, labelId])].sort() : from.filter((each) => each !== labelId);
+				if (from.length === to.length) continue;
+				entries.push({ kind: "task.updated", taskId: id, data: { field: "labels", from, to } });
+			}
+		}
+		await recordActivity(tx, access, ...entries);
+		if (entries.length > 0) await bumpRev(tx, access.project.id);
+		return { count: entries.length };
+	});
+}
+
+/**
+ * Deletes a trashed task for good, with its subtasks (the lead's: the trash in the
+ * project's settings). What's left is one project entry naming it.
+ */
+export async function purgeTask({ db, user }: TasklineServices, ws: string, ref: string): Promise<void> {
+	await db.transaction(async (tx) => {
+		const { access, task } = await resolveTask(tx, user, ws, ref);
+		assertCan(access, "manage");
+		if (!task.deletedAt) throw ruleError("CONFLICT", "Taskline: not in trash", m.taskline_error_not_in_trash());
+		await repo.deleteTasks(tx, [task.id]);
+		await recordActivity(tx, access, {
+			kind: "task.deleted",
+			data: { ref: repo.taskRef(access.project.key, task.number), title: task.title },
+		});
+		await bumpRev(tx, access.project.id);
+	});
+}
+
+/** The project's latest history, for its overview. */
+export async function listProjectActivity(
+	{ db, user }: TasklineServices,
+	ws: string,
+	key: string,
+): Promise<ProjectActivity[]> {
+	const access = await resolveProject(db, user, ws, key);
+	return repo.projectActivity(db, access.project.id, access.project.key, 30);
+}
+
+/** What open pages poll (0209): one small read, resolved like any other. */
+export async function getProjectRev({ db, user }: TasklineServices, ws: string, key: string): Promise<ProjectRev> {
+	const access = await resolveProject(db, user, ws, key);
+	return { rev: access.project.rev };
 }
 
 /** One task with its subtasks and history; a trashed one too (the trash opens it). */

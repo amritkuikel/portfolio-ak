@@ -1,7 +1,7 @@
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { MAIN_CONTENT } from "@/components/layout/skip-link";
+import { MAIN_CONTENT, useInsideMain } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { type AppErrorCode, FORM_ERROR_KEY, isAppError } from "@/lib/errors";
 import { captureException } from "@/lib/observability/sentry-client";
@@ -47,6 +47,9 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	const code = isAppError(error) ? error.code : undefined;
 	const requestId = isAppError(error) ? error.requestId : undefined;
 	const title = (code && titles[code]) || m.error_title;
+	// Below a layout that owns the page's <main>, the error is a section of it.
+	const nested = useInsideMain();
+	const Frame = nested ? "section" : "main";
 
 	// Render/loader errors in the browser. AppErrors are expected or already reported
 	// on the server (see sentry.ts); a no-op without a DSN.
@@ -67,12 +70,22 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	};
 
 	return (
-		<main
-			{...MAIN_CONTENT}
-			className="mx-auto flex max-w-xl flex-col items-start gap-4 px-4 py-16"
+		<Frame
+			{...(nested ? { "aria-labelledby": "error-page-title" } : MAIN_CONTENT)}
+			className={
+				nested
+					? "flex max-w-xl flex-col items-start gap-4 py-6"
+					: "mx-auto flex max-w-xl flex-col items-start gap-4 px-4 py-16"
+			}
 			data-testid="error-page"
 		>
-			<h1 className="font-semibold text-2xl tracking-tight">{title()}</h1>
+			{nested ? (
+				<h2 id="error-page-title" className="font-semibold text-xl tracking-tight">
+					{title()}
+				</h2>
+			) : (
+				<h1 className="font-semibold text-2xl tracking-tight">{title()}</h1>
+			)}
 			<p className="text-muted-foreground" role="alert" data-error-code={code ?? "UNKNOWN"}>
 				{errorMessage(error)}
 			</p>
@@ -99,6 +112,6 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 					{home ?? <Link to="/">{m.error_go_home()}</Link>}
 				</Button>
 			</div>
-		</main>
+		</Frame>
 	);
 }

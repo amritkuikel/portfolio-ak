@@ -79,6 +79,9 @@ export default defineConfig(async ({ command, mode }) => {
 										name: "react-vendor",
 										test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:react|react-dom|scheduler)\//,
 									},
+									// cva's class joiner, on its own: left alone, Rolldown may put it in tailwind-merge's
+									// chunk, which the entry then imports directly (decision 0211).
+									{ name: "clsx", test: /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?clsx\// },
 								],
 							},
 						},

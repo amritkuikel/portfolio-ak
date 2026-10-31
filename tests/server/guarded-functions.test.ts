@@ -118,22 +118,9 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
  * The showcase apps' files (decision 0187): every function runs `requireAppUser` then
  * `withAppServices` first. No permission is involved (guests use the apps too); each
  * service scopes every read and write to the caller's own rows (`ownedBy`, tested in
- * tests/server/apps-kanban.test.ts).
+ * tests/server/apps-notes.test.ts and the others).
  */
 const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
-	"apps/kanban.ts": [
-		"listKanbanBoards",
-		"getKanbanBoard",
-		"createKanbanBoard",
-		"renameKanbanBoard",
-		"deleteKanbanBoard",
-		"createKanbanColumn",
-		"updateKanbanColumn",
-		"deleteKanbanColumn",
-		"createKanbanCard",
-		"updateKanbanCard",
-		"deleteKanbanCard",
-	],
 	"apps/notes.ts": [
 		"listNotes",
 		"searchNotes",
@@ -187,15 +174,9 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
  */
 const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 	"taskline/home.ts": ["getTasklineNav", "listMyTasklineTasks"],
-	"taskline/workspaces.ts": [
-		"listTasklineWorkspaces",
-		"getTasklineWorkspace",
-		"startTasklineSandbox",
-		"listTasklineMembers",
-	],
+	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [
 		"listTasklineProjects",
-		"getTasklineProject",
 		"createTasklineProject",
 		"updateTasklineProject",
 		"setTasklineProjectState",
@@ -205,6 +186,7 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"listTasklineProjectMembers",
 		"setTasklineProjectMember",
 		"removeTasklineProjectMember",
+		"locateTasklineProject",
 	],
 	"taskline/workflow.ts": [
 		"createTasklineStatus",
@@ -225,6 +207,11 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"trashTasklineTask",
 		"restoreTasklineTask",
 		"listTasklineTrash",
+		"listTasklineTaskPage",
+		"bulkUpdateTasklineTasks",
+		"purgeTasklineTask",
+		"listTasklineProjectActivity",
+		"getTasklineProjectRev",
 	],
 };
 // taskline:end
@@ -320,7 +307,7 @@ const DIR = "src/functions";
 
 /**
  * Every server-function file under src/functions, as a path relative to it (e.g. "rbac.ts",
- * "apps/kanban.ts"). Subfolders count too, so a file can't escape this test by living in
+ * "apps/notes.ts"). Subfolders count too, so a file can't escape this test by living in
  * one; `_lib/` holds helpers for these files, not server functions.
  */
 const functionFiles = (dir = DIR, prefix = ""): string[] =>

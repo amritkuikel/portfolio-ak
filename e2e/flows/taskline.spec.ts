@@ -1,12 +1,17 @@
 /**
- * Taskline's shell (decision 0208): a visitor tries the sandbox from the landing and
+ * Taskline (decisions 0208–0210): a visitor tries the sandbox from the landing and
  * works in it as a guest; a team member signs in on Taskline's own page and sees the
  * team's projects, but not a private one they aren't on; a workspace's address opens
- * its projects, and an unknown one is a 404 inside the frame.
+ * its projects, and an unknown one is a 404 inside the frame. On the board a task
+ * moves by keyboard and opens by its own address; a guest keeps their sandbox on
+ * signing up (the emailed link) or in (two-factor and the claim cookie); Kanban's old
+ * addresses redirect.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
-import { expect, RESOURCE_STATUS, test } from "../support/fixtures.ts";
+import { authFetch, expect, RESOURCE_STATUS, test } from "../support/fixtures.ts";
+import { totp } from "../support/totp.ts";
+import { createVerifiedUser, linkIn, uniqueEmail } from "../support/users.ts";
 
 /** Opens a page and waits until it's hydrated (no requests in flight). */
 const open = (page: Page, path: string) => page.goto(path, { waitUntil: "networkidle" });
@@ -18,6 +23,53 @@ async function signInAs(page: Page, email: string) {
 	await page.getByRole("textbox", { name: "Password" }).fill(E2E.password);
 	await page.getByRole("button", { name: "Log in" }).click();
 	await expect(page).toHaveURL(/\/app\/taskline\/home$/);
+}
+
+/** A board column's tasks, by the column's heading, in the order shown. */
+const tasksIn = (page: Page, status: string) =>
+	page
+		.getByTestId("taskline-column")
+		.filter({ has: page.getByRole("heading", { level: 3, name: status, exact: true }) })
+		.getByTestId("taskline-card-title");
+
+const nextSave = (page: Page) =>
+	page.waitForResponse((response) => response.url().includes("/_serverFn/") && response.request().method() === "POST");
+
+/** Adds a task at the foot of "To do", then moves it one column right with Alt + →, both saved. */
+async function addAndMove(page: Page, title: string) {
+	const todo = page
+		.getByTestId("taskline-column")
+		.filter({ has: page.getByRole("heading", { level: 3, name: "To do", exact: true }) });
+	await todo.getByTestId("taskline-add-task-open").click();
+	const field = todo.getByRole("textbox", { name: "New task in To do" });
+	await field.fill(title);
+	const added = nextSave(page);
+	await field.press("Enter");
+	await added;
+	// Once the server has numbered it, its title opens it.
+	await expect(todo.getByTestId("taskline-card-open").filter({ hasText: title })).toBeVisible();
+	await page.getByRole("button", { name: `Move task ${title}` }).focus();
+	const moved = nextSave(page);
+	await page.keyboard.press("Alt+ArrowRight");
+	await expect(page.getByTestId("taskline-announcement")).toHaveText(new RegExp(`${title} moved to In progress`));
+	await moved;
+	await expect(tasksIn(page, "In progress")).toContainText([title]);
+}
+
+/** "Try the sandbox" on the landing, then the sample project's board. */
+async function startGuest(page: Page) {
+	await open(page, "/app/taskline");
+	await page.getByTestId("try-sandbox").click();
+	await expect(page).toHaveURL(/\/app\/taskline\/home$/);
+	await expect(page.getByTestId("guest-banner")).toBeVisible();
+	await open(page, "/app/taskline/sandbox/p/WEB/board");
+}
+
+/** The sandbox as the account sees it: the guest's move is there. */
+async function sandboxKept(page: Page, title: string) {
+	await open(page, "/app/taskline/sandbox/p/WEB/board");
+	await expect(page.getByTestId("guest-banner")).toHaveCount(0);
+	await expect(tasksIn(page, "In progress")).toContainText([title]);
 }
 
 test.describe("Taskline", () => {
@@ -98,5 +150,100 @@ test.describe("Taskline", () => {
 		await expect(page).toHaveURL(/\/app\/taskline\/sign-in\?redirect=/);
 		await expect(page.getByTestId("taskline-auth-panel")).toBeAttached();
 		await expect(page.getByRole("heading", { level: 1, name: "Sign in to Taskline" })).toBeVisible();
+	});
+
+	test("a member moves a task by keyboard and opens it by its address", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await signInAs(page, "asha@taskline.example.com");
+		await open(page, "/app/taskline/team/p/WEB/board");
+		const title = `Moved by keyboard ${Date.now()}`;
+		await addAndMove(page, title);
+		// Saved: a reload (server-rendered from the database) shows it moved.
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(tasksIn(page, "In progress")).toContainText([title]);
+
+		// It opens in a sheet over the board, at its own address.
+		await page.getByTestId("taskline-card-open").filter({ hasText: title }).click();
+		await expect(page.getByTestId("task-sheet")).toBeVisible();
+		await expect(page).toHaveURL(/\/app\/taskline\/team\/t\/WEB-\d+$/);
+		// That address, opened anew, is the task's page.
+		await open(page, page.url());
+		await expect(page.getByTestId("task-page")).toBeVisible();
+		await expect(page.getByRole("heading", { level: 1 })).toContainText(title);
+	});
+
+	test("Kanban's old addresses redirect to Taskline", async ({ page, harness }) => {
+		const landing = await fetch(new URL("/apps/kanban", E2E.baseURL), { redirect: "manual" });
+		expect(landing.status).toBe(301);
+		expect(landing.headers.get("location")).toMatch(/\/app\/taskline$/);
+
+		await harness.resetRateLimits();
+		await signInAs(page, "asha@taskline.example.com");
+		await open(page, `/apps/kanban/${await harness.tasklineProjectId("WEB")}`);
+		await expect(page).toHaveURL(/\/app\/taskline\/team\/p\/WEB\/board$/);
+		await expect(page.getByTestId("taskline-board")).toBeVisible();
+		// An id that is no project of theirs: Taskline itself (signed in, that's Home).
+		await open(page, `/apps/kanban/${crypto.randomUUID()}`);
+		await expect(page).toHaveURL(/\/app\/taskline\/home$/);
+	});
+
+	test("a guest moves a task in the sandbox, signs up, verifies and keeps it", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await addAndMove(page, "Kept after sign-up");
+
+		// A guest's account page is Taskline's sign-up.
+		await open(page, "/app/taskline/account");
+		await expect(page).toHaveURL(/\/app\/taskline\/sign-up\?redirect=/);
+		const email = uniqueEmail("tl-guest");
+		await page.getByLabel("Name").fill("Guest Upgrader");
+		await page.getByLabel("Email").fill(email);
+		await page.getByLabel("Password", { exact: true }).fill(E2E.password);
+		await page.getByLabel("Confirm password").fill(E2E.password);
+		await page.getByRole("button", { name: "Create account" }).click();
+		await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+		const verification = await harness.nextEmail(email, "verify-email");
+		await open(page, linkIn(verification.text));
+		await expect(page.getByText("Your email is verified and you're signed in.")).toBeVisible();
+
+		await sandboxKept(page, "Kept after sign-up");
+	});
+
+	test("a guest signs in to an account with two-factor and keeps the sandbox", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		// An account with two-factor on, set up through Better Auth's API.
+		const user = await createVerifiedUser(harness, "tl-guest-2fa");
+		const signIn = await authFetch("/api/auth/sign-in/email", { email: user.email, password: user.password });
+		const cookie = signIn.headers
+			.getSetCookie()
+			.map((header) => header.split(";")[0])
+			.join("; ");
+		const post = (path: string, body: unknown) =>
+			fetch(new URL(path, E2E.baseURL), {
+				method: "POST",
+				headers: { "content-type": "application/json", origin: E2E.baseURL, cookie },
+				body: JSON.stringify(body),
+			});
+		const enabled = (await (await post("/api/auth/two-factor/enable", { password: user.password })).json()) as {
+			totpURI: string;
+		};
+		const secret = new URL(enabled.totpURI).searchParams.get("secret") ?? "";
+		expect((await post("/api/auth/two-factor/verify-totp", { code: totp(secret) })).status).toBe(200);
+
+		await startGuest(page);
+		await addAndMove(page, "Kept after two-factor");
+
+		// The password step drops the guest's session; the code finishes the sign-in, and the
+		// claim cookie brings the sandbox along.
+		await open(page, "/login?redirect=/app/taskline/home");
+		await page.getByLabel("Email").fill(user.email);
+		await page.getByLabel("Password", { exact: true }).fill(user.password);
+		await page.getByRole("button", { name: "Log in" }).click();
+		await page.getByLabel("6-digit code").fill(totp(secret));
+		await page.getByRole("button", { name: "Sign in" }).click();
+		// The whole address: the login page's own (`?redirect=/app/taskline/home`) ends the same way.
+		await expect(page).toHaveURL(new URL("/app/taskline/home", E2E.baseURL).href);
+
+		await sandboxKept(page, "Kept after two-factor");
 	});
 });

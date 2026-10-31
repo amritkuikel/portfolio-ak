@@ -19,7 +19,6 @@ export type ReviewedPage = {
 		| { from: "seeded-slug" }
 		| { from: "portfolio-project-id" } // @portfolio
 		| { from: "portfolio-post-id" } // @portfolio
-		| { from: "kanban-board-id" } // @apps
 		| { from: "note-id" } // @apps
 		| { from: "shared-note-token" } // @apps
 		| { from: "link-id" } // @apps
@@ -130,9 +129,6 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	// apps:start
 	// The showcase apps (decision 0187): landings for visitors, the app for a user.
 	{ route: "/apps" },
-	{ route: "/apps/kanban" },
-	{ route: "/apps/kanban", as: "member", label: "boards" },
-	{ route: "/apps/kanban/$boardId", as: "member", params: { from: "kanban-board-id" } },
 	{ route: "/apps/notes" },
 	{ route: "/apps/notes", as: "member", label: "notes" },
 	{ route: "/apps/notes/$noteId", as: "member", params: { from: "note-id" } },
@@ -169,6 +165,46 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/taskline/account", as: "admin" },
 	{ route: "/app/taskline/$ws/projects", as: "admin", path: "/app/taskline/team/projects" },
 	{ route: "/app/taskline/$ws/p/$key", as: "admin", path: "/app/taskline/team/p/WEB" },
+	// The views and the task (Task 48): the admin leads nothing but holds taskline:manage, so the lead's settings open.
+	{ route: "/app/taskline/$ws/p/$key/board", as: "admin", path: "/app/taskline/team/p/WEB/board" },
+	{
+		route: "/app/taskline/$ws/p/$key/board",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/board?swimlanes=assignee",
+		label: "swimlanes",
+	},
+	{ route: "/app/taskline/$ws/p/$key/list", as: "admin", path: "/app/taskline/team/p/WEB/list" },
+	{
+		route: "/app/taskline/$ws/p/$key/list",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/list?group=status",
+		label: "grouped",
+	},
+	{ route: "/app/taskline/$ws/t/$ref", as: "admin", path: "/app/taskline/team/t/WEB-1" },
+	{
+		route: "/app/taskline/$ws/p/$key/settings/general",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/settings/general",
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/settings/members",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/settings/members",
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/settings/workflow",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/settings/workflow",
+	},
+	{ route: "/app/taskline/$ws/p/$key/settings/labels", as: "admin", path: "/app/taskline/team/p/WEB/settings/labels" },
+	{ route: "/app/taskline/$ws/p/$key/settings/trash", as: "admin", path: "/app/taskline/team/p/WEB/settings/trash" },
+	{
+		route: "/app/taskline/$ws/t/$ref",
+		as: "admin",
+		path: "/app/taskline/team/t/WEB-9999",
+		status: 404,
+		label: "unknown task",
+	},
 	{
 		route: "/app/taskline/$ws/projects",
 		as: "admin",
@@ -192,6 +228,9 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
 	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
 	"/app/taskline/$ws": "a redirect to the workspace's projects (checked by e2e/flows/taskline.spec.ts)", // @taskline
+	"/app/taskline/$ws/p/$key/settings": "a redirect to the settings' first section", // @taskline
+	"/apps/kanban": "Kanban's old address, a redirect to Taskline (checked by e2e/flows/taskline.spec.ts)", // @taskline
+	"/apps/kanban/$boardId": "an old board's address, a redirect to its project (checked by e2e/flows/taskline.spec.ts)", // @taskline
 	// @new-feature:not-reviewed
 };
 

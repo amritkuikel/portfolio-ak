@@ -11,7 +11,17 @@ import type {
 	TasklineColor,
 } from "@/features/taskline/types";
 import { generateKeysBetween } from "@/lib/fractional-index";
-import { type TlProjectRow, tlMember, tlProject, tlProjectMember, tlStar, tlStatus, tlTask } from "@/server/db/schema";
+import {
+	type TlProjectRow,
+	type TlWorkspaceRow,
+	tlMember,
+	tlProject,
+	tlProjectMember,
+	tlStar,
+	tlStatus,
+	tlTask,
+	tlWorkspace,
+} from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
 
 /** Projects, their members and stars: plain reads and writes (rules are in ./service.ts). */
@@ -202,4 +212,17 @@ export async function setStar(tx: Tx, memberId: string, projectId: string, starr
 	} else {
 		await tx.delete(tlStar).where(and(eq(tlStar.memberId, memberId), eq(tlStar.projectId, projectId)));
 	}
+}
+
+/** A project by id with its workspace, whoever's it is (the caller resolves access next). */
+export async function projectWithWorkspace(
+	db: Db,
+	projectId: string,
+): Promise<{ project: TlProjectRow; workspace: TlWorkspaceRow } | null> {
+	const [row] = await db
+		.select({ project: tlProject, workspace: tlWorkspace })
+		.from(tlProject)
+		.innerJoin(tlWorkspace, eq(tlWorkspace.id, tlProject.workspaceId))
+		.where(eq(tlProject.id, projectId));
+	return row ?? null;
 }

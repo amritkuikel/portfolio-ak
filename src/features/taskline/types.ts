@@ -89,6 +89,8 @@ export const ACTIVITY_KINDS = [
 	"task.trashed",
 	"task.restored",
 	"task.checklist",
+	/** Deleted for good from the trash (Task 48): a project entry with the task's ref and title, its own history gone. */
+	"task.deleted",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -189,6 +191,7 @@ export type TaskSummary = {
 	dueOn: string | null;
 	completedAt: string | null;
 	checklist: { done: number; total: number };
+	updatedAt: string;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -215,7 +218,7 @@ export type TaskDetail = TaskSummary & {
 	can: ProjectCan;
 };
 
-/** A project's tasks with what draws them: the board and list (Task 48) start from it. */
+/** A project's tasks with what draws them: the board, the list and the task sheet start from it. */
 export type ProjectTasks = {
 	project: ProjectDetail;
 	statuses: TasklineStatus[];
@@ -223,9 +226,25 @@ export type ProjectTasks = {
 	members: TasklineMember[];
 	tasks: TaskSummary[];
 	today: string;
+	/** Days a closed task stays on the board: the project's setting, else the workspace's. */
+	doneColumnDays: number;
+	/** When the server read it: relative times ("5 minutes ago") start from here, so both renders agree. */
+	readAt: string;
 };
 
 export type TrashedTask = { id: string; ref: string; title: string; deletedAt: string };
+
+/** An entry of a project's feed (the overview): the task it's about, when it still exists. */
+export type ProjectActivity = TaskActivity & { task: { ref: string; title: string } | null };
+
+/** What open pages poll (decision 0209): the project's `rev`, which every change moves. */
+export type ProjectRev = { rev: number };
+
+/** Where a project lives, for links that only know its id (the Kanban redirects, 0210). */
+export type ProjectLocation = { ws: string; key: string };
+
+/** A bulk change's outcome: how many tasks it changed. */
+export type BulkResult = { count: number };
 
 /** A project in the shell's sidebar and the palette, with the workspace it's in. */
 export type NavProject = {

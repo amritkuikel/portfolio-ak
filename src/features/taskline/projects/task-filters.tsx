@@ -1,0 +1,129 @@
+import { ActiveFilters } from "@/components/filters/active-filters";
+import { FilterBar } from "@/components/filters/filter-bar";
+import { type FilterOption, SearchFilter, SelectFilter } from "@/components/filters/filters";
+import { choiceChip, defineFilters, textChip } from "@/lib/crud/filters";
+import { m } from "@/paraglide/messages";
+import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
+import { DUE_FILTERS, type DueFilter, type PRIORITY_FILTERS, type TaskFilters } from "../search";
+import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type TaskType } from "../types";
+
+/**
+ * The project's filters, shared by the board and the list (the same URL params, PLAN
+ * 11.5): a GET form that works without JavaScript (<FilterBar>), and a chip per
+ * filter that's applied. `extra` is the view's own control (swimlanes, grouping).
+ */
+
+type Context = Pick<ProjectTasks, "statuses" | "members" | "labels">;
+
+const DUE_LABELS: Record<Exclude<DueFilter, "all">, () => string> = {
+	overdue: m.taskline_filter_due_overdue,
+	week: m.taskline_filter_due_week,
+	none: m.taskline_filter_due_none,
+};
+
+const assigneeText = (value: string, context: Context) =>
+	value === "me"
+		? m.taskline_filter_assignee_me()
+		: value === "none"
+			? m.taskline_unassigned()
+			: context.members.find((member) => member.id === value)?.name;
+
+const taskFilterChips = defineFilters<TaskFilters, Context>([
+	textChip("q", m.crud_search),
+	choiceChip(
+		"status",
+		m.taskline_field_status,
+		(id: string, context: Context) => context.statuses.find((status) => status.id === id)?.name,
+	),
+	choiceChip("assignee", m.taskline_field_assignee, assigneeText),
+	choiceChip(
+		"label",
+		m.taskline_field_labels,
+		(id: string, context: Context) => context.labels.find((label) => label.id === id)?.name,
+	),
+	choiceChip("priority", m.taskline_field_priority, (value: (typeof PRIORITY_FILTERS)[number]) =>
+		value === "all" ? undefined : PRIORITY_LABELS[Number(value) as TaskPriority](),
+	),
+	choiceChip("type", m.taskline_field_type, (value: TaskType) => TYPE_LABELS[value]()),
+	choiceChip("due", m.taskline_field_due, (value: Exclude<DueFilter, "all">) => DUE_LABELS[value]()),
+]);
+
+export function TaskFilterBar({
+	search,
+	context,
+	member,
+	preserve,
+	extra,
+}: {
+	search: TaskFilters & Readonly<Record<string, unknown>>;
+	context: Context;
+	/** Whether the caller is a member of the workspace (only then "Assigned to me" means someone). */
+	member: boolean;
+	/** The view's params the form keeps on a no-JS submit (sort, page size, swimlanes). */
+	preserve: ReadonlyArray<string>;
+	extra?: React.ReactNode;
+}) {
+	const all: FilterOption = { value: "all", label: m.filters_any() };
+	const applied = taskFilterChips.applied(search, context);
+	return (
+		<div className="flex flex-col gap-2" data-testid="task-filters">
+			<FilterBar values={search} preserve={preserve} label={m.taskline_filters_label()}>
+				<SearchFilter name="q" label={m.crud_search()} value={search.q} placeholder={m.taskline_filter_search()} />
+				<SelectFilter
+					name="status"
+					label={m.taskline_field_status()}
+					value={search.status}
+					options={[all, ...context.statuses.map((status) => ({ value: status.id, label: status.name }))]}
+				/>
+				<SelectFilter
+					name="assignee"
+					label={m.taskline_field_assignee()}
+					value={search.assignee}
+					options={[
+						all,
+						...(member ? [{ value: "me", label: m.taskline_filter_assignee_me() }] : []),
+						{ value: "none", label: m.taskline_unassigned() },
+						...context.members
+							.filter((each) => !each.deactivated)
+							.map((each) => ({ value: each.id, label: each.name })),
+					]}
+				/>
+				<SelectFilter
+					name="label"
+					label={m.taskline_field_labels()}
+					value={search.label}
+					options={[all, ...context.labels.map((label) => ({ value: label.id, label: label.name }))]}
+				/>
+				<SelectFilter
+					name="priority"
+					label={m.taskline_field_priority()}
+					value={search.priority}
+					options={[
+						all,
+						...[...TASK_PRIORITIES].reverse().map((priority) => ({
+							value: String(priority),
+							label: PRIORITY_LABELS[priority](),
+						})),
+					]}
+				/>
+				<SelectFilter
+					name="type"
+					label={m.taskline_field_type()}
+					value={search.type}
+					options={[all, ...TASK_TYPES.map((type) => ({ value: type, label: TYPE_LABELS[type]() }))]}
+				/>
+				<SelectFilter
+					name="due"
+					label={m.taskline_field_due()}
+					value={search.due}
+					options={[
+						all,
+						...DUE_FILTERS.filter((due) => due !== "all").map((due) => ({ value: due, label: DUE_LABELS[due]() })),
+					]}
+				/>
+				{extra}
+			</FilterBar>
+			<ActiveFilters chips={applied.chips} clearAll={applied.clearAll} />
+		</div>
+	);
+}

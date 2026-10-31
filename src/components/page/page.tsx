@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { MAIN_CONTENT } from "@/components/layout/skip-link";
+import { InsideMain, MAIN_CONTENT } from "@/components/layout/skip-link";
 import { cn } from "@/lib/utils";
 
 const WIDTHS = {
@@ -23,7 +23,13 @@ export function Page({
 	...props
 }: ComponentProps<"main"> & { width?: keyof typeof WIDTHS }) {
 	return (
-		<main {...MAIN_CONTENT} className={cn("flex w-full min-w-0 flex-col gap-6", WIDTHS[width], className)} {...props} />
+		<InsideMain value>
+			<main
+				{...MAIN_CONTENT}
+				className={cn("flex w-full min-w-0 flex-col gap-6", WIDTHS[width], className)}
+				{...props}
+			/>
+		</InsideMain>
 	);
 }
 

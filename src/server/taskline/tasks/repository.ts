@@ -1,8 +1,35 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import type { TaskPriority, TaskSummary, TrashedTask } from "@/features/taskline/types";
+import {
+	type AnyColumn,
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	lte,
+	or,
+	type SQL,
+	sql,
+} from "drizzle-orm";
+import type { ProjectActivity, TaskPriority, TaskSummary, TaskType, TrashedTask } from "@/features/taskline/types";
 import { generateKeyBetween, generateKeysBetween } from "@/lib/fractional-index";
-import { type TlStatusRow, type TlTaskRow, tlTask, tlTaskLabel, tlTaskWatcher } from "@/server/db/schema";
+import { type Paged, parseSort } from "@/lib/list/paging";
+import { allOf, countRows, paginate, textSearch } from "@/server/db/list";
+import {
+	type TlStatusRow,
+	type TlTaskRow,
+	tlActivity,
+	tlMember,
+	tlStatus,
+	tlTask,
+	tlTaskLabel,
+	tlTaskWatcher,
+} from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
 import { byPosition } from "../workflow/repository";
 
@@ -27,6 +54,7 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[]): Ta
 		dueOn: row.dueOn,
 		completedAt: row.completedAt?.toISOString() ?? null,
 		checklist: { done: row.checklist.filter((item) => item.done).length, total: row.checklist.length },
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
@@ -99,15 +127,20 @@ export async function countInStatus(db: Db, statusId: string): Promise<number> {
 	return row?.total ?? 0;
 }
 
-/** The key after the last task in a status: where a new or moved-in task goes. */
-export async function endOfStatus(db: Db, statusId: string): Promise<string> {
+/** The order key of the last task in a status (trashed ones too), or null for an empty one. */
+export async function lastInStatus(db: Db, statusId: string): Promise<string | null> {
 	const [row] = await db
 		.select({ position: tlTask.position })
 		.from(tlTask)
 		.where(eq(tlTask.statusId, statusId))
 		.orderBy(desc(byPosition(tlTask.position)))
 		.limit(1);
-	return generateKeyBetween(row?.position ?? null, null);
+	return row?.position ?? null;
+}
+
+/** The key after the last task in a status: where a new or moved-in task goes. */
+export async function endOfStatus(db: Db, statusId: string): Promise<string> {
+	return generateKeyBetween(await lastInStatus(db, statusId), null);
 }
 
 export async function insertTask(tx: Tx, values: typeof tlTask.$inferInsert): Promise<TlTaskRow> {
@@ -226,6 +259,174 @@ export async function moveAllToStatus(tx: Tx, fromStatusId: string, to: TlStatus
 export async function setDeleted(tx: Tx, taskIds: string[], at: Date | null): Promise<void> {
 	if (taskIds.length === 0) return;
 	await tx.update(tlTask).set({ deletedAt: at }).where(inArray(tlTask.id, taskIds));
+}
+
+/** Tasks of a project by id (trashed ones too: the caller decides). */
+export async function getByIds(db: Db, projectId: string, taskIds: ReadonlyArray<string>): Promise<TlTaskRow[]> {
+	if (taskIds.length === 0) return [];
+	return db
+		.select()
+		.from(tlTask)
+		.where(and(eq(tlTask.projectId, projectId), inArray(tlTask.id, [...taskIds])))
+		.orderBy(asc(tlTask.number));
+}
+
+/** Deletes tasks for good (their subtasks, labels, watchers and history cascade). */
+export async function deleteTasks(tx: Tx, taskIds: ReadonlyArray<string>): Promise<void> {
+	if (taskIds.length === 0) return;
+	await tx.delete(tlTask).where(inArray(tlTask.id, [...taskIds]));
+}
+
+/** Adds one label to tasks (those that have it keep it). */
+export async function addLabel(tx: Tx, taskIds: ReadonlyArray<string>, labelId: string): Promise<void> {
+	if (taskIds.length === 0) return;
+	await tx
+		.insert(tlTaskLabel)
+		.values(taskIds.map((taskId) => ({ taskId, labelId })))
+		.onConflictDoNothing();
+}
+
+export async function removeLabel(tx: Tx, taskIds: ReadonlyArray<string>, labelId: string): Promise<void> {
+	if (taskIds.length === 0) return;
+	await tx.delete(tlTaskLabel).where(and(inArray(tlTaskLabel.taskId, [...taskIds]), eq(tlTaskLabel.labelId, labelId)));
+}
+
+/** What the list view filters by (search.ts's taskFilterParams, resolved: `me` is a member id or nothing). */
+export type TaskListFilters = {
+	q: string;
+	statusId?: string;
+	/** A member's id, `none` (unassigned), or `nobody` (`me` for a caller without a member row: matches nothing). */
+	assignee?: string;
+	labelId?: string;
+	priority?: number;
+	type?: TaskType;
+	due?: "overdue" | "week" | "none";
+	today: string;
+	weekEnd: string;
+};
+
+/** The list view's WHERE: a project's tasks outside the trash, filtered. */
+export function listWhere(projectId: string, filters: TaskListFilters): SQL | undefined {
+	const number = /^(?:[A-Z][A-Z0-9]{1,5}-)?([1-9][0-9]{0,8})$/i.exec(filters.q)?.[1];
+	return allOf(
+		eq(tlTask.projectId, projectId),
+		isNull(tlTask.deletedAt),
+		filters.q
+			? or(
+					textSearch(filters.q, [tlTask.title, tlTask.descriptionText]),
+					number ? eq(tlTask.number, Number(number)) : undefined,
+				)
+			: undefined,
+		filters.statusId ? eq(tlTask.statusId, filters.statusId) : undefined,
+		filters.assignee === "none"
+			? isNull(tlTask.assigneeId)
+			: filters.assignee === "nobody"
+				? sql`false`
+				: filters.assignee
+					? eq(tlTask.assigneeId, filters.assignee)
+					: undefined,
+		filters.labelId
+			? sql`exists (select 1 from ${tlTaskLabel} where ${tlTaskLabel.taskId} = ${tlTask.id} and ${tlTaskLabel.labelId} = ${filters.labelId})`
+			: undefined,
+		filters.priority === undefined ? undefined : eq(tlTask.priority, filters.priority),
+		filters.type ? eq(tlTask.type, filters.type) : undefined,
+		filters.due === "none"
+			? isNull(tlTask.dueOn)
+			: filters.due === "overdue"
+				? and(lt(tlTask.dueOn, filters.today), isNull(tlTask.completedAt))
+				: filters.due === "week"
+					? and(gte(tlTask.dueOn, filters.today), lte(tlTask.dueOn, filters.weekEnd))
+					: undefined,
+	);
+}
+
+/** The status's place on the board, as a sortable expression (statuses order by key). */
+const statusOrder = sql`(select ${tlStatus.position} from ${tlStatus} where ${tlStatus.id} = ${tlTask.statusId}) collate "C"`;
+/** The assignee's name; unassigned tasks last. */
+const assigneeOrder = sql`(select lower(${tlMember.displayName}) from ${tlMember} where ${tlMember.id} = ${tlTask.assigneeId})`;
+
+/**
+ * A page of the list view: the sort (board order by default) after the grouping, so
+ * a group's rows are together on a page.
+ */
+export async function listPage(
+	db: Db,
+	projectId: string,
+	key: string,
+	{
+		filters,
+		sort,
+		group,
+		page,
+		pageSize,
+	}: {
+		filters: TaskListFilters;
+		sort: string;
+		group: "none" | "status" | "assignee";
+		page: number;
+		pageSize: number;
+	},
+): Promise<Paged<TaskSummary>> {
+	const where = listWhere(projectId, filters);
+	const { field, direction } = parseSort(sort);
+	const dir = (column: SQL | AnyColumn) => (direction === "desc" ? desc(column) : asc(column));
+	const groupBy =
+		group === "status" ? [asc(statusOrder)] : group === "assignee" ? [sql`${assigneeOrder} asc nulls last`] : [];
+	const sortBy =
+		field === "status"
+			? [dir(statusOrder), dir(byPosition(tlTask.position))]
+			: field === "due"
+				? [sql`${tlTask.dueOn} ${sql.raw(direction)} nulls last`]
+				: [
+						dir(
+							{
+								updated: tlTask.updatedAt,
+								number: tlTask.number,
+								title: sql`lower(${tlTask.title})`,
+								priority: tlTask.priority,
+							}[field] ?? tlTask.number,
+						),
+					];
+	const result = await paginate(
+		{ page, pageSize },
+		{
+			count: () => countRows(db, tlTask, where),
+			rows: ({ limit, offset }) =>
+				db
+					.select()
+					.from(tlTask)
+					.where(where)
+					.orderBy(...groupBy, ...sortBy, asc(tlTask.number))
+					.limit(limit)
+					.offset(offset),
+		},
+		(row) => row,
+	);
+	return { ...result, items: await summaries(db, result.items, key) };
+}
+
+/** A project's latest history, newest first, with the task each entry is about (the overview's feed). */
+export async function projectActivity(
+	db: Db,
+	projectId: string,
+	key: string,
+	limit: number,
+): Promise<ProjectActivity[]> {
+	const rows = await db
+		.select({ activity: tlActivity, number: tlTask.number, title: tlTask.title })
+		.from(tlActivity)
+		.leftJoin(tlTask, eq(tlTask.id, tlActivity.taskId))
+		.where(eq(tlActivity.projectId, projectId))
+		.orderBy(desc(tlActivity.at), desc(tlActivity.id))
+		.limit(limit);
+	return rows.map(({ activity, number, title }) => ({
+		id: activity.id,
+		kind: activity.kind,
+		actorId: activity.actorId,
+		data: activity.data,
+		at: activity.at.toISOString(),
+		task: number !== null && title !== null ? { ref: taskRef(key, number), title } : null,
+	}));
 }
 
 export async function listTrash(db: Db, projectId: string, key: string): Promise<TrashedTask[]> {

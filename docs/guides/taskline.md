@@ -1,8 +1,8 @@
 # Taskline
 
-Taskline is the project management app at `/app/taskline` (Part 5 of [PLAN.md](../PLAN.md), section 11): one team that the admin runs from `/admin`, and a private sandbox per user so visitors can try it. It grows from Kanban (0188), which it replaces in Task 48.
+Taskline is the project management app at `/app/taskline` (Part 5 of [PLAN.md](../PLAN.md), section 11): one team that the admin runs from `/admin`, and a private sandbox per user so visitors can try it. It grew from Kanban (0188), which it replaced in Task 48 (0210).
 
-**Status:** Task 46 built the foundation: the tables, the access resolver, the activity log, the services and server functions for workspaces, projects, statuses, labels and tasks, the sandbox's seed and claim, and the demo team. Task 47 added the standalone shell and the first pages: the landing, sign-in and sign-up, the account page, Home, the project directory and a first project overview (0208). Task 48 adds the board, the list and the task. Each later task adds a section here.
+**Status:** Task 46 built the foundation: the tables, the access resolver, the activity log, the services and server functions for workspaces, projects, statuses, labels and tasks, the sandbox's seed and claim, and the demo team. Task 47 added the standalone shell and the first pages: the landing, sign-in and sign-up, the account page, Home, the project directory and a first project overview (0208). Task 48 added the project's views (overview, board, list), the task (a sheet over the views and a page of its own), the lead's settings and rev polling, and moved Kanban's boards in (0209–0211). Each later task adds a section here.
 
 ## Where things are
 
@@ -11,19 +11,19 @@ Taskline is its own strip-demo layer, `taskline`, independent of `apps` (`pnpm s
 | Piece | Path |
 | --- | --- |
 | Shared shapes and inputs | `src/features/taskline/`: `types.ts` (constants, DTOs; no imports, the schema reads it), `settings.ts` (`workspaceSettings`, `projectSettings`), `schema.ts` (every function's input), `search.ts` (URL contracts) |
-| Routes | `src/routes/_taskline/route.tsx` (the section: brand, title, public 404), `…/app/taskline/{index,sign-in,sign-up}.tsx` (public frame), `…/app/taskline/_shell/` (the signed-in shell: `home`, `account`, `$ws/projects`, `$ws/p/$key`) |
-| Pages and the shell | `src/features/taskline/`: `brand.ts`, `links.ts`, `colors.ts`, `queries.ts`, `shell/` (frames, sidebar, palette, shortcuts, mark), `landing/`, `auth/`, `home/`, `projects/` |
+| Routes | `src/routes/_taskline/route.tsx` (the section: brand, title, public 404), `…/app/taskline/{index,sign-in,sign-up}.tsx` (public frame), `…/app/taskline/_shell/` (the signed-in shell: `home`, `account`, `$ws/projects`, `$ws/p/$key/{index,board,list,settings/*}`, `$ws/t/$ref`), `src/routes/_taskline/apps/kanban/` (Kanban's old addresses: redirects) |
+| Pages and the shell | `src/features/taskline/`: `brand.ts`, `links.ts`, `colors.ts`, `labels.ts`, `queries.ts`, `filters.ts`, `freshness.ts`, `shell/` (frames, sidebar, palette, shortcuts, mark, "New task"), `landing/`, `auth/`, `home/`, `projects/` (directory, project layout, overview, filter bar), `board/` (moves, collection, board), `list/`, `task/` (panel, sheet, page, masked link, activity sentences), `settings/` (the lead's) |
 | Manifest and icons | `src/server/taskline/manifest.ts`, the Nitro route `src/server/routes/taskline-manifest.ts` (`vite.config.ts`), `public/taskline/` |
-| Tables | `src/server/db/schema/taskline/{workspace,project,task}.ts`, migration `0016_taskline` (which also inserts the team workspace) |
+| Tables | `src/server/db/schema/taskline/{workspace,project,task}.ts`, migration `0016_taskline` (which also inserts the team workspace); `0017_kanban_to_taskline` (Kanban's data, 0210) and `0018_drop_kanban` |
 | Access | `src/server/taskline/access.ts`: `resolveWorkspace`, `resolveProject`, `assertCan` |
 | History and freshness | `src/server/taskline/activity.ts` (`recordActivity`), `rev.ts` (`bumpRev`, `nextTaskNumber`, `saveVersioned`), `rules.ts` (quotas, shared errors, rich text) |
 | Services | `src/server/taskline/{workspace,projects,workflow,tasks,home}/{repository,service}.ts`; `sandbox.ts` (seed, claim, the `GUEST_DATA` entry) |
 | Functions | `src/functions/taskline/{home,workspaces,projects,workflow,tasks}.ts` (app); `src/functions/taskline-admin/` (admin, from Task 49) |
 | Middleware | `src/middleware/taskline.ts`: `requireTasklineUser`, `withTasklineServices` |
 | Demo team | `scripts/lib/taskline-seed.ts`, `pnpm db:seed-taskline` |
-| Tests | `tests/server/taskline-access.test.ts` (the matrix, Home and the navigation), `taskline.test.ts` (the rules), `taskline-seed.test.ts`; `tests/components/taskline/` (the shell); `e2e/flows/taskline.spec.ts`; stories in `shell/taskline-shell.stories.tsx` (data in `.storybook/mocks/taskline.ts`) |
+| Tests | `tests/server/taskline-access.test.ts` (the matrix, Home and the navigation), `taskline.test.ts` (the rules), `taskline-views.test.ts` (list, bulk, purge, feed, rev, finding by id), `taskline-kanban-migration.test.ts`, `taskline-seed.test.ts`; `tests/unit/taskline-moves.test.ts`; `tests/components/taskline/` (the shell, the board by keyboard); `e2e/flows/taskline.spec.ts`; stories in `shell/`, `board/` and `task/` (data in `.storybook/mocks/taskline.ts`, function stand-ins in `.storybook/mocks/functions/taskline/`) |
 
-Shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`: the schema index, the permission catalog and its labels, `GUEST_DATA`, the guard test, `scripts/lib/local-db.ts`, the e2e harness's seed and page list, the route-SEO test, the sitemap, `vite.config.ts` (the manifest routes) and the `/apps` gallery's featured card. `src/lib/fractional-index.ts` belongs to both `apps` and `taskline` (strip-demo's `SHARED` list) until Kanban goes in Task 48.
+Shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`: the schema index, the permission catalog and its labels, `GUEST_DATA`, the guard test, `scripts/lib/local-db.ts`, the e2e harness's seed and page list, the route-SEO test, the sitemap, `vite.config.ts` (the manifest routes) and the `/apps` gallery's featured card. `src/lib/fractional-index.ts` is Taskline's alone since Kanban went (Task 48), so strip-demo's `SHARED` list is empty.
 
 ## The shell (0208)
 
@@ -36,6 +36,37 @@ Taskline is a product of its own inside the app: nothing of the site's, the apps
 - **404s and errors stay in the frame:** the layouts' `notFoundComponent`s render their frame (they replace the layout), and `SectionHome` makes the error and 404 pages' home link go to Taskline. An unknown or hidden workspace or project is a 404 from `loadDetailOr404`.
 - **Pages:** Home (the caller's open tasks in every workspace, soonest due first; recent projects; "Start a sandbox" for an account without one, and for an account with no workspace at all, "Ask an admin to add you"); the project directory (`?view=list`, `?archived=1`, stars, `?create=1` opens "New project" for those allowed, with a key suggested from the name); a first project overview (description, progress by status, members); the account page's sections.
 - **Data:** the shell's `getTasklineNav` (the workspaces with `canCreateProject`, every visible active project, the starred ones, the recent ones) and Home's `listMyTasklineTasks` resolve each of the caller's workspaces and keep what they may see. "Recent" is where the caller last recorded activity, topped up with recently changed projects. Query keys carry the user's id (`tasklineKeys`), and every write refreshes everything under it.
+
+## The project's views (0211)
+
+A project page is a layout (`$ws/p/$key/route.tsx`): the header (name, key, visibility, archived or read-only, the people, "Join" for a team member who may join) and the view tabs (Overview, Board, List, and Settings for those who may run it) around the view. It owns the page's `<main>`, loads the project's tasks, statuses, labels and members once (`listTasklineTasks`) for every view, and its breadcrumb is the key from the URL, which the overview renames to the project's name.
+
+- **Overview:** the description, progress by status category and per status, the people, and the project's feed (`listTasklineProjectActivity`: the latest 30 entries with the task each is about, as sentences from `task/activity.tsx`).
+- **The filters** (`projects/task-filters.tsx`; the URL params `taskFilterParams` in `search.ts`): text or reference, status, assignee (`me`, `none` or a member), label, priority, type, due (overdue, this week, none). One `<FilterBar>`, so they work without JavaScript, with a chip per filter. The board applies them to the tasks it has (`filters.ts`); the list sends them to the server, whose SQL (`listWhere`) means the same.
+- **Board** (Kanban's, 0188): a column per status over a TanStack DB collection of the layout's query (`board/collections.ts`); moves and quick adds show at once and are put back if the save fails. A column over its WIP limit says so (shown, not enforced). Closed tasks leave after the done-column window (the project's `doneColumnDays`, else the workspace's 14), with a count of those hidden. `?swimlanes=assignee|priority` adds a row per assignee (unassigned last) or priority (urgent first); a task moves within its lane, and one added in a lane gets the lane's assignee or priority. A card shows the ref, type, priority, assignee, labels, the due date (overdue in the danger colour, and said), and subtask and checklist progress. Readers get no handles.
+- **List:** a `DataTable` on the list contract (`taskList` in `search.ts`: sort, page and page size in the URL; `listTasklineTaskPage` pages it), board order by default. `?group=status|assignee` makes the server sort by the group first, and `DataTable`'s `groupOf` draws a heading row per group (each its own `<tbody>`). Editors get inline status, assignee and priority and bulk changes (`bulkUpdateTasklineTasks`: one change to up to 100 tasks, an entry each, one rev); everyone gets CSV export and saved views.
+- **The task** (`task/task-panel.tsx`): the fields (status, assignee, priority, type, labels, dates: each change saves at once, last write wins), the title and description (TipTap, loaded lazily, saved against the version they started from: a stale save offers "Reload"), subtasks (quick add, progress), the checklist and the history. From the board and the list it opens as a sheet (`?task=WEB-12`, a masked route): the address bar, a reload, a new tab and no JavaScript give its page, `/$ws/t/WEB-12`.
+- **"New task"** in the sidebar: a title in one of the caller's projects (the current one first), then the task's page.
+
+## The lead's settings
+
+`$ws/p/$key/settings/{general,members,workflow,labels,trash}`, for whoever may run the project (its lead, `taskline:manage`, a sandbox's owner); anyone else who can see it gets the FORBIDDEN page.
+
+- **General:** the project form (versioned) with the done-column days, its state and health, and archiving.
+- **Members:** the workspace's active members, added with a role; roles changed; members removed (their history stays).
+- **Workflow:** statuses renamed, recoloured, given a category and a WIP limit, reordered with up and down, deleted once their tasks move to another.
+- **Labels:** the project's; the workspace's are listed (the admin's, Task 49).
+- **Trash:** restore a task with its subtasks, or delete it for good (`purgeTasklineTask`: its subtasks, labels, watchers and history go, a `task.deleted` entry names it, and its number isn't handed out again).
+
+## Freshness (0209)
+
+No websockets: an open project page polls `getTasklineProjectRev` every 10 s while the tab is visible, and on focus (`useProjectFreshness`, `freshness.ts`). When the rev is past the one the page read, everything of the project is read again (the board's collection follows its query). The caller's own writes refresh everything under their key at once.
+
+## Kanban, moved in (0210)
+
+Migration `0017_kanban_to_taskline` gave each Kanban owner (guests too) a sandbox (or used the one they had) with their member row; made each board a project with the same id (keys `KB1`, `KB2`… in creation order, skipping keys taken); each column a status with the same id and order (the first "not started", the last "completed", the rest "started"; a board without columns got "To do"); and each card a task with the same id (numbered by creation, its plain description as escaped HTML, colour labels as project labels named after the colour, checklist and due date kept, closed when in the completed status). The owner leads and watches them. Portfolio projects whose `app_slug` was `kanban` now say `taskline`, and a case study whose "App" field says `taskline` links to Taskline's landing (`case-study/taskline-link.tsx`, in the taskline layer: Taskline isn't an `/apps` app). `0018_drop_kanban` dropped Kanban's tables.
+
+`/apps/kanban` redirects to the landing (301). `/apps/kanban/<id>` asks `locateTasklineProject` and sends whoever may see that project to its board (301), and anyone else to Taskline (a temporary redirect: signing in may change the answer).
 
 ## Workspaces and members (0203, 0207)
 
@@ -126,7 +157,11 @@ Counted under `lockQuota(tx, scope)` (`src/server/db/quota.ts`, 0206), inside th
 - **Versions aren't `updated_at`:** Taskline's forms compare the integer `version`, not `updated_at` (0122 elsewhere), because last-write-wins patches change `updated_at` constantly.
 - **A team reset in tests:** `env.reset()` truncates every table, the migration's team row included. Tests call `ensureTeamWorkspace(db)` in their seed.
 - **Activity order within a change:** entries of one transaction share `now()`; order them by kind, not by time, when it matters.
-- **Unused functions before the pages:** knip lists `src/functions/taskline/*.ts` as entries while some functions have no page yet (the board, list and lead settings of Task 48). Remove the entry, in `knip.json` and strip-demo's `knipEntries`, once every function is called.
+- **Unused functions before the pages:** while a module's functions have no page yet, knip can take its file as an entry (`knip.json` and strip-demo's `knipEntries`). Remove the entry once every function is called (Task 48 removed Task 46's).
+- **`exists()` around raw SQL:** Drizzle's `exists(sql\`select …\`)` doesn't add the parentheses Postgres needs. Write `sql\`exists (select …)\``.
+- **Lanes repeat the statuses:** with swimlanes every lane has a "To do" column, so a column's region is named after its lane too (axe's landmark-unique).
+- **A reader's card isn't a sortable:** without a handle, dnd-kit makes the whole card a `role="button"` with links inside (axe's aria-allowed-role); the board attaches the sortable's ref for editors only.
+- **Columns are droppables, not sortables:** dnd-kit's optimistic sorting moves an item only over another sortable, so a drop on an empty column arrives as its `target`; `onDragEnd` puts the task at that column's end.
 - **A layout's crumb from its loader, under a child that 404s:** the browser hydrates the layout's match without its loader data, so a crumb the server rendered is missing in the browser (React #418). Take such a label from `params` (the `$ws` crumb), as `src/lib/breadcrumbs.ts` explains.
 - **A section's accent belongs on `<html>`:** a `data-accent` on the shell's root misses portalled menus and dialogs and the tokens `:root` derives from `--primary`. Use `staticData.brand`.
-- **Route definitions are in every page's JavaScript** (0151): Taskline's eleven routes cost 3.2 kB gzip of entry. Keep heads, guards and loaders small; components, queries and DB are split out.
+- **Route definitions are in every page's JavaScript** (0151): Taskline's eleven routes of Task 47 cost 3.2 kB gzip of entry, the thirteen of Task 48 2.7 kB. Keep heads, guards and loaders small; components, queries and DB are split out. A shift in Rolldown's chunks can also move the count (0211: clsx has a code-splitting group of its own).

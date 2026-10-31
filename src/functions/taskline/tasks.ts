@@ -1,15 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+	bulkTasksInput,
 	createTaskInput,
 	moveTaskInput,
 	patchTaskInput,
 	projectInput,
 	setChecklistInput,
 	taskInput,
+	taskListInput,
 	updateTaskInput,
 } from "@/features/taskline/schema";
-import type { ProjectTasks, TaskDetail, TaskSummary, TrashedTask } from "@/features/taskline/types";
+import type {
+	BulkResult,
+	ProjectActivity,
+	ProjectRev,
+	ProjectTasks,
+	TaskDetail,
+	TaskSummary,
+	TrashedTask,
+} from "@/features/taskline/types";
 import { zodInput } from "@/functions/_lib/validator";
+import type { Paged } from "@/lib/list/paging";
 import { requireTasklineUser, withTasklineServices } from "@/middleware/taskline";
 import * as tasks from "@/server/taskline/tasks/service";
 
@@ -64,3 +75,29 @@ export const listTasklineTrash = createServerFn({ method: "GET" })
 	.middleware([requireTasklineUser, withTasklineServices])
 	.validator(zodInput(projectInput))
 	.handler(({ data, context }): Promise<TrashedTask[]> => tasks.listTrash(context, data.ws, data.key));
+
+export const listTasklineTaskPage = createServerFn({ method: "GET" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(taskListInput))
+	.handler(({ data, context }): Promise<Paged<TaskSummary>> => tasks.listTaskPage(context, data));
+
+export const bulkUpdateTasklineTasks = createServerFn({ method: "POST" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(bulkTasksInput))
+	.handler(({ data, context }): Promise<BulkResult> => tasks.bulkUpdate(context, data));
+
+export const purgeTasklineTask = createServerFn({ method: "POST" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(taskInput))
+	.handler(({ data, context }): Promise<void> => tasks.purgeTask(context, data.ws, data.ref));
+
+export const listTasklineProjectActivity = createServerFn({ method: "GET" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(projectInput))
+	.handler(({ data, context }): Promise<ProjectActivity[]> => tasks.listProjectActivity(context, data.ws, data.key));
+
+/** Polled by open pages every 10 s (decision 0209): a changed rev refetches the page's data. */
+export const getTasklineProjectRev = createServerFn({ method: "GET" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(projectInput))
+	.handler(({ data, context }): Promise<ProjectRev> => tasks.getProjectRev(context, data.ws, data.key));

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isOrderKey } from "@/lib/fractional-index";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
 	PROJECT_HEALTHS,
@@ -203,6 +204,40 @@ export const setChecklistInput = z.strictObject({
 	ref: taskRef(),
 	checklist: z.array(checklistItem).max(CHECKLIST_MAX),
 });
+
+/** The list view's page: the list contract (taskList, search.ts) in a project. */
+export const taskListInput = taskList.input.extend({ ws: ws(), key: projectKey() });
+export type TaskListInput = z.infer<typeof taskListInput>;
+
+export const BULK_MAX = 100;
+
+/**
+ * The list's bulk actions on selected tasks of one project: one change at a time
+ * (a status, an assignee, a priority, a label added or removed, or the trash).
+ */
+export const bulkTasksInput = z
+	.strictObject({
+		ws: ws(),
+		key: projectKey(),
+		ids: z.array(id).min(1).max(BULK_MAX),
+		statusId: id.optional(),
+		assigneeId: id.nullable().optional(),
+		priority: z.number().int().min(0).max(4).optional(),
+		addLabelId: id.optional(),
+		removeLabelId: id.optional(),
+		trash: z.literal(true).optional(),
+	})
+	.refine(
+		(input) =>
+			[input.statusId, input.assigneeId, input.priority, input.addLabelId, input.removeLabelId, input.trash].filter(
+				(value) => value !== undefined,
+			).length === 1,
+		{ error: "One change at a time" },
+	);
+export type BulkTasksInput = z.infer<typeof bulkTasksInput>;
+
+/** A project by id: where an old Kanban board's link goes (0210). */
+export const projectByIdInput = z.strictObject({ id });
 
 export type CreateProjectInput = z.infer<typeof createProjectInput>;
 export type UpdateProjectInput = z.infer<typeof updateProjectInput>;

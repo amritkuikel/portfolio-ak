@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
 	createProjectInput,
 	listProjectsInput,
+	projectByIdInput,
 	projectInput,
 	removeProjectMemberInput,
 	setProjectArchivedInput,
@@ -10,7 +11,7 @@ import {
 	setProjectStateInput,
 	updateProjectInput,
 } from "@/features/taskline/schema";
-import type { ProjectDetail, ProjectMemberView, ProjectSummary } from "@/features/taskline/types";
+import type { ProjectDetail, ProjectLocation, ProjectMemberView, ProjectSummary } from "@/features/taskline/types";
 import { zodInput } from "@/functions/_lib/validator";
 import { requireTasklineUser, withTasklineServices } from "@/middleware/taskline";
 import * as projects from "@/server/taskline/projects/service";
@@ -21,11 +22,6 @@ export const listTasklineProjects = createServerFn({ method: "GET" })
 	.middleware([requireTasklineUser, withTasklineServices])
 	.validator(zodInput(listProjectsInput))
 	.handler(({ data, context }): Promise<ProjectSummary[]> => projects.listProjects(context, data));
-
-export const getTasklineProject = createServerFn({ method: "GET" })
-	.middleware([requireTasklineUser, withTasklineServices])
-	.validator(zodInput(projectInput))
-	.handler(({ data, context }): Promise<ProjectDetail> => projects.getProject(context, data.ws, data.key));
 
 export const createTasklineProject = createServerFn({ method: "POST" })
 	.middleware([requireTasklineUser, withTasklineServices])
@@ -73,3 +69,9 @@ export const removeTasklineProjectMember = createServerFn({ method: "POST" })
 	.middleware([requireTasklineUser, withTasklineServices])
 	.validator(zodInput(removeProjectMemberInput))
 	.handler(({ data, context }): Promise<ProjectMemberView[]> => projects.removeProjectMember(context, data));
+
+/** Where a project is, by id: the redirect of an old Kanban board's URL (decision 0210). */
+export const locateTasklineProject = createServerFn({ method: "GET" })
+	.middleware([requireTasklineUser, withTasklineServices])
+	.validator(zodInput(projectByIdInput))
+	.handler(({ data, context }): Promise<ProjectLocation> => projects.locateProject(context, data.id));

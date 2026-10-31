@@ -87,7 +87,6 @@ const INDEXABLE: ReadonlyArray<{
 	// portfolio:end
 	// apps:start
 	{ to: "/apps", label: "apps", context: {}, path: "/apps" },
-	{ to: "/apps/kanban", label: "kanban", context: {}, path: "/apps/kanban" },
 	{ to: "/apps/notes", label: "notes", context: { match: { search: {} } }, path: "/apps/notes" },
 	{ to: "/apps/links", label: "links", context: {}, path: "/apps/links" },
 	{ to: "/apps/expenses", label: "expenses", context: { match: { search: {} } }, path: "/apps/expenses" },

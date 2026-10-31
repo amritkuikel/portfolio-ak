@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import {
 	CheckIcon,
@@ -5,10 +6,11 @@ import {
 	FlaskConicalIcon,
 	FolderKanbanIcon,
 	HouseIcon,
+	PlusIcon,
 	SearchIcon,
 	UsersIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { lazy, type ReactNode, Suspense, useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -31,6 +33,7 @@ import {
 	SidebarRail,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { sessionQueryOptions } from "@/features/auth/queries";
 import { useHotkeyLabel } from "@/hooks/use-hotkeys";
 import { m } from "@/paraglide/messages";
 import { TASKLINE_NAME } from "../brand";
@@ -39,6 +42,9 @@ import { tasklineLinks } from "../links";
 import type { NavProject, NavWorkspace, TasklineNav } from "../types";
 import { TasklineMark } from "./taskline-mark";
 import { TasklineUserMenu } from "./taskline-user-menu";
+
+// Loaded when opened: its form isn't on every page.
+const NewTaskDialog = lazy(() => import("./new-task-dialog"));
 
 /** The workspace the page is in (its `$ws`), else the first one the caller has. */
 export function useCurrentWorkspace(workspaces: ReadonlyArray<NavWorkspace>): NavWorkspace | undefined {
@@ -57,6 +63,9 @@ export const WORKSPACE_ICONS = { team: UsersIcon, sandbox: FlaskConicalIcon } as
 export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOpenPalette: () => void }) {
 	const current = useCurrentWorkspace(nav.workspaces);
 	const shortcut = useHotkeyLabel("mod+k");
+	const params = useParams({ strict: false });
+	const { data: session } = useQuery(sessionQueryOptions());
+	const [creating, setCreating] = useState(false);
 	return (
 		<Sidebar collapsible="icon" data-testid="taskline-sidebar">
 			<nav aria-label={m.taskline_sidebar_label()} className="flex min-h-0 flex-1 flex-col">
@@ -97,6 +106,18 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 										)}
 									</NavItem>
 								) : null}
+								{nav.projects.length > 0 ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											tooltip={m.taskline_new_task()}
+											onClick={() => setCreating(true)}
+											data-testid="taskline-new-task"
+										>
+											<PlusIcon aria-hidden />
+											<span>{m.taskline_new_task()}</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								) : null}
 								<SidebarMenuItem>
 									<SidebarMenuButton
 										tooltip={m.taskline_nav_search()}
@@ -133,6 +154,16 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 				</SidebarFooter>
 				<SidebarRail />
 			</nav>
+			<Suspense fallback={null}>
+				{creating && session ? (
+					<NewTaskDialog
+						userId={session.user.id}
+						projects={nav.projects}
+						current={params.ws && params.key ? { ws: params.ws, key: params.key } : null}
+						onClose={() => setCreating(false)}
+					/>
+				) : null}
+			</Suspense>
 		</Sidebar>
 	);
 }

@@ -25,43 +25,6 @@ const send = (response: ServerResponse, status: number, body: unknown) => {
 };
 
 // apps:start
-/**
- * A user's first Kanban board, made on first ask (columns, and a card with a label, a
- * past due date and a checklist), for the review of the board page.
- */
-async function kanbanBoard(query: DemoQuery, email: string | null) {
-	const { rows: users } = await query(`select "id" from "user" where "email" = $1`, [email]);
-	const owner = users[0]?.id;
-	if (!owner) throw new Error(`no user ${email}`);
-	const { rows: boards } = await query(
-		`select "id" from "kanban_board" where "owner_id" = $1 order by "created_at" limit 1`,
-		[owner],
-	);
-	if (boards[0]) return boards[0];
-	const { rows: created } = await query(
-		`insert into "kanban_board" ("owner_id", "name") values ($1, 'Review board') returning "id"`,
-		[owner],
-	);
-	const board = created[0]?.id;
-	const { rows: columns } = await query(
-		`insert into "kanban_column" ("owner_id", "board_id", "name", "position")
-		values ($1, $2, 'To do', 'a0'), ($1, $2, 'Doing', 'a1'), ($1, $2, 'Done', 'a2') returning "id", "position"`,
-		[owner, board],
-	);
-	const todo = columns.find((column) => column.position === "a0")?.id;
-	const checklist = JSON.stringify([
-		{ id: randomUUID(), text: "Read the page", done: true },
-		{ id: randomUUID(), text: "Check both themes", done: false },
-	]);
-	await query(
-		`insert into "kanban_card" ("owner_id", "board_id", "column_id", "title", "labels", "due_on", "checklist", "position")
-		values ($1, $2, $3, 'Review the board', '{blue,red}', '2026-01-01', $4::jsonb, 'a0'),
-		($1, $2, $3, 'A card with a long title that has to wrap inside its column without pushing the page sideways', '{}', null, '[]'::jsonb, 'a1')`,
-		[owner, board, todo, checklist],
-	);
-	return { id: board };
-}
-
 const ownerOf = async (query: DemoQuery, email: string | null) => {
 	const { rows } = await query(`select "id" from "user" where "email" = $1`, [email]);
 	const owner = rows[0]?.id;
@@ -345,9 +308,17 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
 			// portfolio:end
+			// taskline:start
+			if (route === "GET /e2e/taskline-project") {
+				// A team project's id (the old Kanban URLs redirect by id, decision 0210).
+				const { rows } = await query(
+					`select p."id" from "tl_project" p join "tl_workspace" w on w."id" = p."workspace_id" where w."kind" = 'team' and p."key" = $1`,
+					[url.searchParams.get("key")],
+				);
+				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
+			}
+			// taskline:end
 			// apps:start
-			if (route === "GET /e2e/kanban-board")
-				return send(response, 200, await kanbanBoard(query, url.searchParams.get("email")));
 			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));
 			if (route === "GET /e2e/link") return send(response, 200, await reviewLink(query, url.searchParams.get("email")));
 			if (route === "GET /e2e/expenses")

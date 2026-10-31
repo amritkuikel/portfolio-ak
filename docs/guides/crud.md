@@ -124,7 +124,7 @@ const remove = useCrudMutation(projectMutations.delete(), {
 ```
 
 - **`mutationOptions` live in `queries.ts`** (a key and the server function). `useCrudMutation` adds the rest: with `optimistic`, it cancels the lists' reads, patches **every cached page** (`patchRow`, `withoutRows`, `onRows`) and restores the snapshot on failure; afterwards it invalidates `invalidate`; a failure is the shared "nothing was changed" toast, a stale CONFLICT offers a reload.
-- **Query mutations for admin CRUD; TanStack DB for client-first apps** (Kanban, Habits, Notes), where live queries and optimistic transactions pay off (decision 0174).
+- **Query mutations for admin CRUD; TanStack DB for client-first apps** (Taskline's board, Habits, Notes), where live queries and optimistic transactions pay off (decision 0174).
 
 ## Forms
 

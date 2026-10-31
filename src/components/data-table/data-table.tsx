@@ -85,6 +85,11 @@ export type DataTableProps<Row> = {
 	 * question, plain text cells). Long tables get this anyway.
 	 */
 	scrollRegion?: boolean;
+	/**
+	 * Groups consecutive rows under a heading row (each group its own <tbody>): the
+	 * server sorts by the group first, so a page's rows of one group are together.
+	 */
+	groupOf?: (row: Row) => { id: string; label: ReactNode };
 	"data-testid"?: string;
 };
 
@@ -126,6 +131,7 @@ export function DataTable<Row extends RowData>({
 	empty,
 	busy = false,
 	scrollRegion = false,
+	groupOf,
 	"data-testid": testId,
 }: DataTableProps<Row>) {
 	const preferences = useTablePreferences(tableId);
@@ -324,69 +330,98 @@ export function DataTable<Row extends RowData>({
 									</TableRow>
 								))}
 							</TableHeader>
-							<TableBody>
-								{table.getRowModel().rows.map((row) => {
-									const label = getRowLabel(row.original);
-									const actions = actionsById.get(row.id) ?? [];
-									const cells = row.getVisibleCells().map((cell) => {
-										const { id } = cell.column;
-										const pinned = cell.column.getIsPinned() === "start";
-										const pinClass = pinned ? pinnedClass(id === SELECT, Boolean(bulkActions)) : undefined;
-										if (id === SELECT) {
-											return (
-												<TableCell key={cell.id} className={pinClass}>
-													<Checkbox
-														aria-label={m.table_select_row({ label })}
-														checked={row.getIsSelected()}
-														onCheckedChange={(checked) => row.toggleSelected(checked === true)}
-													/>
-												</TableCell>
-											);
-										}
-										if (id === ACTIONS) {
-											return (
-												<TableCell key={cell.id}>
-													{actions.length > 0 ? <RowActionsMenu actions={actions} label={label} /> : null}
-												</TableCell>
-											);
-										}
-										const column = byId.get(id);
-										return (
-											<TableCell key={cell.id} className={cn(column?.cellClassName, pinClass)}>
-												{column?.cell(row.original)}
-											</TableCell>
-										);
-									});
-									const tableRow = (
-										<TableRow
-											key={row.id}
-											data-state={row.getIsSelected() ? "selected" : undefined}
-											data-row-id={row.id}
-											className="group/row"
-										>
-											{cells}
+							{groupRows(table.getRowModel().rows, groupOf).map((group) => (
+								<TableBody key={group.id} data-testid={group.label === null ? undefined : "table-group"}>
+									{group.label === null ? null : (
+										<TableRow className="bg-surface-1 hover:bg-surface-1">
+											<th
+												scope="rowgroup"
+												colSpan={table.getVisibleLeafColumns().length}
+												className="px-3 py-2 text-start font-medium text-body"
+											>
+												{group.label}
+											</th>
 										</TableRow>
-									);
-									return actions.length > 0 ? (
-										// Right-click a row for the same actions as its "…" menu (the menu is the keyboard way in).
-										// Non-modal like the "…" menu: it shouldn't aria-hide the page.
-										<ContextMenu key={row.id} modal={false}>
-											<ContextMenuTrigger asChild>{tableRow}</ContextMenuTrigger>
-											<ContextMenuContent>
-												<RowActionItems actions={actions} kind="context" />
-											</ContextMenuContent>
-										</ContextMenu>
-									) : (
-										tableRow
-									);
-								})}
-							</TableBody>
+									)}
+									{group.rows.map((row) => {
+										const label = getRowLabel(row.original);
+										const actions = actionsById.get(row.id) ?? [];
+										const cells = row.getVisibleCells().map((cell) => {
+											const { id } = cell.column;
+											const pinned = cell.column.getIsPinned() === "start";
+											const pinClass = pinned ? pinnedClass(id === SELECT, Boolean(bulkActions)) : undefined;
+											if (id === SELECT) {
+												return (
+													<TableCell key={cell.id} className={pinClass}>
+														<Checkbox
+															aria-label={m.table_select_row({ label })}
+															checked={row.getIsSelected()}
+															onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+														/>
+													</TableCell>
+												);
+											}
+											if (id === ACTIONS) {
+												return (
+													<TableCell key={cell.id}>
+														{actions.length > 0 ? <RowActionsMenu actions={actions} label={label} /> : null}
+													</TableCell>
+												);
+											}
+											const column = byId.get(id);
+											return (
+												<TableCell key={cell.id} className={cn(column?.cellClassName, pinClass)}>
+													{column?.cell(row.original)}
+												</TableCell>
+											);
+										});
+										const tableRow = (
+											<TableRow
+												key={row.id}
+												data-state={row.getIsSelected() ? "selected" : undefined}
+												data-row-id={row.id}
+												className="group/row"
+											>
+												{cells}
+											</TableRow>
+										);
+										return actions.length > 0 ? (
+											// Right-click a row for the same actions as its "…" menu (the menu is the keyboard way in).
+											// Non-modal like the "…" menu: it shouldn't aria-hide the page.
+											<ContextMenu key={row.id} modal={false}>
+												<ContextMenuTrigger asChild>{tableRow}</ContextMenuTrigger>
+												<ContextMenuContent>
+													<RowActionItems actions={actions} kind="context" />
+												</ContextMenuContent>
+											</ContextMenu>
+										) : (
+											tableRow
+										);
+									})}
+								</TableBody>
+							))}
 						</table>
 					</div>
 				</div>
 			)}
 		</div>
 	);
+}
+
+/** Consecutive rows of one group together; one unnamed group without `groupOf`. */
+function groupRows<T extends { original: unknown }>(
+	rows: ReadonlyArray<T>,
+	groupOf: ((row: never) => { id: string; label: ReactNode }) | undefined,
+): Array<{ id: string; label: ReactNode | null; rows: T[] }> {
+	if (!groupOf) return [{ id: "rows", label: null, rows: [...rows] }];
+	const groups: Array<{ id: string; label: ReactNode | null; rows: T[] }> = [];
+	for (const row of rows) {
+		const group = (groupOf as (row: unknown) => { id: string; label: ReactNode })(row.original);
+		const last = groups.at(-1);
+		if (last && last.id === group.id) last.rows.push(row);
+		else groups.push({ id: `${group.id}:${groups.length}`, label: group.label, rows: [row] });
+	}
+	return groups;
 }
 
 /**

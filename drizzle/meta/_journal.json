@@ -120,6 +120,20 @@
 			"when": 1793398178468,
 			"tag": "0016_taskline",
 			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "7",
+			"when": 1793432946373,
+			"tag": "0017_kanban_to_taskline",
+			"breakpoints": true
+		},
+		{
+			"idx": 18,
+			"version": "7",
+			"when": 1793433082080,
+			"tag": "0018_drop_kanban",
+			"breakpoints": true
 		}
 	]
 }

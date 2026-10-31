@@ -6,7 +6,7 @@ Pick the tool by what the state is (decision 0064). Examples: `/dev/examples/loa
 | --- | --- | --- |
 | Server data you read | **TanStack Query**: `queryOptions` in `features/<name>/queries.ts`, `ensureQuery` in loaders, `useSuspenseQuery` in components | `/dev/stack`, the session (`sessionQueryOptions`) |
 | Server data you edit in the admin | **Query mutations** through `useCrudMutation` (crud.md): optimistic on every cached page, rolled back on refusal | Test CRUD's publish and delete, the permission matrix |
-| Client-first app state with live queries | **TanStack DB** collections (decision 0174) | `/dev/examples/optimistic`; the apps (Kanban, Habits, Notes) |
+| Client-first app state with live queries | **TanStack DB** collections (decision 0174) | `/dev/examples/optimistic`; the apps (Habits, Notes) and Taskline's board |
 | UI preferences that persist | **TanStack Store** (`src/lib/stores`), saved in cookies | Theme, admin sidebar, table page size and hidden columns, analytics consent |
 | Values being typed | **TanStack Form** ([forms.md](forms.md)) | Every form |
 | Shareable view state | **URL search params** ([search-filters-masking.md](search-filters-masking.md)) | Filters, sort, page, an open dialog (`?edit=…`) |
@@ -43,7 +43,7 @@ export const thingsCollection = (input) => collectionOptions(id, (client) =>
 - **Where it's available (0189):** only below `<DbScope>` (`src/components/layout/db-scope.tsx`): the `_apps` layout and `/dev/examples/optimistic` mount it. The router doesn't, so DB's runtime isn't in other pages' JavaScript; `scripts/check-bundle.ts` fails if it ever is. A route file must not import a collection module (route options are in every page, 0151): keep what a loader needs in `queries.ts`.
 - **In the component:**
   - `const collection = useDbClient().collection(thingsCollection(input))`;
-  - `useLiveSuspenseQuery((q) => q.from({ row: collection }))`: it renders on the server from the Query cache the loader filled, and the browser builds the same rows from the dehydrated cache (Kanban: `src/features/apps/kanban/components/board-page.tsx`). The older pattern, `useLiveQuery` with the Query rows until the collection is ready, is in `src/routes/dev/examples/optimistic.tsx`;
+  - `useLiveSuspenseQuery((q) => q.from({ row: collection }))`: it renders on the server from the Query cache the loader filled, and the browser builds the same rows from the dehydrated cache (Taskline's board: `src/features/taskline/board/board-page.tsx`). The older pattern, `useLiveQuery` with the Query rows until the collection is ready, is in `src/routes/dev/examples/optimistic.tsx`;
   - `collection.update(id, (draft) => { draft.status = … })`;
   - `tx.when("settled")` resolves or rejects (`isPersisted` is deprecated), so show a toast either way.
 - **After a save:** call `await collection.utils.refetch()` and return `{ refetch: false }` from the handler. Query collections' automatic refetch is deprecated and logs a warning (which fails the browser review).

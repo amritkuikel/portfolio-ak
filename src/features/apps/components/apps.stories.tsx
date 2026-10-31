@@ -14,9 +14,9 @@ type Story = StoryObj<typeof meta>;
 /** /apps: every showcase app, with the guest-session note. */
 export const Gallery: Story = {
 	play: async ({ canvas }) => {
-		await expect(canvas.getByRole("link", { name: new RegExp(m.kanban_name()) })).toHaveAttribute(
+		await expect(canvas.getByRole("link", { name: new RegExp(m.notes_name()) })).toHaveAttribute(
 			"href",
-			expect.stringContaining("/apps/kanban"),
+			expect.stringContaining("/apps/notes"),
 		);
 	},
 };

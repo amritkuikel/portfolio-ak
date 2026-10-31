@@ -7,6 +7,7 @@ import { CaseStudyBody } from "../case-study/case-study-body";
 import { CaseStudyHero } from "../case-study/case-study-hero";
 import { FactSheet } from "../case-study/fact-sheet";
 import { NextProject } from "../case-study/next-project";
+import { TasklineLink } from "../case-study/taskline-link"; // @taskline
 import { DraftNotice } from "../chrome/draft-notice";
 import { FigureLines } from "../primitives/figure-lines";
 import { ButtonLink } from "../primitives/links"; // @apps
@@ -37,6 +38,9 @@ export function CaseStudyPage() {
 						</ButtonLink>
 					) : null}
 					{/* apps:end */}
+					{/* taskline:start */}
+					{project.appSlug === "taskline" ? <TasklineLink /> : null}
+					{/* taskline:end */}
 				</div>
 				<div className="col-span-4 flex flex-col gap-[clamp(3.5rem,7vw,6rem)] md:col-span-8 lg:col-span-7 lg:col-start-6">
 					{project.metrics.length > 0 ? (
