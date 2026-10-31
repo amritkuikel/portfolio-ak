@@ -226,3 +226,42 @@ export type ProjectTasks = {
 };
 
 export type TrashedTask = { id: string; ref: string; title: string; deletedAt: string };
+
+/** A project in the shell's sidebar and the palette, with the workspace it's in. */
+export type NavProject = {
+	id: string;
+	key: string;
+	name: string;
+	color: TasklineColor;
+	/** The workspace's `$ws` segment. */
+	ws: string;
+	workspaceKind: WorkspaceKind;
+};
+
+/** A workspace in the shell, with whether the caller may create projects in it. */
+export type NavWorkspace = WorkspaceSummary & { canCreateProject: boolean };
+
+/**
+ * What the shell draws on every page: the caller's workspaces, every active project
+ * they may see (the palette's), the starred ones and the ones they last worked on.
+ */
+export type TasklineNav = {
+	workspaces: NavWorkspace[];
+	projects: NavProject[];
+	starred: NavProject[];
+	recent: NavProject[];
+};
+
+/** An open task assigned to the caller, for Home (every workspace at once). */
+export type MyTask = {
+	id: string;
+	ref: string;
+	title: string;
+	type: TaskType;
+	priority: TaskPriority;
+	dueOn: string | null;
+	status: { name: string; category: StatusCategory; color: TasklineColor };
+	project: NavProject;
+};
+
+export type MyTasks = { tasks: MyTask[]; today: string };

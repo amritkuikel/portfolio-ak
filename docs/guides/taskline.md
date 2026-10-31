@@ -2,7 +2,7 @@
 
 Taskline is the project management app at `/app/taskline` (Part 5 of [PLAN.md](../PLAN.md), section 11): one team that the admin runs from `/admin`, and a private sandbox per user so visitors can try it. It grows from Kanban (0188), which it replaces in Task 48.
 
-**Status:** Task 46 built the foundation: the tables, the access resolver, the activity log, the services and server functions for workspaces, projects, statuses, labels and tasks, the sandbox's seed and claim, and the demo team. There is no UI yet (Task 47 adds the shell and the first pages). Each later task adds a section here.
+**Status:** Task 46 built the foundation: the tables, the access resolver, the activity log, the services and server functions for workspaces, projects, statuses, labels and tasks, the sandbox's seed and claim, and the demo team. Task 47 added the standalone shell and the first pages: the landing, sign-in and sign-up, the account page, Home, the project directory and a first project overview (0208). Task 48 adds the board, the list and the task. Each later task adds a section here.
 
 ## Where things are
 
@@ -10,17 +10,32 @@ Taskline is its own strip-demo layer, `taskline`, independent of `apps` (`pnpm s
 
 | Piece | Path |
 | --- | --- |
-| Shared shapes and inputs | `src/features/taskline/`: `types.ts` (constants, DTOs; no imports, the schema reads it), `settings.ts` (`workspaceSettings`, `projectSettings`), `schema.ts` (every function's input) |
+| Shared shapes and inputs | `src/features/taskline/`: `types.ts` (constants, DTOs; no imports, the schema reads it), `settings.ts` (`workspaceSettings`, `projectSettings`), `schema.ts` (every function's input), `search.ts` (URL contracts) |
+| Routes | `src/routes/_taskline/route.tsx` (the section: brand, title, public 404), `…/app/taskline/{index,sign-in,sign-up}.tsx` (public frame), `…/app/taskline/_shell/` (the signed-in shell: `home`, `account`, `$ws/projects`, `$ws/p/$key`) |
+| Pages and the shell | `src/features/taskline/`: `brand.ts`, `links.ts`, `colors.ts`, `queries.ts`, `shell/` (frames, sidebar, palette, shortcuts, mark), `landing/`, `auth/`, `home/`, `projects/` |
+| Manifest and icons | `src/server/taskline/manifest.ts`, the Nitro route `src/server/routes/taskline-manifest.ts` (`vite.config.ts`), `public/taskline/` |
 | Tables | `src/server/db/schema/taskline/{workspace,project,task}.ts`, migration `0016_taskline` (which also inserts the team workspace) |
 | Access | `src/server/taskline/access.ts`: `resolveWorkspace`, `resolveProject`, `assertCan` |
 | History and freshness | `src/server/taskline/activity.ts` (`recordActivity`), `rev.ts` (`bumpRev`, `nextTaskNumber`, `saveVersioned`), `rules.ts` (quotas, shared errors, rich text) |
-| Services | `src/server/taskline/{workspace,projects,workflow,tasks}/{repository,service}.ts`; `sandbox.ts` (seed, claim, the `GUEST_DATA` entry) |
-| Functions | `src/functions/taskline/{workspaces,projects,workflow,tasks}.ts` (app); `src/functions/taskline-admin/` (admin, from Task 49) |
+| Services | `src/server/taskline/{workspace,projects,workflow,tasks,home}/{repository,service}.ts`; `sandbox.ts` (seed, claim, the `GUEST_DATA` entry) |
+| Functions | `src/functions/taskline/{home,workspaces,projects,workflow,tasks}.ts` (app); `src/functions/taskline-admin/` (admin, from Task 49) |
 | Middleware | `src/middleware/taskline.ts`: `requireTasklineUser`, `withTasklineServices` |
 | Demo team | `scripts/lib/taskline-seed.ts`, `pnpm db:seed-taskline` |
-| Tests | `tests/server/taskline-access.test.ts` (the matrix), `taskline.test.ts` (the rules), `taskline-seed.test.ts` |
+| Tests | `tests/server/taskline-access.test.ts` (the matrix, Home and the navigation), `taskline.test.ts` (the rules), `taskline-seed.test.ts`; `tests/components/taskline/` (the shell); `e2e/flows/taskline.spec.ts`; stories in `shell/taskline-shell.stories.tsx` (data in `.storybook/mocks/taskline.ts`) |
 
-Shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`: the schema index, the permission catalog and its labels, `GUEST_DATA`, the guard test, `scripts/lib/local-db.ts`. `src/lib/fractional-index.ts` belongs to both `apps` and `taskline` (strip-demo's `SHARED` list) until Kanban goes in Task 48.
+Shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`: the schema index, the permission catalog and its labels, `GUEST_DATA`, the guard test, `scripts/lib/local-db.ts`, the e2e harness's seed and page list, the route-SEO test, the sitemap, `vite.config.ts` (the manifest routes) and the `/apps` gallery's featured card. `src/lib/fractional-index.ts` belongs to both `apps` and `taskline` (strip-demo's `SHARED` list) until Kanban goes in Task 48.
+
+## The shell (0208)
+
+Taskline is a product of its own inside the app: nothing of the site's, the apps' or the admin's chrome.
+
+- **Two frames.** Visitors see the public frame (`TasklinePublicFrame`: the wordmark, language, theme, sign in and sign up) on the landing, and `TasklineAuthFrame` on `/sign-in` and `/sign-up`. Everyone signed in, guests included, gets `TasklineShell` under `_shell`: the sidebar (wordmark, the workspace switcher when they have both the team and a sandbox, Home, Projects, Search, starred and recent projects, the user), the topbar (breadcrumbs, search, language, theme; the user on phones, where the sidebar is a sheet), the palette (Ctrl/⌘ K: every project, the pages, a new project where allowed, preferences), the shortcuts (`?`), the guest banner, `ConfirmProvider` and `DbScope`.
+- **The brand** is `TASKLINE_BRAND` on `_taskline`'s `staticData` (`src/lib/section-brand.ts`): the root puts `emerald` on `<html data-accent>` (so portalled menus and dialogs match) and links `public/taskline/`'s icons and the Taskline manifest. Titles are `tasklineTitle(page)` ("Page · Taskline"); the landing uses `seo({ siteName: TASKLINE_NAME })`. The name is a constant, the same in every language.
+- **Links** go through `links.ts` (`tasklineLinks`, `TASKLINE_PATHS`): renaming the app is a move of `src/routes/_taskline/app/taskline` and that file.
+- **Who goes where:** a signed-in visitor to the landing goes to Home; a visitor to any shell page goes to Taskline's sign-in with `?redirect=`, and back afterwards. Sign-up sends the verification link to `/verify-email?redirect=…`, whose "Continue" returns to Taskline. A guest's "account" is sign-up; signing out lands on the landing.
+- **404s and errors stay in the frame:** the layouts' `notFoundComponent`s render their frame (they replace the layout), and `SectionHome` makes the error and 404 pages' home link go to Taskline. An unknown or hidden workspace or project is a 404 from `loadDetailOr404`.
+- **Pages:** Home (the caller's open tasks in every workspace, soonest due first; recent projects; "Start a sandbox" for an account without one, and for an account with no workspace at all, "Ask an admin to add you"); the project directory (`?view=list`, `?archived=1`, stars, `?create=1` opens "New project" for those allowed, with a key suggested from the name); a first project overview (description, progress by status, members); the account page's sections.
+- **Data:** the shell's `getTasklineNav` (the workspaces with `canCreateProject`, every visible active project, the starred ones, the recent ones) and Home's `listMyTasklineTasks` resolve each of the caller's workspaces and keep what they may see. "Recent" is where the caller last recorded activity, topped up with recently changed projects. Query keys carry the user's id (`tasklineKeys`), and every write refreshes everything under it.
 
 ## Workspaces and members (0203, 0207)
 
@@ -111,4 +126,7 @@ Counted under `lockQuota(tx, scope)` (`src/server/db/quota.ts`, 0206), inside th
 - **Versions aren't `updated_at`:** Taskline's forms compare the integer `version`, not `updated_at` (0122 elsewhere), because last-write-wins patches change `updated_at` constantly.
 - **A team reset in tests:** `env.reset()` truncates every table, the migration's team row included. Tests call `ensureTeamWorkspace(db)` in their seed.
 - **Activity order within a change:** entries of one transaction share `now()`; order them by kind, not by time, when it matters.
-- **Unused functions before the pages:** knip lists `src/functions/taskline/*.ts` as entries until Task 47's pages call them (remove the entry then, in `knip.json` and strip-demo's `knipEntries`).
+- **Unused functions before the pages:** knip lists `src/functions/taskline/*.ts` as entries while some functions have no page yet (the board, list and lead settings of Task 48). Remove the entry, in `knip.json` and strip-demo's `knipEntries`, once every function is called.
+- **A layout's crumb from its loader, under a child that 404s:** the browser hydrates the layout's match without its loader data, so a crumb the server rendered is missing in the browser (React #418). Take such a label from `params` (the `$ws` crumb), as `src/lib/breadcrumbs.ts` explains.
+- **A section's accent belongs on `<html>`:** a `data-accent` on the shell's root misses portalled menus and dialogs and the tokens `:root` derives from `--primary`. Use `staticData.brand`.
+- **Route definitions are in every page's JavaScript** (0151): Taskline's eleven routes cost 3.2 kB gzip of entry. Keep heads, guards and loaders small; components, queries and DB are split out.

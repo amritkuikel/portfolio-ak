@@ -9,8 +9,13 @@ import { absoluteUrl } from "./seo";
  *
  *   staticData: { breadcrumb: staticCrumb(m.test_crud_title) }   // fixed, localized label
  *   staticData: { breadcrumb: loaderTitleCrumb }                  // the loader's `title`
+ *   staticData: { breadcrumb: ({ params }) => label(params.ws) }   // from the URL
+ *
+ * A layout whose child can 404 takes its label from the URL, not its loader: when a
+ * child throws notFound during SSR, the browser hydrates the layout's match without
+ * its loader data, and a label from it would not match the server's HTML.
  */
-export type BreadcrumbSource = (match: { loaderData: unknown }) => string | undefined;
+export type BreadcrumbSource = (match: { loaderData: unknown; params: Record<string, string> }) => string | undefined;
 
 declare module "@tanstack/react-router" {
 	interface StaticDataRouteOption {
@@ -40,6 +45,7 @@ export type Crumb = { label: string; path: string };
 type CrumbMatch = {
 	pathname: string;
 	loaderData?: unknown;
+	params?: Record<string, string>;
 	staticData: { breadcrumb?: BreadcrumbSource | undefined };
 };
 
@@ -53,7 +59,7 @@ const normalize = (pathname: string) => (pathname.length > 1 ? pathname.replace(
 export function crumbsFromMatches(matches: ReadonlyArray<CrumbMatch>): Crumb[] {
 	const crumbs: Crumb[] = [];
 	for (const match of matches) {
-		const label = match.staticData.breadcrumb?.({ loaderData: match.loaderData });
+		const label = match.staticData.breadcrumb?.({ loaderData: match.loaderData, params: match.params ?? {} });
 		if (!label) continue;
 		const path = normalize(match.pathname);
 		const previous = crumbs.at(-1);

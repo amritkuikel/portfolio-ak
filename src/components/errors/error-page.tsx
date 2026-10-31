@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { type AppErrorCode, FORM_ERROR_KEY, isAppError } from "@/lib/errors";
 import { captureException } from "@/lib/observability/sentry-client";
 import { m } from "@/paraglide/messages";
+import { useSectionHome } from "./section-home";
 
 const messages: Record<AppErrorCode, () => string> = {
 	BAD_REQUEST: m.error_bad_request,
@@ -39,6 +40,7 @@ const titles: Partial<Record<AppErrorCode, () => string>> = {
  * - anything else: try again, which re-runs loaders and queries.
  */
 export function ErrorPage({ error, reset }: ErrorComponentProps) {
+	const home = useSectionHome();
 	const router = useRouter();
 	const location = useLocation();
 	const queryErrorReset = useQueryErrorResetBoundary();
@@ -94,7 +96,7 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 					</Button>
 				)}
 				<Button asChild variant="outline">
-					<Link to="/">{m.error_go_home()}</Link>
+					{home ?? <Link to="/">{m.error_go_home()}</Link>}
 				</Button>
 			</div>
 		</main>

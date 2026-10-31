@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as SiteRouteImport } from './routes/_site'
+import { Route as TasklineRouteRouteImport } from './routes/_taskline/route'
 import { Route as DevRouteRouteImport } from './routes/dev/route'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -108,6 +109,10 @@ import { Route as AppsAppsLinksIndexRouteImport } from './routes/_apps/apps/link
 import { Route as AppsAppsLinksLinkIdRouteImport } from './routes/_apps/apps/links/$linkId'
 import { Route as AppsAppsNotesIndexRouteImport } from './routes/_apps/apps/notes/index'
 import { Route as AppsAppsNotesNoteIdRouteImport } from './routes/_apps/apps/notes/$noteId'
+import { Route as TasklineAppTasklineIndexRouteImport } from './routes/_taskline/app/taskline/index'
+import { Route as TasklineAppTasklineShellRouteRouteImport } from './routes/_taskline/app/taskline/_shell/route'
+import { Route as TasklineAppTasklineSignInRouteImport } from './routes/_taskline/app/taskline/sign-in'
+import { Route as TasklineAppTasklineSignUpRouteImport } from './routes/_taskline/app/taskline/sign-up'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
 import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
@@ -119,6 +124,12 @@ import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_ad
 import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
 import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
+import { Route as TasklineAppTasklineShellWsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/route'
+import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_taskline/app/taskline/_shell/account'
+import { Route as TasklineAppTasklineShellHomeRouteImport } from './routes/_taskline/app/taskline/_shell/home'
+import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
+import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
+import { Route as TasklineAppTasklineShellWsPKeyIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/index'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -142,6 +153,10 @@ const PublicRoute = PublicRouteImport.update({
 } as any)
 const SiteRoute = SiteRouteImport.update({
   id: '/_site',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasklineRouteRoute = TasklineRouteRouteImport.update({
+  id: '/_taskline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevRouteRoute = DevRouteRouteImport.update({
@@ -621,6 +636,30 @@ const AppsAppsNotesNoteIdRoute = AppsAppsNotesNoteIdRouteImport.update({
   path: '/apps/notes/$noteId',
   getParentRoute: () => AppsRoute,
 } as any)
+const TasklineAppTasklineIndexRoute =
+  TasklineAppTasklineIndexRouteImport.update({
+    id: '/app/taskline/',
+    path: '/app/taskline/',
+    getParentRoute: () => TasklineRouteRoute,
+  } as any)
+const TasklineAppTasklineShellRouteRoute =
+  TasklineAppTasklineShellRouteRouteImport.update({
+    id: '/app/taskline/_shell',
+    path: '/app/taskline',
+    getParentRoute: () => TasklineRouteRoute,
+  } as any)
+const TasklineAppTasklineSignInRoute =
+  TasklineAppTasklineSignInRouteImport.update({
+    id: '/app/taskline/sign-in',
+    path: '/app/taskline/sign-in',
+    getParentRoute: () => TasklineRouteRoute,
+  } as any)
+const TasklineAppTasklineSignUpRoute =
+  TasklineAppTasklineSignUpRouteImport.update({
+    id: '/app/taskline/sign-up',
+    path: '/app/taskline/sign-up',
+    getParentRoute: () => TasklineRouteRoute,
+  } as any)
 const DevExamplesMaskingIndexRoute = DevExamplesMaskingIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -684,10 +723,46 @@ const AppsAppsNotesSTokenRoute = AppsAppsNotesSTokenRouteImport.update({
   path: '/apps/notes/s/$token',
   getParentRoute: () => AppsRoute,
 } as any)
+const TasklineAppTasklineShellWsRouteRoute =
+  TasklineAppTasklineShellWsRouteRouteImport.update({
+    id: '/$ws',
+    path: '/$ws',
+    getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
+const TasklineAppTasklineShellAccountRoute =
+  TasklineAppTasklineShellAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
+const TasklineAppTasklineShellHomeRoute =
+  TasklineAppTasklineShellHomeRouteImport.update({
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => TasklineAppTasklineShellRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsIndexRoute =
+  TasklineAppTasklineShellWsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsProjectsRoute =
+  TasklineAppTasklineShellWsProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyIndexRoute =
+  TasklineAppTasklineShellWsPKeyIndexRouteImport.update({
+    id: '/p/$key/',
+    path: '/p/$key/',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/dev': typeof DevRouteRouteWithChildren
   '/': typeof SiteIndexRoute
+  '/dev': typeof DevRouteRouteWithChildren
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AdminAdminRouteRouteWithChildren
@@ -753,6 +828,7 @@ export interface FileRoutesByFullPath {
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/app/taskline': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -769,6 +845,8 @@ export interface FileRoutesByFullPath {
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
+  '/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
+  '/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
@@ -780,16 +858,23 @@ export interface FileRoutesByFullPath {
   '/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/apps/links/': typeof AppsAppsLinksIndexRoute
   '/apps/notes/': typeof AppsAppsNotesIndexRoute
+  '/app/taskline/': typeof TasklineAppTasklineIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/app/taskline/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
+  '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
+  '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/app/taskline/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
+  '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof SiteIndexRoute
@@ -848,6 +933,7 @@ export interface FileRoutesByTo {
   '/work': typeof SiteWorkIndexRoute
   '/dev/examples': typeof DevExamplesIndexRoute
   '/dev/test-crud': typeof DevTestCrudIndexRoute
+  '/app/taskline': typeof TasklineAppTasklineIndexRoute
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -864,6 +950,8 @@ export interface FileRoutesByTo {
   '/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
+  '/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
+  '/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
@@ -882,12 +970,18 @@ export interface FileRoutesByTo {
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
+  '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
   '/apps/forms/$formId': typeof AppsAppsFormsFormIdIndexRoute
+  '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
+  '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_taskline': typeof TasklineRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
   '/_admin': typeof AdminRouteWithChildren
   '/_apps': typeof AppsRouteWithChildren
@@ -961,6 +1055,7 @@ export interface FileRoutesById {
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
   '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/_admin/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
+  '/_taskline/app/taskline/_shell': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/_admin/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/_admin/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/_admin/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -977,6 +1072,8 @@ export interface FileRoutesById {
   '/_apps/apps/kanban/$boardId': typeof AppsAppsKanbanBoardIdRoute
   '/_apps/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/_apps/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
+  '/_taskline/app/taskline/sign-in': typeof TasklineAppTasklineSignInRoute
+  '/_taskline/app/taskline/sign-up': typeof TasklineAppTasklineSignUpRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
@@ -988,22 +1085,29 @@ export interface FileRoutesById {
   '/_apps/apps/kanban/': typeof AppsAppsKanbanIndexRoute
   '/_apps/apps/links/': typeof AppsAppsLinksIndexRoute
   '/_apps/apps/notes/': typeof AppsAppsNotesIndexRoute
+  '/_taskline/app/taskline/': typeof TasklineAppTasklineIndexRoute
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
+  '/_taskline/app/taskline/_shell/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
+  '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/_apps/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
+  '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
+  '/_taskline/app/taskline/_shell/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/dev'
     | '/'
+    | '/dev'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/admin'
@@ -1069,6 +1173,7 @@ export interface FileRouteTypes {
     | '/dev/test-crud/'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
+    | '/app/taskline'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
     | '/admin/portfolio/process'
@@ -1085,6 +1190,8 @@ export interface FileRouteTypes {
     | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
+    | '/app/taskline/sign-in'
+    | '/app/taskline/sign-up'
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
     | '/admin/roles/'
@@ -1096,16 +1203,23 @@ export interface FileRouteTypes {
     | '/apps/kanban/'
     | '/apps/links/'
     | '/apps/notes/'
+    | '/app/taskline/'
     | '/dev/examples/masking/'
+    | '/app/taskline/$ws'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/taskline/account'
+    | '/app/taskline/home'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
     | '/apps/forms/$formId/'
+    | '/app/taskline/$ws/projects'
+    | '/app/taskline/$ws/'
+    | '/app/taskline/$ws/p/$key/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1164,6 +1278,7 @@ export interface FileRouteTypes {
     | '/work'
     | '/dev/examples'
     | '/dev/test-crud'
+    | '/app/taskline'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
     | '/admin/portfolio/process'
@@ -1180,6 +1295,8 @@ export interface FileRouteTypes {
     | '/apps/kanban/$boardId'
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
+    | '/app/taskline/sign-in'
+    | '/app/taskline/sign-up'
     | '/dev/examples/masking/$id'
     | '/admin/audit'
     | '/admin/roles'
@@ -1198,11 +1315,17 @@ export interface FileRouteTypes {
     | '/admin/portfolio/projects/new'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/taskline/account'
+    | '/app/taskline/home'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/apps/forms/$formId'
+    | '/app/taskline/$ws/projects'
+    | '/app/taskline/$ws'
+    | '/app/taskline/$ws/p/$key'
   id:
     | '__root__'
+    | '/_taskline'
     | '/dev'
     | '/_admin'
     | '/_apps'
@@ -1276,6 +1399,7 @@ export interface FileRouteTypes {
     | '/dev/test-crud/'
     | '/_admin/admin/portfolio/journal'
     | '/_admin/admin/portfolio/projects'
+    | '/_taskline/app/taskline/_shell'
     | '/_admin/admin/portfolio/experience'
     | '/_admin/admin/portfolio/messages'
     | '/_admin/admin/portfolio/process'
@@ -1292,6 +1416,8 @@ export interface FileRouteTypes {
     | '/_apps/apps/kanban/$boardId'
     | '/_apps/apps/links/$linkId'
     | '/_apps/apps/notes/$noteId'
+    | '/_taskline/app/taskline/sign-in'
+    | '/_taskline/app/taskline/sign-up'
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
     | '/_admin/admin/roles/'
@@ -1303,19 +1429,27 @@ export interface FileRouteTypes {
     | '/_apps/apps/kanban/'
     | '/_apps/apps/links/'
     | '/_apps/apps/notes/'
+    | '/_taskline/app/taskline/'
     | '/dev/examples/masking/'
+    | '/_taskline/app/taskline/_shell/$ws'
     | '/_admin/admin/portfolio/journal/$id'
     | '/_admin/admin/portfolio/journal/new'
     | '/_admin/admin/portfolio/projects/$id'
     | '/_admin/admin/portfolio/projects/new'
     | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
+    | '/_taskline/app/taskline/_shell/account'
+    | '/_taskline/app/taskline/_shell/home'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
     | '/_apps/apps/forms/$formId/'
+    | '/_taskline/app/taskline/_shell/$ws/projects'
+    | '/_taskline/app/taskline/_shell/$ws/'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  TasklineRouteRoute: typeof TasklineRouteRouteWithChildren
   DevRouteRoute: typeof DevRouteRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AppsRoute: typeof AppsRouteWithChildren
@@ -1375,6 +1509,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof SiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_taskline': {
+      id: '/_taskline'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof TasklineRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev': {
@@ -2028,6 +2169,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppsNotesNoteIdRouteImport
       parentRoute: typeof AppsRoute
     }
+    '/_taskline/app/taskline/': {
+      id: '/_taskline/app/taskline/'
+      path: '/app/taskline'
+      fullPath: '/app/taskline/'
+      preLoaderRoute: typeof TasklineAppTasklineIndexRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
+    '/_taskline/app/taskline/_shell': {
+      id: '/_taskline/app/taskline/_shell'
+      path: '/app/taskline'
+      fullPath: '/app/taskline'
+      preLoaderRoute: typeof TasklineAppTasklineShellRouteRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
+    '/_taskline/app/taskline/sign-in': {
+      id: '/_taskline/app/taskline/sign-in'
+      path: '/app/taskline/sign-in'
+      fullPath: '/app/taskline/sign-in'
+      preLoaderRoute: typeof TasklineAppTasklineSignInRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
+    '/_taskline/app/taskline/sign-up': {
+      id: '/_taskline/app/taskline/sign-up'
+      path: '/app/taskline/sign-up'
+      fullPath: '/app/taskline/sign-up'
+      preLoaderRoute: typeof TasklineAppTasklineSignUpRouteImport
+      parentRoute: typeof TasklineRouteRoute
+    }
     '/dev/examples/masking/': {
       id: '/dev/examples/masking/'
       path: '/'
@@ -2105,8 +2274,108 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppsNotesSTokenRouteImport
       parentRoute: typeof AppsRoute
     }
+    '/_taskline/app/taskline/_shell/$ws': {
+      id: '/_taskline/app/taskline/_shell/$ws'
+      path: '/$ws'
+      fullPath: '/app/taskline/$ws'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsRouteRouteImport
+      parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/account': {
+      id: '/_taskline/app/taskline/_shell/account'
+      path: '/account'
+      fullPath: '/app/taskline/account'
+      preLoaderRoute: typeof TasklineAppTasklineShellAccountRouteImport
+      parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/home': {
+      id: '/_taskline/app/taskline/_shell/home'
+      path: '/home'
+      fullPath: '/app/taskline/home'
+      preLoaderRoute: typeof TasklineAppTasklineShellHomeRouteImport
+      parentRoute: typeof TasklineAppTasklineShellRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/': {
+      id: '/_taskline/app/taskline/_shell/$ws/'
+      path: '/'
+      fullPath: '/app/taskline/$ws/'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsIndexRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/projects': {
+      id: '/_taskline/app/taskline/_shell/$ws/projects'
+      path: '/projects'
+      fullPath: '/app/taskline/$ws/projects'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsProjectsRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/'
+      path: '/p/$key'
+      fullPath: '/app/taskline/$ws/p/$key/'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyIndexRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
   }
 }
+
+interface TasklineAppTasklineShellWsRouteRouteChildren {
+  TasklineAppTasklineShellWsProjectsRoute: typeof TasklineAppTasklineShellWsProjectsRoute
+  TasklineAppTasklineShellWsIndexRoute: typeof TasklineAppTasklineShellWsIndexRoute
+  TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
+}
+
+const TasklineAppTasklineShellWsRouteRouteChildren: TasklineAppTasklineShellWsRouteRouteChildren =
+  {
+    TasklineAppTasklineShellWsProjectsRoute:
+      TasklineAppTasklineShellWsProjectsRoute,
+    TasklineAppTasklineShellWsIndexRoute: TasklineAppTasklineShellWsIndexRoute,
+    TasklineAppTasklineShellWsPKeyIndexRoute:
+      TasklineAppTasklineShellWsPKeyIndexRoute,
+  }
+
+const TasklineAppTasklineShellWsRouteRouteWithChildren =
+  TasklineAppTasklineShellWsRouteRoute._addFileChildren(
+    TasklineAppTasklineShellWsRouteRouteChildren,
+  )
+
+interface TasklineAppTasklineShellRouteRouteChildren {
+  TasklineAppTasklineShellWsRouteRoute: typeof TasklineAppTasklineShellWsRouteRouteWithChildren
+  TasklineAppTasklineShellAccountRoute: typeof TasklineAppTasklineShellAccountRoute
+  TasklineAppTasklineShellHomeRoute: typeof TasklineAppTasklineShellHomeRoute
+}
+
+const TasklineAppTasklineShellRouteRouteChildren: TasklineAppTasklineShellRouteRouteChildren =
+  {
+    TasklineAppTasklineShellWsRouteRoute:
+      TasklineAppTasklineShellWsRouteRouteWithChildren,
+    TasklineAppTasklineShellAccountRoute: TasklineAppTasklineShellAccountRoute,
+    TasklineAppTasklineShellHomeRoute: TasklineAppTasklineShellHomeRoute,
+  }
+
+const TasklineAppTasklineShellRouteRouteWithChildren =
+  TasklineAppTasklineShellRouteRoute._addFileChildren(
+    TasklineAppTasklineShellRouteRouteChildren,
+  )
+
+interface TasklineRouteRouteChildren {
+  TasklineAppTasklineShellRouteRoute: typeof TasklineAppTasklineShellRouteRouteWithChildren
+  TasklineAppTasklineSignInRoute: typeof TasklineAppTasklineSignInRoute
+  TasklineAppTasklineSignUpRoute: typeof TasklineAppTasklineSignUpRoute
+  TasklineAppTasklineIndexRoute: typeof TasklineAppTasklineIndexRoute
+}
+
+const TasklineRouteRouteChildren: TasklineRouteRouteChildren = {
+  TasklineAppTasklineShellRouteRoute:
+    TasklineAppTasklineShellRouteRouteWithChildren,
+  TasklineAppTasklineSignInRoute: TasklineAppTasklineSignInRoute,
+  TasklineAppTasklineSignUpRoute: TasklineAppTasklineSignUpRoute,
+  TasklineAppTasklineIndexRoute: TasklineAppTasklineIndexRoute,
+}
+
+const TasklineRouteRouteWithChildren = TasklineRouteRoute._addFileChildren(
+  TasklineRouteRouteChildren,
+)
 
 interface DevExamplesMaskingRouteRouteChildren {
   DevExamplesMaskingIdRoute: typeof DevExamplesMaskingIdRoute
@@ -2465,6 +2734,7 @@ const SiteRouteChildren: SiteRouteChildren = {
 const SiteRouteWithChildren = SiteRoute._addFileChildren(SiteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  TasklineRouteRoute: TasklineRouteRouteWithChildren,
   DevRouteRoute: DevRouteRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AppsRoute: AppsRouteWithChildren,

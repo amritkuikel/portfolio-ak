@@ -44,6 +44,7 @@ Three preferences, each an attribute on `<html>`, rendered by the server from a 
 
 - **Where they're set:** `/admin/settings/appearance`, per browser, like the theme. The store (`useAppearance()` in `src/lib/stores/hooks.ts`) re-renders `<html>`'s attributes at once, and the cookie makes the next request render them.
 - **Controls follow density:** `Button` (default, `sm`, `icon`, `icon-sm`), `Input`, `InputGroup`, `NativeSelect`, `Select` and the filter bar use `h-(--control-height)`; table cells use `py-(--row-padding)`. Use the same variables in a new control.
+- **A section's own accent:** a route's `staticData.brand` (`src/lib/section-brand.ts`) puts its accent on `<html>` for every page below it, whatever the visitor picked, and swaps the icons and manifest (Taskline, 0208). On `<html>`, menus and dialogs that portal to `<body>` and the tokens derived from `--primary` follow too.
 - **Scoped accents:** accent selectors match any element, so `<span data-accent="rose" class="bg-primary">` draws a rose swatch inside an indigo page. Only the tokens a preset sets change in such a scope.
 
 ## Contrast is tested
@@ -60,6 +61,7 @@ Each layout renders its own frame (one header per section, 0161):
 | `_auth`, `_public` | `AuthShell`: the page on the left, contour art on the right (one column on phones) | `components/auth-shell/` |
 | `_authed` (account; the apps later) | `AppHeader`: brand, admin link when permitted, language, theme, user menu | `components/app-header/` |
 | `dev` | `SiteHeader` with the demo's links, and the footer | `components/layout/site-header.tsx` |
+| `_taskline` <!-- @taskline --> | A product of its own (0208): `TasklinePublicFrame` and `TasklineAuthFrame` for visitors, `TasklineShell` (built like the admin shell) for the app; its accent, icons and manifest through `staticData.brand` | `features/taskline/shell/` |
 
 **Admin shell:**
 - **Sidebar:** shadcn's `Sidebar` (`components/ui/sidebar.tsx`), collapsing to icons on desktop (labels move into tooltips) and a sheet on phones, chosen by CSS, not by JavaScript (see the pitfalls). Its open state is the `sidebar` preference cookie, not shadcn's own cookie, and its container is sticky rather than fixed, so a banner above it (impersonation) pushes it down. `SidebarInset` is a `<div>`: each page renders its own `<main>`.

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { isAppError } from "@/lib/errors";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
+import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
 import * as tasks from "@/server/taskline/tasks/service";
@@ -445,5 +446,76 @@ describe("the workspace", () => {
 		).toBe("NOT_FOUND");
 		expect(await code(tasks.getTask(as("lead"), ws, "WEB-999"))).toBe("NOT_FOUND");
 		expect(await code(tasks.getTask(as("lead"), ws, "not-a-ref"))).toBe("NOT_FOUND");
+	});
+});
+
+describe("home and the shell's navigation", () => {
+	beforeEach(setUp);
+
+	const memberId = async (caller: Caller) => {
+		const found = (await workspaces.listMembers(as("lead"), "team")).find((row) => row.userId === caller);
+		if (!found) throw new Error(`no member ${caller}`);
+		return found.id;
+	};
+
+	it("lists only the projects each caller may see, in every workspace they have", async () => {
+		const nav = async (caller: Caller) => {
+			const { workspaces: found, recent } = await home.getNav(as(caller));
+			return { workspaces: found.map((row) => row.segment), recent: recent.map((row) => `${row.ws}/${row.key}`) };
+		};
+		expect(await nav("lead")).toEqual({ workspaces: ["team"], recent: ["team/SEC", "team/WEB"] });
+		expect(await nav("member")).toEqual({ workspaces: ["team"], recent: ["team/WEB"] });
+		expect(await nav("reader")).toEqual({ workspaces: ["team"], recent: ["team/SEC", "team/WEB"] });
+		expect(await nav("deactivated")).toEqual({ workspaces: [], recent: [] });
+		expect(await nav("guest")).toEqual({ workspaces: ["sandbox"], recent: ["sandbox/WEB"] });
+		expect(await nav("outsider")).toEqual({ workspaces: ["sandbox"], recent: [] });
+	});
+
+	it("puts the projects a caller worked on first, and lists their stars", async () => {
+		await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Touch" });
+		const lead = await home.getNav(as("lead"));
+		expect(lead.recent.map((row) => row.key)).toEqual(["WEB", "SEC"]);
+		await projects.setProjectStar(as("member"), { ws: "team", key: "WEB", starred: true });
+		expect((await home.getNav(as("member"))).starred.map((row) => row.key)).toEqual(["WEB"]);
+		expect((await home.getNav(as("lead"))).starred).toEqual([]);
+		// An archived project leaves the navigation, even when it was worked on.
+		await projects.setProjectArchived(as("lead"), { ws: "team", key: "SEC", archived: true });
+		expect((await home.getNav(as("lead"))).recent.map((row) => row.key)).toEqual(["WEB"]);
+	});
+
+	it("lists a caller's open tasks across workspaces, soonest due first, and none they can't see", async () => {
+		const member = await memberId("member");
+		const lead = await memberId("lead");
+		const later = await tasks.createTask(as("lead"), {
+			ws: "team",
+			key: "WEB",
+			title: "Later",
+			assigneeId: member,
+			dueOn: "2030-01-02",
+		});
+		await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Undated", assigneeId: member });
+		await tasks.createTask(as("lead"), {
+			ws: "team",
+			key: "WEB",
+			title: "Sooner",
+			assigneeId: member,
+			dueOn: "2030-01-01",
+		});
+		const done = await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Done", assigneeId: member });
+		const { statuses } = await tasks.listTasks(as("lead"), "team", "WEB");
+		const completed = statuses.find((status) => status.category === "completed");
+		await tasks.moveTask(as("lead"), { ws: "team", ref: done.ref, statusId: completed?.id ?? "", position: "a0" });
+		const trashed = await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Gone", assigneeId: member });
+		await tasks.trashTask(as("lead"), "team", trashed.ref);
+		await tasks.createTask(as("lead"), { ws: "team", key: "SEC", title: "Secret", assigneeId: lead });
+
+		const mine = await home.listMyTasks(as("member"));
+		expect(mine.tasks.map((task) => task.title)).toEqual(["Sooner", "Later", "Undated"]);
+		expect(mine.tasks[1]).toMatchObject({ ref: later.ref, project: { key: "WEB", ws: "team" } });
+		expect((await home.listMyTasks(as("lead"))).tasks.map((task) => task.title)).toEqual(["Secret"]);
+		expect((await home.listMyTasks(as("reader"))).tasks).toEqual([]);
+		expect((await home.listMyTasks(as("deactivated"))).tasks).toEqual([]);
+		const sandbox = await home.listMyTasks(as("guest"));
+		expect(sandbox.tasks.every((task) => task.project.ws === "sandbox")).toBe(true);
 	});
 });

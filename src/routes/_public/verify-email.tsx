@@ -7,8 +7,10 @@ import { AuthField, FormMessage } from "@/features/auth/components/auth-field";
 import { CheckEmail } from "@/features/auth/components/check-email";
 import { claimGuestDataQuietly } from "@/features/auth/use-auth-actions";
 import { field, validateEmail } from "@/features/auth/validation";
+import { safeRedirectPath } from "@/lib/http/redirect";
 import { privateHead } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
+import { localizeHref } from "@/paraglide/runtime";
 
 /**
  * Landing page for the emailed verification link. Better Auth verifies the token,
@@ -19,13 +21,17 @@ import { m } from "@/paraglide/messages";
  * this page asks once more in case that browser had lost the guest's session.
  */
 export const Route = createFileRoute("/_public/verify-email")({
-	validateSearch: z.object({ error: z.string().max(64).optional().catch(undefined) }),
+	// ?redirect= is where "Continue" goes (a section's own start page: Taskline's sign-up sets it).
+	validateSearch: z.object({
+		error: z.string().max(64).optional().catch(undefined),
+		redirect: safeRedirectPath.optional().catch(undefined),
+	}),
 	head: () => privateHead(m.auth_verify_title()),
 	component: VerifyEmailPage,
 });
 
 function VerifyEmailPage() {
-	const { error } = Route.useSearch();
+	const { error, redirect } = Route.useSearch();
 	const { session } = Route.useRouteContext();
 	const [resendTo, setResendTo] = useState<string>();
 	const [emailError, setEmailError] = useState<string>();
@@ -72,7 +78,11 @@ function VerifyEmailPage() {
 				<>
 					<FormMessage tone="success">{m.auth_verify_success()}</FormMessage>
 					<Button asChild>
-						<Link to="/account">{m.auth_continue()}</Link>
+						{redirect ? (
+							<a href={localizeHref(redirect)}>{m.auth_continue()}</a>
+						) : (
+							<Link to="/account">{m.auth_continue()}</Link>
+						)}
 					</Button>
 				</>
 			)}

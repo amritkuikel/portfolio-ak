@@ -11,6 +11,7 @@ import { ConsentBanner, ObservabilitySync } from "@/components/layout/observabil
 import { SkipLink } from "@/components/layout/skip-link";
 import { preferenceHtmlProps, SystemThemeScript, ThemeSync } from "@/components/layout/theme";
 import { sessionQueryOptions } from "@/features/auth/queries";
+import { sectionBrandOf, useSectionAccent } from "@/lib/section-brand";
 import { pageTitle } from "@/lib/seo";
 import type { Session } from "@/lib/session";
 import { skipsSession } from "@/lib/session-scope";
@@ -31,7 +32,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	beforeLoad: async ({ context, matches }): Promise<{ session: Session | null }> => ({
 		session: skipsSession(matches) ? null : await context.queryClient.query(sessionQueryOptions()),
 	}),
-	head: () => ({
+	head: ({ matches }) => ({
 		meta: [
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -41,11 +42,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },
-			// Icon set: SVG for modern browsers, ICO for the rest, PNG for iOS; the manifest has the app icons.
-			{ rel: "icon", href: "/favicon.ico", sizes: "32x32" },
-			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-			{ rel: "manifest", href: localizeHref("/manifest.webmanifest") },
+			// A section that is its own product brings its own icons and manifest (decision 0208).
+			...(sectionBrandOf(matches)?.links() ?? [
+				// Icon set: SVG for modern browsers, ICO for the rest, PNG for iOS; the manifest has the app icons.
+				{ rel: "icon", href: "/favicon.ico", sizes: "32x32" },
+				{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+				{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+				{ rel: "manifest", href: localizeHref("/manifest.webmanifest") },
+			]),
 		],
 	}),
 	errorComponent: ErrorPage,
@@ -79,9 +83,16 @@ function RootDocument({ children }: { children: ReactNode }) {
 	const locale = getLocale();
 	const appearance = useAppearance();
 	const { theme } = appearance;
+	// A branded section's accent wins over the visitor's (on <html>, so portalled menus match too).
+	const accent = useSectionAccent() ?? appearance.accent;
 	return (
 		// suppressHydrationWarning: SystemThemeScript may add class="dark" before hydration (this element only).
-		<html lang={locale} dir={getTextDirection(locale)} {...preferenceHtmlProps(appearance)} suppressHydrationWarning>
+		<html
+			lang={locale}
+			dir={getTextDirection(locale)}
+			{...preferenceHtmlProps({ ...appearance, accent })}
+			suppressHydrationWarning
+		>
 			<head>
 				<SystemThemeScript />
 				<ThemeColor theme={theme} />

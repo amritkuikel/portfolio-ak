@@ -186,6 +186,7 @@ const APP_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
  * guarded by permission, in GUARDED_FUNCTIONS.
  */
 const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
+	"taskline/home.ts": ["getTasklineNav", "listMyTasklineTasks"],
 	"taskline/workspaces.ts": [
 		"listTasklineWorkspaces",
 		"getTasklineWorkspace",

@@ -58,7 +58,14 @@ const samplePost = {
  * Every indexable page: its path (as in FileRoutesByTo, so the home is "/" whichever
  * layout serves it), the context its head() gets, and its expected canonical path.
  */
-const INDEXABLE: ReadonlyArray<{ to: string; label: string; context: Partial<HeadContext>; path: string }> = [
+const INDEXABLE: ReadonlyArray<{
+	to: string;
+	label: string;
+	context: Partial<HeadContext>;
+	path: string;
+	/** A product of its own titles its pages with its name (Taskline, decision 0208). */
+	siteName?: string;
+}> = [
 	// portfolio:start
 	{ to: "/", label: "home", context: { loaderData: samplePerson }, path: "/" },
 	{ to: "/work", label: "work", context: { match: { search: {} } }, path: "/work" },
@@ -87,6 +94,7 @@ const INDEXABLE: ReadonlyArray<{ to: string; label: string; context: Partial<Hea
 	{ to: "/apps/habits", label: "habits", context: { match: { search: {} } }, path: "/apps/habits" },
 	{ to: "/apps/forms", label: "forms", context: {}, path: "/apps/forms" },
 	// apps:end
+	{ to: "/app/taskline", label: "taskline", context: {}, path: "/app/taskline", siteName: "Taskline" }, // @taskline
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 	// @new-feature:indexable
 ];
@@ -156,7 +164,7 @@ describe.each(locales)("route SEO (%s)", (locale) => {
 				if (!route) continue;
 				const head = headFor(route, page.context);
 				const where = `${page.label} (${locale})`;
-				expect(head.title, where).toMatch(new RegExp(`${pageTitle()}$`));
+				expect(head.title, where).toMatch(new RegExp(`${page.siteName ?? pageTitle()}$`));
 				expect(head.meta.get("description")?.length ?? 0, where).toBeGreaterThan(20);
 				expect(head.meta.get("robots"), where).toMatch(/^index, follow/);
 

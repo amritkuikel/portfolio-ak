@@ -50,6 +50,8 @@ export type SeoInput = {
 	noindex?: boolean;
 	/** schema.org data for the page, emitted as <script type="application/ld+json">. */
 	jsonLd?: JsonLd | ReadonlyArray<JsonLd>;
+	/** The product the page belongs to, when it isn't the site (Taskline, decision 0208): the title suffix and og:site_name. */
+	siteName?: string;
 };
 
 /** One entry of a route head's `meta` array. */
@@ -74,19 +76,28 @@ const isJsonLdList = (value: JsonLd | ReadonlyArray<JsonLd>): value is ReadonlyA
  * alternates for every locale plus x-default, Open Graph, Twitter cards and
  * JSON-LD. Spread into a route's `head`: `head: () => seo({...})`.
  */
-export function seo({ title, description, path, image, type = "website", noindex = false, jsonLd = [] }: SeoInput) {
+export function seo({
+	title,
+	description,
+	path,
+	image,
+	type = "website",
+	noindex = false,
+	jsonLd = [],
+	siteName = clientEnv.VITE_APP_TITLE,
+}: SeoInput) {
 	const locale = getLocale();
 	const canonical = localizedUrl(path, locale);
-	const shortTitle = title ?? clientEnv.VITE_APP_TITLE;
+	const shortTitle = title ?? siteName;
 	const preview = image ?? defaultOgImage();
 	const imageUrl = absoluteUrl(preview.url);
 	const structured: ReadonlyArray<JsonLd> = isJsonLdList(jsonLd) ? jsonLd : [jsonLd];
 	const meta: HeadMeta[] = [
-		{ title: pageTitle(title) },
+		{ title: title ? `${title} · ${siteName}` : siteName },
 		{ name: "description", content: description },
 		{ name: "robots", content: noindex ? "noindex, follow" : "index, follow, max-image-preview:large" },
 		{ property: "og:type", content: type },
-		{ property: "og:site_name", content: clientEnv.VITE_APP_TITLE },
+		{ property: "og:site_name", content: siteName },
 		{ property: "og:title", content: shortTitle },
 		{ property: "og:description", content: description },
 		{ property: "og:url", content: canonical },

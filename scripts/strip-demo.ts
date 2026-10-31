@@ -135,9 +135,15 @@ const SPECS: Record<Layer, LayerSpec> = {
 		sentinel: "src/server/taskline",
 		paths: [
 			"src/features/taskline",
+			"src/routes/_taskline",
 			"src/server/taskline",
 			"src/functions/taskline",
 			"src/middleware/taskline.ts",
+			"src/server/routes/taskline-manifest.ts",
+			"public/taskline",
+			".storybook/mocks/taskline.ts",
+			"tests/components/taskline",
+			"e2e/flows/taskline.spec.ts",
 			"src/server/db/schema/taskline",
 			"scripts/seed-taskline.ts",
 			"scripts/lib/taskline-seed.ts",
@@ -148,7 +154,7 @@ const SPECS: Record<Layer, LayerSpec> = {
 		],
 		packageScripts: ["db:seed-taskline"],
 		crons: [],
-		// Its server functions, until Task 47's pages call them.
+		// Its server functions the pages don't call yet (the board, list and lead settings of Task 48).
 		knipEntries: ["src/functions/taskline/*.ts"],
 		schema: [
 			"src/server/db/schema/taskline/project.ts",

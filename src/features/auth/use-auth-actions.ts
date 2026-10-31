@@ -6,8 +6,10 @@ import { refreshAuth } from "./queries";
 /**
  * After Better Auth changes the session cookie (sign in/out), refresh cached
  * auth state and re-run route guards, then go to `to` (a validated same-site path).
+ * `signedOutTo` is where signing out lands (de-localized): the home page, or a
+ * section's own landing (Taskline's).
  */
-export function useAuthNavigation() {
+export function useAuthNavigation({ signedOutTo = "/" }: { signedOutTo?: string } = {}) {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
@@ -33,7 +35,7 @@ export function useAuthNavigation() {
 			const { authClient } = await import("@/lib/auth-client");
 			await authClient.signOut();
 			await refreshAuth(queryClient);
-			await router.navigate({ href: localizeHref("/"), replace: true });
+			await router.navigate({ href: localizeHref(signedOutTo), replace: true });
 		},
 	};
 }

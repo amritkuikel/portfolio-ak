@@ -1588,7 +1588,7 @@ The procedure is section 10.1's, with these differences:
 | Task | Name | Effort | Status |
 | --- | --- | --- | --- |
 | 46 | Foundation: the `taskline` layer, core tables, access, activity, permissions, sandbox seed and claim | xhigh | Done (decisions 0203–0207) |
-| 47 | The standalone shell: layout, brand, landing, auth pages, home, project directory, palette | high | Planned |
+| 47 | The standalone shell: layout, brand, landing, auth pages, home, project directory, palette | high | Done (decision 0208) |
 | 48 | Board, list and the task; Kanban's data migrated, redirected and removed | xhigh | Planned |
 | 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Planned |
 | 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0208 after Task 46).
+- **Decisions:** numbered from the next free one (0209 after Task 47).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1684,9 +1684,9 @@ The procedure is section 10.1's, with these differences:
   - **Sidebar:** workspace switcher (only when the user has both Team and Sandbox), Home, Inbox (unread badge), My timesheet, Search (⌘K), starred and recent projects, New task.
   - **Topbar:** breadcrumbs, the project's view tabs, the running-timer pill, and the user menu (Account, My settings, language, theme, "Admin" when `canEnterAdmin`, sign out).
   - **Phones:** the sidebar is a sheet.
-- **Brand:** the `TasklineMark` wordmark; `data-accent="emerald"` on the shell root; the title suffix `· Taskline`; favicons and `manifest.webmanifest` (`scope` and `start_url` `/app/taskline`, a Nitro route like `src/server/routes/manifest.ts`); Taskline-branded emails.
-- **The layout:**
-  - mounts `ConfirmProvider` and `<DbScope>` (0189: TanStack DB exists only below it; update `check-bundle.ts`'s rule if it names the `_apps` layout);
+- **Brand:** the `TasklineMark` wordmark; the `emerald` accent on `<html>` through `staticData.brand` (Task 47, 0208: a scoped `data-accent` on the shell root missed portalled menus); the title suffix `· Taskline`; favicons and `manifest.webmanifest` (`scope` and `start_url` `/app/taskline`, a Nitro route like `src/server/routes/manifest.ts`); Taskline-branded emails.
+- **The layouts** (Task 47: `_taskline` is the section, with its brand, title and public 404; `_shell` is the signed-in app):
+  - the shell mounts `ConfirmProvider` and `<DbScope>` (0189: TanStack DB exists only below it, so the landing and sign-in pages don't load it);
   - reads the session;
   - makes every inner page `noindex`, with the landing the only indexable page;
   - shows guests a banner ("Your sandbox is deleted after 7 days" → Taskline sign-up);
@@ -1846,29 +1846,28 @@ Taskline's data, access and server core, tested on PGlite, with no UI (decisions
   - The functions are knip entries until Task 47's pages call them; the e2e harness doesn't seed the demo team yet (both noted in Task 47).
 - **For the owner:** run `pnpm db:migrate` on Neon (migration `0016_taskline`), and `pnpm db:seed-taskline --password …` there if you want the demo team.
 
-### Task 47: The standalone shell (planned)
+### Task 47: The standalone shell (done)
 
-**Goal:** a signed-in user opens Taskline and it feels like its own app.
+Taskline at `/app/taskline` as a product of its own (decision 0208; [docs/guides/taskline.md](guides/taskline.md), "The shell").
 
-- **Frame:** `src/routes/_taskline/route.tsx` and `TasklineShell`, as in 11.5: sidebar, topbar, user menu, workspace switcher, guest banner, `DbScope`, `ConfirmProvider`, 404 and error inside the frame, the navigation line (0201) and a pending view.
-- **Brand:** `TasklineMark`, the scoped accent, the icons and manifest route (Nitro, `vite.config.ts`, `knip.json`), the title suffix.
-- **Pages:**
-  - the landing (product page, "Try the sandbox" → guest sign-in, Sign in / Sign up), in the sitemap with JSON-LD;
-  - the Taskline sign-in and sign-up pages, and the account page;
-  - `/home`, first version: my open tasks by due date, recent projects. An account with no team membership and no sandbox sees "Start a sandbox" and "Ask an admin to add you";
-  - `/$ws/projects`: a directory of cards and a list, star, a create dialog (for those allowed).
-- **Navigation:** `features/taskline/links.ts`; a command palette (projects, go to, actions); a shortcuts dialog.
-- **The gallery card** in `/apps`.
-- **Tests:**
-  - jsdom: shell navigation, the switcher, the guest banner;
-  - stories: the shell in both themes and languages, on a phone and a desktop;
-  - e2e: a guest tries the sandbox from the landing; a member sees the team's projects; every new page in the review.
-- **Decision:** a standalone section (its own frame, brand, auth pages, manifest) inside the same app.
-- **Left by Task 46:** remove `src/functions/taskline/*.ts` from `knip.json`'s `entry` (and strip-demo's `knipEntries`) once the pages call them; the e2e harness doesn't seed the demo team yet (`scripts/lib/taskline-seed.ts`, which `dev:local` runs): add it to `e2e/harness/database.ts` for "a member sees the team's projects" (check the user counts other flows expect).
+- **Frames:** `_taskline` (brand, `· Taskline` titles, noindex, a public 404) with the public frame and `TasklineAuthFrame`; `_shell` with `TasklineShell`: sidebar (wordmark, workspace switcher with both workspaces, Home, Projects, Search, starred and recent projects, the user), topbar (breadcrumbs, search, language, theme; the user on phones), palette (every project, pages, "New project" per workspace allowed, shortcuts, preferences, sign out), shortcuts dialog (`?`), guest banner, `ConfirmProvider`, `DbScope`, the navigation line, and its 404 and errors inside the frame (`SectionHome` sends them to Taskline).
+- **Brand:** `TasklineMark`/`TasklineWordmark`, `staticData.brand` (`src/lib/section-brand.ts`: the accent on `<html>`, the icons and manifest in the root's head), `public/taskline/` (SVG, 32, 180, 192, 512, maskable), the manifest as a Nitro route per locale, `seo({ siteName })`.
+- **Pages:** the landing (sandbox, sign in and up; sitemap, JSON-LD `SoftwareApplication`; signed-in visitors go to Home), sign-in and sign-up (the shared forms; `RegisterForm` taken out of `/register`, `/verify-email?redirect=`), the account page (`signedOutTo`), Home (open tasks across workspaces by due date, recent projects, "Start a sandbox", "Ask an admin to add you"), `/$ws/projects` (cards or a list, archived, stars, a create dialog with a suggested key), `/$ws` (redirects to its projects) and a first `/$ws/p/$key` overview (description, progress by status, members) so the sidebar, palette and directory link somewhere.
+- **Server:** `getTasklineNav` and `listMyTasklineTasks` (`src/server/taskline/home/`), resolving each of the caller's workspaces; in the guard test and covered by three PGlite tests.
+- **The gallery:** a featured Taskline card on `/apps` (taskline markers).
+- **Tests:** PGlite (navigation and Home per caller: lead, member, viewer, deactivated, `taskline:read`, guest, outsider; archived projects leave), jsdom (`tests/components/taskline/`: navigation, switcher, guest banner, palette, shortcuts), stories (desktop, guest, palette, phone through the `mobile1` viewport global, in en/light and ne/dark), the breadcrumbs' `params`, route SEO for the landing. `pnpm test`: 109 files, 970 tests; `test:storybook` 420. e2e for what changed (11.1): `taskline`, `apps`, `auth` and `account` flows (14 passed), and the review of every Taskline page, `/apps`, `/admin/apps`, `/register`, `/verify-email`, `/account`, `/account/delete` and the 404 (two runs, 72 and 132 checks, all passed). The e2e database now has the demo team (`seedTaskline`; no flow counts users).
+- **Numbers:** every page's JavaScript 242.1 kB gzip (238.9 before; budget 250): Taskline's eleven route definitions and the landing's head strings (0151). Build, bundle check and `build-storybook` green.
+- **Deviations:**
+  - The sidebar has no Inbox, My timesheet or New task yet, the topbar no view tabs or timer pill, and the user menu no "My settings": they come with their modules (Tasks 48, 50, 53). The user menu has a language item instead of a theme one (the topbar has the theme toggle).
+  - The workspace breadcrumb reads `params.ws` ("Team" or "Sandbox"), not the workspace's name: a loader-based crumb above a child that 404s broke hydration (0208, taskline.md pitfalls).
+  - `src/functions/taskline/*.ts` stay knip entries: the board, list and lead settings (Task 48) call the rest.
+- **For the owner:** nothing to migrate. On Neon, `pnpm db:seed-taskline --password …` gives the landing's sign-in a demo team to show.
 
 ### Task 48: Board, list and the task; Kanban replaced (planned)
 
 **Goal:** Taskline's daily work, and Kanban's data moved into it.
+
+- **Left by Task 47:** the project overview exists at `/$ws/p/$key/index.tsx` (description, progress by status, members): give it a `$key/route.tsx` layout with the header and view tabs, and add the activity. Sidebar "New task" and the topbar's view tabs are this task's. Remove `src/functions/taskline/*.ts` from `knip.json`'s `entry` (and strip-demo's `knipEntries`) once every function has a caller.
 
 - **Project layout:** header (name, members, view tabs), a shared `FilterBar` (assignee, label, priority, type, due, status; in the URL), and the overview page (description, progress by category, members, recent activity through `Timeline`).
 - **Board:** a port of Kanban's `board.tsx`, `moves.ts` and `collections.ts`.

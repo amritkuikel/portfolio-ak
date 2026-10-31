@@ -22,7 +22,7 @@ import { m } from "@/paraglide/messages";
 import { UserMenu } from "./user-menu";
 
 /** The route's breadcrumb trail (each match's staticData.breadcrumb). Phones show the current page only. */
-function TopbarBreadcrumbs() {
+export function TopbarBreadcrumbs() {
 	const crumbs = crumbsFromMatches(useMatches());
 	if (crumbs.length === 0) return null;
 	return (

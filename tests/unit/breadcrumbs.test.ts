@@ -62,6 +62,17 @@ describe("crumbsFromMatches", () => {
 		expect(crumbsFromMatches(route({ title: 42 }))).toHaveLength(1);
 		expect(crumbsFromMatches(route({ title: "" }))).toHaveLength(1);
 	});
+
+	it("passes the match's params, so a layout can label itself from the URL", () => {
+		const crumbs = crumbsFromMatches([
+			{
+				pathname: "/app/taskline/sandbox",
+				params: { ws: "sandbox" },
+				staticData: { breadcrumb: ({ params }) => (params.ws === "sandbox" ? "Sandbox" : "Team") },
+			},
+		]);
+		expect(crumbs).toEqual([{ label: "Sandbox", path: "/app/taskline/sandbox" }]);
+	});
 });
 
 describe("breadcrumb JSON-LD", () => {

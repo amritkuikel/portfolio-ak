@@ -38,6 +38,7 @@ export async function sitemapEntries({ db }: Pick<Services, "db">): Promise<Site
 	// portfolio:end
 	// The showcase apps' gallery and landings (decision 0187); what's inside an app is private.
 	entries.push({ path: "/apps" }, ...APPS.map((app) => ({ path: appPath(app.slug) }))); // @apps
+	entries.push({ path: "/app/taskline" }); // @taskline
 	for (const source of SITEMAP_SOURCES) entries.push(...(await source({ db })));
 	return entries;
 }

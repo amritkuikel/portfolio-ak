@@ -1,7 +1,8 @@
 /**
  * The e2e database: the committed migrations, an admin, the demo data
  * (`scripts/lib/demo-data.ts`, the same rows `pnpm db:seed-demo` writes) and the
- * portfolio's content (`scripts/lib/portfolio-seed.ts`, as `pnpm db:seed-portfolio`).
+ * portfolio's content (`scripts/lib/portfolio-seed.ts`, as `pnpm db:seed-portfolio`) and
+ * Taskline's demo team (`scripts/lib/taskline-seed.ts`, as `pnpm db:seed-taskline`).
  */
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
@@ -10,6 +11,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 import { type DemoQuery, seedDemo } from "../../scripts/lib/demo-data.ts";
 import { seedPortfolio } from "../../scripts/lib/portfolio-seed.ts"; // @portfolio
+import { seedTaskline } from "../../scripts/lib/taskline-seed.ts"; // @taskline
 import { E2E } from "./config.ts";
 
 /**
@@ -47,6 +49,8 @@ export async function prepareDatabase(
 		[randomUUID(), adminId, passwordHash],
 	);
 	await seedDemo(query, { passwordHash });
+	// Taskline's demo team (asha@… and the rest, with the same password; the admin joins it too).
+	await seedTaskline(query, { passwordHash }); // @taskline
 	await query("commit");
 	return { query, close: () => client.end() };
 }

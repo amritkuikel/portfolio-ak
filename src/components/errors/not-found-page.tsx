@@ -2,8 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
+import { useSectionHome } from "./section-home";
 
 export function NotFoundPage() {
+	const home = useSectionHome();
 	return (
 		<main
 			{...MAIN_CONTENT}
@@ -13,7 +15,7 @@ export function NotFoundPage() {
 			<h1 className="font-semibold text-2xl tracking-tight">{m.not_found_title()}</h1>
 			<p className="text-muted-foreground">{m.not_found_description()}</p>
 			<Button asChild variant="outline">
-				<Link to="/">{m.error_go_home()}</Link>
+				{home ?? <Link to="/">{m.error_go_home()}</Link>}
 			</Button>
 		</main>
 	);

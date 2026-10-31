@@ -158,6 +158,25 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/apps", as: "admin" },
 	{ route: "/admin/links", as: "admin" },
 	// apps:end
+	// taskline:start
+	// Taskline (decision 0208): the landing and its sign-in pages for visitors; the app as a team member (the admin
+	// is on the seeded demo team) and as an account with neither the team nor a sandbox.
+	{ route: "/app/taskline" },
+	{ route: "/app/taskline/sign-in" },
+	{ route: "/app/taskline/sign-up" },
+	{ route: "/app/taskline/home", as: "admin" },
+	{ route: "/app/taskline/home", as: "editor", label: "no team" },
+	{ route: "/app/taskline/account", as: "admin" },
+	{ route: "/app/taskline/$ws/projects", as: "admin", path: "/app/taskline/team/projects" },
+	{ route: "/app/taskline/$ws/p/$key", as: "admin", path: "/app/taskline/team/p/WEB" },
+	{
+		route: "/app/taskline/$ws/projects",
+		as: "admin",
+		path: "/app/taskline/nope/projects",
+		status: 404,
+		label: "unknown workspace",
+	},
+	// taskline:end
 	// @new-feature:reviewed-pages
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },
@@ -172,6 +191,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/account/export": "a JSON download (checked by e2e/flows/account.spec.ts)",
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
 	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
+	"/app/taskline/$ws": "a redirect to the workspace's projects (checked by e2e/flows/taskline.spec.ts)", // @taskline
 	// @new-feature:not-reviewed
 };
 

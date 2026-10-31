@@ -24,6 +24,7 @@ head: () =>
 		image: { url, width, height, alt },    // optional; defaults to public/og-default.png
 		type: "article",                       // optional; "website" by default
 		jsonLd: productJsonLd({ ... }),        // optional; one object or an array
+		siteName: "Taskline",                  // optional: a product of its own (title suffix, og:site_name; 0208)
 	}),
 ```
 

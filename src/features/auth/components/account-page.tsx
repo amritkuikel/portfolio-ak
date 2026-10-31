@@ -35,14 +35,17 @@ export function AccountPage({
 	user,
 	emailChanged,
 	twoFactorRequested,
+	signedOutTo,
 }: {
 	user: { name: string; email: string };
 	/** Back from the link confirming a new email address. */
 	emailChanged: boolean;
 	/** Sent here by the admin area to set up two-factor first (0126). */
 	twoFactorRequested: boolean;
+	/** Where signing out lands (a section's own landing; the home page by default). */
+	signedOutTo?: string;
 }) {
-	const { signOut } = useAuthNavigation();
+	const { signOut } = useAuthNavigation({ signedOutTo });
 	const { data: security } = useSuspenseQuery(accountSecurityQueryOptions());
 
 	return (
@@ -58,7 +61,7 @@ export function AccountPage({
 						{user.email}
 					</p>
 				</div>
-				<Button type="button" variant="outline" onClick={signOut}>
+				<Button type="button" variant="outline" onClick={() => void signOut()}>
 					{m.nav_logout()}
 				</Button>
 			</div>
