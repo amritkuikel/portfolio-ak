@@ -346,6 +346,12 @@ function BoardCard({
 						<TaskTypeIcon type={task.type} />
 						<span className="font-mono">{task.number > 0 ? task.ref : ""}</span>
 						<PriorityIcon priority={task.priority} />
+						{task.points !== null ? (
+							<span className="rounded-full bg-surface-2 px-1.5 tabular-nums" data-testid="taskline-card-points">
+								<span className="sr-only">{m.taskline_field_points()}: </span>
+								{formatNumber(task.points)}
+							</span>
+						) : null}
 					</span>
 					{props.renderOpen(
 						task,

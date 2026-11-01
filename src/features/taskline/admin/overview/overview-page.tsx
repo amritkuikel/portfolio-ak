@@ -18,6 +18,7 @@ import { formatDayMonth, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { TASKLINE_NAME } from "../../brand";
 import { tasklineColor } from "../../colors";
+import { ActiveSprintList } from "../../sprints/active-sprints";
 import { PROJECT_HEALTH, PROJECT_STATUS } from "../labels";
 import { tasklineOverviewQueryOptions } from "../queries";
 import type { AdminProjectHealthRow } from "../schema";
@@ -150,6 +151,22 @@ export function TasklineOverviewPage() {
 					empty={<p className="p-6 text-center text-muted-foreground">{m.taskline_admin_health_empty()}</p>}
 					data-testid="taskline-admin-health"
 				/>
+			</section>
+			<section aria-labelledby="tl-admin-sprints" className="flex flex-col gap-3">
+				<h2 id="tl-admin-sprints" className="text-heading">
+					{m.taskline_admin_sprints_title()}
+				</h2>
+				{data.sprints.length === 0 ? (
+					<p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+						{m.taskline_admin_sprints_empty()}
+					</p>
+				) : (
+					<ActiveSprintList
+						sprints={data.sprints}
+						today={data.today}
+						className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+					/>
+				)}
 			</section>
 			<section aria-labelledby="tl-admin-people" className="flex flex-col gap-3">
 				<h2 id="tl-admin-people" className="text-heading">

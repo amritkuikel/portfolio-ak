@@ -35,6 +35,9 @@ const task = (id: string, statusId: string, position: string): TaskSummary => ({
 	completedAt: null,
 	checklist: { done: 0, total: 0 },
 	updatedAt: "2026-10-31T00:00:00.000Z",
+	sprintId: null,
+	points: null,
+	rank: "c000",
 });
 
 // Given out of order on purpose: the layout sorts.

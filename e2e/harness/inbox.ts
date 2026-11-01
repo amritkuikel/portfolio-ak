@@ -317,6 +317,15 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				);
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
+			if (route === "GET /e2e/taskline-sprint") {
+				// A team project's sprint in a state (Task 52: the reports' review).
+				const { rows } = await query(
+					`select s."id" from "tl_sprint" s join "tl_project" p on p."id" = s."project_id" join "tl_workspace" w on w."id" = p."workspace_id"
+					 where w."kind" = 'team' and p."key" = $1 and s."state" = $2 order by s."start_on" limit 1`,
+					[url.searchParams.get("key"), url.searchParams.get("state")],
+				);
+				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
+			}
 			// taskline:end
 			// apps:start
 			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));

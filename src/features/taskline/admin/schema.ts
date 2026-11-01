@@ -5,6 +5,7 @@ import { m } from "@/paraglide/messages";
 import { LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey } from "../schema";
 import { DEFAULT_STATUS_MAX, defaultStatus, TEAM_SLUG_PATTERN, workspaceSettings } from "../settings";
 import {
+	type ActiveSprint,
 	PROJECT_HEALTHS,
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
@@ -63,6 +64,8 @@ export type AdminOverview = {
 	sandboxes: { total: number; guests: number; projects: number; tasks: number };
 	members: { active: number; invited: number };
 	today: string;
+	/** Task 52: the team's active sprints, soonest ending first. */
+	sprints: ActiveSprint[];
 };
 
 // ---- Projects -----------------------------------------------------------------------------------

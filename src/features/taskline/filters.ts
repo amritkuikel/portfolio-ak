@@ -8,8 +8,11 @@ import type { TaskSummary } from "./types";
  * (`listWhere` in src/server/taskline/tasks/repository.ts) means the same thing.
  */
 
-/** What a filter needs besides the task: the caller's member row (for `me`) and today in the workspace. */
-export type FilterContext = { me: string | null; today: string };
+/**
+ * What a filter needs besides the task: the caller's member row (for `me`), today in
+ * the workspace, and the project's active sprint (for `sprint=active`, Task 52).
+ */
+export type FilterContext = { me: string | null; today: string; activeSprintId?: string | null };
 
 /** "web-12", "12" or words of the title (any case). */
 const matchesText = (task: TaskSummary, q: string) => {
@@ -19,7 +22,11 @@ const matchesText = (task: TaskSummary, q: string) => {
 	return task.title.toLowerCase().includes(text);
 };
 
-export function matchesFilters(task: TaskSummary, filters: TaskFilters, { me, today }: FilterContext): boolean {
+export function matchesFilters(
+	task: TaskSummary,
+	filters: TaskFilters,
+	{ me, today, activeSprintId = null }: FilterContext,
+): boolean {
 	if (!matchesText(task, filters.q)) return false;
 	if (filters.status !== "all" && task.statusId !== filters.status) return false;
 	if (filters.assignee === "none" && task.assigneeId !== null) return false;
@@ -35,6 +42,9 @@ export function matchesFilters(task: TaskSummary, filters: TaskFilters, { me, to
 	if (filters.due === "week" && !(task.dueOn !== null && task.dueOn >= today && task.dueOn <= addDays(today, 6))) {
 		return false;
 	}
+	if (filters.sprint === "none" && task.sprintId !== null) return false;
+	if (filters.sprint === "active" && (activeSprintId === null || task.sprintId !== activeSprintId)) return false;
+	if (!["all", "none", "active"].includes(filters.sprint) && task.sprintId !== filters.sprint) return false;
 	return true;
 }
 
@@ -46,7 +56,8 @@ export const hasFilters = (filters: TaskFilters) =>
 	filters.label !== "all" ||
 	filters.priority !== "all" ||
 	filters.type !== "all" ||
-	filters.due !== "all";
+	filters.due !== "all" ||
+	filters.sprint !== "all";
 
 /** The filters out of a view's search (which carries other params too). */
 export const filtersOf = (search: TaskFilters): TaskFilters => ({
@@ -57,4 +68,5 @@ export const filtersOf = (search: TaskFilters): TaskFilters => ({
 	priority: search.priority,
 	type: search.type,
 	due: search.due,
+	sprint: search.sprint,
 });

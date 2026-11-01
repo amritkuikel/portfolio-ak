@@ -18,6 +18,7 @@ import { tasklineLinks } from "../links";
 import { myTasksQueryOptions, startSandboxMutation, tasklineNavQueryOptions } from "../queries";
 import type { MyWorkShow } from "../search";
 import { ProjectDot } from "../shell/taskline-sidebar";
+import { ActiveSprintList } from "../sprints/active-sprints";
 import type { MyTask, NavProject } from "../types";
 
 const BUCKET_LABELS: Record<MyWorkBucket, () => string> = {
@@ -135,28 +136,38 @@ export function TasklineHome() {
 						</div>
 					)}
 				</section>
-				<section aria-labelledby="home-recent" className="flex flex-col gap-3">
-					<h2 id="home-recent" className="text-heading">
-						{m.taskline_home_recent()}
-					</h2>
-					{nav.recent.length === 0 ? (
-						<EmptyState icon={FolderKanbanIcon} description={m.taskline_home_recent_empty()} />
-					) : (
-						<ul className="flex flex-col gap-2" data-testid="recent-projects">
-							{nav.recent.map((project) => (
-								<li key={project.id}>
-									<RecentProject project={project} several={nav.workspaces.length > 1} />
-								</li>
-							))}
-						</ul>
-					)}
-					{guest || hasSandbox ? null : (
-						<div className="flex flex-col items-start gap-2 rounded-lg border border-dashed p-4">
-							<p className="text-muted-foreground text-sm">{m.taskline_home_sandbox_offer()}</p>
-							<StartSandboxButton userId={userId} variant="outline" />
-						</div>
-					)}
-				</section>
+				<div className="flex flex-col gap-6">
+					{mine.sprints.length > 0 ? (
+						<section aria-labelledby="home-sprints" className="flex flex-col gap-3">
+							<h2 id="home-sprints" className="text-heading">
+								{m.taskline_home_sprints()}
+							</h2>
+							<ActiveSprintList sprints={mine.sprints} today={mine.today} />
+						</section>
+					) : null}
+					<section aria-labelledby="home-recent" className="flex flex-col gap-3">
+						<h2 id="home-recent" className="text-heading">
+							{m.taskline_home_recent()}
+						</h2>
+						{nav.recent.length === 0 ? (
+							<EmptyState icon={FolderKanbanIcon} description={m.taskline_home_recent_empty()} />
+						) : (
+							<ul className="flex flex-col gap-2" data-testid="recent-projects">
+								{nav.recent.map((project) => (
+									<li key={project.id}>
+										<RecentProject project={project} several={nav.workspaces.length > 1} />
+									</li>
+								))}
+							</ul>
+						)}
+						{guest || hasSandbox ? null : (
+							<div className="flex flex-col items-start gap-2 rounded-lg border border-dashed p-4">
+								<p className="text-muted-foreground text-sm">{m.taskline_home_sandbox_offer()}</p>
+								<StartSandboxButton userId={userId} variant="outline" />
+							</div>
+						)}
+					</section>
+				</div>
 			</div>
 		</Page>
 	);

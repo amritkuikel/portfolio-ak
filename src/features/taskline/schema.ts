@@ -7,11 +7,13 @@ import { projectSettings } from "./settings";
 import {
 	NOTIFY_KINDS,
 	NOTIFY_MODES,
+	POINTS_MAX,
 	PROJECT_HEALTHS,
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
 	PROJECT_VISIBILITIES,
 	SAVED_VIEW_KINDS,
+	SPRINT_CARRY,
 	STATUS_CATEGORIES,
 	TASK_TYPES,
 	TASKLINE_COLORS,
@@ -42,6 +44,7 @@ export const TASK_REF_PATTERN = /^([A-Z][A-Z0-9]{1,5})-([1-9][0-9]{0,8})$/;
 const id = z.uuid();
 const position = z.string().refine(isOrderKey);
 const color = z.enum(TASKLINE_COLORS);
+const points = z.number().int().min(0).max(POINTS_MAX);
 
 export const ws = () => z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/);
 export const projectKey = () =>
@@ -188,6 +191,9 @@ export const createTaskInput = z.strictObject({
 	labelIds: labelIds.optional(),
 	startOn: isoDate().nullable().optional(),
 	dueOn: isoDate().nullable().optional(),
+	/** Task 52: planned in a sprint (omitted: the backlog), and its estimate. */
+	sprintId: id.nullable().optional(),
+	points: points.nullable().optional(),
 });
 
 /** The title and description: saved with the version they started from. */
@@ -210,10 +216,16 @@ export const patchTaskInput = z.strictObject({
 	labelIds: labelIds.optional(),
 	startOn: isoDate().nullable().optional(),
 	dueOn: isoDate().nullable().optional(),
+	sprintId: id.nullable().optional(),
+	points: points.nullable().optional(),
 });
 
 /** A drop on the board: a status and a position in it (an order key the browser computed). */
 export const moveTaskInput = z.strictObject({ ws: ws(), ref: taskRef(), statusId: id, position });
+
+/** A drop on the backlog (Task 52): a sprint (null: the backlog) and a rank (an order key the browser computed). */
+export const rankTaskInput = z.strictObject({ ws: ws(), ref: taskRef(), sprintId: id.nullable(), rank: position });
+export type RankTaskInput = z.infer<typeof rankTaskInput>;
 
 export const setChecklistInput = z.strictObject({
 	ws: ws(),
@@ -369,6 +381,68 @@ export const importTasksInput = z.strictObject({
 
 export type SaveViewInput = z.infer<typeof saveViewInput>;
 export type ImportTasksInput = z.infer<typeof importTasksInput>;
+
+// ---- Sprints (Task 52) ----------------------------------------------------------------------
+
+export const SPRINT_NAME_MAX = 60;
+export const SPRINT_GOAL_MAX = 500;
+/** A sprint lasts at most this many days. */
+export const SPRINT_DAYS_MAX = 60;
+/** Sprints a project keeps planned at once. */
+export const PLANNED_SPRINTS_MAX = 10;
+
+const sprintFields = {
+	name: required({ max: SPRINT_NAME_MAX }),
+	goal: optionalText({ max: SPRINT_GOAL_MAX }).optional(),
+	startOn: isoDate(),
+	endOn: isoDate(),
+};
+
+/** The dates' order and length, as a field error on `endOn` (the form shows it under the end date). */
+const sprintDates = <T extends { startOn?: string; endOn?: string }>(input: T, context: z.RefinementCtx) => {
+	if (!input.startOn || !input.endOn) return;
+	if (input.endOn < input.startOn) {
+		context.addIssue({ code: "custom", path: ["endOn"], message: m.taskline_sprint_error_dates() });
+		return;
+	}
+	const days = (Date.parse(input.endOn) - Date.parse(input.startOn)) / 86_400_000 + 1;
+	if (days > SPRINT_DAYS_MAX) {
+		context.addIssue({
+			code: "custom",
+			path: ["endOn"],
+			message: m.taskline_sprint_error_length({ days: SPRINT_DAYS_MAX }),
+		});
+	}
+};
+
+export const createSprintInput = z
+	.strictObject({ ws: ws(), key: projectKey(), ...sprintFields })
+	.superRefine(sprintDates);
+export const updateSprintInput = z
+	.strictObject({
+		ws: ws(),
+		key: projectKey(),
+		id,
+		name: sprintFields.name.optional(),
+		goal: sprintFields.goal,
+		startOn: isoDate().optional(),
+		endOn: isoDate().optional(),
+	})
+	.superRefine(sprintDates);
+export const sprintInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+/**
+ * Completing the active sprint: its unfinished tasks go to the backlog, to a planned
+ * sprint (`nextId`), or to a new sprint that starts the next day, as long as this one was.
+ */
+export const completeSprintInput = z
+	.strictObject({ ws: ws(), key: projectKey(), id, carryTo: z.enum(SPRINT_CARRY), nextId: id.optional() })
+	.refine((input) => (input.carryTo === "next") === (input.nextId !== undefined), {
+		error: "A next sprint with `next`, none otherwise",
+	});
+
+export type CreateSprintInput = z.infer<typeof createSprintInput>;
+export type UpdateSprintInput = z.infer<typeof updateSprintInput>;
+export type CompleteSprintInput = z.infer<typeof completeSprintInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

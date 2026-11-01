@@ -32,6 +32,9 @@ const task = (id: string, title: string, dueOn: string | null): TaskSummary => (
 	completedAt: null,
 	checklist: { done: 0, total: 0 },
 	updatedAt: "2026-11-01T00:00:00.000Z",
+	sprintId: null,
+	points: null,
+	rank: "c000",
 });
 
 function Harness({ canEdit = true }: { canEdit?: boolean }) {

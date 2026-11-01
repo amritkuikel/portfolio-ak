@@ -50,6 +50,12 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "taskline-project-id") {
 		return page.route.replace("$id", await harness.tasklineProjectId("WEB"));
 	}
+	if (page.params.from === "taskline-sprint-id") {
+		return page.route
+			.replace("$ws", "team")
+			.replace("$key", "APP")
+			.replace("$sprintId", await harness.tasklineSprintId("APP", page.params.state));
+	}
 	// taskline:end
 	// apps:start
 	if (page.params.from === "note-id") return page.route.replace("$noteId", (await harness.reviewNote("member")).id);

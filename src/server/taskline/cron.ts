@@ -10,6 +10,7 @@ import * as collab from "./collab/repository";
 import { type DeliveryResult, sendDigests } from "./notify/deliver";
 import { produce } from "./notify/produce";
 import { bumpRev } from "./rev";
+import * as sprints from "./sprints/repository";
 import * as tasks from "./tasks/repository";
 
 /**
@@ -19,10 +20,11 @@ import * as tasks from "./tasks/repository";
  *
  * 1. Due and overdue notices to assignees (one per task and due date).
  * 2. The daily digests.
- * 3. Purging the trash past each workspace's retention (with the tasks' files).
- * 4. Expiring invitations: open ones a month past their date are revoked.
+ * 3. Sprint snapshots: each active sprint's close of yesterday (Task 52, 0216).
+ * 4. Purging the trash past each workspace's retention (with the tasks' files).
+ * 5. Expiring invitations: open ones a month past their date are revoked.
  *
- * Later tasks add sprint snapshots (52), stopping old timers (53) and automations (56).
+ * Later tasks add stopping old timers (53) and automations (56).
  */
 
 /** Overdue notices catch up this many days of missed runs, not the whole backlog. */
@@ -31,7 +33,7 @@ const INVITATION_GRACE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type CronStep = { ok: boolean; [detail: string]: unknown };
-export type CronResult = Record<"notices" | "digests" | "trash" | "invitations", CronStep>;
+export type CronResult = Record<"notices" | "digests" | "sprints" | "trash" | "invitations", CronStep>;
 
 /** Notices of tasks due tomorrow, or past due, to their assignees; never twice for one due date. */
 export async function dueNotices(db: Db, now = new Date()): Promise<{ due: number; overdue: number }> {
@@ -125,6 +127,40 @@ export async function purgeTrash(db: Db, now = new Date()): Promise<{ purged: nu
 	return { purged };
 }
 
+/**
+ * Each active sprint's totals at the close of yesterday in its workspace (decision
+ * 0216): the job runs in the morning, so what it reads is the day that just ended. A
+ * day already written is left alone, so a second run changes nothing.
+ */
+export async function sprintSnapshots(db: Db, now = new Date()): Promise<{ snapshots: number }> {
+	let written = 0;
+	const workspaces = await db.select().from(tlWorkspace);
+	for (const workspace of workspaces) {
+		const settings = workspaceSettings.parse(workspace.settings);
+		const yesterday = addDays(todayInZone(settings.timeZone, now), -1);
+		const live = await db
+			.select({ id: tlProject.id })
+			.from(tlProject)
+			.where(and(eq(tlProject.workspaceId, workspace.id), isNull(tlProject.archivedAt)));
+		const active = (
+			await sprints.activeSprintsOf(
+				db,
+				live.map((row) => row.id),
+			)
+		).filter((sprint) => sprint.startOn <= yesterday);
+		if (active.length === 0) continue;
+		const totals = await sprints.totalsOf(
+			db,
+			active.map((sprint) => sprint.id),
+		);
+		for (const sprint of active) {
+			const today = totals.get(sprint.id);
+			if (today && (await sprints.writeSnapshot(db, sprint.id, yesterday, today, { replace: false }))) written++;
+		}
+	}
+	return { snapshots: written };
+}
+
 /** Open invitations a month past their date are revoked: they leave the admin's list and free the address. */
 export async function expireInvitations(db: Db, now = new Date()): Promise<{ expired: number }> {
 	const rows = await db
@@ -157,6 +193,7 @@ export async function runTasklineCron(
 	return {
 		notices: await step("notices", () => dueNotices(db, now)),
 		digests: await step("digests", (): Promise<DeliveryResult> => sendDigests(db, { provider, now })),
+		sprints: await step("sprints", () => sprintSnapshots(db, now)),
 		trash: await step("trash", () => purgeTrash(db, now)),
 		invitations: await step("invitations", () => expireInvitations(db, now)),
 	};

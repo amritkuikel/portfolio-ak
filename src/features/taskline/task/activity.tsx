@@ -24,6 +24,8 @@ import type {
 export type ActivityContext = {
 	members: ReadonlyArray<TasklineMember>;
 	statuses: ReadonlyArray<TasklineStatus>;
+	/** Task 52: the open sprints, for "planned it in Sprint 2" (a completed one reads as "a sprint"). */
+	sprints?: ReadonlyArray<{ id: string; name: string }>;
 };
 
 const text = (value: ActivityValue | undefined) => (typeof value === "string" ? value : "");
@@ -69,6 +71,17 @@ function fieldPhrase(actor: string, data: ActivityData, context: ActivityContext
 			return m.taskline_activity_labels({ actor });
 		case "parentId":
 			return m.taskline_activity_parent({ actor });
+		case "sprintId":
+			return to
+				? m.taskline_activity_sprint({
+						actor,
+						sprint: context.sprints?.find((sprint) => sprint.id === to)?.name ?? m.taskline_activity_a_sprint(),
+					})
+				: m.taskline_activity_backlog({ actor });
+		case "points":
+			return to === null || to === undefined
+				? m.taskline_activity_points_removed({ actor })
+				: m.taskline_activity_points({ actor, points: formatNumber(Number(to) || 0) });
 		default:
 			return m.taskline_activity_changed({ actor });
 	}
@@ -133,6 +146,16 @@ export function activitySentence(
 		case "label.updated":
 		case "label.deleted":
 			return m.taskline_activity_label_changed({ actor });
+		case "sprint.created":
+			return m.taskline_activity_sprint_created({ actor, sprint: text(data.name) });
+		case "sprint.updated":
+			return m.taskline_activity_sprint_updated({ actor, sprint: text(data.name) });
+		case "sprint.deleted":
+			return m.taskline_activity_sprint_deleted({ actor, sprint: text(data.name) });
+		case "sprint.started":
+			return m.taskline_activity_sprint_started({ actor, sprint: text(data.name) });
+		case "sprint.completed":
+			return m.taskline_activity_sprint_completed({ actor, sprint: text(data.name) });
 		default:
 			return m.taskline_activity_changed({ actor });
 	}

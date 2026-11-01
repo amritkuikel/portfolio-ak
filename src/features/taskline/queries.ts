@@ -36,6 +36,14 @@ import {
 	updateTasklineProject,
 } from "@/functions/taskline/projects";
 import {
+	completeTasklineSprint,
+	createTasklineSprint,
+	deleteTasklineSprint,
+	getTasklineSprintReport,
+	startTasklineSprint,
+	updateTasklineSprint,
+} from "@/functions/taskline/sprints";
+import {
 	bulkUpdateTasklineTasks,
 	createTasklineTask,
 	getTasklineProjectRev,
@@ -64,8 +72,10 @@ import { getTasklineWorkspace, listTasklineMembers, startTasklineSandbox } from 
 import type {
 	AddCommentInput,
 	BulkTasksInput,
+	CompleteSprintInput,
 	CreateLabelInput,
 	CreateProjectInput,
+	CreateSprintInput,
 	CreateStatusInput,
 	CreateTaskInput,
 	ImportTasksInput,
@@ -79,6 +89,7 @@ import type {
 	UpdateCommentInput,
 	UpdateLabelInput,
 	UpdateProjectInput,
+	UpdateSprintInput,
 	UpdateStatusInput,
 	UpdateTaskInput,
 } from "./schema";
@@ -117,7 +128,17 @@ export const tasklineKeys = {
 	search: (userId: string, ws: string, q: string, page: number) =>
 		[...tasklineKeys.workspace(userId, ws), "search", { q, page }] as const,
 	find: (userId: string, q: string) => [...tasklineKeys.user(userId), "find", q] as const,
+	/** Task 52: a sprint's report (under its project, so the project's refresh reads it again). */
+	sprintReport: (userId: string, ws: string, key: string, id: string) =>
+		[...tasklineKeys.project(userId, ws, key), "sprint", id] as const,
 };
+
+/** A sprint's report: its days, today's totals and the velocity. */
+export const sprintReportQueryOptions = (userId: string, ws: string, key: string, id: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.sprintReport(userId, ws, key, id),
+		queryFn: () => getTasklineSprintReport({ data: { ws, key, id } }),
+	});
 
 /** A project's saved views of one kind (the list's, the board's, the calendar's "Views" menu). */
 export const savedViewsQueryOptions = (userId: string, ws: string, key: string, view: SavedViewKind) =>
@@ -365,4 +386,18 @@ export const tasklineMutations = {
 			mutationFn: (input: NotifySettingsInput) => saveTasklineNotifySettings({ data: input }),
 			onSuccess: (saved) => queryClient.setQueryData(tasklineKeys.notifySettings(userId), saved),
 		}),
+	createSprint: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateSprintInput) => createTasklineSprint({ data: input })),
+	updateSprint: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateSprintInput) => updateTasklineSprint({ data: input })),
+	deleteSprint: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			deleteTasklineSprint({ data: input }),
+		),
+	startSprint: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			startTasklineSprint({ data: input }),
+		),
+	completeSprint: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CompleteSprintInput) => completeTasklineSprint({ data: input })),
 };

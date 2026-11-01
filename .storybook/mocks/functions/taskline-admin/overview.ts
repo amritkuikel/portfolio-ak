@@ -41,6 +41,17 @@ export const sampleTasklineOverview: AdminOverview = {
 	sandboxes: { total: 14, guests: 11, projects: 30, tasks: 410 },
 	members: { active: 5, invited: 2 },
 	today: "2026-10-31",
+	sprints: [
+		{
+			id: "s-2",
+			name: "Sprint 2",
+			project: { id: "p-web", key: "WEB", name: "Website relaunch", color: "teal", ws: "team", workspaceKind: "team" },
+			startOn: "2026-10-24",
+			endOn: "2026-11-06",
+			totals: { scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2 },
+			estimation: "points",
+		},
+	],
 };
 
 export const getTasklineOverview = fn(async (): Promise<AdminOverview> => sampleTasklineOverview).mockName(

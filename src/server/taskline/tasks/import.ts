@@ -141,6 +141,8 @@ export async function importTasks(
 		const firstNumber = await reserveTaskNumbers(tx, access.project.id, planned.length);
 		const reporterId = access.member?.id ?? null;
 		const now = new Date();
+		// Task 52: the imported tasks go to the end of the backlog, in the file's order.
+		const ranks = await repo.endRanks(tx, access.project.id, planned.length);
 		const tasks = planned.map(({ row, status, assigneeId }, index) => {
 			const text = description(row.description);
 			return {
@@ -154,6 +156,7 @@ export async function importTasks(
 				type: row.type && offered.includes(row.type) ? row.type : defaultType,
 				statusId: status.id,
 				position: keys.get(status.id)?.shift() ?? "a0",
+				rank: ranks[index] ?? "a0",
 				priority: row.priority,
 				assigneeId,
 				reporterId,

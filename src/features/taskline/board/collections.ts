@@ -1,5 +1,6 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { collectionOptions } from "@tanstack/react-db";
+import { rankTasklineTask } from "@/functions/taskline/sprints";
 import {
 	createTasklineTask,
 	listTasklineTasks,
@@ -39,6 +40,7 @@ const patchOf = ({
 	labelIds,
 	startOn,
 	dueOn,
+	points,
 }: Partial<TaskSummary>): Omit<PatchTaskInput, "ws" | "ref"> => ({
 	type,
 	priority,
@@ -46,6 +48,7 @@ const patchOf = ({
 	labelIds,
 	startOn,
 	dueOn,
+	points,
 });
 
 const hasAny = (patch: object) => Object.values(patch).some((value) => value !== undefined);
@@ -71,6 +74,7 @@ const make = (userId: string, ws: string, key: string) =>
 							position: modified.position,
 							priority: modified.priority,
 							assigneeId: modified.assigneeId,
+							sprintId: modified.sprintId,
 						},
 					});
 				}
@@ -78,6 +82,17 @@ const make = (userId: string, ws: string, key: string) =>
 			},
 			onUpdate: async ({ transaction, collection }) => {
 				for (const { original, changes } of transaction.mutations) {
+					// A drop on the backlog (Task 52): its sprint and rank.
+					if (changes.sprintId !== undefined || changes.rank !== undefined) {
+						await rankTasklineTask({
+							data: {
+								ws,
+								ref: original.ref,
+								sprintId: changes.sprintId !== undefined ? changes.sprintId : original.sprintId,
+								rank: changes.rank ?? original.rank,
+							},
+						});
+					}
 					if (changes.statusId !== undefined || changes.position !== undefined) {
 						await moveTasklineTask({
 							data: {
@@ -121,6 +136,8 @@ export function draftTask(
 	values: Pick<TaskSummary, "title" | "statusId" | "position"> & {
 		priority?: TaskPriority;
 		assigneeId?: string | null;
+		/** Task 52: added in a sprint's section of the backlog. */
+		sprintId?: string | null;
 		key: string;
 	},
 ): TaskSummary {
@@ -142,5 +159,12 @@ export function draftTask(
 		completedAt: null,
 		checklist: { done: 0, total: 0 },
 		updatedAt: new Date().toISOString(),
+		sprintId: values.sprintId ?? null,
+		points: null,
+		// The server ranks it last in the backlog; until then it sorts after every key ("~" is past base 62).
+		rank: DRAFT_RANK,
 	};
 }
+
+/** A new task's rank before the server gives it one: after every order key. */
+export const DRAFT_RANK = "~";

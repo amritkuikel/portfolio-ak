@@ -57,6 +57,11 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, () => string> = {
 	"comment.deleted": m.taskline_admin_kind_comment_deleted,
 	"attachment.added": m.taskline_admin_kind_file_added,
 	"attachment.removed": m.taskline_admin_kind_file_removed,
+	"sprint.created": m.taskline_admin_kind_sprint_created,
+	"sprint.updated": m.taskline_admin_kind_sprint_updated,
+	"sprint.deleted": m.taskline_admin_kind_sprint_deleted,
+	"sprint.started": m.taskline_admin_kind_sprint_started,
+	"sprint.completed": m.taskline_admin_kind_sprint_completed,
 };
 
 /** A week's capacity in hours, from the stored minutes. */

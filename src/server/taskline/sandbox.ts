@@ -4,7 +4,7 @@ import { workspaceSettings } from "@/features/taskline/settings";
 import type { TasklineColor, TaskPriority, TaskType } from "@/features/taskline/types";
 import { generateKeysBetween } from "@/lib/fractional-index";
 import { addDays, todayInZone } from "@/lib/i18n/date-only";
-import { APP_TIME_ZONE } from "@/lib/i18n/intl";
+import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
 import {
@@ -28,12 +28,13 @@ import {
 } from "@/server/db/schema";
 import type { Tx } from "@/server/db/types";
 import type { GuestData } from "@/server/guests/data";
-import type { WorkspaceAccess } from "./access";
+import type { ProjectAccess, WorkspaceAccess } from "./access";
 import { recordActivity } from "./activity";
 import * as projects from "./projects/repository";
 import { insertProjectWithWorkflow } from "./projects/service";
 import { nextTaskNumber } from "./rev";
 import { richText } from "./rules";
+import * as sprints from "./sprints/repository";
 import * as tasks from "./tasks/repository";
 import * as workflow from "./workflow/repository";
 import * as workspaces from "./workspace/repository";
@@ -60,6 +61,9 @@ type SampleTask = {
 	/** Index of a sample task above: this one is its subtask. */
 	parent?: number;
 	checklist?: Array<(t: { locale: Locale }) => string>;
+	/** Task 52: its estimate, and its sprint (0 the completed one, 1 the active one, 2 the planned one; none: the backlog). */
+	points?: number;
+	sprint?: 0 | 1 | 2;
 };
 
 const TEAMMATES = [
@@ -75,8 +79,17 @@ const LABELS: ReadonlyArray<{ name: (t: { locale: Locale }) => string; color: Ta
 ];
 
 const TASKS: ReadonlyArray<SampleTask> = [
-	{ title: (t) => m.taskline_seed_task_try({}, t), status: 1, assignee: -1, priority: 2 },
-	{ title: (t) => m.taskline_seed_task_copy({}, t), status: 1, assignee: 2, priority: 3, labels: [2], due: 3 },
+	{ title: (t) => m.taskline_seed_task_try({}, t), status: 1, assignee: -1, priority: 2, points: 1 },
+	{
+		title: (t) => m.taskline_seed_task_copy({}, t),
+		status: 1,
+		assignee: 2,
+		priority: 3,
+		labels: [2],
+		due: 3,
+		points: 3,
+		sprint: 1,
+	},
 	{
 		title: (t) => m.taskline_seed_task_navigation({}, t),
 		status: 2,
@@ -85,9 +98,19 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		labels: [0],
 		due: 1,
 		type: "story",
+		points: 5,
+		sprint: 1,
 	},
-	{ title: (t) => m.taskline_seed_task_mobile_menu({}, t), status: 3, assignee: 0, priority: 2, parent: 2 },
-	{ title: (t) => m.taskline_seed_task_contrast({}, t), status: 1, assignee: 1, priority: 2, parent: 2 },
+	{
+		title: (t) => m.taskline_seed_task_mobile_menu({}, t),
+		status: 3,
+		assignee: 0,
+		priority: 2,
+		parent: 2,
+		points: 2,
+		sprint: 1,
+	},
+	{ title: (t) => m.taskline_seed_task_contrast({}, t), status: 1, assignee: 1, priority: 2, parent: 2, points: 2 },
 	{
 		title: (t) => m.taskline_seed_task_contact_form({}, t),
 		status: 2,
@@ -101,12 +124,41 @@ const TASKS: ReadonlyArray<SampleTask> = [
 			(t) => m.taskline_seed_check_logs({}, t),
 			(t) => m.taskline_seed_check_test({}, t),
 		],
+		points: 3,
+		sprint: 1,
 	},
-	{ title: (t) => m.taskline_seed_task_launch_date({}, t), status: 1, assignee: -1, priority: 2, due: 7 },
-	{ title: (t) => m.taskline_seed_task_analytics({}, t), status: 0, assignee: null, priority: 1 },
+	{
+		title: (t) => m.taskline_seed_task_launch_date({}, t),
+		status: 1,
+		assignee: -1,
+		priority: 2,
+		due: 7,
+		points: 2,
+		sprint: 2,
+	},
+	{ title: (t) => m.taskline_seed_task_analytics({}, t), status: 0, assignee: null, priority: 1, points: 5 },
 	{ title: (t) => m.taskline_seed_task_blog({}, t), status: 0, assignee: 2, priority: 0, labels: [2] },
-	{ title: (t) => m.taskline_seed_task_logo({}, t), status: 3, assignee: 0, priority: 2, labels: [0] },
+	{
+		title: (t) => m.taskline_seed_task_logo({}, t),
+		status: 3,
+		assignee: 0,
+		priority: 2,
+		labels: [0],
+		points: 8,
+		sprint: 0,
+	},
 ];
+
+/**
+ * The sample sprints (Task 52), in days from today: a completed one (its commitment
+ * included the copy task, carried over), the active one, and the next. The burndown's
+ * days are made up: the work in each sprint was done by `doneOn`.
+ */
+const SPRINTS = [
+	{ start: -22, end: -9, committed: { points: 11, tasks: 2 }, doneOn: -13 },
+	{ start: -8, end: 5, committed: { points: 13, tasks: 4 }, doneOn: -3 },
+	{ start: 6, end: 19, committed: null, doneOn: null },
+] as const;
 
 /**
  * The user's sandbox, created and seeded if they have none (in the caller's
@@ -192,6 +244,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 				done: index === 0,
 			})),
 			completedAt: closed ? new Date() : null,
+			points: sample.points ?? null,
 		});
 		ids.push(task.id);
 		await tasks.setLabels(
@@ -203,6 +256,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 		await recordActivity(tx, created, { kind: "task.created", taskId: task.id, data: { title: task.title } });
 	}
 	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
+	await seedSprints(tx, created, ids, today, t);
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
@@ -217,6 +271,63 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 		});
 	}
 	return workspace;
+}
+
+/**
+ * The project's sprints (Task 52): sprints on, a completed sprint with its numbers and
+ * days, the active one with the days so far, and the next one planned.
+ */
+async function seedSprints(tx: Tx, access: ProjectAccess, taskIds: string[], today: string, t: { locale: Locale }) {
+	const projectId = access.project.id;
+	await tx
+		.update(tlProject)
+		.set({ settings: { sprints: true } })
+		.where(eq(tlProject.id, projectId));
+	const goals = [m.taskline_seed_sprint_goal_1, m.taskline_seed_sprint_goal_2, m.taskline_seed_sprint_goal_3];
+	for (const [index, plan] of SPRINTS.entries()) {
+		const state = index === 0 ? "completed" : index === 1 ? "active" : "planned";
+		const startOn = addDays(today, plan.start);
+		const sprint = await sprints.insertSprint(tx, {
+			projectId,
+			name: m.taskline_sprint_default_name({ number: formatNumber(index + 1, {}, t.locale) }, t),
+			goal: goals[index]?.({}, t) ?? "",
+			state,
+			startOn,
+			endOn: addDays(today, plan.end),
+			startedAt: state === "planned" ? null : new Date(`${startOn}T03:00:00Z`),
+			completedAt: state === "completed" ? new Date(`${addDays(today, plan.end)}T12:00:00Z`) : null,
+			committedPoints: plan.committed?.points ?? null,
+			committedTasks: plan.committed?.tasks ?? null,
+			completedPoints: state === "completed" ? 8 : null,
+			completedTasks: state === "completed" ? 1 : null,
+		});
+		const mine = TASKS.flatMap((sample, at) => (sample.sprint === index && taskIds[at] ? [taskIds[at]] : []));
+		if (mine.length > 0) await tx.update(tlTask).set({ sprintId: sprint.id }).where(inArray(tlTask.id, mine));
+		if (!plan.committed || plan.doneOn === null) continue;
+		// The days: the commitment until `doneOn`, then what's done in it (the logo, or the mobile menu).
+		const done = index === 0 ? { points: 8, tasks: 1 } : { points: 2, tasks: 1 };
+		const last = Math.min(plan.end, -1);
+		for (let day = plan.start - 1; day <= last; day++) {
+			const finished = day >= plan.doneOn;
+			const scope = plan.committed;
+			await sprints.writeSnapshot(
+				tx,
+				sprint.id,
+				addDays(today, day),
+				{
+					scopePoints: scope.points,
+					scopeTasks: scope.tasks,
+					donePoints: finished ? done.points : 0,
+					doneTasks: finished ? done.tasks : 0,
+				},
+				{ replace: true },
+			);
+		}
+		await recordActivity(tx, access, {
+			kind: index === 0 ? "sprint.completed" : "sprint.started",
+			data: { sprintId: sprint.id, name: sprint.name, points: index === 0 ? done.points : plan.committed.points },
+		});
+	}
 }
 
 const escapeHtml = (text: string) =>

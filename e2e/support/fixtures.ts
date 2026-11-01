@@ -128,6 +128,14 @@ export class Harness {
 		if (!row.id) throw new Error(`no Taskline project ${key}`);
 		return row.id;
 	}
+
+	/** A team project's sprint in a state (the demo team's APP has one of each, Task 52). */
+	async tasklineSprintId(key: string, state: "active" | "completed" | "planned"): Promise<string> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/taskline-sprint?key=${encodeURIComponent(key)}&state=${state}`);
+		const row = (await response.json()) as { id?: string };
+		if (!row.id) throw new Error(`no ${state} sprint in ${key}`);
+		return row.id;
+	}
 	// taskline:end
 
 	// apps:start

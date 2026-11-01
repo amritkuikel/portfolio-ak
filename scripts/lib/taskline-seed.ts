@@ -138,6 +138,77 @@ const PROJECTS = [
 /** A calendar day `offset` days from today (UTC; demo data needs no time zone). */
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
+type SeededTask = { id: string; done: boolean; canceled: boolean };
+
+/**
+ * Task 52: APP plans in sprints. Its tasks get points; the first eight were a completed
+ * sprint (the open ones among them carried into the active one), the next eight are the
+ * active sprint, two more the planned one, the rest the backlog. The days of the
+ * completed and the active sprint burn down evenly to what's done.
+ */
+async function seedSprints(query: DemoQuery, projectId: string, tasks: ReadonlyArray<SeededTask>) {
+	const POINTS = [1, 2, 3, 5, 8];
+	await query(`update "tl_project" set "settings" = $2 where "id" = $1`, [
+		projectId,
+		JSON.stringify({ sprints: true }),
+	]);
+	for (const [index, task] of tasks.entries()) {
+		await query(`update "tl_task" set "points" = $2 where "id" = $1`, [task.id, POINTS[index % POINTS.length]]);
+	}
+	const points = (index: number) => POINTS[index % POINTS.length] ?? 0;
+	const plans = [
+		{ name: "Sprint 1", state: "completed", start: -22, end: -9, from: 0, to: 8 },
+		{ name: "Sprint 2", state: "active", start: -6, end: 7, from: 8, to: 16 },
+		{ name: "Sprint 3", state: "planned", start: 8, end: 21, from: 16, to: 18 },
+	] as const;
+	for (const plan of plans) {
+		const members = tasks.map((task, index) => ({ ...task, index })).slice(plan.from, plan.to);
+		// The completed sprint keeps its done tasks; its open ones moved on to the active sprint.
+		const kept = plan.state === "completed" ? members.filter((task) => task.done) : members;
+		const scope = members.filter((task) => !task.canceled);
+		const scopePoints = scope.reduce((sum, task) => sum + points(task.index), 0);
+		const done = scope.filter((task) => task.done);
+		const donePoints = done.reduce((sum, task) => sum + points(task.index), 0);
+		const started = plan.state !== "planned";
+		const sprint = await query(
+			`insert into "tl_sprint" ("project_id", "name", "goal", "state", "start_on", "end_on", "started_at", "completed_at", "committed_points", "committed_tasks", "completed_points", "completed_tasks")
+			 values ($1, $2, '', $3, $4, $5, $6, $7, $8, $9, $10, $11) returning "id"`,
+			[
+				projectId,
+				plan.name,
+				plan.state,
+				day(plan.start),
+				day(plan.end),
+				started ? new Date(Date.now() + plan.start * 86_400_000).toISOString() : null,
+				plan.state === "completed" ? new Date(Date.now() + plan.end * 86_400_000).toISOString() : null,
+				started ? scopePoints : null,
+				started ? scope.length : null,
+				plan.state === "completed" ? donePoints : null,
+				plan.state === "completed" ? done.length : null,
+			],
+		);
+		const sprintId = firstId(sprint.rows, `sprint ${plan.name}`);
+		for (const task of kept) await query(`update "tl_task" set "sprint_id" = $2 where "id" = $1`, [task.id, sprintId]);
+		if (!started) continue;
+		const last = Math.min(plan.end, -1);
+		const length = Math.max(1, last - plan.start + 1);
+		for (let offset = plan.start - 1; offset <= last; offset++) {
+			const share = Math.max(0, offset - plan.start + 1) / length;
+			await query(
+				`insert into "tl_sprint_snapshot" ("sprint_id", "day", "scope_points", "done_points", "scope_tasks", "done_tasks") values ($1, $2, $3, $4, $5, $6)`,
+				[
+					sprintId,
+					day(offset),
+					scopePoints,
+					Math.round(donePoints * share),
+					scope.length,
+					Math.round(done.length * share),
+				],
+			);
+		}
+	}
+}
+
 const firstId = (rows: Array<Record<string, unknown>>, what: string): string => {
 	const id = rows[0]?.id;
 	if (typeof id !== "string") throw new Error(`taskline seed: no ${what}`);
@@ -248,13 +319,16 @@ export async function seedTaskline(
 		const positions = STATUSES.map((_, status) =>
 			generateKeysBetween(null, null, project.tasks.filter((__, index) => statusOf(index) === status).length),
 		);
+		// The backlog's order (Task 52): the tasks' own order.
+		const ranks = generateKeysBetween(null, null, project.tasks.length);
+		const made: SeededTask[] = [];
 		for (const [index, title] of project.tasks.entries()) {
 			const status = statusOf(index);
 			const closed = status >= 3;
 			const number = index + 1;
 			const task = await query(
-				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at")
-				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning "id"`,
+				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at", "rank")
+				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning "id"`,
 				[
 					workspaceId,
 					projectId,
@@ -268,9 +342,11 @@ export async function seedTaskline(
 					positions[status]?.shift() ?? "a0",
 					index % 3 === 0 ? null : day((index % 11) - 3),
 					closed ? new Date(Date.now() - (20 - index) * 86_400_000).toISOString() : null,
+					ranks[index] ?? "a0",
 				],
 			);
 			const taskId = firstId(task.rows, `task ${project.key}-${number}`);
+			made.push({ id: taskId, done: status === 3, canceled: status === 4 });
 			const labelId = labelIds[index % (labelIds.length + 1)];
 			if (labelId) {
 				await query(`insert into "tl_task_label" ("task_id", "label_id") values ($1, $2)`, [taskId, labelId]);
@@ -282,6 +358,7 @@ export async function seedTaskline(
 			taskCount += 1;
 		}
 		await query(`update "tl_project" set "task_seq" = $2 where "id" = $1`, [projectId, project.tasks.length]);
+		if (project.key === "APP") await seedSprints(query, projectId, made);
 		await query(
 			`insert into "tl_activity" ("workspace_id", "project_id", "actor_id", "kind", "data") values ($1, $2, $3, 'project.created', $4)`,
 			[workspaceId, projectId, leadId, JSON.stringify({ key: project.key, name: project.name })],

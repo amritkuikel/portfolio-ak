@@ -1,6 +1,7 @@
 /**
  * Bundle budget for a production build (`pnpm build` first). Fails when:
- *  - the JavaScript every page preloads (the root route's preloads) is over ENTRY_BUDGET_KB gzip;
+ *  - the JavaScript every page loads (the root route's preloads and every chunk they import
+ *    statically, decision 0217) is over ENTRY_BUDGET_KB gzip;
  *  - a chunk only some pages need is preloaded by every page (NOT_IN_ENTRY: TanStack DB, which
  *    only the apps and one example use, decision 0189);
  *  - any route adds more than ROUTE_BUDGET_KB gzip on top of the root;
@@ -12,15 +13,18 @@
  * Decision 0151. The numbers it prints are the ones recorded there.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, posix, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 
 // 240 until Task 41, plus a separate 105 kB line for TanStack DB. DB left every page then (0189),
 // and TanStack Query's core, which DB's chunk group used to hold, came back into the entry: every
 // page went from 338.5 to 245.6 kB.
-const ENTRY_BUDGET_KB = 250;
-const ROUTE_BUDGET_KB = 250;
+// Task 52 (0217): counted as the closure of what every page loads (265.7 kB then; 249.9 by the old
+// count of the root's direct preloads), with room for Tasks 53–57's routes. Routes are counted the
+// same way, so their line rose too (the heaviest, the portfolio's project editor, 266.5 kB).
+const ENTRY_BUDGET_KB = 275;
+const ROUTE_BUDGET_KB = 300;
 const FONT_BUDGET_KB = 150;
 /** Code that must never be preloaded by every page, found by a string it always contains: its pages load it. */
 const NOT_IN_ENTRY: ReadonlyArray<{ name: string; contains: string }> = [
@@ -57,6 +61,28 @@ const gzipKb = (asset: string): number => {
 };
 
 const sum = (assets: Iterable<string>) => [...assets].reduce((total, asset) => total + gzipKb(asset), 0);
+
+/**
+ * Every chunk the browser loads before the page runs: the preloads, and every chunk
+ * they import statically, recursively (decision 0217). `import "./x.js"` and
+ * `… from "./x.js"` are static; `import("./x.js")` loads on demand and isn't followed.
+ */
+const closure = (assets: Iterable<string>): Set<string> => {
+	const seen = new Set<string>();
+	const queue = [...assets];
+	while (queue.length > 0) {
+		const asset = queue.pop() as string;
+		if (seen.has(asset)) continue;
+		seen.add(asset);
+		if (!asset.endsWith(".js")) continue;
+		const source = readFileSync(join(OUTPUT, "public", asset), "utf8");
+		const dir = asset.slice(0, asset.lastIndexOf("/") + 1);
+		for (const [, specifier] of source.matchAll(/(?:\bfrom\s*|\bimport\s*)["'](\.{1,2}\/[^"']+\.js)["']/g)) {
+			queue.push(posix.normalize(`${dir}${specifier}`));
+		}
+	}
+	return seen;
+};
 const kb = (value: number) => `${value.toFixed(1)} kB`;
 
 /** Fonts imported with `?url` by a fonts.ts module: the files the app preloads. */
@@ -81,11 +107,13 @@ const preloadedFonts = (): Array<{ file: string; kb: number }> => {
 };
 
 const manifest = await loadManifest();
-const rootPreloads = new Set(manifest.routes.__root__?.preloads ?? []);
+const rootPreloads = closure(manifest.routes.__root__?.preloads ?? []);
 const failures: string[] = [];
 
 const entry = sum(rootPreloads);
-console.log(`Entry JS (every page): ${kb(entry)} gzip in ${rootPreloads.size} files (budget ${ENTRY_BUDGET_KB} kB)`);
+console.log(
+	`Entry JS (every page, with what it imports): ${kb(entry)} gzip in ${rootPreloads.size} files (budget ${ENTRY_BUDGET_KB} kB)`,
+);
 if (entry > ENTRY_BUDGET_KB) failures.push(`entry JS is ${kb(entry)}, over ${ENTRY_BUDGET_KB} kB`);
 for (const { name, contains } of NOT_IN_ENTRY) {
 	const assets = [...rootPreloads].filter((asset) =>
@@ -96,7 +124,10 @@ for (const { name, contains } of NOT_IN_ENTRY) {
 
 const routes = Object.entries(manifest.routes)
 	.filter(([id]) => id !== "__root__")
-	.map(([id, route]) => ({ id, extra: sum((route.preloads ?? []).filter((asset) => !rootPreloads.has(asset))) }))
+	.map(([id, route]) => ({
+		id,
+		extra: sum([...closure(route.preloads ?? [])].filter((asset) => !rootPreloads.has(asset))),
+	}))
 	.sort((a, b) => b.extra - a.extra);
 console.log("\nHeaviest routes (JS added on top of the root):");
 for (const { id, extra } of routes.slice(0, 8)) console.log(`  ${kb(extra).padStart(10)}  ${id}`);

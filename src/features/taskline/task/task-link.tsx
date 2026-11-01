@@ -7,10 +7,25 @@ import type { ComponentProps } from "react";
  * the address bar, the href, a reload, a new tab or no JavaScript give the task's own
  * page, /$ws/t/WEB-12 (`unmaskOnReload`: the server only sees the shown URL).
  */
-type Props = Omit<ComponentProps<"a">, "href"> & { view: "board" | "list" | "calendar"; ws: string; taskRef: string };
+type Props = Omit<ComponentProps<"a">, "href"> & {
+	view: "board" | "list" | "calendar" | "backlog";
+	ws: string;
+	taskRef: string;
+};
 
 export function TaskSheetLink({ view, ws, taskRef, ...props }: Props) {
 	const mask = { to: "/app/taskline/$ws/t/$ref", params: { ws, ref: taskRef }, unmaskOnReload: true } as const;
+	if (view === "backlog") {
+		return (
+			<Link
+				from="/app/taskline/$ws/p/$key/backlog"
+				to="."
+				search={(prev) => ({ ...prev, task: taskRef })}
+				mask={mask}
+				{...props}
+			/>
+		);
+	}
 	if (view === "calendar") {
 		return (
 			<Link

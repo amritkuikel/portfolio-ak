@@ -99,6 +99,9 @@ export type NotificationData = {
 	status?: string;
 	excerpt?: string;
 	dueOn?: string;
+	/** Task 52: the sprint's name, and whether it started or completed. */
+	sprint?: string;
+	sprintEvent?: "started" | "completed";
 };
 
 /** Everything `tl_activity.kind` holds; `data` carries the change (`{ from, to }` and the like). */
@@ -130,6 +133,12 @@ export const ACTIVITY_KINDS = [
 	/** Task 50: `{ attachmentId, name }`. */
 	"attachment.added",
 	"attachment.removed",
+	/** Task 52: `{ sprintId, name }` (and on completion the points and where the open tasks went). */
+	"sprint.created",
+	"sprint.updated",
+	"sprint.deleted",
+	"sprint.started",
+	"sprint.completed",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -231,6 +240,10 @@ export type TaskSummary = {
 	completedAt: string | null;
 	checklist: { done: number; total: number };
 	updatedAt: string;
+	/** Task 52: the sprint it's planned in (null: the backlog), its estimate, and its place in the backlog. */
+	sprintId: string | null;
+	points: number | null;
+	rank: string;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -303,6 +316,11 @@ export type ProjectTasks = {
 	taskTypes: TaskType[];
 	/** When the server read it: relative times ("5 minutes ago") start from here, so both renders agree. */
 	readAt: string;
+	/** Task 52: the active and planned sprints (the active first, then by start), and the recent velocity. */
+	sprints: SprintSummary[];
+	velocity: Velocity;
+	/** How many sprints the project has had (completed ones too): the next one's suggested number. */
+	sprintCount: number;
 };
 
 export type TrashedTask = { id: string; ref: string; title: string; deletedAt: string };
@@ -359,8 +377,84 @@ export type MyTask = {
 	watching: boolean;
 };
 
-/** My work: the tasks, and the days they're grouped by (today and the last day of this week, in the first workspace's calendar). */
-export type MyTasks = { tasks: MyTask[]; today: string; weekEnd: string };
+/**
+ * My work: the tasks, and the days they're grouped by (today and the last day of this
+ * week, in the first workspace's calendar); Task 52: the active sprints of the projects
+ * the caller may see.
+ */
+export type MyTasks = { tasks: MyTask[]; today: string; weekEnd: string; sprints: ActiveSprint[] };
+
+// ---- Sprints and backlog (Task 52) ------------------------------------------------------------
+
+/** `planned` → `active` (one per project at a time) → `completed`. */
+export const SPRINT_STATES = ["planned", "active", "completed"] as const;
+export type SprintState = (typeof SPRINT_STATES)[number];
+
+/** Where a completed sprint's unfinished tasks go: the backlog, a planned sprint, or a new one. */
+export const SPRINT_CARRY = ["backlog", "next", "new"] as const;
+export type SprintCarry = (typeof SPRINT_CARRY)[number];
+
+/** A task's points: what an estimate can be. */
+export const POINTS_MAX = 100;
+
+/** A sprint's work: everything in it but canceled tasks (scope), and the completed part (done), as points and as tasks. */
+export type SprintTotals = { scopePoints: number; donePoints: number; scopeTasks: number; doneTasks: number };
+
+export type SprintSummary = {
+	id: string;
+	name: string;
+	goal: string;
+	state: SprintState;
+	startOn: string;
+	endOn: string;
+	startedAt: string | null;
+	completedAt: string | null;
+	/** Stored at the start (scope then) and at the completion (done then); null before. */
+	committed: { points: number; tasks: number } | null;
+	completed: { points: number; tasks: number } | null;
+};
+
+/** The average of the last three completed sprints' completed work (null before the first). */
+export type Velocity = { points: number | null; tasks: number | null; sprints: number };
+
+/** One completed sprint on the velocity chart. */
+export type VelocityRow = {
+	id: string;
+	name: string;
+	committedPoints: number;
+	completedPoints: number;
+	committedTasks: number;
+	completedTasks: number;
+};
+
+/** A day's close of an active sprint (the daily job's snapshot, decision 0216). */
+export type SprintDay = SprintTotals & { day: string };
+
+/** /$ws/p/$key/sprints/$sprintId: the sprint, its days, today's live totals, and the project's velocity. */
+export type SprintReport = {
+	sprint: SprintSummary;
+	estimation: "points" | "time";
+	days: SprintDay[];
+	/** Now, for an active sprint (what today's point shows), or null. */
+	live: SprintTotals | null;
+	today: string;
+	workingDays: number[];
+	/** The last six completed sprints, oldest first. */
+	velocity: VelocityRow[];
+	/** Every sprint of the project, for the switcher (newest first). */
+	sprints: Array<Pick<SprintSummary, "id" | "name" | "state">>;
+};
+
+/** An active sprint on Home and the admin's overview: where it is and how far along. */
+export type ActiveSprint = {
+	id: string;
+	name: string;
+	project: NavProject;
+	startOn: string;
+	endOn: string;
+	totals: SprintTotals;
+	estimation: "points" | "time";
+};
 
 // ---- Finding things (Task 51) -----------------------------------------------------------------
 

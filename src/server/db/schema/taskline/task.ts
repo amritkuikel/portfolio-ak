@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { ActivityData, ActivityKind, ChecklistItem, TaskType } from "../../../../features/taskline/types";
 import { tlLabel, tlProject, tlStatus } from "./project";
+import { tlSprint } from "./sprint";
 import { tlMember, tlWorkspace } from "./workspace";
 
 /**
@@ -56,6 +57,12 @@ export const tlTask = pgTable(
 		startOn: date({ mode: "string" }),
 		dueOn: date({ mode: "string" }),
 		completedAt: timestamp({ withTimezone: true }),
+		/** Task 52: the sprint it's planned in (null: the backlog); a deleted sprint leaves its tasks in the backlog. */
+		sprintId: uuid().references(() => tlSprint.id, { onDelete: "set null" }),
+		/** The estimate in points (null: not estimated). */
+		points: smallint(),
+		/** The backlog's order (a fractional key across the project, compared with COLLATE "C"). */
+		rank: text().notNull(),
 		/** Bumped by each save of the title or the description only: other fields are last-write-wins. */
 		version: integer().notNull().default(1),
 		search: tsvector().generatedAlwaysAs(
@@ -75,6 +82,8 @@ export const tlTask = pgTable(
 		index("tl_task_parent_idx").on(table.parentId),
 		index("tl_task_workspace_due_idx").on(table.workspaceId, table.dueOn),
 		index("tl_task_search_idx").using("gin", table.search),
+		index("tl_task_sprint_idx").on(table.sprintId),
+		check("tl_task_points_valid", sql`${table.points} between 0 and 100`),
 		check("tl_task_type_valid", sql`${table.type} in ('task', 'bug', 'story', 'epic')`),
 		check("tl_task_priority_valid", sql`${table.priority} between 0 and 4`),
 		check("tl_task_not_own_parent", sql`${table.parentId} <> ${table.id}`),

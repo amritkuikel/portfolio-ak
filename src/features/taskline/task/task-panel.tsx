@@ -37,6 +37,7 @@ import { CHECKLIST_MAX, type PatchTaskInput, TASK_DESCRIPTION_MAX, TASK_TITLE_MA
 import {
 	type ChecklistItem,
 	isClosedCategory,
+	POINTS_MAX,
 	type ProjectTasks,
 	TASK_PRIORITIES,
 	TASK_TYPES,
@@ -404,6 +405,56 @@ function TaskFields({
 					))}
 				</NativeSelect>
 			</div>
+			{project.project.settings.sprints ? (
+				<>
+					<div className={row}>
+						<label htmlFor={`${id}-sprint`} className={label}>
+							{m.taskline_field_sprint()}
+						</label>
+						<NativeSelect
+							id={`${id}-sprint`}
+							value={task.sprintId ?? ""}
+							disabled={!editable}
+							onChange={(event) => writes.patch({ sprintId: event.target.value || null })}
+							data-testid="task-sprint"
+						>
+							<option value="">{m.taskline_backlog_section()}</option>
+							{/* A completed sprint isn't offered, but a task done in one still says so. */}
+							{task.sprintId && !project.sprints.some((sprint) => sprint.id === task.sprintId) ? (
+								<option value={task.sprintId}>{m.taskline_sprint_completed_option()}</option>
+							) : null}
+							{project.sprints.map((sprint) => (
+								<option key={sprint.id} value={sprint.id}>
+									{sprint.name}
+								</option>
+							))}
+						</NativeSelect>
+					</div>
+					<div className={row}>
+						<label htmlFor={`${id}-points`} className={label}>
+							{m.taskline_field_points()}
+						</label>
+						<Input
+							id={`${id}-points`}
+							type="number"
+							inputMode="numeric"
+							min={0}
+							max={POINTS_MAX}
+							step={1}
+							defaultValue={task.points ?? ""}
+							key={`points:${task.points ?? ""}`}
+							disabled={!editable}
+							onBlur={(event) => {
+								const raw = event.target.value.trim();
+								const points = raw === "" ? null : Number(raw);
+								if (points !== null && (!Number.isInteger(points) || points < 0 || points > POINTS_MAX)) return;
+								if (points !== task.points) writes.patch({ points });
+							}}
+							data-testid="task-points"
+						/>
+					</div>
+				</>
+			) : null}
 			<div className={row}>
 				<span className={label}>{m.taskline_field_labels()}</span>
 				<div className="flex flex-wrap items-center gap-1.5">

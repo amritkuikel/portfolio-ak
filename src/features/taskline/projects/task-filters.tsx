@@ -13,7 +13,17 @@ import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type
  * filter that's applied. `extra` is the view's own control (swimlanes, grouping).
  */
 
-type Context = Pick<ProjectTasks, "statuses" | "members" | "labels">;
+type Context = Pick<ProjectTasks, "statuses" | "members" | "labels" | "sprints"> & {
+	project: Pick<ProjectTasks["project"], "settings">;
+};
+
+/** The sprint filter's value as words: the active sprint, the backlog, or one sprint by name (Task 52). */
+const sprintText = (value: string, context: Context) =>
+	value === "active"
+		? m.taskline_filter_sprint_active()
+		: value === "none"
+			? m.taskline_backlog_section()
+			: (context.sprints.find((sprint) => sprint.id === value)?.name ?? m.taskline_activity_a_sprint());
 
 const DUE_LABELS: Record<Exclude<DueFilter, "all">, () => string> = {
 	overdue: m.taskline_filter_due_overdue,
@@ -46,6 +56,7 @@ const taskFilterChips = defineFilters<TaskFilters, Context>([
 	),
 	choiceChip("type", m.taskline_field_type, (value: TaskType) => TYPE_LABELS[value]()),
 	choiceChip("due", m.taskline_field_due, (value: Exclude<DueFilter, "all">) => DUE_LABELS[value]()),
+	choiceChip("sprint", m.taskline_field_sprint, sprintText),
 ]);
 
 export function TaskFilterBar({
@@ -125,6 +136,20 @@ export function TaskFilterBar({
 							...DUE_FILTERS.filter((due) => due !== "all").map((due) => ({ value: due, label: DUE_LABELS[due]() })),
 						]}
 					/>
+					{/* Task 52: shown while the project has sprints on, or a link still sets it. */}
+					{context.project.settings.sprints || search.sprint !== "all" ? (
+						<SelectFilter
+							name="sprint"
+							label={m.taskline_field_sprint()}
+							value={search.sprint}
+							options={[
+								all,
+								{ value: "active", label: m.taskline_filter_sprint_active() },
+								{ value: "none", label: m.taskline_backlog_section() },
+								...context.sprints.map((sprint) => ({ value: sprint.id, label: sprint.name })),
+							]}
+						/>
+					) : null}
 					{extra}
 				</FilterBar>
 				{tools ? <div className="ms-auto flex items-center gap-2">{tools}</div> : null}

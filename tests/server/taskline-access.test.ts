@@ -2,12 +2,15 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { taskList } from "@/features/taskline/search";
 import { isAppError } from "@/lib/errors";
+import { addDays, todayInZone } from "@/lib/i18n/date-only";
+import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
 import * as collab from "@/server/taskline/collab/service";
 import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
+import * as sprints from "@/server/taskline/sprints/service";
 import * as imports from "@/server/taskline/tasks/import";
 import * as tasks from "@/server/taskline/tasks/service";
 import * as views from "@/server/taskline/views/service";
@@ -135,6 +138,23 @@ const otherMember = async ({ ws, owner }: Context) => {
 };
 let counter = 0;
 const unique = (prefix: string) => `${prefix} ${++counter}`;
+
+/** Task 52's fixtures: a planned sprint of the owner's, and the project's active sprint (the sandbox already has one). */
+const TWO_WEEKS = () => {
+	const startOn = todayInZone(APP_TIME_ZONE);
+	return { startOn, endOn: addDays(startOn, 13) };
+};
+const ownerSprint = ({ ws, key, owner }: Context) =>
+	sprints.createSprint(as(owner), { ws, key, name: unique("Sprint"), ...TWO_WEEKS() });
+const completeActive = async ({ ws, key, owner }: Context) => {
+	const active = (await ownerBoard({ ws, key, owner })).sprints.find((sprint) => sprint.state === "active");
+	if (active) await sprints.completeSprint(as(owner), { ws, key, id: active.id, carryTo: "backlog" });
+};
+const activeSprint = async (context: Context) => {
+	await completeActive(context);
+	const sprint = await ownerSprint(context);
+	return sprints.startSprint(as(context.owner), context.ws, context.key, sprint.id);
+};
 
 const OPERATIONS: ReadonlyArray<Operation> = [
 	// Reading
@@ -471,6 +491,61 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 				name: unique("Label"),
 			});
 			return workflow.deleteLabel(caller, { ws: context.ws, key: context.key, id: label.id });
+		},
+	},
+	// Sprints (Task 52)
+	{
+		name: "createSprint",
+		need: "edit",
+		run: ({ ws, key }, caller) => sprints.createSprint(caller, { ws, key, name: unique("Sprint"), ...TWO_WEEKS() }),
+	},
+	{
+		name: "updateSprint",
+		need: "edit",
+		run: async (context, caller) => {
+			const sprint = await ownerSprint(context);
+			return sprints.updateSprint(caller, { ws: context.ws, key: context.key, id: sprint.id, goal: "Ship it" });
+		},
+	},
+	{
+		name: "deleteSprint",
+		need: "edit",
+		run: async (context, caller) => {
+			const sprint = await ownerSprint(context);
+			return sprints.deleteSprint(caller, context.ws, context.key, sprint.id);
+		},
+	},
+	{
+		name: "startSprint",
+		need: "edit",
+		run: async (context, caller) => {
+			await completeActive(context);
+			const sprint = await ownerSprint(context);
+			return sprints.startSprint(caller, context.ws, context.key, sprint.id);
+		},
+	},
+	{
+		name: "completeSprint",
+		need: "edit",
+		run: async (context, caller) => {
+			const sprint = await activeSprint(context);
+			return sprints.completeSprint(caller, { ws: context.ws, key: context.key, id: sprint.id, carryTo: "backlog" });
+		},
+	},
+	{
+		name: "rankTask",
+		need: "edit",
+		run: async (context, caller) => {
+			const [task, sprint] = await Promise.all([ownerTask(context), ownerSprint(context)]);
+			return sprints.rankTask(caller, { ws: context.ws, ref: task.ref, sprintId: sprint.id, rank: "a0" });
+		},
+	},
+	{
+		name: "getSprintReport",
+		need: "read",
+		run: async (context, caller) => {
+			const sprint = await ownerSprint(context);
+			return sprints.getSprintReport(caller, context.ws, context.key, sprint.id);
 		},
 	},
 ];

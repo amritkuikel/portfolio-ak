@@ -30,6 +30,16 @@ describe("Taskline demo seed", async () => {
 		expect((await projects.listProjects(viewer, { ws: "team" })).map((project) => project.key)).toEqual(["APP", "WEB"]);
 		const board = await tasks.listTasks(await as(asha?.email ?? ""), "team", "WEB");
 		expect(board.tasks).toHaveLength(20);
+		// Task 52: APP plans in sprints: one completed (the velocity), the active one and the next.
+		const app = await tasks.listTasks(await as(asha?.email ?? ""), "team", "APP");
+		expect(app.project.settings.sprints).toBe(true);
+		expect(app.sprints.map((sprint) => [sprint.name, sprint.state])).toEqual([
+			["Sprint 2", "active"],
+			["Sprint 3", "planned"],
+		]);
+		expect(app.velocity.sprints).toBe(1);
+		expect(app.sprintCount).toBe(3);
+		expect(app.tasks.every((task) => task.points !== null)).toBe(true);
 		expect(board.statuses.map((status) => status.name)).toEqual([
 			"Backlog",
 			"To do",

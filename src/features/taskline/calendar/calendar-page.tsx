@@ -63,7 +63,11 @@ export function CalendarPage() {
 	const last = weeks.at(-1)?.at(-1) ?? anchor;
 	const dayOf = (task: TaskSummary) => (search.by === "start" ? task.startOn : task.dueOn);
 	const filters = filtersOf(search);
-	const context = { me: workspace.me?.id ?? null, today: project.today };
+	const context = {
+		me: workspace.me?.id ?? null,
+		today: project.today,
+		activeSprintId: project.sprints.find((sprint) => sprint.state === "active")?.id ?? null,
+	};
 	const shown = tasks.filter((task) => {
 		if (!matchesFilters(task, filters, context)) return false;
 		const day = dayOf(task);

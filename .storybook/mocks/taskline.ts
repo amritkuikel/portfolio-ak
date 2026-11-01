@@ -4,6 +4,8 @@ import type {
 	NavWorkspace,
 	NotifySettingsView,
 	ProjectTasks,
+	SprintReport,
+	SprintSummary,
 	TaskDetail,
 	TasklineLabel,
 	TasklineMember,
@@ -147,6 +149,9 @@ const summary = (
 	completedAt: null,
 	checklist: { done: 0, total: 0 },
 	updatedAt: "2026-10-30T09:00:00.000Z",
+	sprintId: null,
+	points: null,
+	rank: `c${String(number).padStart(3, "0")}`,
 	...extra,
 });
 
@@ -208,6 +213,76 @@ export const sampleProjectTasks: ProjectTasks = {
 	doneColumnDays: 14,
 	taskTypes: ["task", "bug", "story", "epic"],
 	readAt: "2026-10-31T06:00:00.000Z",
+	sprints: [],
+	velocity: { points: null, tasks: null, sprints: 0 },
+	sprintCount: 0,
+};
+
+/** Task 52: the same project with sprints on: an active sprint, the next one planned, and a backlog. */
+const activeSprint: SprintSummary = {
+	id: "s-2",
+	name: "Sprint 2",
+	goal: "Ship the new navigation",
+	state: "active",
+	startOn: "2026-10-24",
+	endOn: "2026-11-06",
+	startedAt: "2026-10-24T03:00:00.000Z",
+	completedAt: null,
+	committed: { points: 13, tasks: 4 },
+	completed: null,
+};
+const plannedSprint: SprintSummary = {
+	id: "s-3",
+	name: "Sprint 3",
+	goal: "",
+	state: "planned",
+	startOn: "2026-11-07",
+	endOn: "2026-11-20",
+	startedAt: null,
+	completedAt: null,
+	committed: null,
+	completed: null,
+};
+const IN_SPRINT: Record<string, { sprintId: string | null; points: number | null }> = {
+	"t-1": { sprintId: "s-2", points: 5 },
+	"t-2": { sprintId: "s-2", points: 3 },
+	"t-3": { sprintId: "s-3", points: 2 },
+	"t-4": { sprintId: "s-2", points: 3 },
+	"t-5": { sprintId: "s-2", points: 2 },
+	"t-6": { sprintId: null, points: 8 },
+};
+export const sampleSprintProject: ProjectTasks = {
+	...sampleProjectTasks,
+	project: { ...sampleProjectTasks.project, settings: { ...sampleProjectTasks.project.settings, sprints: true } },
+	tasks: sampleTasks.map((task) => ({ ...task, ...(IN_SPRINT[task.id] ?? { sprintId: null, points: null }) })),
+	sprints: [activeSprint, plannedSprint],
+	velocity: { points: 9.5, tasks: 3, sprints: 2 },
+	sprintCount: 4,
+};
+
+/** The active sprint's report: a week of days so far, and two completed sprints before it. */
+export const sampleSprintReport: SprintReport = {
+	sprint: activeSprint,
+	estimation: "points",
+	days: [
+		{ day: "2026-10-23", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0 },
+		{ day: "2026-10-26", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0 },
+		{ day: "2026-10-27", scopePoints: 15, donePoints: 2, scopeTasks: 5, doneTasks: 1 },
+		{ day: "2026-10-29", scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2 },
+	],
+	live: { scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2 },
+	today: "2026-10-31",
+	workingDays: [0, 1, 2, 3, 4, 5],
+	velocity: [
+		{ id: "s-0", name: "Sprint 0", committedPoints: 10, completedPoints: 11, committedTasks: 3, completedTasks: 3 },
+		{ id: "s-1", name: "Sprint 1", committedPoints: 11, completedPoints: 8, committedTasks: 3, completedTasks: 2 },
+	],
+	sprints: [
+		{ id: "s-3", name: "Sprint 3", state: "planned" },
+		{ id: "s-2", name: "Sprint 2", state: "active" },
+		{ id: "s-1", name: "Sprint 1", state: "completed" },
+		{ id: "s-0", name: "Sprint 0", state: "completed" },
+	],
 };
 
 export const sampleTaskDetail: TaskDetail = {

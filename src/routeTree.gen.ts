@@ -150,6 +150,7 @@ import { Route as TasklineAppTasklineShellWsSearchRouteImport } from './routes/_
 import { Route as TasklineAppTasklineShellWsPKeyRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/route'
 import { Route as TasklineAppTasklineShellWsTRefRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/t/$ref'
 import { Route as TasklineAppTasklineShellWsPKeyIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/index'
+import { Route as TasklineAppTasklineShellWsPKeyBacklogRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/backlog'
 import { Route as TasklineAppTasklineShellWsPKeyBoardRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/board'
 import { Route as TasklineAppTasklineShellWsPKeyCalendarRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
 import { Route as TasklineAppTasklineShellWsPKeyListRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/list'
@@ -160,6 +161,7 @@ import { Route as TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport } from
 import { Route as TasklineAppTasklineShellWsPKeySettingsMembersRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
 import { Route as TasklineAppTasklineShellWsPKeySettingsTrashRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash'
 import { Route as TasklineAppTasklineShellWsPKeySettingsWorkflowRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow'
+import { Route as TasklineAppTasklineShellWsPKeySprintsSprintIdRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
@@ -908,6 +910,12 @@ const TasklineAppTasklineShellWsPKeyIndexRoute =
     path: '/',
     getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsPKeyBacklogRoute =
+  TasklineAppTasklineShellWsPKeyBacklogRouteImport.update({
+    id: '/backlog',
+    path: '/backlog',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeyBoardRoute =
   TasklineAppTasklineShellWsPKeyBoardRouteImport.update({
     id: '/board',
@@ -967,6 +975,12 @@ const TasklineAppTasklineShellWsPKeySettingsWorkflowRoute =
     id: '/workflow',
     path: '/workflow',
     getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeySprintsSprintIdRoute =
+  TasklineAppTasklineShellWsPKeySprintsSprintIdRouteImport.update({
+    id: '/sprints/$sprintId',
+    path: '/sprints/$sprintId',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -1104,6 +1118,7 @@ export interface FileRoutesByFullPath {
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/app/taskline/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  '/app/taskline/$ws/p/$key/backlog': typeof TasklineAppTasklineShellWsPKeyBacklogRoute
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
@@ -1113,6 +1128,7 @@ export interface FileRoutesByFullPath {
   '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
   '/app/taskline/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
   '/app/taskline/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/app/taskline/$ws/p/$key/sprints/$sprintId': typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
   '/app/taskline/$ws/p/$key/settings/': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -1232,6 +1248,7 @@ export interface FileRoutesByTo {
   '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
+  '/app/taskline/$ws/p/$key/backlog': typeof TasklineAppTasklineShellWsPKeyBacklogRoute
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
@@ -1241,6 +1258,7 @@ export interface FileRoutesByTo {
   '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
   '/app/taskline/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
   '/app/taskline/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/app/taskline/$ws/p/$key/sprints/$sprintId': typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
   '/app/taskline/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -1386,6 +1404,7 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings': typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  '/_taskline/app/taskline/_shell/$ws/p/$key/backlog': typeof TasklineAppTasklineShellWsPKeyBacklogRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
@@ -1395,6 +1414,7 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash': typeof TasklineAppTasklineShellWsPKeySettingsTrashRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow': typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId': typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/': typeof TasklineAppTasklineShellWsPKeySettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -1534,6 +1554,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/t/$ref'
     | '/app/taskline/$ws/p/$key/settings'
+    | '/app/taskline/$ws/p/$key/backlog'
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
@@ -1543,6 +1564,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/settings/members'
     | '/app/taskline/$ws/p/$key/settings/trash'
     | '/app/taskline/$ws/p/$key/settings/workflow'
+    | '/app/taskline/$ws/p/$key/sprints/$sprintId'
     | '/app/taskline/$ws/p/$key/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1662,6 +1684,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
     | '/app/taskline/$ws/t/$ref'
+    | '/app/taskline/$ws/p/$key/backlog'
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
@@ -1671,6 +1694,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/settings/members'
     | '/app/taskline/$ws/p/$key/settings/trash'
     | '/app/taskline/$ws/p/$key/settings/workflow'
+    | '/app/taskline/$ws/p/$key/sprints/$sprintId'
     | '/app/taskline/$ws/p/$key/settings'
   id:
     | '__root__'
@@ -1815,6 +1839,7 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/$ws/p/$key'
     | '/_taskline/app/taskline/_shell/$ws/t/$ref'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/backlog'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/board'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/list'
@@ -1824,6 +1849,7 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/trash'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/workflow'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -2835,6 +2861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyIndexRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/backlog': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/backlog'
+      path: '/backlog'
+      fullPath: '/app/taskline/$ws/p/$key/backlog'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyBacklogRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key/board': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key/board'
       path: '/board'
@@ -2905,6 +2938,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsWorkflowRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId'
+      path: '/sprints/$sprintId'
+      fullPath: '/app/taskline/$ws/p/$key/sprints/$sprintId'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
   }
 }
 
@@ -2940,16 +2980,20 @@ const TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren =
 
 interface TasklineAppTasklineShellWsPKeyRouteRouteChildren {
   TasklineAppTasklineShellWsPKeySettingsRouteRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren
+  TasklineAppTasklineShellWsPKeyBacklogRoute: typeof TasklineAppTasklineShellWsPKeyBacklogRoute
   TasklineAppTasklineShellWsPKeyBoardRoute: typeof TasklineAppTasklineShellWsPKeyBoardRoute
   TasklineAppTasklineShellWsPKeyCalendarRoute: typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   TasklineAppTasklineShellWsPKeyListRoute: typeof TasklineAppTasklineShellWsPKeyListRoute
   TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  TasklineAppTasklineShellWsPKeySprintsSprintIdRoute: typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
 }
 
 const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShellWsPKeyRouteRouteChildren =
   {
     TasklineAppTasklineShellWsPKeySettingsRouteRoute:
       TasklineAppTasklineShellWsPKeySettingsRouteRouteWithChildren,
+    TasklineAppTasklineShellWsPKeyBacklogRoute:
+      TasklineAppTasklineShellWsPKeyBacklogRoute,
     TasklineAppTasklineShellWsPKeyBoardRoute:
       TasklineAppTasklineShellWsPKeyBoardRoute,
     TasklineAppTasklineShellWsPKeyCalendarRoute:
@@ -2958,6 +3002,8 @@ const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShell
       TasklineAppTasklineShellWsPKeyListRoute,
     TasklineAppTasklineShellWsPKeyIndexRoute:
       TasklineAppTasklineShellWsPKeyIndexRoute,
+    TasklineAppTasklineShellWsPKeySprintsSprintIdRoute:
+      TasklineAppTasklineShellWsPKeySprintsSprintIdRoute,
   }
 
 const TasklineAppTasklineShellWsPKeyRouteRouteWithChildren =

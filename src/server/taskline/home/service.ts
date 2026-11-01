@@ -1,12 +1,21 @@
 import "@tanstack/react-start/server-only";
 import { endOfWeek } from "@/features/taskline/calendar/grid";
-import type { MyTasks, NavProject, ProjectRole, TasklineNav, WorkspaceSummary } from "@/features/taskline/types";
+import { projectSettings } from "@/features/taskline/settings";
+import type {
+	ActiveSprint,
+	MyTasks,
+	NavProject,
+	ProjectRole,
+	TasklineNav,
+	WorkspaceSummary,
+} from "@/features/taskline/types";
 import { todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import type { TlProjectRow } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import { projectLevel, resolveWorkspace, type TasklineServices, type WorkspaceAccess } from "../access";
 import * as projects from "../projects/repository";
+import * as sprints from "../sprints/repository";
 import { listWorkspaces } from "../workspace/service";
 import * as repo from "./repository";
 
@@ -148,5 +157,41 @@ export async function listMyTasks(services: TasklineServices): Promise<MyTasks> 
 			a.ref.localeCompare(b.ref),
 	);
 	const today = todayInZone(calendar?.timeZone ?? APP_TIME_ZONE);
-	return { tasks: tasks.slice(0, MY_TASKS_MAX), today, weekEnd: endOfWeek(today, calendar?.weekStart ?? 0) };
+	return {
+		tasks: tasks.slice(0, MY_TASKS_MAX),
+		today,
+		weekEnd: endOfWeek(today, calendar?.weekStart ?? 0),
+		sprints: await activeSprints(db, visible),
+	};
+}
+
+/** The active sprints of projects the caller may see (Task 52), soonest ending first, with their totals. */
+export async function activeSprints(
+	db: Db,
+	visible: ReadonlyArray<Pick<Visible, "summary" | "projects">>,
+): Promise<ActiveSprint[]> {
+	const byId = new Map(
+		visible.flatMap(({ summary, projects: rows }) => rows.map((row) => [row.id, { row, summary }] as const)),
+	);
+	const rows = await sprints.activeSprintsOf(db, [...byId.keys()]);
+	const totals = await sprints.totalsOf(
+		db,
+		rows.map((row) => row.id),
+	);
+	return rows.flatMap((sprint) => {
+		const project = byId.get(sprint.projectId);
+		const sum = totals.get(sprint.id);
+		if (!project || !sum) return [];
+		return [
+			{
+				id: sprint.id,
+				name: sprint.name,
+				project: navProject(project.row, project.summary),
+				startOn: sprint.startOn,
+				endOn: sprint.endOn,
+				totals: sum,
+				estimation: projectSettings.parse(project.row.settings).estimation,
+			},
+		];
+	});
 }

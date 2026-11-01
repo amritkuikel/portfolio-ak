@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
-import { AreaChart, BarChart, DonutChart, Sparkline } from "./index";
+import { AreaChart, BarChart, DonutChart, LineChart, Sparkline } from "./index";
 
 const week = [
 	{ day: "Mon", created: 4, done: 2 },
@@ -47,6 +47,31 @@ export const Area: Story = {
 export const StackedArea: Story = { args: { stacked: true } };
 
 export const Bars: Story = { render: (args) => <BarChart {...args} /> };
+
+/** Lines with a dashed guide and a gap where a row has no value (a burndown: the days still to come). */
+export const Lines: Story = {
+	render: (args) => (
+		<LineChart
+			{...args}
+			label="Work remaining each day"
+			data={[
+				{ day: "Mon", remaining: 12, ideal: 12 },
+				{ day: "Tue", remaining: 10, ideal: 9 },
+				{ day: "Wed", remaining: 7, ideal: 6 },
+				{ day: "Thu", remaining: null, ideal: 3 },
+				{ day: "Fri", remaining: null, ideal: 0 },
+			]}
+			series={[
+				{ key: "remaining", label: "Remaining" },
+				{ key: "ideal", label: "Ideal", dashed: true, color: "var(--muted-foreground)" },
+			]}
+		/>
+	),
+	play: async ({ canvasElement }) => {
+		await expect(canvasElement.querySelector("table caption")).toHaveTextContent("Work remaining each day");
+		await expect(canvasElement.querySelector("tbody tr:last-child td")).toHaveTextContent("–");
+	},
+};
 
 export const Donut: Story = {
 	render: () => (

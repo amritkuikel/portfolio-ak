@@ -1,4 +1,14 @@
-import { Area, Bar, CartesianGrid, AreaChart as RechartsArea, BarChart as RechartsBar, XAxis, YAxis } from "recharts";
+import {
+	Area,
+	Bar,
+	CartesianGrid,
+	Line,
+	AreaChart as RechartsArea,
+	BarChart as RechartsBar,
+	LineChart as RechartsLine,
+	XAxis,
+	YAxis,
+} from "recharts";
 import {
 	ChartContainer,
 	ChartLegend,
@@ -11,11 +21,11 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { type ChartProps, chartConfig } from "./types";
 
 /**
- * Area and bar charts on Recharts (loaded with React.lazy from ./index.tsx, so
+ * Area, bar and line charts on Recharts (loaded with React.lazy from ./index.tsx, so
  * Recharts is in this chunk only). Colours come from --color-<series>, set by
  * ChartContainer from the series; Graphite's grid and axis tokens style the rest.
  */
-type Props = ChartProps & { kind: "area" | "bar"; stacked?: boolean };
+type Props = ChartProps & { kind: "area" | "bar" | "line"; stacked?: boolean };
 
 export default function CartesianChart({
 	kind,
@@ -27,7 +37,7 @@ export default function CartesianChart({
 }: Props) {
 	// Phones drop the value axis: the tooltip and the screen-reader table carry the numbers.
 	const narrow = useMediaQuery("(max-width: 639px)");
-	const Chart = kind === "area" ? RechartsArea : RechartsBar;
+	const Chart = kind === "area" ? RechartsArea : kind === "line" ? RechartsLine : RechartsBar;
 	return (
 		<ChartContainer config={chartConfig(series)} className="aspect-auto size-full">
 			<Chart data={[...data]} accessibilityLayer={false} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -43,7 +53,19 @@ export default function CartesianChart({
 				<ChartTooltip content={<ChartTooltipContent indicator={kind === "bar" ? "dot" : "line"} />} />
 				{series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null}
 				{series.map((each) =>
-					kind === "area" ? (
+					kind === "line" ? (
+						<Line
+							key={each.key}
+							dataKey={each.key}
+							type="linear"
+							stroke={`var(--color-${each.key})`}
+							strokeWidth={2}
+							strokeDasharray={each.dashed ? "5 4" : undefined}
+							dot={false}
+							connectNulls={false}
+							isAnimationActive={false}
+						/>
+					) : kind === "area" ? (
 						<Area
 							key={each.key}
 							dataKey={each.key}

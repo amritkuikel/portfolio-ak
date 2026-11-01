@@ -20,6 +20,9 @@ export const tasklineLinks = {
 	board: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/board", params: { ws, key } }),
 	list: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/list", params: { ws, key } }),
 	calendar: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/calendar", params: { ws, key } }),
+	backlog: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/backlog", params: { ws, key } }),
+	sprint: (ws: string, key: string, sprintId: string) =>
+		linkOptions({ to: "/app/taskline/$ws/p/$key/sprints/$sprintId", params: { ws, key, sprintId }, search: {} }),
 	search: (ws: string, q?: string) =>
 		linkOptions({ to: "/app/taskline/$ws/search", params: { ws }, search: { q: q ?? "", page: 1 } }),
 	settings: (ws: string, key: string, section: "general" | "members" | "workflow" | "labels" | "trash" = "general") =>

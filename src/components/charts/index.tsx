@@ -28,6 +28,15 @@ export function BarChart({ stacked, ...props }: ChartProps & { stacked?: boolean
 	);
 }
 
+/** Values over time as lines: gaps where a row has null, `dashed` series for guides (a burndown's ideal). */
+export function LineChart(props: ChartProps) {
+	return (
+		<ChartFrame {...props} aspect="wide">
+			<Cartesian kind="line" {...props} />
+		</ChartFrame>
+	);
+}
+
 /** Parts of a whole: a slice per row, the total in the middle; `colors` (by row) overrides the palette. */
 export function DonutChart(props: ChartProps & { colors?: ReadonlyArray<string> }) {
 	return (

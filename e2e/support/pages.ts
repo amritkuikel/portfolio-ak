@@ -20,6 +20,7 @@ export type ReviewedPage = {
 		| { from: "portfolio-project-id" } // @portfolio
 		| { from: "portfolio-post-id" } // @portfolio
 		| { from: "taskline-project-id" } // @taskline
+		| { from: "taskline-sprint-id"; state: "active" | "completed" } // @taskline
 		| { from: "note-id" } // @apps
 		| { from: "shared-note-token" } // @apps
 		| { from: "link-id" } // @apps
@@ -192,6 +193,25 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		as: "admin",
 		path: "/app/taskline/team/p/WEB/calendar?mode=week&by=start",
 		label: "a week by start date",
+	},
+	// Sprints and backlog (Task 52): the demo team's APP plans in sprints.
+	{ route: "/app/taskline/$ws/p/$key/backlog", as: "admin", path: "/app/taskline/team/p/APP/backlog" },
+	{
+		route: "/app/taskline/$ws/p/$key/backlog",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/backlog",
+		label: "sprints off",
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/sprints/$sprintId",
+		as: "admin",
+		params: { from: "taskline-sprint-id", state: "active" },
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/sprints/$sprintId",
+		as: "admin",
+		params: { from: "taskline-sprint-id", state: "completed" },
+		label: "completed",
 	},
 	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search" },
 	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search?q=design", label: "results" },

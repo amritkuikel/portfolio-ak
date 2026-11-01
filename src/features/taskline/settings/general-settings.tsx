@@ -50,6 +50,9 @@ const projectFormSchema = z.object({
 	startOn: z.union([z.literal(""), isoDate()]),
 	targetOn: z.union([z.literal(""), isoDate()]),
 	doneColumnDays: z.number().int().min(1).max(365).optional(),
+	/** Task 52: sprints and the backlog, and what tasks are estimated in. */
+	sprints: z.boolean(),
+	estimation: z.enum(["points", "time"]),
 });
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
@@ -61,6 +64,8 @@ const toValues = (project: ProjectDetail): ProjectFormValues => ({
 	startOn: project.startOn ?? "",
 	targetOn: project.targetOn ?? "",
 	doneColumnDays: project.settings.doneColumnDays ?? undefined,
+	sprints: project.settings.sprints,
+	estimation: project.settings.estimation,
 });
 
 /** General: the project form (saved against its version), its state and health, and the archive. */
@@ -96,7 +101,11 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 					visibility: value.visibility,
 					startOn: value.startOn || null,
 					targetOn: value.targetOn || null,
-					settings: { doneColumnDays: value.doneColumnDays ?? null },
+					settings: {
+						doneColumnDays: value.doneColumnDays ?? null,
+						sprints: value.sprints,
+						estimation: value.estimation,
+					},
 				});
 				toast.success(m.crud_toast_saved());
 			} catch (error) {
@@ -158,6 +167,28 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 								description={m.taskline_project_done_days_hint()}
 								optional
 								integer
+							/>
+						)}
+					</form.AppField>
+				</FormSection>
+				<FormSection title={m.taskline_settings_sprints()} description={m.taskline_settings_sprints_description()}>
+					<form.AppField name="sprints">
+						{(field) => (
+							<field.SwitchField
+								label={m.taskline_settings_sprints_on()}
+								description={m.taskline_settings_sprints_on_hint()}
+							/>
+						)}
+					</form.AppField>
+					<form.AppField name="estimation">
+						{(field) => (
+							<field.SelectField
+								label={m.taskline_settings_estimation()}
+								description={m.taskline_settings_estimation_hint()}
+								options={[
+									{ value: "points", label: m.taskline_settings_estimation_points() },
+									{ value: "time", label: m.taskline_settings_estimation_time() },
+								]}
 							/>
 						)}
 					</form.AppField>

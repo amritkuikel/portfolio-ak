@@ -1593,7 +1593,7 @@ The procedure is section 10.1's, with these differences:
 | 49 | Admin control panel I: overview, projects, members and invitations, settings, activity | high | Done (decisions 0212–0213) |
 | 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Done (decision 0214) |
 | 51 | More views: calendar, my work, saved views, search, CSV import | high | Done (decision 0215) |
-| 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Planned |
+| 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Done (decisions 0216–0217) |
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Planned |
 | 54 | Timeline, milestones and dependencies | xhigh | Planned |
 | 55 | Custom fields | high | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0216 after Task 51).
+- **Decisions:** numbered from the next free one (0218 after Task 52).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1756,7 +1756,7 @@ The procedure is section 10.1's, with these differences:
 | `tl_comment` | project_id, task_id, author_id?, body html + text, mentions uuid[], edited_at, deleted_at | 50 |
 | `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data (a snapshot for the sentence), email (instant / digest / none, fixed when made), created_at, read_at, emailed_at; index (user, read_at, created desc), a partial index on the unsent | 50 |
 | `tl_saved_view`, `tl_import` | saved view: workspace_id, project_id (required, 0215), member_id, name (unique per project, member and view, any case), view (list / board / calendar), search, shared. Import: key (the idempotency key), project_id, user_id, fingerprint, result | 51 |
-| `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, completed_at, committed_points, completed_points; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks. `tl_task` gains sprint_id, points, rank | 52 |
+| `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, started_at, completed_at, committed and completed points and tasks; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks (the close of the day, 0216). `tl_task` gains sprint_id, points, rank (one fractional order across the project) | 52 |
 | `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member. `tl_task` gains estimate_minutes | 53 |
 | `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
 | `tl_field` | workspace_id, project_id?, name, type (text / number / select / multi_select / date / member / checkbox / url), options jsonb (with ids), required, position, archived_at. `tl_task` gains `fields` jsonb (GIN) | 55 |
@@ -1962,18 +1962,25 @@ The calendar, My work, saved views, search and the CSV import (decision 0215; [d
   - The bundle count is 0.8 kB under its budget, and Tasks 52 onwards add routes (backlog, sprints, time, timeline…): decide on the closure measurement (Task 48's note) or a new budget before Task 52.
   - `suggestKey` in `features/taskline/schema.ts` splits names on `/s+/` (the letter s), not `/\s+/`, so "Website relaunch" suggests "WEB", not "WR" as its comment says. Left as it is (flows may rely on it); a one-character fix.
 
-### Task 52: Sprints and backlog (planned)
+### Task 52: Sprints and backlog (done)
 
-- **Settings:** per project, sprints on or off, and estimation in points or time. `tl_sprint` and `tl_sprint_snapshot`; `tl_task` gains `sprint_id`, `points` and `rank`.
-- **Backlog page:** the active and planned sprints as sections, then the backlog. Tasks drag between them (and move by keyboard), ordered by rank; points total per section.
-- **Planning:** create a sprint (name, dates, goal), with capacity against the last 3 sprints' velocity.
-- **Start and complete:**
-  - start: one active sprint per project;
-  - complete: the unfinished tasks go to the next sprint, a new one or the backlog; committed and completed points are stored.
-- **Charts:** the burndown and burnup (the cron's daily snapshots plus today, computed live), velocity, and a sprint report page.
-- **Elsewhere:** sprint started and completed notifications; active sprints on `/home` and the admin overview.
-- **Tests:** PGlite (one active sprint, completion and carry-over, snapshot idempotency), unit (burndown series from snapshots), e2e (plan → start → complete).
-- **Decision:** daily snapshots for the burndown.
+Sprints, the backlog and their charts (decision 0216; [docs/guides/taskline.md](guides/taskline.md), "Sprints and backlog"), and the bundle budget measured as what every page loads (decision 0217, the owner's choice before the task).
+
+- **Schema:** `0022_taskline_sprints`: `tl_sprint` (state, dates, started and completed, committed and completed points and tasks; one active per project, a partial unique index) and `tl_sprint_snapshot` (sprint, day, scope and done as points and tasks); `tl_task` gains `sprint_id` (set null), `points` (0–100) and `rank` (one fractional order across the project, backfilled in number order by the migration). Activity kinds `sprint.created`, `updated`, `deleted`, `started`, `completed`.
+- **Server:** `sprints/{repository,service}.ts`: plan (up to 10 planned), edit (an active sprint keeps its first day), delete (planned only), start (a later start becomes today; the commitment and the starting snapshot are stored), complete (done stored, today's close written, the unfinished tasks to the next planned sprint, a new one or the backlog), `rankTask`, the report; scope leaves canceled tasks out, done is the completed category. Seven functions in `src/functions/taskline/sprints.ts` (in the guard test and the access matrix: everything needs `edit`, the report `read`). `createTask` and `patchTask` take a sprint and points, the list filters by sprint (`active`, `none`, one), `listTasks` carries the open sprints, the velocity (the last three completed) and the sprint count, Home and the admin's overview their active sprints, the daily job a snapshot step (each active sprint's close of yesterday, once), and the `sprint` notification goes to the project's members.
+- **Pages:** the Backlog tab (sprints on): sections with totals against the velocity, drag, keyboard drag or Alt + ↑ ↓ across sections (announced), points in the row, quick add, "New sprint" (suggested name and dates), Start, Complete (where the unfinished tasks go), Edit, Delete, Report; `/$ws/p/$key/sprints/$sprintId` (numbers, burndown with a working-days ideal, burnup, velocity, the tasks, `?by=points|tasks`, a switcher); the lead's General settings gained "Use sprints" and "Estimate in"; the task's Sprint and Points; points on board cards; the Sprint filter on the board, list and calendar; active sprints on Home and the admin's overview. The charts kit gained `LineChart` (dashed series, gaps for missing values).
+- **Sandbox and demo team:** `WEB` in the sandbox and the demo team's `APP` plan in sprints (a completed sprint with its days, the active one, a planned one, points); the claim moves sprints with their project.
+- **Bundle (0217):** `check-bundle.ts` follows every static import from the preloads. Every page loads 265.7 kB gzip (249.9 by the old count of direct preloads, 249.2 before this task); the budgets are 275 kB per page and 300 kB per route (the heaviest, the portfolio's project editor, 266.5 kB). The backlog adds 149.2 kB (dnd-kit and the kit), the report 13.3 kB by the old count; the dialogs load when opened, the charts on demand.
+- **Tests:** PGlite `taskline-sprints.test.ts` (14: one active sprint and the start's commitment and snapshot; readers, dates, another project's sprint; notifications; completion with carry-over to the next, a new one or the backlog, the stored numbers, the velocity; deleting; snapshots once a day, archived projects; ranks and the history; the list's sprint filter; Home; the sandbox in Nepali and the claim; the migration's ranks), the access matrix (+7 operations), the demo seed's sprints; unit `taskline-sprints.test.ts` (8: the burndown's days, carry-over, ideal line, tasks, a late completion; the backlog's layout, drops, steps, placeholder ranks); jsdom `backlog.test.tsx` (keyboard moves across sections, totals and points, readers); stories `Taskline/Backlog` (sections, keyboard, reader) and a `LineChart` story. `pnpm test`: 120 files, 1,081 tests; `test:storybook` 96 files, 456 tests. E2E (11.1): `taskline.spec.ts` (12 flows, the new one: a guest plans a sprint, moves a task into it by keyboard, completes the active one and starts the next, then reads both reports) and the review of every Taskline page with the backlog (sprints on and off) and the active and completed reports (528 checks), all passing.
+- **Numbers:** 124 new messages in each language, the Nepali written by hand. Build, `build-storybook`, `i18n:check` and the bundle check green.
+- **Deviations:**
+  - Sprint operations need `edit`, not the lead's `manage`, and the "sprints" setting only shows or hides them (the server doesn't refuse when it's off).
+  - With time estimation, the totals and charts count tasks: minutes come with Task 53, which should count `estimate_minutes` there.
+  - The sprint filter (board, list, calendar) wasn't in the plan; the board shows the active sprint with it.
+  - The bundle budget is measured differently (0217), so its number rose from 250 to 275 without growth.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0022_taskline_sprints`).
+  - `pnpm db:seed-taskline` gives `APP` sprints only on a database where the team has no projects yet (the seed writes projects once).
 
 ### Task 53: Time tracking (planned)
 

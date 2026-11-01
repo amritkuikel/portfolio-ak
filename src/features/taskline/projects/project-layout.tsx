@@ -6,6 +6,7 @@ import {
 	ColumnsIcon,
 	LayoutDashboardIcon,
 	ListIcon,
+	ListOrderedIcon,
 	LockIcon,
 	SettingsIcon,
 	UserPlusIcon,
@@ -36,7 +37,7 @@ const FACES = 5;
 
 /**
  * A project's frame (PLAN 11.5): its name, who is on it, and the view tabs (overview,
- * board, list, calendar, and the lead's settings) around the view. It owns the page's <main>
+ * the backlog when sprints are on, board, list, calendar, and the lead's settings) around the view. It owns the page's <main>
  * and keeps the project fresh while it's open (rev polling, decision 0209).
  */
 export function ProjectLayout() {
@@ -130,6 +131,12 @@ export function ProjectLayout() {
 							<LayoutDashboardIcon aria-hidden />
 							{m.taskline_view_overview()}
 						</PageTab>
+						{project.settings.sprints ? (
+							<PageTab {...tasklineLinks.backlog(ws, key)} data-testid="view-backlog">
+								<ListOrderedIcon aria-hidden />
+								{m.taskline_view_backlog()}
+							</PageTab>
+						) : null}
 						<PageTab {...tasklineLinks.board(ws, key)} data-testid="view-board">
 							<ColumnsIcon aria-hidden />
 							{m.taskline_view_board()}

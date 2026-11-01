@@ -55,7 +55,35 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[]): Ta
 		completedAt: row.completedAt?.toISOString() ?? null,
 		checklist: { done: row.checklist.filter((item) => item.done).length, total: row.checklist.length },
 		updatedAt: row.updatedAt.toISOString(),
+		sprintId: row.sprintId,
+		points: row.points,
+		rank: row.rank,
 	};
+}
+
+/** The backlog's order (Task 52): rank keys compared by code unit, as positions are. */
+export const byRank = (column: AnyColumn) => sql`${column} collate "C"`;
+
+/** The rank after every task of the project (trashed ones too): where a new task goes in the backlog. */
+export async function endRank(db: Db, projectId: string): Promise<string> {
+	const [row] = await db
+		.select({ rank: tlTask.rank })
+		.from(tlTask)
+		.where(eq(tlTask.projectId, projectId))
+		.orderBy(desc(byRank(tlTask.rank)))
+		.limit(1);
+	return generateKeyBetween(row?.rank ?? null, null);
+}
+
+/** `count` ranks after every task of the project (the CSV import's). */
+export async function endRanks(db: Db, projectId: string, count: number): Promise<string[]> {
+	const [row] = await db
+		.select({ rank: tlTask.rank })
+		.from(tlTask)
+		.where(eq(tlTask.projectId, projectId))
+		.orderBy(desc(byRank(tlTask.rank)))
+		.limit(1);
+	return generateKeysBetween(row?.rank ?? null, null, count);
 }
 
 /** Each task's label ids. */
@@ -143,8 +171,16 @@ export async function endOfStatus(db: Db, statusId: string): Promise<string> {
 	return generateKeyBetween(await lastInStatus(db, statusId), null);
 }
 
-export async function insertTask(tx: Tx, values: typeof tlTask.$inferInsert): Promise<TlTaskRow> {
-	const [row] = await tx.insert(tlTask).values(values).returning();
+/** A new task; without a rank, it goes at the end of the backlog's order. */
+export async function insertTask(
+	tx: Tx,
+	values: Omit<typeof tlTask.$inferInsert, "rank"> & { rank?: string },
+): Promise<TlTaskRow> {
+	const rank = values.rank ?? (await endRank(tx, values.projectId));
+	const [row] = await tx
+		.insert(tlTask)
+		.values({ ...values, rank })
+		.returning();
 	if (!row) throw new Error("Task insert returned no row");
 	return row;
 }
@@ -190,6 +226,9 @@ export type TaskPatch = Partial<
 		| "completedAt"
 		| "checklist"
 		| "deletedAt"
+		| "sprintId"
+		| "points"
+		| "rank"
 	>
 >;
 
@@ -328,6 +367,8 @@ export type TaskListFilters = {
 	priority?: number;
 	type?: TaskType;
 	due?: "overdue" | "week" | "none";
+	/** A sprint's id, `none` (the backlog), or `nobody` (`active` when there's none: matches nothing). */
+	sprint?: string;
 	today: string;
 	weekEnd: string;
 };
@@ -363,6 +404,13 @@ export function listWhere(projectId: string, filters: TaskListFilters): SQL | un
 				? and(lt(tlTask.dueOn, filters.today), isNull(tlTask.completedAt))
 				: filters.due === "week"
 					? and(gte(tlTask.dueOn, filters.today), lte(tlTask.dueOn, filters.weekEnd))
+					: undefined,
+		filters.sprint === "none"
+			? isNull(tlTask.sprintId)
+			: filters.sprint === "nobody"
+				? sql`false`
+				: filters.sprint
+					? eq(tlTask.sprintId, filters.sprint)
 					: undefined,
 	);
 }

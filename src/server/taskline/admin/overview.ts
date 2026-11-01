@@ -6,6 +6,7 @@ import { addDays, startOfDayInZone, todayInZone, weekdayOf } from "@/lib/i18n/da
 import { tlInvitation, tlMember, tlProject, tlTask, tlWorkspace, user } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
+import { activeSprints } from "../home/service";
 import { team } from "./team";
 
 /**
@@ -168,5 +169,17 @@ export async function getOverview({ db }: Pick<Services, "db">): Promise<AdminOv
 		},
 		members: { active: activeMembers?.total ?? 0, invited: invited?.total ?? 0 },
 		today,
+		sprints: await activeSprints(db, [
+			{
+				summary: {
+					id: workspace.id,
+					kind: workspace.kind,
+					slug: workspace.slug,
+					name: workspace.name,
+					segment: workspace.slug,
+				},
+				projects,
+			},
+		]),
 	};
 }

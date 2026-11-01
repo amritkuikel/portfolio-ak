@@ -39,6 +39,7 @@ import { actorOf, type NotifyEvent, produce, taskData } from "../notify/produce"
 import * as projects from "../projects/repository";
 import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf, richText } from "../rules";
+import * as sprints from "../sprints/repository";
 import * as workflow from "../workflow/repository";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
@@ -191,13 +192,14 @@ function taskType(access: ProjectAccess, type: TaskType | undefined): TaskType {
 
 export async function listTasks({ db, user }: TasklineServices, ws: string, key: string): Promise<ProjectTasks> {
 	const access = await resolveProject(db, user, ws, key);
-	const [statuses, labels, memberRows, rows, stars, counts] = await Promise.all([
+	const [statuses, labels, memberRows, rows, stars, counts, planning] = await Promise.all([
 		workflow.listStatuses(db, access.project.id),
 		workflow.listLabels(db, access.workspace.id, access.project.id),
 		members.listMembers(db, access.workspace.id, { deactivated: true }),
 		repo.listTasks(db, access.project.id),
 		projects.starsOf(db, access.member?.id ?? null, [access.project.id]),
 		projects.openTaskCounts(db, [access.project.id]),
+		sprints.projectSprints(db, access.project.id),
 	]);
 	return {
 		project: projects.projectDetail(access.project, {
@@ -214,13 +216,26 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		doneColumnDays: projectSettings.parse(access.project.settings).doneColumnDays ?? access.settings.doneColumnDays,
 		taskTypes: access.settings.taskTypes,
 		readAt: new Date().toISOString(),
+		sprints: planning.sprints,
+		velocity: planning.velocity,
+		sprintCount: planning.sprintCount,
 	};
 }
 
-/** The list view's filters for the server: `me` is the caller's member row, dates are the workspace's. */
-function listFilters(access: ProjectAccess, input: TaskListInput): repo.TaskListFilters {
+/**
+ * The list view's filters for the server: `me` is the caller's member row, dates are
+ * the workspace's, `active` is the project's active sprint (none: nothing matches).
+ */
+async function listFilters(db: Db, access: ProjectAccess, input: TaskListInput): Promise<repo.TaskListFilters> {
 	const today = todayInZone(access.settings.timeZone);
+	const sprint =
+		input.sprint === "all"
+			? undefined
+			: input.sprint === "active"
+				? ((await sprints.activeSprint(db, access.project.id))?.id ?? "nobody")
+				: input.sprint;
 	return {
+		sprint,
 		q: input.q,
 		statusId: input.status === "all" ? undefined : input.status,
 		assignee:
@@ -238,7 +253,7 @@ function listFilters(access: ProjectAccess, input: TaskListInput): repo.TaskList
 export async function listTaskPage({ db, user }: TasklineServices, input: TaskListInput): Promise<Paged<TaskSummary>> {
 	const access = await resolveProject(db, user, input.ws, input.key);
 	return repo.listPage(db, access.project.id, access.project.key, {
-		filters: listFilters(access, input),
+		filters: await listFilters(db, access, input),
 		sort: input.sort,
 		group: input.group,
 		page: input.page,
@@ -390,6 +405,7 @@ export async function createTask(
 		await checkAssignee(tx, access, input.assigneeId);
 		await checkParent(tx, access, input.parentId);
 		await checkLabels(tx, access, labelIds);
+		if (input.sprintId) await sprints.checkSprint(tx, access.project.id, input.sprintId);
 		const text = richText(description);
 		const task = await repo.insertTask(tx, {
 			...(id ? { id } : {}),
@@ -409,6 +425,8 @@ export async function createTask(
 			startOn: input.startOn ?? null,
 			dueOn: input.dueOn ?? null,
 			completedAt: isClosedCategory(status.category) ? new Date() : null,
+			sprintId: input.sprintId ?? null,
+			points: input.points ?? null,
 		});
 		await repo.setLabels(tx, task.id, labelIds);
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
@@ -465,6 +483,9 @@ export async function patchTask(
 		if (fields.type !== undefined && fields.type !== before.type) taskType(access, fields.type);
 		if (fields.assigneeId !== undefined) await checkAssignee(tx, access, fields.assigneeId);
 		if (fields.parentId !== undefined) await checkParent(tx, access, fields.parentId, before);
+		if (fields.sprintId && fields.sprintId !== before.sprintId) {
+			await sprints.checkSprint(tx, access.project.id, fields.sprintId);
+		}
 		const entries: ActivityEntry[] = [];
 		let task = before;
 		if (Object.keys(fields).length > 0) {

@@ -37,6 +37,9 @@ const task = (id: string, title: string, statusId: string, position: string, pri
 	completedAt: null,
 	checklist: { done: 0, total: 0 },
 	updatedAt: "2026-10-31T00:00:00.000Z",
+	sprintId: null,
+	points: null,
+	rank: "c000",
 });
 
 const STATUSES = [status("todo", "To do", "a0"), status("doing", "Doing", "a1", 1)];

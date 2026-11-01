@@ -43,6 +43,8 @@ export const taskFilterParams = {
 	priority: enumParam(PRIORITY_FILTERS, "all"),
 	type: enumParam(["all", ...TASK_TYPES], "all"),
 	due: enumParam(DUE_FILTERS, "all"),
+	/** Task 52: the active sprint, the backlog (in no sprint), or one sprint. */
+	sprint: idOr("all", "active", "none"),
 };
 
 export type TaskFilters = { q: string } & {
@@ -121,6 +123,16 @@ export const taskSearchSearch = z.object({ q: searchParam(), page: pageParam(50)
 export const MY_WORK_SHOWS = ["assigned", "watching", "all"] as const;
 export type MyWorkShow = (typeof MY_WORK_SHOWS)[number];
 export const homeSearch = z.object({ show: enumParam(MY_WORK_SHOWS, "assigned") });
+
+// ---- Task 52: the backlog and a sprint's report --------------------------------------------------
+
+/** The backlog: the open task (a sheet, masked as its page). */
+export const backlogSearch = z.object({ task: taskParam });
+
+/** What a sprint's charts count: points or tasks (omitted: the project's estimation). */
+export const SPRINT_MEASURES = ["points", "tasks"] as const;
+export type SprintMeasure = (typeof SPRINT_MEASURES)[number];
+export const sprintReportSearch = z.object({ by: z.enum(SPRINT_MEASURES).optional().catch(undefined) });
 
 /** The project key of a task reference ("WEB-12" → "WEB"), or null when it isn't one (route files can't import schema.ts). */
 export const keyOfRef = (ref: string): string | null => /^([A-Z][A-Z0-9]{1,5})-[1-9][0-9]{0,8}$/.exec(ref)?.[1] ?? null;

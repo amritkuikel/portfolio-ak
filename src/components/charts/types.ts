@@ -1,7 +1,7 @@
 import type { ChartConfig } from "@/components/ui/chart";
 
-/** One row of chart data: the category (a month, a status) and a number per series. */
-export type ChartRow = Record<string, string | number>;
+/** One row of chart data: the category (a month, a status) and a number per series; null is "no value" (a line has a gap). */
+export type ChartRow = Record<string, string | number | null>;
 
 export type ChartSeries = {
 	/** The row field holding this series' numbers. */
@@ -10,6 +10,8 @@ export type ChartSeries = {
 	label: string;
 	/** A CSS colour; defaults to Graphite's --chart-1…5 in series order (chart 1 is the accent). */
 	color?: string;
+	/** Line charts: a dashed line (a guide, such as a burndown's ideal). */
+	dashed?: boolean;
 };
 
 export type ChartProps = {

@@ -58,7 +58,9 @@ export function ChartFrame({
 								<th scope="row">{row[index]}</th>
 								{series.map((each) => {
 									const value = row[each.key];
-									return <td key={each.key}>{typeof value === "number" ? format(value) : value}</td>;
+									return (
+										<td key={each.key}>{typeof value === "number" ? format(value) : value === null ? "–" : value}</td>
+									);
 								})}
 							</tr>
 						))}

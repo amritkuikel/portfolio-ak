@@ -10,7 +10,9 @@
  * Collaboration (Task 50, 0214): assigning someone reaches their inbox and their email,
  * and an `@` mention in a comment emails the one mentioned. Finding things (Task 51):
  * tasks imported from CSV, one rescheduled on the calendar by keyboard, a view shared
- * with the project and opened by another member, search and an exact reference.
+ * with the project and opened by another member, search and an exact reference. Sprints
+ * (Task 52): a guest plans a sprint, moves a task into it by keyboard, completes the
+ * active one (its open tasks carried on) and starts the next, then reads the reports.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -455,5 +457,64 @@ test.describe("Taskline from the admin", () => {
 		const response = await invitee.goto(`/app/taskline/team/p/${key}`);
 		expect(response?.status()).toBe(404);
 		await context.close();
+	});
+});
+
+test.describe("Taskline sprints", () => {
+	test("a guest plans a sprint, moves a task into it by keyboard, completes the active one and starts the next", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await page.getByTestId("view-backlog").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/sandbox\/p\/WEB\/backlog$/);
+		const sprints = page.getByTestId("backlog-sprint");
+		await expect(sprints).toHaveCount(2);
+		await expect(sprints.first()).toHaveAttribute("data-state", "active");
+		await expect(sprints.first().getByTestId("backlog-over")).toBeVisible();
+
+		// Plan: the dialog suggests the next name and dates.
+		await page.getByTestId("sprint-new").click();
+		const dialog = page.getByTestId("sprint-dialog");
+		await expect(dialog.getByRole("textbox", { name: "Name" })).toHaveValue("Sprint 4");
+		await dialog.getByRole("button", { name: "Create sprint" }).click();
+		await expect(dialog).toHaveCount(0);
+		await expect(sprints).toHaveCount(3);
+		await expect(sprints.nth(2).getByRole("heading", { level: 2 })).toHaveText("Sprint 4");
+
+		// Alt + ↑ on the backlog's first task moves it into the sprint above it.
+		const backlog = page.getByTestId("backlog-section");
+		const title = (await backlog.getByTestId("backlog-title").first().textContent()) ?? "";
+		await backlog.getByTestId("backlog-handle").first().focus();
+		const moved = nextSave(page);
+		await page.keyboard.press("Alt+ArrowUp");
+		await expect(page.getByTestId("taskline-announcement")).toHaveText(new RegExp(`${title} moved to Sprint 4`));
+		await moved;
+		await expect(sprints.nth(2).getByTestId("backlog-title")).toHaveText([title]);
+
+		// Complete the active sprint: its unfinished tasks go to the next planned one (Sprint 3).
+		const carried = await sprints.first().getByTestId("backlog-title").count();
+		await sprints.first().getByTestId("sprint-complete").click();
+		const complete = page.getByTestId("complete-sprint-dialog");
+		await expect(complete.getByRole("radio", { name: "The next planned sprint" })).toBeChecked();
+		await complete.getByRole("button", { name: "Complete sprint" }).click();
+		await expect(complete).toHaveCount(0);
+		await expect(sprints).toHaveCount(2);
+		await expect(sprints.first().getByRole("heading", { level: 2 })).toHaveText("Sprint 3");
+		// The done task stayed with the completed sprint; the rest came along.
+		await expect(sprints.first().getByTestId("backlog-title")).toHaveCount(carried);
+
+		// Start Sprint 3, then read its report and the completed one's.
+		await sprints.first().getByTestId("sprint-start").click();
+		await expect(sprints.first()).toHaveAttribute("data-state", "active");
+		await sprints.first().getByTestId("sprint-report-link").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/sandbox\/p\/WEB\/sprints\/[0-9a-f-]+$/);
+		await expect(page.getByTestId("sprint-state")).toHaveText("Active");
+		await expect(page.getByRole("heading", { name: "Burndown" })).toBeVisible();
+		const switcher = page.getByTestId("sprint-switch");
+		await switcher.selectOption({ label: "Sprint 2 (Completed)" });
+		await expect(page.getByTestId("sprint-state")).toHaveText("Completed");
+		await expect(page.getByTestId("sprint-tasks")).toBeVisible();
 	});
 });
