@@ -13,7 +13,7 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { changes } from "@/server/audit/record";
 import { notFound, uniqueViolation, withAudit } from "@/server/db/crud";
-import { tlLabel, tlProject, tlStatus, tlTask, tlTaskLabel, tlWorkspace } from "@/server/db/schema";
+import { tlLabel, tlProject, tlStatus, tlTask, tlTaskLabel, tlTimeEntry, tlWorkspace } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
 import * as projectRepo from "../projects/repository";
@@ -41,7 +41,7 @@ const isTimeZone = (zone: string) => {
 
 /** What exists now: the quotas can't be set below it. */
 async function usage(db: Db, workspaceId: string) {
-	const [[projects], [tasks], [statuses]] = await Promise.all([
+	const [[projects], [tasks], [statuses], [entries]] = await Promise.all([
 		db.select({ total: count() }).from(tlProject).where(eq(tlProject.workspaceId, workspaceId)),
 		db.select({ total: count() }).from(tlTask).where(eq(tlTask.workspaceId, workspaceId)),
 		db.select({ most: max(sql<number>`per_project.total`) }).from(
@@ -53,8 +53,14 @@ async function usage(db: Db, workspaceId: string) {
 				.groupBy(tlStatus.projectId)
 				.as("per_project"),
 		),
+		db.select({ total: count() }).from(tlTimeEntry).where(eq(tlTimeEntry.workspaceId, workspaceId)),
 	]);
-	return { projects: projects?.total ?? 0, tasks: tasks?.total ?? 0, statusesPerProject: Number(statuses?.most ?? 0) };
+	return {
+		projects: projects?.total ?? 0,
+		tasks: tasks?.total ?? 0,
+		statusesPerProject: Number(statuses?.most ?? 0),
+		timeEntries: entries?.total ?? 0,
+	};
 }
 
 function view({ workspace, settings }: Team, used: AdminWorkspace["usage"]): AdminWorkspace {
@@ -98,7 +104,7 @@ export async function updateWorkspace(
 		if (RESERVED_SLUGS.includes(slug)) fields.slug = [m.taskline_admin_error_slug_reserved({ slug })];
 		if (!isTimeZone(settings.timeZone)) fields.timeZone = [m.taskline_admin_error_time_zone()];
 		const used = await usage(tx, before.workspace.id);
-		for (const key of ["projects", "tasks", "statusesPerProject"] as const) {
+		for (const key of ["projects", "tasks", "statusesPerProject", "timeEntries"] as const) {
 			if (settings.quotas[key] < used[key]) {
 				fields[key] = [m.taskline_admin_error_quota({ used: formatNumber(used[key]) })];
 			}

@@ -35,6 +35,7 @@ const task = (id: string, title: string, dueOn: string | null): TaskSummary => (
 	sprintId: null,
 	points: null,
 	rank: "c000",
+	estimateMinutes: null,
 });
 
 function Harness({ canEdit = true }: { canEdit?: boolean }) {

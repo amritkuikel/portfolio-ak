@@ -102,6 +102,8 @@ export type NotificationData = {
 	/** Task 52: the sprint's name, and whether it started or completed. */
 	sprint?: string;
 	sprintEvent?: "started" | "completed";
+	/** Task 53: how long a timer the daily job stopped had counted. */
+	minutes?: number;
 };
 
 /** Everything `tl_activity.kind` holds; `data` carries the change (`{ from, to }` and the like). */
@@ -139,6 +141,8 @@ export const ACTIVITY_KINDS = [
 	"sprint.deleted",
 	"sprint.started",
 	"sprint.completed",
+	/** Task 53: `{ minutes, entryId }` (and `auto: true` when the daily job stopped a forgotten timer). */
+	"time.logged",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -244,6 +248,8 @@ export type TaskSummary = {
 	sprintId: string | null;
 	points: number | null;
 	rank: string;
+	/** Task 53: the estimate in minutes. */
+	estimateMinutes: number | null;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -300,6 +306,8 @@ export type TaskDetail = TaskSummary & {
 	attachments: TaskAttachment[];
 	watching: boolean;
 	watcherIds: string[];
+	/** Task 53: the time logged on it. */
+	time: TaskTime;
 };
 
 /** A project's tasks with what draws them: the board, the list and the task sheet start from it. */
@@ -360,6 +368,9 @@ export type TasklineNav = {
 	projects: NavProject[];
 	starred: NavProject[];
 	recent: NavProject[];
+	/** Task 53: the caller's running timer (the topbar's pill), wherever it runs, and when the server read it. */
+	timer: RunningTimer | null;
+	readAt: string;
 };
 
 /** An open task assigned to the caller or watched by them, for Home ("My work", every workspace at once). */
@@ -398,7 +409,15 @@ export type SprintCarry = (typeof SPRINT_CARRY)[number];
 export const POINTS_MAX = 100;
 
 /** A sprint's work: everything in it but canceled tasks (scope), and the completed part (done), as points and as tasks. */
-export type SprintTotals = { scopePoints: number; donePoints: number; scopeTasks: number; doneTasks: number };
+export type SprintTotals = {
+	scopePoints: number;
+	donePoints: number;
+	scopeTasks: number;
+	doneTasks: number;
+	/** Task 53: estimated minutes (unestimated counts 0), what a project that estimates in time counts. */
+	scopeMinutes: number;
+	doneMinutes: number;
+};
 
 export type SprintSummary = {
 	id: string;
@@ -410,12 +429,12 @@ export type SprintSummary = {
 	startedAt: string | null;
 	completedAt: string | null;
 	/** Stored at the start (scope then) and at the completion (done then); null before. */
-	committed: { points: number; tasks: number } | null;
-	completed: { points: number; tasks: number } | null;
+	committed: { points: number; tasks: number; minutes: number } | null;
+	completed: { points: number; tasks: number; minutes: number } | null;
 };
 
 /** The average of the last three completed sprints' completed work (null before the first). */
-export type Velocity = { points: number | null; tasks: number | null; sprints: number };
+export type Velocity = { points: number | null; tasks: number | null; minutes: number | null; sprints: number };
 
 /** One completed sprint on the velocity chart. */
 export type VelocityRow = {
@@ -425,6 +444,8 @@ export type VelocityRow = {
 	completedPoints: number;
 	committedTasks: number;
 	completedTasks: number;
+	committedMinutes: number;
+	completedMinutes: number;
 };
 
 /** A day's close of an active sprint (the daily job's snapshot, decision 0216). */
@@ -454,6 +475,125 @@ export type ActiveSprint = {
 	endOn: string;
 	totals: SprintTotals;
 	estimation: "points" | "time";
+};
+
+// ---- Time tracking (Task 53) ------------------------------------------------------------------
+
+/** A timer counts this long at most: the daily job stops one that ran longer, and tells its owner. */
+export const TIMER_MAX_MINUTES = 720;
+/** One entry (and one timesheet cell) is a day at most. */
+export const DAY_MINUTES = 1440;
+/** An estimate is a thousand hours at most. */
+export const ESTIMATE_MAX_MINUTES = 60_000;
+
+/** The caller's running timer: the task it runs on, and when the server started it. */
+export type RunningTimer = {
+	id: string;
+	/** The workspace's `$ws` segment. */
+	ws: string;
+	workspaceKind: WorkspaceKind;
+	projectKey: string;
+	/** Null when its task was deleted for good while it ran. */
+	ref: string | null;
+	title: string;
+	startedAt: string;
+};
+
+/** A time entry, as the task, the project's time and the admin show it. */
+export type TimeEntry = {
+	id: string;
+	taskId: string | null;
+	ref: string | null;
+	title: string | null;
+	project: { id: string; key: string; name: string };
+	memberId: string;
+	memberName: string;
+	onDay: string;
+	minutes: number;
+	note: string;
+	billable: boolean;
+	running: boolean;
+	startedAt: string | null;
+	/** The caller's own (or theirs to change with `taskline:time`), on a day after the lock. */
+	canEdit: boolean;
+	/** On or before the workspace's lock date: nobody changes it. */
+	locked: boolean;
+};
+
+/** The time on a task: what was logged (everyone's), the latest entries, and whether the caller may log. */
+export type TaskTime = {
+	loggedMinutes: number;
+	billableMinutes: number;
+	entries: TimeEntry[];
+	/** A member who may edit the project (time needs a member row). */
+	canLog: boolean;
+	lockOn: string | null;
+	today: string;
+	/** Whether the project tracks time (its setting): when off, the task shows no time section. */
+	enabled: boolean;
+};
+
+/** A row of the timesheet: a task (or a project's time whose task is gone) and its minutes per day of the week. */
+export type TimesheetRow = {
+	key: string;
+	task: { id: string; ref: string; title: string; closed: boolean } | null;
+	project: { id: string; key: string; name: string; color: TasklineColor };
+	/** Whether the caller may change its cells (a task they may still log time on). */
+	editable: boolean;
+	/** Seven numbers, one per day of the week (`Timesheet.days`). */
+	minutes: number[];
+};
+
+/** /$ws/timesheet: the caller's week in one workspace. */
+export type Timesheet = {
+	weekStart: string;
+	days: string[];
+	today: string;
+	lockOn: string | null;
+	workingDays: number[];
+	rows: TimesheetRow[];
+	/** Open tasks to add a row for: assigned to the caller, then the ones they last logged on. */
+	suggestions: Array<Pick<TimesheetRow, "key" | "task" | "project">>;
+	/** The caller's weekly capacity (the admin's), or null. */
+	capacityMinutes: number | null;
+	/** Whether the caller has a member row here (an admin reading the team has no timesheet). */
+	canLog: boolean;
+	/** Whether the week before has time to copy. */
+	lastWeekMinutes: number;
+};
+
+/** What copying last week did: cells filled, and those skipped (already had time, locked, or the task is closed to the caller). */
+export type CopyWeekResult = { copied: number; skipped: number };
+
+export type ProjectTimeTask = {
+	taskId: string;
+	ref: string;
+	title: string;
+	assigneeId: string | null;
+	estimateMinutes: number | null;
+	loggedMinutes: number;
+	billableMinutes: number;
+	closed: boolean;
+};
+
+export type ProjectTimeMember = {
+	memberId: string;
+	name: string;
+	/** The estimates of the tasks assigned to them. */
+	estimateMinutes: number;
+	loggedMinutes: number;
+	billableMinutes: number;
+};
+
+/** A project's time page: estimate against actual by task and by member, and the latest entries. */
+export type ProjectTime = {
+	tasks: ProjectTimeTask[];
+	members: ProjectTimeMember[];
+	totals: { estimateMinutes: number; loggedMinutes: number; billableMinutes: number };
+	/** Time left on the project by tasks deleted for good. */
+	orphanMinutes: number;
+	entries: TimeEntry[];
+	today: string;
 };
 
 // ---- Finding things (Task 51) -----------------------------------------------------------------

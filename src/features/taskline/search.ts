@@ -129,10 +129,25 @@ export const homeSearch = z.object({ show: enumParam(MY_WORK_SHOWS, "assigned") 
 /** The backlog: the open task (a sheet, masked as its page). */
 export const backlogSearch = z.object({ task: taskParam });
 
-/** What a sprint's charts count: points or tasks (omitted: the project's estimation). */
-export const SPRINT_MEASURES = ["points", "tasks"] as const;
+/** What a sprint's charts count: points, estimated hours (Task 53) or tasks (omitted: the project's estimation). */
+export const SPRINT_MEASURES = ["points", "hours", "tasks"] as const;
 export type SprintMeasure = (typeof SPRINT_MEASURES)[number];
 export const sprintReportSearch = z.object({ by: z.enum(SPRINT_MEASURES).optional().catch(undefined) });
 
 /** The project key of a task reference ("WEB-12" → "WEB"), or null when it isn't one (route files can't import schema.ts). */
 export const keyOfRef = (ref: string): string | null => /^([A-Z][A-Z0-9]{1,5})-[1-9][0-9]{0,8}$/.exec(ref)?.[1] ?? null;
+
+// ---- Task 53: time ------------------------------------------------------------------------------
+
+const dayParam = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/)
+	.optional()
+	.catch(undefined);
+
+/** My timesheet: the week holding `?week=` (omitted: this week). */
+export const timesheetSearch = z.object({ week: dayParam });
+
+/** A project's time: estimate against actual by task or by member, and the open task. */
+export const PROJECT_TIME_VIEWS = ["task", "member"] as const;
+export const projectTimeSearch = z.object({ by: enumParam(PROJECT_TIME_VIEWS, "task"), task: taskParam });

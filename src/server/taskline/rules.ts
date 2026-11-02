@@ -15,7 +15,7 @@ export const quotasOf = (access: WorkspaceAccess): TasklineQuotas =>
 /** The advisory lock's scope for a workspace's counts (`lockQuota`). */
 export const quotaScope = (workspaceId: string) => `taskline:${workspaceId}`;
 
-export const quotaError = (what: "projects" | "tasks" | "statuses", max: number) =>
+export const quotaError = (what: "projects" | "tasks" | "statuses" | "timeEntries", max: number) =>
 	ruleError(
 		"CONFLICT",
 		`Taskline quota reached: ${what}`,
@@ -23,7 +23,9 @@ export const quotaError = (what: "projects" | "tasks" | "statuses", max: number)
 			? m.taskline_quota_projects({ max: formatNumber(max) })
 			: what === "tasks"
 				? m.taskline_quota_tasks({ max: formatNumber(max) })
-				: m.taskline_quota_statuses({ max: formatNumber(max) }),
+				: what === "timeEntries"
+					? m.taskline_quota_time({ max: formatNumber(max) })
+					: m.taskline_quota_statuses({ max: formatNumber(max) }),
 	);
 
 /** Something only a workspace's member can do (an admin reading as `taskline:read` isn't one). */

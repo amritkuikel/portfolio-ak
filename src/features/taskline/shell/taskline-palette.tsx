@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
+	ClockIcon,
 	FolderKanbanIcon,
 	HouseIcon,
 	KeyboardIcon,
@@ -182,6 +183,22 @@ export function TasklinePalette({
 								onSelect={() => go(() => navigate(tasklineLinks.projects(workspace.segment)))}
 							>
 								<Icon aria-hidden />
+								<span>{label}</span>
+							</CommandItem>
+						);
+					})}
+					{nav.workspaces.map((workspace) => {
+						const label = several
+							? m.taskline_palette_timesheet_of({ workspace: workspace.name })
+							: m.taskline_nav_timesheet();
+						return (
+							<CommandItem
+								key={workspace.id}
+								value={`go timesheet ${workspace.segment}`}
+								keywords={[label]}
+								onSelect={() => go(() => navigate(tasklineLinks.timesheet(workspace.segment)))}
+							>
+								<ClockIcon aria-hidden />
 								<span>{label}</span>
 							</CommandItem>
 						);

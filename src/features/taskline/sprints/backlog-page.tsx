@@ -26,7 +26,7 @@ import { TaskSheetLink } from "../task/task-link";
 import { isClosedCategory, type SprintSummary, type TaskSummary } from "../types";
 import { Backlog } from "./backlog";
 import { type BacklogSection, backlogLayout } from "./moves";
-import { measureOf, velocityText } from "./sprint-bits";
+import { measureOf, velocityIn, velocityText } from "./sprint-bits";
 
 const TaskSheet = lazy(() => import("../task/task-sheet"));
 const SprintFormDialog = lazy(() =>
@@ -70,7 +70,7 @@ export function BacklogPage() {
 
 	const { can, settings } = project.project;
 	const measure = measureOf(settings.estimation);
-	const velocity = measure === "points" ? project.velocity.points : project.velocity.tasks;
+	const velocity = velocityIn(project.velocity, measure);
 	const closedIds = new Set(project.statuses.filter((status) => isClosedCategory(status.category)).map((s) => s.id));
 	const isClosed = (task: TaskSummary) => closedIds.has(task.statusId);
 	const sections = backlogLayout(project.sprints, tasks, isClosed);
@@ -200,6 +200,13 @@ export function BacklogPage() {
 					reportRollback(
 						collection.update(task.id, (draft) => {
 							draft.points = points;
+						}),
+					)
+				}
+				onEstimate={(task, estimateMinutes) =>
+					reportRollback(
+						collection.update(task.id, (draft) => {
+							draft.estimateMinutes = estimateMinutes;
 						}),
 					)
 				}

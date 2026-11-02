@@ -515,7 +515,7 @@ describe("overview and activity", () => {
 		expect(numbers.weeks.at(-1)?.created).toBe(2);
 		expect(numbers.sandboxes).toMatchObject({ total: 1, guests: 0 });
 		expect(numbers.sandboxes.projects).toBeGreaterThan(0);
-		expect(numbers.members).toEqual({ active: 2, invited: 0 });
+		expect(numbers.members).toEqual({ active: 2, invited: 0, loggedThisWeek: 0 });
 
 		const history = await activity.list(
 			admin(),

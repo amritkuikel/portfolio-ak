@@ -2,7 +2,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { patchTasklineTask } from "../../../../.storybook/mocks/functions/taskline/tasks";
+import { logTasklineTime } from "../../../../.storybook/mocks/functions/taskline/time";
 import { sampleProjectTasks, sampleTaskDetail, sampleTasklineMember } from "../../../../.storybook/mocks/taskline";
+import { formatDuration } from "../time/duration";
 import { TaskPanel } from "./task-panel";
 
 /** The task, as the sheet over a view and its own page show it (Task 48). */
@@ -62,5 +64,24 @@ export const ReadOnly: Story = {
 		await expect(canvas.queryByTestId("task-form")).toBeNull();
 		await expect(canvas.queryByTestId("task-trash")).toBeNull();
 		await expect(canvas.getByTestId("task-priority")).toBeDisabled();
+	},
+};
+
+/** Its time (Task 53): logged against the estimate, the entries (one's own to change), logging by hand, the timer. */
+export const Time: Story = {
+	play: async ({ canvas, userEvent }) => {
+		await expect(canvas.getByTestId("task-estimate")).toHaveValue("6:00");
+		await expect(canvas.getByTestId("task-timer-start")).toBeVisible();
+		await userEvent.click(canvas.getByTestId("task-tab-time"));
+		await expect(canvas.getByTestId("time-against-estimate")).toHaveTextContent(formatDuration(270));
+		await expect(canvas.getAllByTestId("time-entry")).toHaveLength(2);
+		await userEvent.click(canvas.getByTestId("time-log-open"));
+		await userEvent.type(canvas.getByTestId("time-duration"), "45m");
+		await userEvent.click(canvas.getByTestId("time-submit"));
+		await waitFor(() =>
+			expect(logTasklineTime).toHaveBeenCalledWith({
+				data: expect.objectContaining({ ws: "team", ref: "WEB-4", minutes: 45 }),
+			}),
+		);
 	},
 };

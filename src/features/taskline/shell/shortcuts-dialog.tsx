@@ -20,6 +20,7 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
 		{ keys: ["Alt", "↑↓←→"], label: m.taskline_shortcut_board_move() },
 		{ keys: ["Alt", "←→"], label: m.taskline_shortcut_calendar_day() },
 		{ keys: ["Alt", "↑↓"], label: m.taskline_shortcut_calendar_week() },
+		{ keys: ["↑↓←→", "↵"], label: m.taskline_shortcut_timesheet() },
 	];
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

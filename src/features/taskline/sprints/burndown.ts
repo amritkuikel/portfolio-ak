@@ -25,10 +25,17 @@ export type BurnPoint = {
 	ideal: number;
 };
 
-const pick = (totals: SprintTotals, by: SprintMeasure) =>
-	by === "points"
-		? { scope: totals.scopePoints, done: totals.donePoints }
-		: { scope: totals.scopeTasks, done: totals.doneTasks };
+/** Minutes as hours with one decimal (charts and totals). */
+export const toHours = (minutes: number) => Math.round(minutes / 6) / 10;
+
+/** A sprint's work in one measure: scope and done (Task 53: estimated minutes as hours). */
+export function totalsIn(totals: SprintTotals, measure: SprintMeasure): { scope: number; done: number } {
+	if (measure === "points") return { scope: totals.scopePoints, done: totals.donePoints };
+	if (measure === "hours") return { scope: toHours(totals.scopeMinutes), done: toHours(totals.doneMinutes) };
+	return { scope: totals.scopeTasks, done: totals.doneTasks };
+}
+
+const pick = totalsIn;
 
 /** Every day from `first` to `last`, inclusive. */
 const daysBetween = (first: string, last: string): string[] => {
@@ -44,7 +51,15 @@ export function burnSeries(
 	const { sprint, days, live, today, workingDays } = report;
 	const byDay = new Map<string, SprintDay>(days.map((day) => [day.day, day]));
 	const committed = sprint.committed
-		? { scope: by === "points" ? sprint.committed.points : sprint.committed.tasks, done: 0 }
+		? {
+				scope:
+					by === "points"
+						? sprint.committed.points
+						: by === "hours"
+							? toHours(sprint.committed.minutes)
+							: sprint.committed.tasks,
+				done: 0,
+			}
 		: { scope: 0, done: 0 };
 	const startSnapshot = byDay.get(addDays(sprint.startOn, -1));
 	const start = startSnapshot ? pick(startSnapshot, by) : committed;
@@ -58,7 +73,7 @@ export function burnSeries(
 	const isWorking = (day: string) => workingDays.includes(weekdayOf(day));
 	const planned = range.filter((day) => day <= sprint.endOn);
 	const working = planned.filter(isWorking).length;
-	const base = start.scope - start.done;
+	const base = Math.round((start.scope - start.done) * 10) / 10;
 	let left = working > 0 ? working : planned.length;
 	const ideal = (day: string) => {
 		if (day > sprint.endOn) return 0;
@@ -81,7 +96,13 @@ export function burnSeries(
 		const value =
 			day === today && sprint.state === "active" && live ? pick(live, by) : snapshot ? pick(snapshot, by) : known;
 		known = value;
-		points.push({ day, scope: value.scope, done: value.done, remaining: value.scope - value.done, ideal: idealValue });
+		points.push({
+			day,
+			scope: value.scope,
+			done: value.done,
+			remaining: Math.round((value.scope - value.done) * 10) / 10,
+			ideal: idealValue,
+		});
 	}
 	return points;
 }

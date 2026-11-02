@@ -38,6 +38,7 @@ const task = (id: string, statusId: string, position: string): TaskSummary => ({
 	sprintId: null,
 	points: null,
 	rank: "c000",
+	estimateMinutes: null,
 });
 
 // Given out of order on purpose: the layout sorts.

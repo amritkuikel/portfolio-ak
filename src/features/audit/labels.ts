@@ -70,6 +70,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"taskline.label.create": m.audit_action_taskline_label_create,
 	"taskline.label.update": m.audit_action_taskline_label_update,
 	"taskline.label.delete": m.audit_action_taskline_label_delete,
+	"taskline.time.update": m.audit_action_taskline_time_update,
+	"taskline.time.delete": m.audit_action_taskline_time_delete,
+	"taskline.time.lock": m.audit_action_taskline_time_lock,
 	// taskline:end
 	// @new-feature:audit-action-labels
 };
@@ -96,6 +99,7 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	"taskline-invitation": m.audit_target_taskline_invitation,
 	"taskline-workspace": m.audit_target_taskline_workspace,
 	"taskline-label": m.audit_target_taskline_label,
+	"taskline-time-entry": m.audit_target_taskline_time_entry,
 	// taskline:end
 	// @new-feature:audit-target-labels
 };
@@ -148,5 +152,10 @@ export const AUDIT_FIELD_LABELS: Readonly<Record<string, () => string>> = {
 	format: m.audit_field_format,
 	tasks: m.audit_field_tasks,
 	taskTypes: m.audit_field_task_types,
+	onDay: m.audit_field_on_day,
+	minutes: m.audit_field_minutes,
+	note: m.audit_field_note,
+	billable: m.audit_field_billable,
+	lockOn: m.audit_field_lock_on,
 	// taskline:end
 };

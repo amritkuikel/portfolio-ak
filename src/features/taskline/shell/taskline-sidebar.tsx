@@ -3,6 +3,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import {
 	CheckIcon,
 	ChevronsUpDownIcon,
+	ClockIcon,
 	FlaskConicalIcon,
 	FolderKanbanIcon,
 	HouseIcon,
@@ -129,6 +130,16 @@ export function TasklineSidebar({ nav, onOpenPalette }: { nav: TasklineNav; onOp
 										</Link>
 									)}
 								</NavItem>
+								{current ? (
+									<NavItem label={m.taskline_nav_timesheet()}>
+										{(props) => (
+											<Link {...tasklineLinks.timesheet(current.segment)} {...props} data-testid="nav-timesheet">
+												<ClockIcon aria-hidden />
+												<span>{m.taskline_nav_timesheet()}</span>
+											</Link>
+										)}
+									</NavItem>
+								) : null}
 								{current ? (
 									<NavItem label={m.taskline_nav_projects()}>
 										{(props) => (

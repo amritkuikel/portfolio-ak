@@ -61,6 +61,8 @@ export const tlTask = pgTable(
 		sprintId: uuid().references(() => tlSprint.id, { onDelete: "set null" }),
 		/** The estimate in points (null: not estimated). */
 		points: smallint(),
+		/** Task 53: the estimate in minutes (null: not estimated), what a sprint counts when the project estimates in time. */
+		estimateMinutes: integer(),
 		/** The backlog's order (a fractional key across the project, compared with COLLATE "C"). */
 		rank: text().notNull(),
 		/** Bumped by each save of the title or the description only: other fields are last-write-wins. */
@@ -84,6 +86,7 @@ export const tlTask = pgTable(
 		index("tl_task_search_idx").using("gin", table.search),
 		index("tl_task_sprint_idx").on(table.sprintId),
 		check("tl_task_points_valid", sql`${table.points} between 0 and 100`),
+		check("tl_task_estimate_valid", sql`${table.estimateMinutes} between 0 and 60000`),
 		check("tl_task_type_valid", sql`${table.type} in ('task', 'bug', 'story', 'epic')`),
 		check("tl_task_priority_valid", sql`${table.priority} between 0 and 4`),
 		check("tl_task_not_own_parent", sql`${table.parentId} <> ${table.id}`),

@@ -13,6 +13,9 @@
  * with the project and opened by another member, search and an exact reference. Sprints
  * (Task 52): a guest plans a sprint, moves a task into it by keyboard, completes the
  * active one (its open tasks carried on) and starts the next, then reads the reports.
+ * Time (Task 53): a guest's timer survives a reload and stops from the topbar, time is
+ * logged by hand and typed in the timesheet; an admin's lock makes the days up to it
+ * read only and refuses logging there.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -516,5 +519,107 @@ test.describe("Taskline sprints", () => {
 		await switcher.selectOption({ label: "Sprint 2 (Completed)" });
 		await expect(page.getByTestId("sprint-state")).toHaveText("Completed");
 		await expect(page.getByTestId("sprint-tasks")).toBeVisible();
+	});
+});
+
+/** Today (or another day) in Kathmandu, the team's and the sandbox's time zone, as YYYY-MM-DD. */
+const kathmanduDay = (offset = 0) =>
+	new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kathmandu" }).format(new Date(Date.now() + offset * 86_400_000));
+
+test.describe("Taskline time", () => {
+	test("a guest runs a timer that survives a reload, logs time by hand and types it in the timesheet", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await open(page, "/app/taskline/sandbox/t/WEB-1");
+		await page.getByTestId("task-timer-start").click();
+		await expect(page.getByTestId("timer-pill")).toContainText("WEB-1");
+		// The server keeps it: a reload shows it still running.
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(page.getByTestId("timer-pill")).toContainText("WEB-1");
+		await expect(page.getByTestId("task-timer-stop")).toBeVisible();
+		await page.getByTestId("timer-pill-stop").click();
+		// Under a minute it is dropped; on a slow machine the reload may pass a minute and log it.
+		await expect(page.getByText(/^Timer stopped/)).toBeVisible();
+		await expect(page.getByTestId("timer-pill")).toHaveCount(0);
+
+		// By hand, on the task.
+		await page.getByTestId("task-tab-time").click();
+		await page.getByTestId("time-log-open").click();
+		await page.getByTestId("time-duration").fill("1h 30m");
+		const logged = nextSave(page);
+		await page.getByTestId("time-submit").click();
+		await logged;
+		await expect(page.getByTestId("time-entries")).toContainText("1h 30m");
+
+		// The week: WEB-1's cell for today, typed and saved, is there after a reload.
+		await page.getByTestId("nav-timesheet").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/sandbox\/timesheet$/);
+		const today = page
+			.getByTestId("timesheet-row")
+			.filter({ hasText: "WEB-1" })
+			.locator(`[data-testid="timesheet-cell"][data-day="${kathmanduDay()}"]`);
+		await today.focus();
+		const saved = nextSave(page);
+		await page.keyboard.type("3");
+		await page.keyboard.press("Tab");
+		await saved;
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(today).toHaveValue("3:00");
+	});
+});
+
+test.describe("Taskline time from the admin", () => {
+	test.use(signedIn("admin"));
+
+	test("an admin locks the days up to yesterday: they read only in the timesheet, and logging there is refused", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const yesterday = kathmanduDay(-1);
+		// The admin is on the demo team: time on WEB-2 yesterday, before the lock.
+		await open(page, "/app/taskline/team/t/WEB-2");
+		await page.getByTestId("task-tab-time").click();
+		await page.getByTestId("time-log-open").click();
+		const form = page.getByTestId("time-log-form");
+		await form.getByLabel("Day").fill(yesterday);
+		await form.getByTestId("time-duration").fill("1:00");
+		const logged = nextSave(page);
+		await form.getByTestId("time-submit").click();
+		await logged;
+
+		await open(page, "/admin/taskline/timesheets");
+		await page.getByTestId("time-lock-open").click();
+		const dialog = page.getByTestId("time-lock-dialog");
+		await dialog.getByTestId("time-lock-day").fill(yesterday);
+		await dialog.getByTestId("time-lock-save").click();
+		await expect(page.getByText(/^Locked through /).first()).toBeVisible();
+
+		try {
+			// Yesterday's cell can't be typed into any more.
+			await open(page, `/app/taskline/team/timesheet?week=${yesterday}`);
+			const row = page.getByTestId("timesheet-row").filter({ hasText: "WEB-2" });
+			await expect(row.locator(`[data-testid="timesheet-cell"][data-day="${yesterday}"]`)).toHaveCount(0);
+			await expect(row.locator(`[data-testid="timesheet-cell-readonly"][data-day="${yesterday}"]`)).toContainText(
+				"1:00",
+			);
+			// Nor logged on by hand.
+			await open(page, "/app/taskline/team/t/WEB-2");
+			await page.getByTestId("task-tab-time").click();
+			await page.getByTestId("time-log-open").click();
+			await form.getByLabel("Day").fill(yesterday);
+			await form.getByTestId("time-duration").fill("30m");
+			await form.getByTestId("time-submit").click();
+			await expect(page.getByText(/is locked\./)).toBeVisible();
+		} finally {
+			// The lock is the team's: put it back for the other flows.
+			await open(page, "/admin/taskline/timesheets");
+			await page.getByTestId("time-lock-open").click();
+			await page.getByTestId("time-lock-dialog").getByRole("button", { name: "Unlock everything" }).click();
+			await expect(page.getByText("Nothing is locked").first()).toBeVisible();
+		}
 	});
 });

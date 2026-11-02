@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { workspaceSettings } from "@/features/taskline/settings";
+import { TIMER_MAX_MINUTES } from "@/features/taskline/types";
 import { addDays, todayInZone } from "@/lib/i18n/date-only";
 import { tlInvitation, tlMember, tlNotification, tlProject, tlTask, tlWorkspace } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
@@ -12,6 +13,7 @@ import { produce } from "./notify/produce";
 import { bumpRev } from "./rev";
 import * as sprints from "./sprints/repository";
 import * as tasks from "./tasks/repository";
+import * as time from "./time/repository";
 
 /**
  * `GET /api/cron/taskline` (PLAN 11.5; decision 0214), daily at about 07:00 in
@@ -23,8 +25,10 @@ import * as tasks from "./tasks/repository";
  * 3. Sprint snapshots: each active sprint's close of yesterday (Task 52, 0216).
  * 4. Purging the trash past each workspace's retention (with the tasks' files).
  * 5. Expiring invitations: open ones a month past their date are revoked.
+ * 6. Stopping timers that ran 12 hours (Task 53, 0218): each counts 12 hours, and its
+ *    owner hears (the `timer` notification). It runs before the digests, which carry it.
  *
- * Later tasks add stopping old timers (53) and automations (56).
+ * Task 56 adds automations.
  */
 
 /** Overdue notices catch up this many days of missed runs, not the whole backlog. */
@@ -33,7 +37,7 @@ const INVITATION_GRACE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type CronStep = { ok: boolean; [detail: string]: unknown };
-export type CronResult = Record<"notices" | "digests" | "sprints" | "trash" | "invitations", CronStep>;
+export type CronResult = Record<"timers" | "notices" | "digests" | "sprints" | "trash" | "invitations", CronStep>;
 
 /** Notices of tasks due tomorrow, or past due, to their assignees; never twice for one due date. */
 export async function dueNotices(db: Db, now = new Date()): Promise<{ due: number; overdue: number }> {
@@ -161,6 +165,49 @@ export async function sprintSnapshots(db: Db, now = new Date()): Promise<{ snaps
 	return { snapshots: written };
 }
 
+/**
+ * Timers running for 12 hours or more stop, each counting 12 hours (TIMER_MAX_MINUTES)
+ * from its start; the owner is told so they can correct it. A timer stopped once isn't
+ * running any more, so a second run finds nothing.
+ */
+export async function stopForgottenTimers(db: Db, now = new Date()): Promise<{ stopped: number }> {
+	const due = await time.runningSince(db, new Date(now.getTime() - TIMER_MAX_MINUTES * 60_000));
+	for (const entry of due) {
+		await db.transaction(async (tx) => {
+			const endedAt = new Date((entry.startedAt ?? now).getTime() + TIMER_MAX_MINUTES * 60_000);
+			const row = await time.patchEntry(tx, entry.id, { endedAt, minutes: TIMER_MAX_MINUTES });
+			await time.recordLogged(tx, row, { auto: true, actorId: null });
+			await bumpRev(tx, row.projectId);
+			const [scope] = await tx
+				.select({ workspace: tlWorkspace, project: tlProject })
+				.from(tlProject)
+				.innerJoin(tlWorkspace, eq(tlWorkspace.id, tlProject.workspaceId))
+				.where(eq(tlProject.id, row.projectId));
+			if (!scope) return;
+			const task = row.taskId ? await tasks.getById(tx, row.projectId, row.taskId) : null;
+			await produce(
+				tx,
+				{ ...scope, settings: workspaceSettings.parse(scope.workspace.settings) },
+				{ memberId: null, userId: null, name: null },
+				[
+					{
+						kind: "timer",
+						taskId: row.taskId,
+						to: [row.memberId],
+						data: {
+							ref: task ? tasks.taskRef(scope.project.key, task.number) : undefined,
+							title: task?.title ?? scope.project.name,
+							project: scope.project.name,
+							minutes: TIMER_MAX_MINUTES,
+						},
+					},
+				],
+			);
+		});
+	}
+	return { stopped: due.length };
+}
+
 /** Open invitations a month past their date are revoked: they leave the admin's list and free the address. */
 export async function expireInvitations(db: Db, now = new Date()): Promise<{ expired: number }> {
 	const rows = await db
@@ -191,6 +238,7 @@ export async function runTasklineCron(
 	{ provider, now = new Date() }: { provider?: EmailProvider; now?: Date } = {},
 ): Promise<CronResult> {
 	return {
+		timers: await step("timers", () => stopForgottenTimers(db, now)),
 		notices: await step("notices", () => dueNotices(db, now)),
 		digests: await step("digests", (): Promise<DeliveryResult> => sendDigests(db, { provider, now })),
 		sprints: await step("sprints", () => sprintSnapshots(db, now)),

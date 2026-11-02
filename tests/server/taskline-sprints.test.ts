@@ -104,9 +104,19 @@ describe("planning and starting", () => {
 		// Planned to start in three days: it starts today.
 		expect(started.startOn).toBe(today());
 		// The canceled task is out of the scope; the unestimated one counts as a task.
-		expect(started.committed).toEqual({ points: 7, tasks: 3 });
+		expect(started.committed).toEqual({ points: 7, tasks: 3, minutes: 0 });
 		const days = await sprintRepo.snapshotsOf(env.db, first.id);
-		expect(days).toEqual([{ day: addDays(today(), -1), scopePoints: 7, donePoints: 0, scopeTasks: 3, doneTasks: 0 }]);
+		expect(days).toEqual([
+			{
+				day: addDays(today(), -1),
+				scopePoints: 7,
+				donePoints: 0,
+				scopeTasks: 3,
+				doneTasks: 0,
+				scopeMinutes: 0,
+				doneMinutes: 0,
+			},
+		]);
 
 		expect(await code(sprints.startSprint(as("lead"), ws, key, second.id))).toBe("CONFLICT");
 		expect(await code(sprints.startSprint(as("lead"), ws, key, first.id))).toBe("CONFLICT");
@@ -182,8 +192,8 @@ describe("completing", () => {
 			nextId: next.id,
 		});
 		expect(completed.state).toBe("completed");
-		expect(completed.committed).toEqual({ points: 8, tasks: 2 });
-		expect(completed.completed).toEqual({ points: 5, tasks: 1 });
+		expect(completed.committed).toEqual({ points: 8, tasks: 2, minutes: 0 });
+		expect(completed.completed).toEqual({ points: 5, tasks: 1, minutes: 0 });
 		expect(await sprintOf(done.ref)).toBe(sprint.id);
 		expect(await sprintOf(open.ref)).toBe(next.id);
 		// The trash stays where it was.
@@ -191,7 +201,15 @@ describe("completing", () => {
 		expect(trashedRow?.sprintId).toBe(sprint.id);
 		// Its last day is today's close, before the move.
 		const days = await sprintRepo.snapshotsOf(env.db, sprint.id);
-		expect(days.at(-1)).toEqual({ day: today(), scopePoints: 8, donePoints: 5, scopeTasks: 2, doneTasks: 1 });
+		expect(days.at(-1)).toEqual({
+			day: today(),
+			scopePoints: 8,
+			donePoints: 5,
+			scopeTasks: 2,
+			doneTasks: 1,
+			scopeMinutes: 0,
+			doneMinutes: 0,
+		});
 		// A completed sprint is done with: no second completion, no edits, nothing moves in.
 		expect(await code(sprints.completeSprint(as("lead"), { ws, key, id: sprint.id, carryTo: "backlog" }))).toBe(
 			"CONFLICT",
@@ -203,7 +221,7 @@ describe("completing", () => {
 		expect(await code(tasks.patchTask(as("lead"), { ws, ref: open.ref, sprintId: sprint.id }))).toBe("CONFLICT");
 		// The velocity is the completed sprint's.
 		const board = await tasks.listTasks(as("lead"), ws, key);
-		expect(board.velocity).toEqual({ points: 5, tasks: 1, sprints: 1 });
+		expect(board.velocity).toEqual({ points: 5, tasks: 1, minutes: 0, sprints: 1 });
 		expect(board.sprints.map((each) => each.name)).toEqual(["Sprint 2"]);
 		expect(board.sprintCount).toBe(2);
 	});
@@ -260,12 +278,35 @@ describe("snapshots", () => {
 		expect(await sprintSnapshots(env.db)).toEqual({ snapshots: 0 });
 		const days = await sprintRepo.snapshotsOf(env.db, sprint.id);
 		expect(days).toEqual([
-			{ day: addDays(today(), -4), scopePoints: 4, donePoints: 0, scopeTasks: 1, doneTasks: 0 },
-			{ day: addDays(today(), -1), scopePoints: 4, donePoints: 0, scopeTasks: 1, doneTasks: 0 },
+			{
+				day: addDays(today(), -4),
+				scopePoints: 4,
+				donePoints: 0,
+				scopeTasks: 1,
+				doneTasks: 0,
+				scopeMinutes: 0,
+				doneMinutes: 0,
+			},
+			{
+				day: addDays(today(), -1),
+				scopePoints: 4,
+				donePoints: 0,
+				scopeTasks: 1,
+				doneTasks: 0,
+				scopeMinutes: 0,
+				doneMinutes: 0,
+			},
 		]);
 		// The report's live totals see the move.
 		const report = await sprints.getSprintReport(as("viewer"), ws, key, sprint.id);
-		expect(report.live).toEqual({ scopePoints: 4, donePoints: 4, scopeTasks: 1, doneTasks: 1 });
+		expect(report.live).toEqual({
+			scopePoints: 4,
+			donePoints: 4,
+			scopeTasks: 1,
+			doneTasks: 1,
+			scopeMinutes: 0,
+			doneMinutes: 0,
+		});
 		expect(report.days).toHaveLength(2);
 		// Tomorrow's run writes today.
 		expect(await sprintSnapshots(env.db, new Date(Date.now() + 86_400_000))).toEqual({ snapshots: 1 });
@@ -334,7 +375,7 @@ describe("tasks in sprints", () => {
 		expect(home.sprints).toEqual([
 			expect.objectContaining({
 				name: "Sprint 1",
-				totals: { scopePoints: 2, donePoints: 0, scopeTasks: 1, doneTasks: 0 },
+				totals: { scopePoints: 2, donePoints: 0, scopeTasks: 1, doneTasks: 0, scopeMinutes: 0, doneMinutes: 0 },
 				estimation: "points",
 				project: expect.objectContaining({ key, ws }),
 			}),
@@ -367,12 +408,19 @@ describe("the sandbox", () => {
 			["स्प्रिन्ट २", "active"],
 			["स्प्रिन्ट ३", "planned"],
 		]);
-		expect(board.velocity).toEqual({ points: 8, tasks: 1, sprints: 1 });
+		expect(board.velocity).toEqual({ points: 8, tasks: 1, minutes: 0, sprints: 1 });
 		const active = board.sprints[0];
 		if (!active) throw new Error("no active sprint");
 		const report = await sprints.getSprintReport(guest, "sandbox", key, active.id);
 		expect(report.days.length).toBe(9);
-		expect(report.live).toEqual({ scopePoints: 13, donePoints: 2, scopeTasks: 4, doneTasks: 1 });
+		expect(report.live).toEqual({
+			scopePoints: 13,
+			donePoints: 2,
+			scopeTasks: 4,
+			doneTasks: 1,
+			scopeMinutes: 1500,
+			doneMinutes: 180,
+		});
 		expect(report.sprints).toHaveLength(3);
 		expect(board.tasks.filter((task) => task.sprintId === null).map((task) => task.points)).toEqual(
 			expect.arrayContaining([1, 2, 5, null]),

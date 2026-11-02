@@ -1594,7 +1594,7 @@ The procedure is section 10.1's, with these differences:
 | 50 | Collaboration: comments, @mentions, watchers, attachments, inbox, email, the daily cron | high | Done (decision 0214) |
 | 51 | More views: calendar, my work, saved views, search, CSV import | high | Done (decision 0215) |
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Done (decisions 0216–0217) |
-| 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Planned |
+| 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Done (decision 0218) |
 | 54 | Timeline, milestones and dependencies | xhigh | Planned |
 | 55 | Custom fields | high | Planned |
 | 56 | Automations and recurring tasks | xhigh | Planned |
@@ -1602,7 +1602,7 @@ The procedure is section 10.1's, with these differences:
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0218 after Task 52).
+- **Decisions:** numbered from the next free one (0219 after Task 53).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1757,7 +1757,7 @@ The procedure is section 10.1's, with these differences:
 | `tl_notification` | user_id (cascade), workspace_id, kind, project_id, task_id?, actor_id?, data (a snapshot for the sentence), email (instant / digest / none, fixed when made), created_at, read_at, emailed_at; index (user, read_at, created desc), a partial index on the unsent | 50 |
 | `tl_saved_view`, `tl_import` | saved view: workspace_id, project_id (required, 0215), member_id, name (unique per project, member and view, any case), view (list / board / calendar), search, shared. Import: key (the idempotency key), project_id, user_id, fingerprint, result | 51 |
 | `tl_sprint`, `tl_sprint_snapshot` | sprint: project_id, name, goal, state (planned / active / completed), start_on, end_on, started_at, completed_at, committed and completed points and tasks; partial unique on the active sprint per project. Snapshot: (sprint, day) scope and done, as points and as tasks (the close of the day, 0216). `tl_task` gains sprint_id, points, rank (one fractional order across the project) | 52 |
-| `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member. `tl_task` gains estimate_minutes | 53 |
+| `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member (the service keeps one per person). `tl_task` gains estimate_minutes; sprints and snapshots their minutes | 53 |
 | `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
 | `tl_field` | workspace_id, project_id?, name, type (text / number / select / multi_select / date / member / checkbox / url), options jsonb (with ids), required, position, archived_at. `tl_task` gains `fields` jsonb (GIN) | 55 |
 | `tl_automation`, `tl_automation_run` | automation: workspace_id, project_id?, name, enabled, trigger, conditions and actions jsonb, version. Run: automation_id, task_id?, outcome (ok / skipped / failed), detail, at. `tl_task` gains recurrence jsonb | 56 |
@@ -1813,7 +1813,7 @@ The procedure is section 10.1's, with these differences:
 | `/admin/taskline/members` (add accounts, team role, title, capacity, deactivate with reassignment, workload) and `/admin/taskline/invitations` (invite by email, resend, revoke) | read / manage | 49 |
 | `/admin/taskline/settings` (`workspaceSettings`), `/admin/taskline/activity` | configure / read | 49 |
 | `/admin/taskline/workflows` (default statuses, task types, workspace labels) | configure | 49 |
-| `/admin/taskline/timesheets` | time | 53 |
+| `/admin/taskline/timesheets` (entries, the lock date, CSV) and `/timesheets/utilization` | read and time | 53 |
 | `/admin/taskline/fields` | configure | 55 |
 | `/admin/taskline/automations` (with the run log) | configure | 56 |
 | `/admin/taskline/templates`, `/admin/taskline/reports` | configure / read | 57 |
@@ -1982,24 +1982,29 @@ Sprints, the backlog and their charts (decision 0216; [docs/guides/taskline.md](
   - Run `pnpm db:migrate` on Neon (`0022_taskline_sprints`).
   - `pnpm db:seed-taskline` gives `APP` sprints only on a database where the team has no projects yet (the seed writes projects once).
 
-### Task 53: Time tracking (planned)
+### Task 53: Time tracking (done)
 
-- **Estimates:** `tl_time_entry`; `tl_task` gains `estimate_minutes`.
-- **Timer:**
-  - start and stop from a task or the topbar pill;
-  - one running per member; the server stamps the start;
-  - survives a reload;
-  - the cron stops a timer after 12 h and notifies its owner.
-- **Logging:** manual entries on a task (date, duration, note, billable).
-- **My timesheet (`/$ws/timesheet`):** a week grid (rows: tasks, columns: the days from the week start), keyboard editing, totals, copying last week.
-- **Project time page:** estimate vs actual by task and member.
-- **Admin `timesheets` (`taskline:time`):**
-  - every entry, with filters;
-  - edit any entry;
-  - the lock date: the service refuses changes on or before it;
-  - utilization against capacity;
-  - CSV.
-- **Tests:** PGlite (one running timer, the lock, editing others' entries needs `taskline:time`), jsdom (the grid's keyboard), e2e (timer, timesheet, a lock blocks an edit).
+Estimates, the timer, time by hand, My timesheet, a project's time and the admin's timesheets (decision 0218; [docs/guides/taskline.md](guides/taskline.md), "Time").
+
+- **Schema:** `0023_taskline_time`: `tl_time_entry` (workspace, project, task `set null` so a purged task's time stays on the project, member, day, minutes 0–1,440, the timer's start and end, note, billable; a partial unique index keeps one running timer per member); `tl_task.estimate_minutes` (0–60,000); sprints and snapshots gain their minutes (`committed_minutes`, `completed_minutes`, `scope_minutes`, `done_minutes`). Activity kind `time.logged`; audit actions `taskline.time.update`, `delete`, `lock` on the target `taskline-time-entry`.
+- **Server:** `time/{repository,rules,service}.ts`: the timer (one per person: starting stops the caller's other one in any workspace and logs it; stamped by the server; under a minute is dropped; 12 hours at most), time by hand, edits and deletes (the caller's own, anyone's with `taskline:time` in the team; a running timer is stopped or discarded, not edited), the timesheet's cells (`planCell`: the fewest entries changed), copying last week, the timesheet and a project's time; the lock date and future days refused for everyone; the time quota under the quota lock. The task's detail carries its time, the nav the running timer. The daily job's first step stops timers that ran 12 hours and sends the `timer` notification. Nine functions in `src/functions/taskline/time.ts` (in the guard test; six operations in the access matrix, the timesheet and stopping tested on their own), seven admin functions in `src/functions/taskline-admin/time.ts` (`taskline:time`) over `admin/time.ts` (list with totals, edit and delete audited, the lock, utilization, CSV). The admin's settings count time entries against the quota; the overview shows the team's time this week.
+- **Pages:** the task's Estimate field, Start and Stop in its header, and a Time tab (logged against the estimate, log by hand, the entries with edit and delete); the topbar's timer pill (the task, the time so far, Stop); the sidebar's and the palette's "My timesheet" (`$ws/timesheet`: the week grid, keyboard editing, totals, capacity, add a row, copy last week, `?week=`); the project's Time tab (`$ws/p/$key/time`: estimated, logged, billable, left; by task or member; the newest entries); the lead's "Track time" setting; `/admin/taskline/timesheets` (entries with filters and totals, edit dialog, delete, "Lock period", CSV) and `/timesheets/utilization` (each member against capacity over days chosen). Durations are typed as "1h 30m", "1:30", "1.5" and in Devanagari digits (`time/duration.ts`).
+- **Sprints in time:** a project estimating in time counts estimated minutes in its totals, snapshots, commitment, completion and velocity, and the backlog and report measure hours (`?by=hours`), as Task 52 had left for this task; the backlog's rows take an estimate there.
+- **Sandbox and demo team:** estimates on five of WEB's tasks and a week of time by the owner and the teammates with notes in the guest's language; the claim moves the entries, stopping a guest's running timer first. The demo team's tasks are estimated and their assignees logged time on started and done ones.
+- **Tests:** PGlite `taskline-time.test.ts` (15: one timer per person and the history, under a minute and the 12-hour cap, two starts at once, the daily job's stop and notice once, future and locked days for everyone and unlocking, whose time and `taskline:time`, a running timer, the quota, cells, the week and suggestions, copying, whose timesheet, a project's time with a purged task, the admin's list, totals, filters, utilization and CSV, sprints in hours, the sandbox's time in Nepali and the claim); the access matrix (+6 operations); updated sprint, admin and fixture tests; unit `taskline-time.test.ts` (11: durations both ways and in Nepali, a cell's plan, totals, capacity, utilization's days, the burndown in hours); jsdom `timesheet.test.tsx` (3: open cells, arrows, Enter and Escape, an invalid value); stories `Taskline/Time` (the week, the keyboard, the pill) and the task's Time. `pnpm test`: 123 files, 1,112 tests; `test:storybook` 98 files, 464 tests. E2E (11.1): `taskline.spec.ts` (14 flows, the two new: a guest's timer survives a reload and stops from the topbar, time is logged by hand and typed in the timesheet; an admin's lock makes the days up to it read only and refuses logging there) and the review of every `/app/taskline` and `/admin/taskline` page with My timesheet, a project's time (by task and by member) and the admin's timesheets and utilization: 569 checks passed and 18 failed on the first run (a wide table's scroll with nothing focusable, and the task's tabs and header too wide at 390 px), then 660 and 60 passed after the fixes.
+- **Numbers:** every page's JavaScript 267.5 kB gzip (265.7 before; budget 275): four route definitions and the shell's timer pill. 136 new messages in each language (one, `taskline_velocity_tasks`, removed), the Nepali written by hand. Build, `build-storybook`, `i18n:check`, `db:check` and the bundle check green.
+- **Deviations:**
+  - The timer is one per person, not per member: starting one in the sandbox stops the team's (a person times one thing at once); the partial unique index is per member, the service stops the others.
+  - A timer counts 12 hours at most when stopped by hand too, not only when the job stops it; one under a minute is dropped.
+  - Time entries outlive their task (`set null`): the project's Time page shows what purged tasks left.
+  - The admin's timesheets need `taskline:read` (every `/admin/taskline` page does) as well as `taskline:time`; the lock date is set there, not on the settings form, and it isn't after today.
+  - Utilization is a page of its own (a tab beside the entries), and the CSV export is built on the server from every matching entry, not the table's page.
+  - Not planned but done: sprints count hours when estimating in time (Task 52's note), the admin's overview shows the week's time, and the project's "Track time" setting.
+  - The kit gained `ScrollRegion` (`components/data-display/scroll-region.tsx`): the review's axe failed the hand-written wide tables (the project's "by member", utilization) whose sideways scroll held nothing focusable.
+  - Fixed on the way: `strip-demo`'s taskline layer missed Task 51's and 52's test files and `.storybook/mocks/functions/taskline-admin`, which CI's every-layer template job would have kept; `createTask` now stores an estimate it's given.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0023_taskline_time`).
+  - `pnpm db:seed-taskline` gives the demo team time only on a database where the team has no projects yet (the seed writes projects once).
 
 ### Task 54: Timeline, milestones and dependencies (planned)
 

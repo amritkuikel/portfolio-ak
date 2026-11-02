@@ -39,7 +39,7 @@ export const sampleTasklineOverview: AdminOverview = {
 		},
 	],
 	sandboxes: { total: 14, guests: 11, projects: 30, tasks: 410 },
-	members: { active: 5, invited: 2 },
+	members: { active: 5, invited: 2, loggedThisWeek: 1950 },
 	today: "2026-10-31",
 	sprints: [
 		{

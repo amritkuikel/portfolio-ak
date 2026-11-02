@@ -40,6 +40,7 @@ import * as projects from "../projects/repository";
 import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as sprints from "../sprints/repository";
+import { taskTime } from "../time/rules";
 import * as workflow from "../workflow/repository";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
@@ -79,15 +80,16 @@ export async function taskDetail(
 	db: Db,
 	access: ProjectAccess,
 	row: TlTaskRow,
-	store: ImageStore | null | undefined,
+	{ imageStore: store, user }: { imageStore: ImageStore | null | undefined; user: TasklineServices["user"] },
 ): Promise<TaskDetail> {
-	const [summary, subtasks, activity, comments, watcherIds, files] = await Promise.all([
+	const [summary, subtasks, activity, comments, watcherIds, files, time] = await Promise.all([
 		summaryOf(db, access, row),
 		repo.subtasksOf(db, row.id).then((rows) => repo.summaries(db, rows, access.project.key)),
 		taskActivity(db, row.id),
 		collab.listComments(db, row.id),
 		collab.watcherIds(db, row.id),
 		collab.filesOf(db, store, collab.TASK_FILES, [row.id]),
+		taskTime(db, access, user, row.id),
 	]);
 	const commentFiles = await collab.filesOf(
 		db,
@@ -121,6 +123,7 @@ export async function taskDetail(
 		attachments: files.get(row.id) ?? [],
 		watching: me !== null && watcherIds.includes(me),
 		watcherIds,
+		time,
 	};
 }
 
@@ -382,7 +385,7 @@ export async function getTask(
 	ref: string,
 ): Promise<TaskDetail> {
 	const { access, task } = await resolveTask(db, user, ws, ref);
-	return taskDetail(db, access, task, imageStore);
+	return taskDetail(db, access, task, { imageStore, user });
 }
 
 export async function createTask(
@@ -427,6 +430,7 @@ export async function createTask(
 			completedAt: isClosedCategory(status.category) ? new Date() : null,
 			sprintId: input.sprintId ?? null,
 			points: input.points ?? null,
+			estimateMinutes: input.estimateMinutes ?? null,
 		});
 		await repo.setLabels(tx, task.id, labelIds);
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
@@ -435,7 +439,7 @@ export async function createTask(
 		const notify = await produce(tx, access, actorOf(access, user.id), [
 			{ kind: "assigned", taskId: task.id, to: [task.assigneeId], data: taskData(access, task) },
 		]);
-		return { detail: await taskDetail(tx, access, task, imageStore), notify };
+		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;
@@ -468,7 +472,7 @@ export async function updateTask(
 		}
 		await recordActivity(tx, access, ...entries);
 		await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 
@@ -508,7 +512,7 @@ export async function patchTask(
 		const notify = await produce(tx, access, actorOf(access, user.id), [
 			{ kind: "assigned", taskId: task.id, to: [reassigned], data: taskData(access, task) },
 		]);
-		return { detail: await taskDetail(tx, access, task, imageStore), notify };
+		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;
@@ -561,7 +565,7 @@ export async function setChecklist(
 			data: { done, total: checklist.length },
 		});
 		await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 
@@ -588,7 +592,7 @@ export async function restoreTask(
 	return db.transaction(async (tx) => {
 		const { access, task } = await resolveTask(tx, user, ws, ref);
 		assertCan(access, "edit");
-		if (!task.deletedAt) return taskDetail(tx, access, task, imageStore);
+		if (!task.deletedAt) return taskDetail(tx, access, task, { imageStore, user });
 		const trashedAt = task.deletedAt.getTime();
 		const together = (await repo.descendantsOf(tx, task.id)).filter((row) => row.deletedAt?.getTime() === trashedAt);
 		await repo.setDeleted(tx, [task.id, ...together.map((row) => row.id)], null);
@@ -599,7 +603,7 @@ export async function restoreTask(
 		}
 		await recordActivity(tx, access, { kind: "task.restored", taskId: task.id, data: { subtasks: together.length } });
 		await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, restored, imageStore);
+		return taskDetail(tx, access, restored, { imageStore, user });
 	});
 }
 

@@ -27,7 +27,7 @@ const SPRINT: SprintSummary = {
 	endOn: "2026-11-14",
 	startedAt: "2026-11-01T03:00:00.000Z",
 	completedAt: null,
-	committed: { points: 5, tasks: 2 },
+	committed: { points: 5, tasks: 2, minutes: 0 },
 	completed: null,
 };
 
@@ -57,6 +57,7 @@ const task = (
 	sprintId,
 	points,
 	rank,
+	estimateMinutes: null,
 });
 
 function Harness({ canEdit = true, onPoints = vi.fn() }: { canEdit?: boolean; onPoints?: () => void }) {

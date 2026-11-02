@@ -152,6 +152,15 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["listTasklineActivity", "taskline:read"],
 		["getTasklineActivityOptions", "taskline:read"],
 	],
+	"taskline-admin/time.ts": [
+		["listTasklineTimeEntries", "taskline:time"],
+		["getTasklineTimeOptions", "taskline:time"],
+		["updateTasklineAdminTimeEntry", "taskline:time"],
+		["deleteTasklineAdminTimeEntry", "taskline:time"],
+		["setTasklineTimesheetLock", "taskline:time"],
+		["getTasklineUtilization", "taskline:time"],
+		["exportTasklineTimeEntries", "taskline:time"],
+	],
 	// taskline:end
 	// @new-feature:guarded-functions
 };
@@ -252,6 +261,17 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"completeTasklineSprint",
 		"rankTasklineTask",
 		"getTasklineSprintReport",
+	],
+	"taskline/time.ts": [
+		"startTasklineTimer",
+		"stopTasklineTimer",
+		"logTasklineTime",
+		"updateTasklineTimeEntry",
+		"deleteTasklineTimeEntry",
+		"setTasklineTimesheetCell",
+		"copyTasklineTimesheetWeek",
+		"getTasklineTimesheet",
+		"getTasklineProjectTime",
 	],
 	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [

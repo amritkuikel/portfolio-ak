@@ -37,17 +37,27 @@ import {
 	updateTasklineWorkspace,
 	updateTasklineWorkspaceLabel,
 } from "@/functions/taskline-admin/settings";
+import {
+	deleteTasklineAdminTimeEntry,
+	exportTasklineTimeEntries,
+	getTasklineTimeOptions,
+	getTasklineUtilization,
+	listTasklineTimeEntries,
+	setTasklineTimesheetLock,
+	updateTasklineAdminTimeEntry,
+} from "@/functions/taskline-admin/time";
 import type { ProjectHealth, ProjectRole, ProjectStatus, TasklineColor, TeamRole } from "../types";
-import { adminActivityKeys, adminMemberKeys, adminProjectKeys, tasklineAdminKeys } from "./keys";
+import { adminActivityKeys, adminMemberKeys, adminProjectKeys, adminTimeKeys, tasklineAdminKeys } from "./keys";
 import type {
 	AdminCreateProjectInput,
 	AdminUpdateProjectInput,
+	AdminUpdateTimeEntryInput,
 	InviteMemberInput,
 	UpdateMemberInput,
 	UpdateWorkflowsInput,
 	UpdateWorkspaceInput,
 } from "./schema";
-import type { AdminActivityListInput, AdminMemberListInput, AdminProjectListInput } from "./search";
+import type { AdminActivityListInput, AdminMemberListInput, AdminProjectListInput, AdminTimeListInput } from "./search";
 
 /** /admin/taskline's reads (queryOptions) and writes (mutationOptions); routes load this on demand (0194). */
 
@@ -80,6 +90,19 @@ export const adminActivityQueryOptions = (input: AdminActivityListInput) =>
 
 export const activityOptionsQueryOptions = () =>
 	queryOptions({ queryKey: tasklineAdminKeys.activityOptions(), queryFn: () => getTasklineActivityOptions() });
+
+/** Task 53: the team's time entries, the page's choices (and the lock date), utilization. */
+export const adminTimeListQueryOptions = (input: AdminTimeListInput) =>
+	queryOptions({ queryKey: adminTimeKeys.list(input), queryFn: () => listTasklineTimeEntries({ data: input }) });
+
+export const timeOptionsQueryOptions = () =>
+	queryOptions({ queryKey: tasklineAdminKeys.timeOptions(), queryFn: () => getTasklineTimeOptions() });
+
+export const utilizationQueryOptions = (from: string, to: string) =>
+	queryOptions({
+		queryKey: tasklineAdminKeys.utilization(from, to),
+		queryFn: () => getTasklineUtilization({ data: { from, to } }),
+	});
 
 /** The "Add people" picker's search (AsyncComboboxField, RelationField). */
 export const accountSearch = {
@@ -204,5 +227,25 @@ export const tasklineAdminMutations = {
 		mutationOptions({
 			mutationKey: key("delete-label"),
 			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceLabel({ data: input }),
+		}),
+	updateTimeEntry: () =>
+		mutationOptions({
+			mutationKey: key("update-time"),
+			mutationFn: (input: AdminUpdateTimeEntryInput) => updateTasklineAdminTimeEntry({ data: input }),
+		}),
+	deleteTimeEntry: () =>
+		mutationOptions({
+			mutationKey: key("delete-time"),
+			mutationFn: (input: { id: string }) => deleteTasklineAdminTimeEntry({ data: input }),
+		}),
+	setTimesheetLock: () =>
+		mutationOptions({
+			mutationKey: key("time-lock"),
+			mutationFn: (input: { lockOn: string | null }) => setTasklineTimesheetLock({ data: input }),
+		}),
+	exportTime: () =>
+		mutationOptions({
+			mutationKey: key("export-time"),
+			mutationFn: (input: AdminTimeListInput) => exportTasklineTimeEntries({ data: input }),
 		}),
 };

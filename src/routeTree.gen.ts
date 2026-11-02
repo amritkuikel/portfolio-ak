@@ -100,6 +100,7 @@ import { Route as AdminAdminTasklineInvitationsRouteImport } from './routes/_adm
 import { Route as AdminAdminTasklineMembersRouteImport } from './routes/_admin/admin/taskline/members'
 import { Route as AdminAdminTasklineProjectsRouteRouteImport } from './routes/_admin/admin/taskline/projects/route'
 import { Route as AdminAdminTasklineSettingsRouteImport } from './routes/_admin/admin/taskline/settings'
+import { Route as AdminAdminTasklineTimesheetsRouteRouteImport } from './routes/_admin/admin/taskline/timesheets/route'
 import { Route as AdminAdminTasklineWorkflowsRouteImport } from './routes/_admin/admin/taskline/workflows'
 import { Route as AdminAdminTestCrudIndexRouteImport } from './routes/_admin/admin/test-crud/index'
 import { Route as AdminAdminTestCrudIdRouteImport } from './routes/_admin/admin/test-crud/$id'
@@ -132,6 +133,8 @@ import { Route as AdminAdminPortfolioProjectsNewRouteImport } from './routes/_ad
 import { Route as AdminAdminTasklineProjectsIndexRouteImport } from './routes/_admin/admin/taskline/projects/index'
 import { Route as AdminAdminTasklineProjectsIdRouteRouteImport } from './routes/_admin/admin/taskline/projects/$id/route'
 import { Route as AdminAdminTasklineProjectsNewRouteImport } from './routes/_admin/admin/taskline/projects/new'
+import { Route as AdminAdminTasklineTimesheetsIndexRouteImport } from './routes/_admin/admin/taskline/timesheets/index'
+import { Route as AdminAdminTasklineTimesheetsUtilizationRouteImport } from './routes/_admin/admin/taskline/timesheets/utilization'
 import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
 import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
@@ -147,6 +150,7 @@ import { Route as AdminAdminTasklineProjectsIdWorkflowRouteImport } from './rout
 import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
 import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
 import { Route as TasklineAppTasklineShellWsSearchRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/search'
+import { Route as TasklineAppTasklineShellWsTimesheetRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/timesheet'
 import { Route as TasklineAppTasklineShellWsPKeyRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/route'
 import { Route as TasklineAppTasklineShellWsTRefRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/t/$ref'
 import { Route as TasklineAppTasklineShellWsPKeyIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/index'
@@ -155,6 +159,7 @@ import { Route as TasklineAppTasklineShellWsPKeyBoardRouteImport } from './route
 import { Route as TasklineAppTasklineShellWsPKeyCalendarRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
 import { Route as TasklineAppTasklineShellWsPKeyListRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/list'
 import { Route as TasklineAppTasklineShellWsPKeySettingsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/route'
+import { Route as TasklineAppTasklineShellWsPKeyTimeRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/time'
 import { Route as TasklineAppTasklineShellWsPKeySettingsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/index'
 import { Route as TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
 import { Route as TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
@@ -627,6 +632,12 @@ const AdminAdminTasklineSettingsRoute =
     path: '/settings',
     getParentRoute: () => AdminAdminTasklineRouteRoute,
   } as any)
+const AdminAdminTasklineTimesheetsRouteRoute =
+  AdminAdminTasklineTimesheetsRouteRouteImport.update({
+    id: '/timesheets',
+    path: '/timesheets',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
 const AdminAdminTasklineWorkflowsRoute =
   AdminAdminTasklineWorkflowsRouteImport.update({
     id: '/workflows',
@@ -803,6 +814,18 @@ const AdminAdminTasklineProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AdminAdminTasklineProjectsRouteRoute,
   } as any)
+const AdminAdminTasklineTimesheetsIndexRoute =
+  AdminAdminTasklineTimesheetsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminTasklineTimesheetsRouteRoute,
+  } as any)
+const AdminAdminTasklineTimesheetsUtilizationRoute =
+  AdminAdminTasklineTimesheetsUtilizationRouteImport.update({
+    id: '/utilization',
+    path: '/utilization',
+    getParentRoute: () => AdminAdminTasklineTimesheetsRouteRoute,
+  } as any)
 const AppsAppsFormsFormIdIndexRoute =
   AppsAppsFormsFormIdIndexRouteImport.update({
     id: '/apps/forms/$formId/',
@@ -892,6 +915,12 @@ const TasklineAppTasklineShellWsSearchRoute =
     path: '/search',
     getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsTimesheetRoute =
+  TasklineAppTasklineShellWsTimesheetRouteImport.update({
+    id: '/timesheet',
+    path: '/timesheet',
+    getParentRoute: () => TasklineAppTasklineShellWsRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeyRouteRoute =
   TasklineAppTasklineShellWsPKeyRouteRouteImport.update({
     id: '/p/$key',
@@ -938,6 +967,12 @@ const TasklineAppTasklineShellWsPKeySettingsRouteRoute =
   TasklineAppTasklineShellWsPKeySettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyTimeRoute =
+  TasklineAppTasklineShellWsPKeyTimeRouteImport.update({
+    id: '/time',
+    path: '/time',
     getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
 const TasklineAppTasklineShellWsPKeySettingsIndexRoute =
@@ -1053,6 +1088,7 @@ export interface FileRoutesByFullPath {
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
+  '/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/app/taskline': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
@@ -1098,6 +1134,7 @@ export interface FileRoutesByFullPath {
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
+  '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
@@ -1107,12 +1144,14 @@ export interface FileRoutesByFullPath {
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
+  '/admin/taskline/timesheets/': typeof AdminAdminTasklineTimesheetsIndexRoute
   '/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
   '/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
+  '/app/taskline/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
   '/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
@@ -1122,6 +1161,7 @@ export interface FileRoutesByFullPath {
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1230,6 +1270,7 @@ export interface FileRoutesByTo {
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
+  '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
@@ -1239,12 +1280,14 @@ export interface FileRoutesByTo {
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsIndexRoute
+  '/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsIndexRoute
   '/apps/forms/$formId': typeof AppsAppsFormsFormIdIndexRoute
   '/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
+  '/app/taskline/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
   '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsIndexRoute
   '/app/taskline/$ws/t/$ref': typeof TasklineAppTasklineShellWsTRefRoute
@@ -1252,6 +1295,7 @@ export interface FileRoutesByTo {
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1339,6 +1383,7 @@ export interface FileRoutesById {
   '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/_admin/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
   '/_admin/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
+  '/_admin/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/_taskline/app/taskline/_shell': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/_admin/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/_admin/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
@@ -1384,6 +1429,7 @@ export interface FileRoutesById {
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
   '/_admin/admin/portfolio/projects/new': typeof AdminAdminPortfolioProjectsNewRoute
   '/_admin/admin/taskline/projects/new': typeof AdminAdminTasklineProjectsNewRoute
+  '/_admin/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
   '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
@@ -1393,12 +1439,14 @@ export interface FileRoutesById {
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/_admin/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
+  '/_admin/admin/taskline/timesheets/': typeof AdminAdminTasklineTimesheetsIndexRoute
   '/_apps/apps/forms/$formId/': typeof AppsAppsFormsFormIdIndexRoute
   '/_admin/admin/taskline/projects/$id/labels': typeof AdminAdminTasklineProjectsIdLabelsRoute
   '/_admin/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/_admin/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/_taskline/app/taskline/_shell/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
+  '/_taskline/app/taskline/_shell/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
   '/_admin/admin/taskline/projects/$id/': typeof AdminAdminTasklineProjectsIdIndexRoute
   '/_taskline/app/taskline/_shell/$ws/': typeof TasklineAppTasklineShellWsIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
@@ -1408,6 +1456,7 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1489,6 +1538,7 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/admin/taskline/projects'
+    | '/admin/taskline/timesheets'
     | '/app/taskline'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
@@ -1534,6 +1584,7 @@ export interface FileRouteTypes {
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
     | '/admin/taskline/projects/new'
+    | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
@@ -1543,12 +1594,14 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
     | '/admin/taskline/projects/'
+    | '/admin/taskline/timesheets/'
     | '/apps/forms/$formId/'
     | '/admin/taskline/projects/$id/labels'
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws/search'
+    | '/app/taskline/$ws/timesheet'
     | '/admin/taskline/projects/$id/'
     | '/app/taskline/$ws/'
     | '/app/taskline/$ws/p/$key'
@@ -1558,6 +1611,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
+    | '/app/taskline/$ws/p/$key/time'
     | '/app/taskline/$ws/p/$key/'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
@@ -1666,6 +1720,7 @@ export interface FileRouteTypes {
     | '/admin/portfolio/projects/$id'
     | '/admin/portfolio/projects/new'
     | '/admin/taskline/projects/new'
+    | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
     | '/app/taskline/account'
@@ -1675,12 +1730,14 @@ export interface FileRouteTypes {
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/admin/taskline/projects'
+    | '/admin/taskline/timesheets'
     | '/apps/forms/$formId'
     | '/admin/taskline/projects/$id/labels'
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws/search'
+    | '/app/taskline/$ws/timesheet'
     | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
     | '/app/taskline/$ws/t/$ref'
@@ -1688,6 +1745,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
+    | '/app/taskline/$ws/p/$key/time'
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
@@ -1774,6 +1832,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/portfolio/journal'
     | '/_admin/admin/portfolio/projects'
     | '/_admin/admin/taskline/projects'
+    | '/_admin/admin/taskline/timesheets'
     | '/_taskline/app/taskline/_shell'
     | '/_admin/admin/portfolio/experience'
     | '/_admin/admin/portfolio/messages'
@@ -1819,6 +1878,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/portfolio/projects/$id'
     | '/_admin/admin/portfolio/projects/new'
     | '/_admin/admin/taskline/projects/new'
+    | '/_admin/admin/taskline/timesheets/utilization'
     | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
     | '/_taskline/app/taskline/_shell/account'
@@ -1828,12 +1888,14 @@ export interface FileRouteTypes {
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
     | '/_admin/admin/taskline/projects/'
+    | '/_admin/admin/taskline/timesheets/'
     | '/_apps/apps/forms/$formId/'
     | '/_admin/admin/taskline/projects/$id/labels'
     | '/_admin/admin/taskline/projects/$id/members'
     | '/_admin/admin/taskline/projects/$id/workflow'
     | '/_taskline/app/taskline/_shell/$ws/projects'
     | '/_taskline/app/taskline/_shell/$ws/search'
+    | '/_taskline/app/taskline/_shell/$ws/timesheet'
     | '/_admin/admin/taskline/projects/$id/'
     | '/_taskline/app/taskline/_shell/$ws/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key'
@@ -1843,6 +1905,7 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/$ws/p/$key/board'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/list'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/time'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
@@ -2511,6 +2574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTasklineSettingsRouteImport
       parentRoute: typeof AdminAdminTasklineRouteRoute
     }
+    '/_admin/admin/taskline/timesheets': {
+      id: '/_admin/admin/taskline/timesheets'
+      path: '/timesheets'
+      fullPath: '/admin/taskline/timesheets'
+      preLoaderRoute: typeof AdminAdminTasklineTimesheetsRouteRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
     '/_admin/admin/taskline/workflows': {
       id: '/_admin/admin/taskline/workflows'
       path: '/workflows'
@@ -2735,6 +2805,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTasklineProjectsNewRouteImport
       parentRoute: typeof AdminAdminTasklineProjectsRouteRoute
     }
+    '/_admin/admin/taskline/timesheets/': {
+      id: '/_admin/admin/taskline/timesheets/'
+      path: '/'
+      fullPath: '/admin/taskline/timesheets/'
+      preLoaderRoute: typeof AdminAdminTasklineTimesheetsIndexRouteImport
+      parentRoute: typeof AdminAdminTasklineTimesheetsRouteRoute
+    }
+    '/_admin/admin/taskline/timesheets/utilization': {
+      id: '/_admin/admin/taskline/timesheets/utilization'
+      path: '/utilization'
+      fullPath: '/admin/taskline/timesheets/utilization'
+      preLoaderRoute: typeof AdminAdminTasklineTimesheetsUtilizationRouteImport
+      parentRoute: typeof AdminAdminTasklineTimesheetsRouteRoute
+    }
     '/_apps/apps/forms/$formId/': {
       id: '/_apps/apps/forms/$formId/'
       path: '/apps/forms/$formId'
@@ -2840,6 +2924,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsSearchRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/timesheet': {
+      id: '/_taskline/app/taskline/_shell/$ws/timesheet'
+      path: '/timesheet'
+      fullPath: '/app/taskline/$ws/timesheet'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsTimesheetRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key'
       path: '/p/$key'
@@ -2894,6 +2985,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/app/taskline/$ws/p/$key/settings'
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/time': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/time'
+      path: '/time'
+      fullPath: '/app/taskline/$ws/p/$key/time'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyTimeRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
     }
     '/_taskline/app/taskline/_shell/$ws/p/$key/settings/': {
@@ -2984,6 +3082,7 @@ interface TasklineAppTasklineShellWsPKeyRouteRouteChildren {
   TasklineAppTasklineShellWsPKeyBoardRoute: typeof TasklineAppTasklineShellWsPKeyBoardRoute
   TasklineAppTasklineShellWsPKeyCalendarRoute: typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   TasklineAppTasklineShellWsPKeyListRoute: typeof TasklineAppTasklineShellWsPKeyListRoute
+  TasklineAppTasklineShellWsPKeyTimeRoute: typeof TasklineAppTasklineShellWsPKeyTimeRoute
   TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
   TasklineAppTasklineShellWsPKeySprintsSprintIdRoute: typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
 }
@@ -3000,6 +3099,8 @@ const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShell
       TasklineAppTasklineShellWsPKeyCalendarRoute,
     TasklineAppTasklineShellWsPKeyListRoute:
       TasklineAppTasklineShellWsPKeyListRoute,
+    TasklineAppTasklineShellWsPKeyTimeRoute:
+      TasklineAppTasklineShellWsPKeyTimeRoute,
     TasklineAppTasklineShellWsPKeyIndexRoute:
       TasklineAppTasklineShellWsPKeyIndexRoute,
     TasklineAppTasklineShellWsPKeySprintsSprintIdRoute:
@@ -3014,6 +3115,7 @@ const TasklineAppTasklineShellWsPKeyRouteRouteWithChildren =
 interface TasklineAppTasklineShellWsRouteRouteChildren {
   TasklineAppTasklineShellWsProjectsRoute: typeof TasklineAppTasklineShellWsProjectsRoute
   TasklineAppTasklineShellWsSearchRoute: typeof TasklineAppTasklineShellWsSearchRoute
+  TasklineAppTasklineShellWsTimesheetRoute: typeof TasklineAppTasklineShellWsTimesheetRoute
   TasklineAppTasklineShellWsIndexRoute: typeof TasklineAppTasklineShellWsIndexRoute
   TasklineAppTasklineShellWsPKeyRouteRoute: typeof TasklineAppTasklineShellWsPKeyRouteRouteWithChildren
   TasklineAppTasklineShellWsTRefRoute: typeof TasklineAppTasklineShellWsTRefRoute
@@ -3025,6 +3127,8 @@ const TasklineAppTasklineShellWsRouteRouteChildren: TasklineAppTasklineShellWsRo
       TasklineAppTasklineShellWsProjectsRoute,
     TasklineAppTasklineShellWsSearchRoute:
       TasklineAppTasklineShellWsSearchRoute,
+    TasklineAppTasklineShellWsTimesheetRoute:
+      TasklineAppTasklineShellWsTimesheetRoute,
     TasklineAppTasklineShellWsIndexRoute: TasklineAppTasklineShellWsIndexRoute,
     TasklineAppTasklineShellWsPKeyRouteRoute:
       TasklineAppTasklineShellWsPKeyRouteRouteWithChildren,
@@ -3252,8 +3356,27 @@ const AdminAdminTasklineProjectsRouteRouteWithChildren =
     AdminAdminTasklineProjectsRouteRouteChildren,
   )
 
+interface AdminAdminTasklineTimesheetsRouteRouteChildren {
+  AdminAdminTasklineTimesheetsUtilizationRoute: typeof AdminAdminTasklineTimesheetsUtilizationRoute
+  AdminAdminTasklineTimesheetsIndexRoute: typeof AdminAdminTasklineTimesheetsIndexRoute
+}
+
+const AdminAdminTasklineTimesheetsRouteRouteChildren: AdminAdminTasklineTimesheetsRouteRouteChildren =
+  {
+    AdminAdminTasklineTimesheetsUtilizationRoute:
+      AdminAdminTasklineTimesheetsUtilizationRoute,
+    AdminAdminTasklineTimesheetsIndexRoute:
+      AdminAdminTasklineTimesheetsIndexRoute,
+  }
+
+const AdminAdminTasklineTimesheetsRouteRouteWithChildren =
+  AdminAdminTasklineTimesheetsRouteRoute._addFileChildren(
+    AdminAdminTasklineTimesheetsRouteRouteChildren,
+  )
+
 interface AdminAdminTasklineRouteRouteChildren {
   AdminAdminTasklineProjectsRouteRoute: typeof AdminAdminTasklineProjectsRouteRouteWithChildren
+  AdminAdminTasklineTimesheetsRouteRoute: typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   AdminAdminTasklineActivityRoute: typeof AdminAdminTasklineActivityRoute
   AdminAdminTasklineInvitationsRoute: typeof AdminAdminTasklineInvitationsRoute
   AdminAdminTasklineMembersRoute: typeof AdminAdminTasklineMembersRoute
@@ -3266,6 +3389,8 @@ const AdminAdminTasklineRouteRouteChildren: AdminAdminTasklineRouteRouteChildren
   {
     AdminAdminTasklineProjectsRouteRoute:
       AdminAdminTasklineProjectsRouteRouteWithChildren,
+    AdminAdminTasklineTimesheetsRouteRoute:
+      AdminAdminTasklineTimesheetsRouteRouteWithChildren,
     AdminAdminTasklineActivityRoute: AdminAdminTasklineActivityRoute,
     AdminAdminTasklineInvitationsRoute: AdminAdminTasklineInvitationsRoute,
     AdminAdminTasklineMembersRoute: AdminAdminTasklineMembersRoute,

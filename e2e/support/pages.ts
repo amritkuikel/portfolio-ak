@@ -213,6 +213,15 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		params: { from: "taskline-sprint-id", state: "completed" },
 		label: "completed",
 	},
+	// Time tracking (Task 53): the admin is on the demo team, whose seed logged time on WEB and APP.
+	{ route: "/app/taskline/$ws/timesheet", as: "admin", path: "/app/taskline/team/timesheet" },
+	{ route: "/app/taskline/$ws/p/$key/time", as: "admin", path: "/app/taskline/team/p/WEB/time" },
+	{
+		route: "/app/taskline/$ws/p/$key/time",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/time?by=member",
+		label: "by member",
+	},
 	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search" },
 	{ route: "/app/taskline/$ws/search", as: "admin", path: "/app/taskline/team/search?q=design", label: "results" },
 	{ route: "/app/taskline/home", as: "admin", path: "/app/taskline/home?show=all", label: "assigned and watched" },
@@ -261,6 +270,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/workflows", as: "admin" },
 	{ route: "/admin/taskline/settings", as: "admin" },
 	{ route: "/admin/taskline/activity", as: "admin" },
+	{ route: "/admin/taskline/timesheets", as: "admin" },
+	{ route: "/admin/taskline/timesheets/utilization", as: "admin" },
 	// taskline:end
 	// @new-feature:reviewed-pages
 	// Errors

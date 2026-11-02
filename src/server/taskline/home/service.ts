@@ -16,6 +16,7 @@ import type { Db } from "@/server/db/types";
 import { projectLevel, resolveWorkspace, type TasklineServices, type WorkspaceAccess } from "../access";
 import * as projects from "../projects/repository";
 import * as sprints from "../sprints/repository";
+import { runningTimer } from "../time/rules";
 import { listWorkspaces } from "../workspace/service";
 import * as repo from "./repository";
 
@@ -108,6 +109,8 @@ export async function getNav(services: TasklineServices): Promise<TasklineNav> {
 		projects: visible.flatMap(({ summary, projects: rows }) => rows.map((row) => navProject(row, summary))),
 		starred,
 		recent,
+		timer: await runningTimer(db, services.user.id),
+		readAt: new Date().toISOString(),
 	};
 }
 

@@ -61,6 +61,17 @@ import {
 	updateTasklineTask,
 } from "@/functions/taskline/tasks";
 import {
+	copyTasklineTimesheetWeek,
+	deleteTasklineTimeEntry,
+	getTasklineProjectTime,
+	getTasklineTimesheet,
+	logTasklineTime,
+	setTasklineTimesheetCell,
+	startTasklineTimer,
+	stopTasklineTimer,
+	updateTasklineTimeEntry,
+} from "@/functions/taskline/time";
+import {
 	createTasklineLabel,
 	createTasklineStatus,
 	deleteTasklineLabel,
@@ -80,18 +91,21 @@ import type {
 	CreateTaskInput,
 	ImportTasksInput,
 	InboxInput,
+	LogTimeInput,
 	MarkReadInput,
 	NotifySettingsInput,
 	PatchTaskInput,
 	SaveViewInput,
 	SetProjectStateInput,
 	TaskListInput,
+	TimesheetCellInput,
 	UpdateCommentInput,
 	UpdateLabelInput,
 	UpdateProjectInput,
 	UpdateSprintInput,
 	UpdateStatusInput,
 	UpdateTaskInput,
+	UpdateTimeEntryInput,
 } from "./schema";
 import type { ChecklistItem, ProjectRole, SavedViewKind } from "./types";
 
@@ -131,7 +145,26 @@ export const tasklineKeys = {
 	/** Task 52: a sprint's report (under its project, so the project's refresh reads it again). */
 	sprintReport: (userId: string, ws: string, key: string, id: string) =>
 		[...tasklineKeys.project(userId, ws, key), "sprint", id] as const,
+	/** Task 53: the caller's timesheet of a week, and a project's time (under its project). */
+	timesheet: (userId: string, ws: string, week: string) =>
+		[...tasklineKeys.workspace(userId, ws), "timesheet", week] as const,
+	projectTime: (userId: string, ws: string, key: string) => [...tasklineKeys.project(userId, ws, key), "time"] as const,
 };
+
+/** My timesheet: the week holding `week` (any of its days). */
+export const timesheetQueryOptions = (userId: string, ws: string, week: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.timesheet(userId, ws, week),
+		queryFn: () => getTasklineTimesheet({ data: { ws, week } }),
+		placeholderData: keepPreviousData,
+	});
+
+/** A project's estimate against actual. */
+export const projectTimeQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.projectTime(userId, ws, key),
+		queryFn: () => getTasklineProjectTime({ data: { ws, key } }),
+	});
 
 /** A sprint's report: its days, today's totals and the velocity. */
 export const sprintReportQueryOptions = (userId: string, ws: string, key: string, id: string) =>
@@ -400,4 +433,17 @@ export const tasklineMutations = {
 		),
 	completeSprint: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: CompleteSprintInput) => completeTasklineSprint({ data: input })),
+	startTimer: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; ref: string }) => startTasklineTimer({ data: input })),
+	stopTimer: (queryClient: QueryClient, userId: string) => write(queryClient, userId, () => stopTasklineTimer()),
+	logTime: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: LogTimeInput) => logTasklineTime({ data: input })),
+	updateTimeEntry: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateTimeEntryInput) => updateTasklineTimeEntry({ data: input })),
+	deleteTimeEntry: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; id: string }) => deleteTasklineTimeEntry({ data: input })),
+	setTimesheetCell: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: TimesheetCellInput) => setTasklineTimesheetCell({ data: input })),
+	copyWeek: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; week: string }) => copyTasklineTimesheetWeek({ data: input })),
 };

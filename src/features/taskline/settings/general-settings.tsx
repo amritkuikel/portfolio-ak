@@ -53,6 +53,8 @@ const projectFormSchema = z.object({
 	/** Task 52: sprints and the backlog, and what tasks are estimated in. */
 	sprints: z.boolean(),
 	estimation: z.enum(["points", "time"]),
+	/** Task 53: the Time tab, a task's time and timer. */
+	time: z.boolean(),
 });
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
@@ -66,6 +68,7 @@ const toValues = (project: ProjectDetail): ProjectFormValues => ({
 	doneColumnDays: project.settings.doneColumnDays ?? undefined,
 	sprints: project.settings.sprints,
 	estimation: project.settings.estimation,
+	time: project.settings.time,
 });
 
 /** General: the project form (saved against its version), its state and health, and the archive. */
@@ -105,6 +108,7 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 						doneColumnDays: value.doneColumnDays ?? null,
 						sprints: value.sprints,
 						estimation: value.estimation,
+						time: value.time,
 					},
 				});
 				toast.success(m.crud_toast_saved());
@@ -189,6 +193,16 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 									{ value: "points", label: m.taskline_settings_estimation_points() },
 									{ value: "time", label: m.taskline_settings_estimation_time() },
 								]}
+							/>
+						)}
+					</form.AppField>
+				</FormSection>
+				<FormSection title={m.taskline_settings_time()} description={m.taskline_settings_time_description()}>
+					<form.AppField name="time">
+						{(field) => (
+							<field.SwitchField
+								label={m.taskline_settings_time_on()}
+								description={m.taskline_settings_time_on_hint()}
 							/>
 						)}
 					</form.AppField>

@@ -17,6 +17,7 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { useSidebar } from "@/lib/stores/hooks";
 import { m } from "@/paraglide/messages";
 import { tasklineLinks } from "../links";
+import { TimerPill } from "../time/timer";
 import type { TasklineNav } from "../types";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { TasklinePalette } from "./taskline-palette";
@@ -50,7 +51,7 @@ export function TasklineShell({ nav, children }: { nav: TasklineNav; children: R
 				<TasklineSidebar nav={nav} onOpenPalette={() => setPaletteOpen(true)} />
 				<SidebarInset className="min-w-0">
 					<NavigationProgress />
-					<TasklineTopbar onOpenPalette={() => setPaletteOpen(true)} />
+					<TasklineTopbar nav={nav} userId={session?.user.id ?? ""} onOpenPalette={() => setPaletteOpen(true)} />
 					{session?.isAnonymous ? <GuestBanner /> : null}
 					{children}
 				</SidebarInset>
@@ -68,14 +69,26 @@ export function TasklineShell({ nav, children }: { nav: TasklineNav; children: R
 	);
 }
 
-/** Sidebar toggle, the route's breadcrumbs, search, language, theme and (on phones, where the sidebar is a sheet) the user. */
-function TasklineTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
+/**
+ * Sidebar toggle, the route's breadcrumbs, the running timer (Task 53), search, language,
+ * theme and (on phones, where the sidebar is a sheet) the user.
+ */
+function TasklineTopbar({
+	nav,
+	userId,
+	onOpenPalette,
+}: {
+	nav: TasklineNav;
+	userId: string;
+	onOpenPalette: () => void;
+}) {
 	return (
 		<header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-4">
 			<SidebarTrigger className="-ms-1" />
 			<Separator orientation="vertical" className="me-1 data-[orientation=vertical]:h-4" />
 			<TopbarBreadcrumbs />
 			<div className="ms-auto flex shrink-0 items-center gap-1">
+				{nav.timer && userId ? <TimerPill timer={nav.timer} readAt={nav.readAt} userId={userId} /> : null}
 				<Button
 					variant="ghost"
 					size="icon"

@@ -19,6 +19,7 @@ import {
 	SettingsIcon, // @taskline
 	ShieldCheckIcon,
 	SquareKanbanIcon, // @taskline
+	TimerIcon, // @taskline
 	UserRoundIcon, // @portfolio
 	UsersIcon,
 	UsersRoundIcon, // @taskline
@@ -231,6 +232,15 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		icon: HistoryIcon,
 		permission: "taskline:read",
 		group: "taskline",
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/timesheets" }),
+		label: m.admin_nav_taskline_timesheets,
+		description: m.taskline_admin_timesheets_description,
+		icon: TimerIcon,
+		permission: "taskline:time",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_timesheets,
 	},
 	{
 		...linkOptions({ to: "/admin/taskline/settings" }),

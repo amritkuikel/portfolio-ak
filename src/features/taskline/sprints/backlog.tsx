@@ -11,7 +11,16 @@ import { m } from "@/paraglide/messages";
 import { TASK_TITLE_MAX } from "../schema";
 import type { SprintMeasure } from "../search";
 import { Assignee, StatusName, TaskTypeIcon } from "../task/task-bits";
-import { isClosedCategory, POINTS_MAX, type TasklineMember, type TasklineStatus, type TaskSummary } from "../types";
+import { durationInput, formatDuration, parseDuration } from "../time/duration";
+import {
+	ESTIMATE_MAX_MINUTES,
+	isClosedCategory,
+	POINTS_MAX,
+	type TasklineMember,
+	type TasklineStatus,
+	type TaskSummary,
+} from "../types";
+import { toHours } from "./burndown";
 import {
 	BACKLOG_SECTION,
 	type BacklogSection,
@@ -19,6 +28,7 @@ import {
 	rowDrop,
 	rowPlace,
 	rowStep,
+	sectionEstimate,
 	sectionPoints,
 } from "./moves";
 import { amountText, SprintDates } from "./sprint-bits";
@@ -28,20 +38,22 @@ import { amountText, SprintDates } from "./sprint-bits";
  * backlog, each in rank order. Three ways to move a task, from its handle, as on the
  * board (0188): drag it; dnd-kit's keyboard drag (Space, the arrows, Space); or Alt + ↑
  * ↓, which moves it one place at once and, past a section's edge, into the next
- * section. Every move is announced. Editors set points in the row.
+ * section. Every move is announced. Editors set points (or, estimating in time, the estimate) in the row.
  */
 
 export type BacklogProps = {
 	sections: ReadonlyArray<BacklogSection>;
 	statuses: ReadonlyArray<TasklineStatus>;
 	members: ReadonlyArray<TasklineMember>;
-	/** What the totals count: points (the project's estimation) or tasks. */
+	/** What the totals count: points or estimated hours (the project's estimation), or tasks. */
 	measure: SprintMeasure;
 	/** The recent velocity in the measure, to compare a sprint's plan with (null: none yet). */
 	velocity: number | null;
 	canEdit: boolean;
 	onMove: (task: TaskSummary, move: RankMove) => void;
 	onPoints: (task: TaskSummary, points: number | null) => void;
+	/** Task 53: an estimate in minutes, typed in the row when the project estimates in time. */
+	onEstimate?: (task: TaskSummary, minutes: number | null) => void;
 	onAdd: (title: string) => void;
 	/** The task's title as a link that opens it (the sheet over the backlog). */
 	renderOpen: (task: TaskSummary, children: ReactNode) => ReactNode;
@@ -129,7 +141,15 @@ function Section({
 	const headingId = useId();
 	const { sprint } = section;
 	const sum = sectionPoints(section.tasks);
-	const total = props.measure === "points" ? sum.points : section.tasks.length;
+	const estimated = sectionEstimate(section.tasks);
+	const total =
+		props.measure === "points"
+			? sum.points
+			: props.measure === "hours"
+				? toHours(estimated.minutes)
+				: section.tasks.length;
+	const unestimated =
+		props.measure === "points" ? sum.unestimated : props.measure === "hours" ? estimated.unestimated : 0;
 	const over = sprint !== null && props.velocity !== null && total > props.velocity;
 	return (
 		<section
@@ -152,9 +172,7 @@ function Section({
 						{sprint ? <SprintDates sprint={sprint} /> : null}
 						<span className="text-caption text-muted-foreground tabular-nums" data-testid="backlog-total">
 							{amountText(total, props.measure)}
-							{props.measure === "points" && sum.unestimated > 0
-								? ` · ${m.taskline_backlog_unestimated({ count: formatNumber(sum.unestimated) })}`
-								: ""}
+							{unestimated > 0 ? ` · ${m.taskline_backlog_unestimated({ count: formatNumber(unestimated) })}` : ""}
 						</span>
 						{over && props.velocity !== null ? (
 							<span className="inline-flex items-center gap-1 text-caption text-warning" data-testid="backlog-over">
@@ -255,7 +273,15 @@ function Row({
 				</span>
 			) : null}
 			<Assignee member={props.members.find((member) => member.id === task.assigneeId)} />
-			{editable ? (
+			{props.measure === "hours" ? (
+				editable && props.onEstimate ? (
+					<EstimateInput task={task} onEstimate={props.onEstimate} />
+				) : (
+					<span className="w-16 shrink-0 text-end text-caption text-muted-foreground tabular-nums">
+						{task.estimateMinutes === null ? "–" : formatDuration(task.estimateMinutes)}
+					</span>
+				)
+			) : editable ? (
 				<PointsInput task={task} onPoints={props.onPoints} />
 			) : (
 				<span className="w-14 shrink-0 text-end text-caption text-muted-foreground tabular-nums">
@@ -349,5 +375,45 @@ function AddToBacklog({ onAdd }: { onAdd: (title: string) => void }) {
 				{m.common_cancel()}
 			</Button>
 		</form>
+	);
+}
+
+/** A task's estimate as a duration ("1h 30m", "2", "1:30"), saved when the field is left or Enter is pressed. */
+function EstimateInput({
+	task,
+	onEstimate,
+}: {
+	task: TaskSummary;
+	onEstimate: NonNullable<BacklogProps["onEstimate"]>;
+}) {
+	const [invalid, setInvalid] = useState(false);
+	const commit = (raw: string) => {
+		const text = raw.trim();
+		const minutes = text === "" ? null : parseDuration(text, ESTIMATE_MAX_MINUTES);
+		if (text !== "" && minutes === null) {
+			setInvalid(true);
+			return;
+		}
+		setInvalid(false);
+		if (minutes !== task.estimateMinutes) onEstimate(task, minutes);
+	};
+	return (
+		<Input
+			key={String(task.estimateMinutes)}
+			defaultValue={task.estimateMinutes === null ? "" : durationInput(task.estimateMinutes)}
+			aria-label={m.taskline_estimate_for({ task: task.title })}
+			aria-invalid={invalid || undefined}
+			placeholder="–"
+			autoComplete="off"
+			className="h-8 w-20 shrink-0 text-end tabular-nums"
+			onBlur={(event) => commit(event.currentTarget.value)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					commit(event.currentTarget.value);
+				}
+			}}
+			data-testid="backlog-estimate"
+		/>
 	);
 }

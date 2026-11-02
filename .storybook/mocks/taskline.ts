@@ -4,6 +4,7 @@ import type {
 	NavWorkspace,
 	NotifySettingsView,
 	ProjectTasks,
+	ProjectTime,
 	SprintReport,
 	SprintSummary,
 	TaskDetail,
@@ -12,6 +13,7 @@ import type {
 	TasklineNav,
 	TasklineStatus,
 	TaskSummary,
+	Timesheet,
 } from "../../src/features/taskline/types";
 import type { Session } from "../../src/lib/session";
 
@@ -54,6 +56,22 @@ export const sampleTasklineNav: TasklineNav = {
 	projects: [app, ops, web, trial],
 	starred: [web],
 	recent: [app, web, trial],
+	timer: null,
+	readAt: "2026-10-31T06:00:00.000Z",
+};
+
+/** Task 53: the same member with a timer running on WEB-4 for 42 minutes. */
+export const sampleTimerNav: TasklineNav = {
+	...sampleTasklineNav,
+	timer: {
+		id: "te-run",
+		ws: "team",
+		workspaceKind: "team",
+		projectKey: "WEB",
+		ref: "WEB-4",
+		title: "Fix the broken contact form",
+		startedAt: "2026-10-31T05:18:00.000Z",
+	},
 };
 
 /** A guest: their sandbox only. */
@@ -62,6 +80,8 @@ export const sampleGuestNav: TasklineNav = {
 	projects: [trial],
 	starred: [],
 	recent: [trial],
+	timer: null,
+	readAt: "2026-10-31T06:00:00.000Z",
 };
 
 export const sampleTasklineMember: Session = {
@@ -152,6 +172,7 @@ const summary = (
 	sprintId: null,
 	points: null,
 	rank: `c${String(number).padStart(3, "0")}`,
+	estimateMinutes: null,
 	...extra,
 });
 
@@ -214,7 +235,7 @@ export const sampleProjectTasks: ProjectTasks = {
 	taskTypes: ["task", "bug", "story", "epic"],
 	readAt: "2026-10-31T06:00:00.000Z",
 	sprints: [],
-	velocity: { points: null, tasks: null, sprints: 0 },
+	velocity: { points: null, tasks: null, minutes: null, sprints: 0 },
 	sprintCount: 0,
 };
 
@@ -228,7 +249,7 @@ const activeSprint: SprintSummary = {
 	endOn: "2026-11-06",
 	startedAt: "2026-10-24T03:00:00.000Z",
 	completedAt: null,
-	committed: { points: 13, tasks: 4 },
+	committed: { points: 13, tasks: 4, minutes: 0 },
 	completed: null,
 };
 const plannedSprint: SprintSummary = {
@@ -256,7 +277,7 @@ export const sampleSprintProject: ProjectTasks = {
 	project: { ...sampleProjectTasks.project, settings: { ...sampleProjectTasks.project.settings, sprints: true } },
 	tasks: sampleTasks.map((task) => ({ ...task, ...(IN_SPRINT[task.id] ?? { sprintId: null, points: null }) })),
 	sprints: [activeSprint, plannedSprint],
-	velocity: { points: 9.5, tasks: 3, sprints: 2 },
+	velocity: { points: 9.5, tasks: 3, minutes: null, sprints: 2 },
 	sprintCount: 4,
 };
 
@@ -265,17 +286,35 @@ export const sampleSprintReport: SprintReport = {
 	sprint: activeSprint,
 	estimation: "points",
 	days: [
-		{ day: "2026-10-23", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0 },
-		{ day: "2026-10-26", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0 },
-		{ day: "2026-10-27", scopePoints: 15, donePoints: 2, scopeTasks: 5, doneTasks: 1 },
-		{ day: "2026-10-29", scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2 },
+		{ day: "2026-10-23", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0, scopeMinutes: 0, doneMinutes: 0 },
+		{ day: "2026-10-26", scopePoints: 13, donePoints: 0, scopeTasks: 4, doneTasks: 0, scopeMinutes: 0, doneMinutes: 0 },
+		{ day: "2026-10-27", scopePoints: 15, donePoints: 2, scopeTasks: 5, doneTasks: 1, scopeMinutes: 0, doneMinutes: 0 },
+		{ day: "2026-10-29", scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2, scopeMinutes: 0, doneMinutes: 0 },
 	],
-	live: { scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2 },
+	live: { scopePoints: 15, donePoints: 5, scopeTasks: 5, doneTasks: 2, scopeMinutes: 0, doneMinutes: 0 },
 	today: "2026-10-31",
 	workingDays: [0, 1, 2, 3, 4, 5],
 	velocity: [
-		{ id: "s-0", name: "Sprint 0", committedPoints: 10, completedPoints: 11, committedTasks: 3, completedTasks: 3 },
-		{ id: "s-1", name: "Sprint 1", committedPoints: 11, completedPoints: 8, committedTasks: 3, completedTasks: 2 },
+		{
+			id: "s-0",
+			name: "Sprint 0",
+			committedPoints: 10,
+			completedPoints: 11,
+			committedTasks: 3,
+			completedTasks: 3,
+			committedMinutes: 0,
+			completedMinutes: 0,
+		},
+		{
+			id: "s-1",
+			name: "Sprint 1",
+			committedPoints: 11,
+			completedPoints: 8,
+			committedTasks: 3,
+			completedTasks: 2,
+			committedMinutes: 0,
+			completedMinutes: 0,
+		},
 	],
 	sprints: [
 		{ id: "s-3", name: "Sprint 3", state: "planned" },
@@ -341,6 +380,137 @@ export const sampleTaskDetail: TaskDetail = {
 	attachments: [],
 	watching: true,
 	watcherIds: ["m-asha", "m-bikash"],
+	estimateMinutes: 360,
+	time: {
+		loggedMinutes: 270,
+		billableMinutes: 90,
+		entries: [
+			{
+				id: "te-1",
+				taskId: "t-4",
+				ref: "WEB-4",
+				title: "Fix the broken contact form",
+				project: { id: "p-web", key: "WEB", name: "Website relaunch" },
+				memberId: "m-bikash",
+				memberName: "Bikash Thapa",
+				onDay: "2026-10-30",
+				minutes: 180,
+				note: "Found the cause, writing the fix",
+				billable: false,
+				running: false,
+				startedAt: null,
+				canEdit: false,
+				locked: false,
+			},
+			{
+				id: "te-2",
+				taskId: "t-4",
+				ref: "WEB-4",
+				title: "Fix the broken contact form",
+				project: { id: "p-web", key: "WEB", name: "Website relaunch" },
+				memberId: "m-asha",
+				memberName: "Asha Gurung",
+				onDay: "2026-10-29",
+				minutes: 90,
+				note: "",
+				billable: true,
+				running: false,
+				startedAt: null,
+				canEdit: true,
+				locked: false,
+			},
+		],
+		canLog: true,
+		lockOn: "2026-10-25",
+		today: "2026-10-31",
+		enabled: true,
+	},
+};
+
+/** Task 53: Asha's week (Sunday 26 October to Saturday 1 November), locked through the 25th. */
+export const sampleTimesheet: Timesheet = {
+	weekStart: "2026-10-26",
+	days: ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"],
+	today: "2026-10-31",
+	lockOn: "2026-10-25",
+	workingDays: [0, 1, 2, 3, 4, 5],
+	rows: [
+		{
+			key: "t-1",
+			task: { id: "t-1", ref: "WEB-1", title: "Design the new navigation", closed: false },
+			project: { id: "p-web", key: "WEB", name: "Website relaunch", color: "teal" },
+			editable: true,
+			minutes: [120, 240, 0, 180, 60, 0, 0],
+		},
+		{
+			key: "t-4",
+			task: { id: "t-4", ref: "WEB-4", title: "Fix the broken contact form", closed: false },
+			project: { id: "p-web", key: "WEB", name: "Website relaunch", color: "teal" },
+			editable: true,
+			minutes: [0, 0, 90, 90, 0, 0, 0],
+		},
+		{
+			key: "project:p-app",
+			task: null,
+			project: { id: "p-app", key: "APP", name: "Mobile app", color: "indigo" },
+			editable: false,
+			minutes: [30, 0, 0, 0, 0, 0, 0],
+		},
+	],
+	suggestions: [
+		{
+			key: "t-2",
+			task: { id: "t-2", ref: "WEB-2", title: "Write the launch copy", closed: false },
+			project: { id: "p-web", key: "WEB", name: "Website relaunch", color: "teal" },
+		},
+	],
+	capacityMinutes: 2400,
+	canLog: true,
+	lastWeekMinutes: 1500,
+};
+
+/** Task 53: WEB's time against its estimates. */
+export const sampleProjectTime: ProjectTime = {
+	tasks: [
+		{
+			taskId: "t-1",
+			ref: "WEB-1",
+			title: "Design the new navigation",
+			assigneeId: "m-asha",
+			estimateMinutes: 720,
+			loggedMinutes: 600,
+			billableMinutes: 0,
+			closed: false,
+		},
+		{
+			taskId: "t-4",
+			ref: "WEB-4",
+			title: "Fix the broken contact form",
+			assigneeId: "m-bikash",
+			estimateMinutes: 240,
+			loggedMinutes: 270,
+			billableMinutes: 90,
+			closed: false,
+		},
+		{
+			taskId: "t-6",
+			ref: "WEB-6",
+			title: "Choose the analytics tool",
+			assigneeId: null,
+			estimateMinutes: 300,
+			loggedMinutes: 0,
+			billableMinutes: 0,
+			closed: false,
+		},
+	],
+	members: [
+		{ memberId: "m-asha", name: "Asha Gurung", estimateMinutes: 720, loggedMinutes: 690, billableMinutes: 90 },
+		{ memberId: "m-bikash", name: "Bikash Thapa", estimateMinutes: 240, loggedMinutes: 180, billableMinutes: 0 },
+	],
+	totals: { estimateMinutes: 1260, loggedMinutes: 870, billableMinutes: 90 },
+	orphanMinutes: 0,
+	entries: [],
+	today: "2026-10-31",
 };
 
 /** The inbox (Task 50): two unread, one read. */

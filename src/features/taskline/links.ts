@@ -23,6 +23,11 @@ export const tasklineLinks = {
 	backlog: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/backlog", params: { ws, key } }),
 	sprint: (ws: string, key: string, sprintId: string) =>
 		linkOptions({ to: "/app/taskline/$ws/p/$key/sprints/$sprintId", params: { ws, key, sprintId }, search: {} }),
+	/** Task 53: my timesheet (this week unless `week` names a day of another), a project's time. */
+	timesheet: (ws: string, week?: string) =>
+		linkOptions({ to: "/app/taskline/$ws/timesheet", params: { ws }, search: week ? { week } : {} }),
+	time: (ws: string, key: string) =>
+		linkOptions({ to: "/app/taskline/$ws/p/$key/time", params: { ws, key }, search: { by: "task" as const } }),
 	search: (ws: string, q?: string) =>
 		linkOptions({ to: "/app/taskline/$ws/search", params: { ws }, search: { q: q ?? "", page: 1 } }),
 	settings: (ws: string, key: string, section: "general" | "members" | "workflow" | "labels" | "trash" = "general") =>

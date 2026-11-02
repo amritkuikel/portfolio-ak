@@ -58,6 +58,7 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[]): Ta
 		sprintId: row.sprintId,
 		points: row.points,
 		rank: row.rank,
+		estimateMinutes: row.estimateMinutes,
 	};
 }
 
@@ -228,6 +229,7 @@ export type TaskPatch = Partial<
 		| "deletedAt"
 		| "sprintId"
 		| "points"
+		| "estimateMinutes"
 		| "rank"
 	>
 >;

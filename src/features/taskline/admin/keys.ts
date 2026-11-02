@@ -1,5 +1,5 @@
 import { createCrudKeys } from "@/lib/crud/keys";
-import type { AdminActivityListInput, AdminMemberListInput, AdminProjectListInput } from "./search";
+import type { AdminActivityListInput, AdminMemberListInput, AdminProjectListInput, AdminTimeListInput } from "./search";
 
 /** /admin/taskline's Query keys (the shared shape, src/lib/crud/keys.ts). */
 
@@ -15,11 +15,15 @@ export const tasklineAdminKeys = {
 	workflows: () => [...ROOT, "workflows"] as const,
 	activityOptions: () => [...ROOT, "activity-options"] as const,
 	accounts: () => [...ROOT, "accounts"] as const,
+	/** Task 53: the timesheets' choices and lock, and utilization over some days. */
+	timeOptions: () => [...ROOT, "time-options"] as const,
+	utilization: (from: string, to: string) => [...ROOT, "utilization", { from, to }] as const,
 };
 
 export const adminProjectKeys = createCrudKeys<AdminProjectListInput>("taskline-admin-projects");
 export const adminMemberKeys = createCrudKeys<AdminMemberListInput>("taskline-admin-members");
 export const adminActivityKeys = createCrudKeys<AdminActivityListInput>("taskline-admin-activity");
+export const adminTimeKeys = createCrudKeys<AdminTimeListInput>("taskline-admin-time");
 
 /** What a change to the team can move: every list and read of the section. */
 export const ALL_TASKLINE_ADMIN = [
@@ -27,4 +31,5 @@ export const ALL_TASKLINE_ADMIN = [
 	adminProjectKeys.all,
 	adminMemberKeys.all,
 	adminActivityKeys.all,
+	adminTimeKeys.all,
 ] as const;

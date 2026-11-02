@@ -41,6 +41,7 @@ const patchOf = ({
 	startOn,
 	dueOn,
 	points,
+	estimateMinutes,
 }: Partial<TaskSummary>): Omit<PatchTaskInput, "ws" | "ref"> => ({
 	type,
 	priority,
@@ -49,6 +50,7 @@ const patchOf = ({
 	startOn,
 	dueOn,
 	points,
+	estimateMinutes,
 });
 
 const hasAny = (patch: object) => Object.values(patch).some((value) => value !== undefined);
@@ -163,6 +165,7 @@ export function draftTask(
 		points: null,
 		// The server ranks it last in the backlog; until then it sorts after every key ("~" is past base 62).
 		rank: DRAFT_RANK,
+		estimateMinutes: null,
 	};
 }
 

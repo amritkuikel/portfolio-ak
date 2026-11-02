@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { workspaceSettings } from "@/features/taskline/settings";
 import type { TasklineColor, TaskPriority, TaskType } from "@/features/taskline/types";
 import { generateKeysBetween } from "@/lib/fractional-index";
-import { addDays, todayInZone } from "@/lib/i18n/date-only";
+import { addDays, todayInZone, weekdayOf } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
@@ -24,6 +24,7 @@ import {
 	tlTask,
 	tlTaskLabel,
 	tlTaskWatcher,
+	tlTimeEntry,
 	tlWorkspace,
 } from "@/server/db/schema";
 import type { Tx } from "@/server/db/types";
@@ -64,6 +65,8 @@ type SampleTask = {
 	/** Task 52: its estimate, and its sprint (0 the completed one, 1 the active one, 2 the planned one; none: the backlog). */
 	points?: number;
 	sprint?: 0 | 1 | 2;
+	/** Task 53: its estimate, in hours. */
+	estimate?: number;
 };
 
 const TEAMMATES = [
@@ -89,6 +92,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		due: 3,
 		points: 3,
 		sprint: 1,
+		estimate: 4,
 	},
 	{
 		title: (t) => m.taskline_seed_task_navigation({}, t),
@@ -100,6 +104,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		type: "story",
 		points: 5,
 		sprint: 1,
+		estimate: 12,
 	},
 	{
 		title: (t) => m.taskline_seed_task_mobile_menu({}, t),
@@ -109,6 +114,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		parent: 2,
 		points: 2,
 		sprint: 1,
+		estimate: 3,
 	},
 	{ title: (t) => m.taskline_seed_task_contrast({}, t), status: 1, assignee: 1, priority: 2, parent: 2, points: 2 },
 	{
@@ -126,6 +132,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		],
 		points: 3,
 		sprint: 1,
+		estimate: 6,
 	},
 	{
 		title: (t) => m.taskline_seed_task_launch_date({}, t),
@@ -146,6 +153,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		labels: [0],
 		points: 8,
 		sprint: 0,
+		estimate: 10,
 	},
 ];
 
@@ -245,6 +253,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 			})),
 			completedAt: closed ? new Date() : null,
 			points: sample.points ?? null,
+			estimateMinutes: sample.estimate === undefined ? null : sample.estimate * 60,
 		});
 		ids.push(task.id);
 		await tasks.setLabels(
@@ -257,6 +266,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	}
 	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
 	await seedSprints(tx, created, ids, today, t);
+	await seedTime(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, today, t });
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
@@ -319,6 +329,8 @@ async function seedSprints(tx: Tx, access: ProjectAccess, taskIds: string[], tod
 					scopeTasks: scope.tasks,
 					donePoints: finished ? done.points : 0,
 					doneTasks: finished ? done.tasks : 0,
+					scopeMinutes: 0,
+					doneMinutes: 0,
 				},
 				{ replace: true },
 			);
@@ -328,6 +340,78 @@ async function seedSprints(tx: Tx, access: ProjectAccess, taskIds: string[], tod
 			data: { sprintId: sprint.id, name: sprint.name, points: index === 0 ? done.points : plan.committed.points },
 		});
 	}
+}
+
+/**
+ * Task 53: a week of time on the sample tasks, by the owner and the teammates, on the
+ * workspace's working days before today (and some today), with a few notes; the
+ * logo's time was billable. Days and minutes are relative, so every sandbox reads the same.
+ */
+const SAMPLE_TIME: ReadonlyArray<{
+	task: number;
+	who: -1 | 0 | 1 | 2;
+	/** Working days back: 0 is the latest (today, on a working day). */
+	day: number;
+	minutes: number;
+	note?: (t: { locale: Locale }) => string;
+	billable?: boolean;
+}> = [
+	{ task: 0, who: -1, day: 0, minutes: 30 },
+	{ task: 2, who: 0, day: 0, minutes: 120, note: (t) => m.taskline_seed_time_note_design({}, t) },
+	{ task: 5, who: 1, day: 0, minutes: 90, note: (t) => m.taskline_seed_time_note_fix({}, t) },
+	{ task: 6, who: -1, day: 1, minutes: 60, note: (t) => m.taskline_seed_time_note_call({}, t) },
+	{ task: 1, who: 2, day: 1, minutes: 150 },
+	{ task: 2, who: 0, day: 1, minutes: 240 },
+	{ task: 3, who: 0, day: 2, minutes: 180 },
+	{ task: 5, who: 1, day: 2, minutes: 210, note: (t) => m.taskline_seed_time_note_review({}, t) },
+	{ task: 1, who: -1, day: 3, minutes: 45, note: (t) => m.taskline_seed_time_note_review({}, t) },
+	{ task: 9, who: 0, day: 4, minutes: 300, billable: true },
+	{ task: 9, who: 0, day: 5, minutes: 240, billable: true },
+	{ task: 6, who: -1, day: 4, minutes: 90 },
+];
+
+async function seedTime(
+	tx: Tx,
+	{
+		workspaceId,
+		projectId,
+		owner,
+		teammates,
+		taskIds,
+		today,
+		t,
+	}: {
+		workspaceId: string;
+		projectId: string;
+		owner: TlMemberRow;
+		teammates: TlMemberRow[];
+		taskIds: string[];
+		today: string;
+		t: { locale: Locale };
+	},
+): Promise<void> {
+	const working = workspaceSettings.parse({}).workingDays;
+	const days: string[] = [];
+	for (let day = today; days.length < 7; day = addDays(day, -1)) if (working.includes(weekdayOf(day))) days.push(day);
+	const values = SAMPLE_TIME.flatMap((sample) => {
+		const memberId = sample.who === -1 ? owner.id : teammates[sample.who]?.id;
+		const taskId = taskIds[sample.task];
+		const onDay = days[sample.day];
+		if (!memberId || !taskId || !onDay) return [];
+		return [
+			{
+				workspaceId,
+				projectId,
+				taskId,
+				memberId,
+				onDay,
+				minutes: sample.minutes,
+				note: sample.note?.(t) ?? "",
+				billable: sample.billable ?? false,
+			},
+		];
+	});
+	if (values.length > 0) await tx.insert(tlTimeEntry).values(values);
 }
 
 const escapeHtml = (text: string) =>
@@ -465,6 +549,11 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 	await tx.update(tlNotification).set({ actorId: to }).where(eq(tlNotification.actorId, from));
 	// Saved views (Task 51): the guest's projects are distinct from the account's, so names can't collide.
 	await tx.update(tlSavedView).set({ memberId: to }).where(eq(tlSavedView.memberId, from));
+	// Time (Task 53): one timer runs per member, so the guest's stops first (what it counted is kept).
+	await tx.execute(
+		sql`update ${tlTimeEntry} set ended_at = now(), minutes = least(720, greatest(1, round(extract(epoch from now() - started_at) / 60)::int)) where member_id = ${from} and started_at is not null and ended_at is null`,
+	);
+	await tx.update(tlTimeEntry).set({ memberId: to }).where(eq(tlTimeEntry.memberId, from));
 }
 
 /**
@@ -513,6 +602,7 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 	await tx.update(tlActivity).set({ workspaceId: target.id }).where(eq(tlActivity.workspaceId, guest.id));
 	await tx.update(tlNotification).set({ workspaceId: target.id }).where(eq(tlNotification.workspaceId, guest.id));
 	await tx.update(tlSavedView).set({ workspaceId: target.id }).where(eq(tlSavedView.workspaceId, guest.id));
+	await tx.update(tlTimeEntry).set({ workspaceId: target.id }).where(eq(tlTimeEntry.workspaceId, guest.id));
 	await tx
 		.update(tlLabel)
 		.set({ workspaceId: target.id })

@@ -6,6 +6,7 @@ import { isoDateInstant } from "@/lib/i18n/date-only";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
+import { formatDuration } from "../time/duration";
 import type {
 	ActivityData,
 	ActivityValue,
@@ -82,6 +83,10 @@ function fieldPhrase(actor: string, data: ActivityData, context: ActivityContext
 			return to === null || to === undefined
 				? m.taskline_activity_points_removed({ actor })
 				: m.taskline_activity_points({ actor, points: formatNumber(Number(to) || 0) });
+		case "estimateMinutes":
+			return to === null || to === undefined
+				? m.taskline_activity_estimate_removed({ actor })
+				: m.taskline_activity_estimate({ actor, estimate: formatDuration(Number(to) || 0) });
 		default:
 			return m.taskline_activity_changed({ actor });
 	}
@@ -156,6 +161,10 @@ export function activitySentence(
 			return m.taskline_activity_sprint_started({ actor, sprint: text(data.name) });
 		case "sprint.completed":
 			return m.taskline_activity_sprint_completed({ actor, sprint: text(data.name) });
+		case "time.logged":
+			return data.auto === true
+				? m.taskline_activity_time_stopped({ duration: formatDuration(Number(data.minutes) || 0) })
+				: m.taskline_activity_time({ actor, duration: formatDuration(Number(data.minutes) || 0) });
 		default:
 			return m.taskline_activity_changed({ actor });
 	}

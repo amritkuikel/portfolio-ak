@@ -327,8 +327,8 @@ export async function seedTaskline(
 			const closed = status >= 3;
 			const number = index + 1;
 			const task = await query(
-				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at", "rank")
-				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning "id"`,
+				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at", "rank", "estimate_minutes")
+				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning "id"`,
 				[
 					workspaceId,
 					projectId,
@@ -343,9 +343,21 @@ export async function seedTaskline(
 					index % 3 === 0 ? null : day((index % 11) - 3),
 					closed ? new Date(Date.now() - (20 - index) * 86_400_000).toISOString() : null,
 					ranks[index] ?? "a0",
+					// Task 53: most tasks are estimated, in whole hours.
+					index % 4 === 3 ? null : ((index % 5) + 1) * 60,
 				],
 			);
 			const taskId = firstId(task.rows, `task ${project.key}-${number}`);
+			// Task 53: the assignee logged time on started and done tasks over the last days.
+			const assignee = index % 6 === 5 ? null : (assignees[index % assignees.length] ?? null);
+			if (assignee && status >= 2 && status <= 3 && index < 14) {
+				for (const back of [1, 2 + (index % 3)]) {
+					await query(
+						`insert into "tl_time_entry" ("workspace_id", "project_id", "task_id", "member_id", "on_day", "minutes", "billable") values ($1, $2, $3, $4, $5, $6, $7)`,
+						[workspaceId, projectId, taskId, assignee, day(-back), 30 * ((index % 6) + 2), project.key === "WEB"],
+					);
+				}
+			}
 			made.push({ id: taskId, done: status === 3, canceled: status === 4 });
 			const labelId = labelIds[index % (labelIds.length + 1)];
 			if (labelId) {

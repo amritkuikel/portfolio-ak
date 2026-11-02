@@ -102,7 +102,7 @@ export async function addComment(services: TasklineServices, input: AddCommentIn
 			{ kind: "mentioned", taskId: task.id, to: body.mentions, data },
 			{ kind: "comment", taskId: task.id, to: watchers, data },
 		]);
-		return { detail: await taskDetail(tx, access, task, imageStore), notify };
+		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;
@@ -138,7 +138,7 @@ export async function updateComment(services: TasklineServices, input: UpdateCom
 				data: { ...taskData(access, task), excerpt: excerptOf(body.text) },
 			},
 		]);
-		return { detail: await taskDetail(tx, access, task, imageStore), notify };
+		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;
@@ -162,7 +162,7 @@ export async function deleteComment(
 		await link(tx, { entityType: repo.COMMENT_FILES, entityId: comment.id, ownerId: user.id }, []);
 		await recordActivity(tx, access, { kind: "comment.deleted", taskId: task.id, data: { commentId: comment.id } });
 		await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 
@@ -175,7 +175,7 @@ export async function watchTask(
 		const { access, task } = await resolveTask(tx, user, input.ws, input.ref);
 		if (!access.member) throw notMemberError();
 		await repo.setWatching(tx, task.id, access.member.id, input.watching);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 
@@ -197,7 +197,7 @@ export async function addTaskFiles(
 			...adding.map((id) => ({ kind: "attachment.added" as const, taskId: task.id, data: { attachmentId: id } })),
 		);
 		if (adding.length > 0) await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 
@@ -222,7 +222,7 @@ export async function removeTaskFile(
 			data: { attachmentId: input.id },
 		});
 		await bumpRev(tx, access.project.id);
-		return taskDetail(tx, access, task, imageStore);
+		return taskDetail(tx, access, task, { imageStore, user });
 	});
 }
 

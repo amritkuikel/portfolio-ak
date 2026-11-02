@@ -9,11 +9,21 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { tasklineLinks } from "../links";
 import { projectTasksQueryOptions, sprintReportQueryOptions } from "../queries";
-import { SPRINT_MEASURES, type SprintMeasure } from "../search";
+import type { SprintMeasure } from "../search";
 import { StatusName, TaskTypeIcon } from "../task/task-bits";
+import { formatDuration } from "../time/duration";
 import { isClosedCategory, type SprintState } from "../types";
 import { burnSeries } from "./burndown";
-import { amountText, daysLeft, dayText, measureOf, SprintDates } from "./sprint-bits";
+import {
+	amountIn,
+	amountText,
+	daysLeft,
+	dayText,
+	measureLabel,
+	measureOf,
+	measuresOf,
+	SprintDates,
+} from "./sprint-bits";
 
 const route = getRouteApi("/_taskline/app/taskline/_shell/$ws/p/$key/sprints/$sprintId");
 
@@ -26,7 +36,7 @@ const STATE_LABELS: Record<SprintState, () => string> = {
 /**
  * /app/taskline/$ws/p/$key/sprints/$sprintId (Task 52): a sprint's report. Its numbers,
  * the burndown and burnup from the daily snapshots (0216), the project's velocity, and
- * the tasks in it. `?by=` counts points or tasks (default: the project's estimation).
+ * the tasks in it. `?by=` counts points (or estimated hours) or tasks (default: the project's estimation).
  */
 export function SprintReportPage() {
 	const { session } = route.useRouteContext();
@@ -47,13 +57,13 @@ export function SprintReportPage() {
 		done: point.done,
 	}));
 	const latest = [...series].reverse().find((point) => point.remaining !== null) ?? series[0];
-	const committed = sprint.committed ? (by === "points" ? sprint.committed.points : sprint.committed.tasks) : null;
+	const committed = sprint.committed ? amountIn(sprint.committed, by) : null;
 	const closedIds = new Set(project.statuses.filter((status) => isClosedCategory(status.category)).map((s) => s.id));
 	const tasks = project.tasks.filter((task) => task.sprintId === sprint.id);
 	const velocity = report.velocity.map((row) => ({
 		sprint: row.name,
-		committed: by === "points" ? row.committedPoints : row.committedTasks,
-		completed: by === "points" ? row.completedPoints : row.completedTasks,
+		committed: amountIn({ points: row.committedPoints, tasks: row.committedTasks, minutes: row.committedMinutes }, by),
+		completed: amountIn({ points: row.completedPoints, tasks: row.completedTasks, minutes: row.completedMinutes }, by),
 	}));
 	const amount = (value: number | null) => (value === null ? "–" : formatNumber(value));
 
@@ -95,7 +105,7 @@ export function SprintReportPage() {
 						</NativeSelect>
 					</label>
 					<nav aria-label={m.taskline_sprint_measure()} className="flex rounded-md border p-0.5">
-						{SPRINT_MEASURES.map((measure) => (
+						{measuresOf(report.estimation).map((measure) => (
 							<Link
 								key={measure}
 								{...tasklineLinks.sprint(ws, key, sprint.id)}
@@ -107,7 +117,7 @@ export function SprintReportPage() {
 								)}
 								data-testid={`sprint-by-${measure}`}
 							>
-								{measure === "points" ? m.taskline_sprint_by_points() : m.taskline_sprint_by_tasks()}
+								{measureLabel(measure)}
 							</Link>
 						))}
 					</nav>
@@ -240,7 +250,13 @@ export function SprintReportPage() {
 									</Link>
 									{status ? <StatusName status={status} /> : null}
 									<span className="w-20 shrink-0 text-end text-caption text-muted-foreground tabular-nums">
-										{task.points === null ? "–" : amountText(task.points, "points")}
+										{report.estimation === "time"
+											? task.estimateMinutes === null
+												? "–"
+												: formatDuration(task.estimateMinutes)
+											: task.points === null
+												? "–"
+												: amountText(task.points, "points")}
 									</span>
 								</li>
 							);

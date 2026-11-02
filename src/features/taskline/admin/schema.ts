@@ -2,10 +2,11 @@ import { z } from "zod";
 import type { Paged } from "@/lib/list/paging";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
-import { LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey } from "../schema";
+import { LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX } from "../schema";
 import { DEFAULT_STATUS_MAX, defaultStatus, TEAM_SLUG_PATTERN, workspaceSettings } from "../settings";
 import {
 	type ActiveSprint,
+	DAY_MINUTES,
 	PROJECT_HEALTHS,
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
@@ -24,6 +25,7 @@ import {
 	type TaskType,
 	TEAM_ROLES,
 	type TeamRole,
+	type TimeEntry,
 } from "../types";
 
 /**
@@ -62,7 +64,8 @@ export type AdminOverview = {
 	projects: AdminProjectHealthRow[];
 	/** Counts only: what is in the sandboxes is their owners'. */
 	sandboxes: { total: number; guests: number; projects: number; tasks: number };
-	members: { active: number; invited: number };
+	/** Task 53: loggedThisWeek is the team's time this week, in minutes. */
+	members: { active: number; invited: number; loggedThisWeek: number };
 	today: string;
 	/** Task 52: the team's active sprints, soonest ending first. */
 	sprints: ActiveSprint[];
@@ -254,7 +257,7 @@ export type AdminWorkspace = {
 	updatedAt: string;
 	settings: z.output<typeof workspaceForm> & { quotas: z.output<typeof quotas> };
 	/** What exists now: the quotas can't go below it. */
-	usage: { projects: number; tasks: number; statusesPerProject: number };
+	usage: { projects: number; tasks: number; statusesPerProject: number; timeEntries: number };
 };
 
 export type DefaultStatus = z.output<typeof defaultStatus>;
@@ -298,3 +301,54 @@ export type AdminActivityOptions = {
 	projects: { id: string; key: string; name: string }[];
 	members: { id: string; name: string }[];
 };
+
+// ---- Timesheets (Task 53) -----------------------------------------------------------------------
+
+/** A page of the team's time, with its totals (every matching entry, not only the page's). */
+export type AdminTimePage = Paged<TimeEntry> & { totalMinutes: number; billableMinutes: number };
+
+/** The timesheets page's choices and state: members and projects to filter by, the lock date, the week. */
+export type AdminTimeOptions = {
+	members: { id: string; name: string }[];
+	projects: { id: string; key: string; name: string }[];
+	lockOn: string | null;
+	today: string;
+	weekStart: number;
+};
+
+/** Each active member's time over some days, against their capacity for those days. */
+export type AdminUtilization = {
+	from: string;
+	to: string;
+	rows: Array<{
+		memberId: string;
+		name: string;
+		capacityMinutes: number;
+		loggedMinutes: number;
+		billableMinutes: number;
+	}>;
+};
+
+/** The days utilization covers at most. */
+export const UTILIZATION_DAYS_MAX = 92;
+
+export const adminUpdateTimeEntryInput = z.strictObject({
+	id,
+	onDay: isoDate().optional(),
+	minutes: z.number().int().min(1).max(DAY_MINUTES).optional(),
+	note: optionalText({ max: TIME_NOTE_MAX }).optional(),
+	billable: z.boolean().optional(),
+});
+export type AdminUpdateTimeEntryInput = z.infer<typeof adminUpdateTimeEntryInput>;
+export const adminTimeEntryInput = z.strictObject({ id });
+/** Entries on or before `lockOn` can't change (null: nothing is locked). */
+export const timesheetLockInput = z.strictObject({ lockOn: isoDate().nullable() });
+export const utilizationInput = z
+	.strictObject({ from: isoDate(), to: isoDate() })
+	.refine(
+		(input) =>
+			input.to >= input.from && (Date.parse(input.to) - Date.parse(input.from)) / 86_400_000 < UTILIZATION_DAYS_MAX,
+		{ error: "A range of at most 92 days" },
+	);
+/** Exports at most this many entries (the filters narrow it). */
+export const TIME_EXPORT_MAX = 10_000;

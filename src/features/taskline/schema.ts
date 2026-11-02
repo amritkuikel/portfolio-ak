@@ -5,6 +5,8 @@ import { m } from "@/paraglide/messages";
 import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
+	DAY_MINUTES,
+	ESTIMATE_MAX_MINUTES,
 	NOTIFY_KINDS,
 	NOTIFY_MODES,
 	POINTS_MAX,
@@ -45,6 +47,7 @@ const id = z.uuid();
 const position = z.string().refine(isOrderKey);
 const color = z.enum(TASKLINE_COLORS);
 const points = z.number().int().min(0).max(POINTS_MAX);
+const estimate = z.number().int().min(0).max(ESTIMATE_MAX_MINUTES);
 
 export const ws = () => z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/);
 export const projectKey = () =>
@@ -194,6 +197,8 @@ export const createTaskInput = z.strictObject({
 	/** Task 52: planned in a sprint (omitted: the backlog), and its estimate. */
 	sprintId: id.nullable().optional(),
 	points: points.nullable().optional(),
+	/** Task 53: the estimate in minutes. */
+	estimateMinutes: estimate.nullable().optional(),
 });
 
 /** The title and description: saved with the version they started from. */
@@ -218,6 +223,7 @@ export const patchTaskInput = z.strictObject({
 	dueOn: isoDate().nullable().optional(),
 	sprintId: id.nullable().optional(),
 	points: points.nullable().optional(),
+	estimateMinutes: estimate.nullable().optional(),
 });
 
 /** A drop on the board: a status and a position in it (an order key the browser computed). */
@@ -443,6 +449,48 @@ export const completeSprintInput = z
 export type CreateSprintInput = z.infer<typeof createSprintInput>;
 export type UpdateSprintInput = z.infer<typeof updateSprintInput>;
 export type CompleteSprintInput = z.infer<typeof completeSprintInput>;
+
+// ---- Time tracking (Task 53) ----------------------------------------------------------------
+
+export const TIME_NOTE_MAX = 500;
+/** Entries the task shows (the newest); the project's time page shows as many. */
+export const TASK_TIME_ENTRIES = 50;
+
+const minutes = z.number().int().min(1).max(DAY_MINUTES);
+const timeNote = optionalText({ max: TIME_NOTE_MAX });
+
+/** Time logged by hand on a task: a day, how long, a note, billable. */
+export const logTimeInput = z.strictObject({
+	ws: ws(),
+	ref: taskRef(),
+	onDay: isoDate(),
+	minutes,
+	note: timeNote.optional(),
+	billable: z.boolean().optional(),
+});
+/** An entry changed (the caller's own, or anyone's in the team with `taskline:time`). */
+export const updateTimeEntryInput = z.strictObject({
+	ws: ws(),
+	id,
+	onDay: isoDate().optional(),
+	minutes: minutes.optional(),
+	note: timeNote.optional(),
+	billable: z.boolean().optional(),
+});
+export const timeEntryInput = z.strictObject({ ws: ws(), id });
+/** The timesheet of the week holding `week` (any of its days). */
+export const timesheetInput = z.strictObject({ ws: ws(), week: isoDate() });
+/** A timesheet cell's new total (0 clears it). */
+export const timesheetCellInput = z.strictObject({
+	ws: ws(),
+	ref: taskRef(),
+	onDay: isoDate(),
+	minutes: z.number().int().min(0).max(DAY_MINUTES),
+});
+
+export type LogTimeInput = z.infer<typeof logTimeInput>;
+export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntryInput>;
+export type TimesheetCellInput = z.infer<typeof timesheetCellInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

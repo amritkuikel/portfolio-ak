@@ -122,3 +122,14 @@ export function sectionPoints(tasks: ReadonlyArray<TaskSummary>): { points: numb
 		{ points: 0, unestimated: 0 },
 	);
 }
+
+/** A section's estimate in minutes (Task 53), and how many of its tasks have none. */
+export function sectionEstimate(tasks: ReadonlyArray<TaskSummary>): { minutes: number; unestimated: number } {
+	return tasks.reduce(
+		(sum, task) => ({
+			minutes: sum.minutes + (task.estimateMinutes ?? 0),
+			unestimated: sum.unestimated + (task.estimateMinutes === null ? 1 : 0),
+		}),
+		{ minutes: 0, unestimated: 0 },
+	);
+}

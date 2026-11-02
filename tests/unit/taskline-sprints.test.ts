@@ -18,7 +18,7 @@ const sprint = (values: Partial<SprintSummary> = {}): SprintSummary => ({
 	endOn: "2026-11-07",
 	startedAt: "2026-11-01T03:00:00.000Z",
 	completedAt: null,
-	committed: { points: 10, tasks: 4 },
+	committed: { points: 10, tasks: 4, minutes: 0 },
 	completed: null,
 	...values,
 });
@@ -28,6 +28,9 @@ const totals = (scopePoints: number, donePoints: number, scopeTasks = 4, doneTas
 	donePoints,
 	scopeTasks,
 	doneTasks,
+	// Task 53: every point is an hour of estimate here.
+	scopeMinutes: scopePoints * 60,
+	doneMinutes: donePoints * 60,
 });
 
 // 2026-11-01 is a Sunday; the week Sunday–Friday works, Saturday (11-07) is off.
@@ -125,6 +128,7 @@ const task = (id: string, rank: string, values: Partial<TaskSummary> = {}): Task
 	sprintId: null,
 	points: null,
 	rank,
+	estimateMinutes: null,
 	...values,
 });
 

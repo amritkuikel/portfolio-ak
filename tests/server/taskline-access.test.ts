@@ -13,6 +13,7 @@ import { seedSandbox } from "@/server/taskline/sandbox";
 import * as sprints from "@/server/taskline/sprints/service";
 import * as imports from "@/server/taskline/tasks/import";
 import * as tasks from "@/server/taskline/tasks/service";
+import * as time from "@/server/taskline/time/service";
 import * as views from "@/server/taskline/views/service";
 import * as workflow from "@/server/taskline/workflow/service";
 import * as workspaceRepo from "@/server/taskline/workspace/repository";
@@ -548,7 +549,55 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 			return sprints.getSprintReport(caller, context.ws, context.key, sprint.id);
 		},
 	},
+	// Task 53: time is a member's (memberOnly), logged where they may edit.
+	{
+		name: "startTimer",
+		need: "edit",
+		memberOnly: true,
+		run: async (context, caller) => time.startTimer(caller, context.ws, (await ownerTask(context)).ref),
+	},
+	{
+		name: "logTime",
+		need: "edit",
+		memberOnly: true,
+		run: async (context, caller) =>
+			time.logTime(caller, { ws: context.ws, ref: (await ownerTask(context)).ref, onDay: TODAY(), minutes: 30 }),
+	},
+	{
+		name: "updateTimeEntry (own)",
+		need: "edit",
+		memberOnly: true,
+		run: async (context, caller) => {
+			const ref = (await ownerTask(context)).ref;
+			const entry = await time.logTime(caller, { ws: context.ws, ref, onDay: TODAY(), minutes: 30 });
+			return time.updateEntry(caller, { ws: context.ws, id: entry.id, minutes: 45 });
+		},
+	},
+	{
+		name: "deleteTimeEntry (own)",
+		need: "edit",
+		memberOnly: true,
+		run: async (context, caller) => {
+			const ref = (await ownerTask(context)).ref;
+			const entry = await time.logTime(caller, { ws: context.ws, ref, onDay: TODAY(), minutes: 30 });
+			return time.deleteEntry(caller, context.ws, entry.id);
+		},
+	},
+	{
+		name: "setTimesheetCell",
+		need: "edit",
+		memberOnly: true,
+		run: async (context, caller) =>
+			time.setCell(caller, { ws: context.ws, ref: (await ownerTask(context)).ref, onDay: TODAY(), minutes: 60 }),
+	},
+	{
+		name: "getProjectTime",
+		need: "read",
+		run: ({ ws, key }, caller) => time.getProjectTime(caller, ws, key),
+	},
 ];
+
+const TODAY = () => todayInZone(APP_TIME_ZONE);
 
 type Level = "none" | "read" | "comment" | "edit" | "manage";
 const RANK: Record<Level, number> = { none: 0, read: 1, comment: 2, edit: 3, manage: 4 };

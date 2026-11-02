@@ -1,6 +1,8 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { listSchema } from "@/lib/crud/schema";
+import { addDays } from "@/lib/i18n/date-only";
 import { dateParam, enumParam, searchParam } from "@/lib/list/params";
+import { endOfWeek, startOfWeek } from "../calendar/grid";
 import { ACTIVITY_KINDS, PROJECT_STATUSES, PROJECT_VISIBILITIES, TEAM_ROLES } from "../types";
 
 /**
@@ -57,3 +59,38 @@ export const adminActivityList = listSchema({
 });
 export type AdminActivitySearch = z.output<typeof adminActivityList.search>;
 export type AdminActivityListInput = z.output<typeof adminActivityList.input>;
+
+export const TL_ADMIN_TIME_TABLE_ID = "admin-taskline-time";
+export const BILLABLE_FILTERS = ["all", "billable", "unbillable"] as const;
+
+/**
+ * /admin/taskline/timesheets (Task 53): every time entry of the team, newest day first.
+ * Filters: the member, the project (ids), billable or not, and the days.
+ */
+export const adminTimeList = listSchema({
+	sorts: ["-day", "day", "-minutes", "minutes"],
+	filters: {
+		member: searchParam(40),
+		project: searchParam(40),
+		billable: enumParam(BILLABLE_FILTERS, "all"),
+		from: dateParam(),
+		to: dateParam(),
+	},
+});
+export type AdminTimeSearch = z.output<typeof adminTimeList.search>;
+export type AdminTimeListInput = z.output<typeof adminTimeList.input>;
+
+/** /admin/taskline/timesheets/utilization: the days it covers (omitted: this week, the team's). */
+export const utilizationSearch = z.object({ from: dateParam(), to: dateParam() });
+
+/** The days a utilization page covers: the URL's, else this week in the team's calendar. */
+export const utilizationRange = (
+	search: { from?: string; to?: string },
+	options: { today: string; weekStart: number },
+): { from: string; to: string } => {
+	const from = search.from ?? startOfWeek(options.today, options.weekStart);
+	const to = search.to ?? endOfWeek(options.today, options.weekStart);
+	const [first, last] = to < from ? [to, from] : [from, to];
+	// The server covers 92 days at most (UTILIZATION_DAYS_MAX): a longer range keeps its start.
+	return { from: first, to: last > addDays(first, 91) ? addDays(first, 91) : last };
+};

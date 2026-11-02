@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
 	AlarmClockIcon,
 	CircleCheckIcon,
+	ClockIcon,
 	FolderKanbanIcon,
 	ListTodoIcon,
 	MailIcon,
@@ -19,6 +20,7 @@ import { m } from "@/paraglide/messages";
 import { TASKLINE_NAME } from "../../brand";
 import { tasklineColor } from "../../colors";
 import { ActiveSprintList } from "../../sprints/active-sprints";
+import { formatDuration, hoursOf } from "../../time/duration";
 import { PROJECT_HEALTH, PROJECT_STATUS } from "../labels";
 import { tasklineOverviewQueryOptions } from "../queries";
 import type { AdminProjectHealthRow } from "../schema";
@@ -180,6 +182,12 @@ export function TasklineOverviewPage() {
 						to="/admin/taskline/members"
 					/>
 					<StatCard label={m.taskline_admin_stat_invited()} value={data.members.invited} icon={MailIcon} />
+					<StatCard
+						label={m.taskline_admin_stat_logged_week()}
+						value={hoursOf(data.members.loggedThisWeek)}
+						format={() => formatDuration(data.members.loggedThisWeek)}
+						icon={ClockIcon}
+					/>
 					<StatCard
 						label={m.taskline_admin_stat_sandboxes()}
 						value={data.sandboxes.total}

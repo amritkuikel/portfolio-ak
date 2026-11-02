@@ -3,7 +3,7 @@ import { and, count, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-or
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { AdminOverview, AdminWeekCount } from "@/features/taskline/admin/schema";
 import { addDays, startOfDayInZone, todayInZone, weekdayOf } from "@/lib/i18n/date-only";
-import { tlInvitation, tlMember, tlProject, tlTask, tlWorkspace, user } from "@/server/db/schema";
+import { tlInvitation, tlMember, tlProject, tlTask, tlTimeEntry, tlWorkspace, user } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
 import { activeSprints } from "../home/service";
@@ -140,6 +140,11 @@ export async function getOverview({ db }: Pick<Services, "db">): Promise<AdminOv
 	const sum = (key: "open" | "overdue") => perProject.reduce((total, row) => total + row[key], 0);
 	const sandboxTotal = sandboxRows.reduce((total, row) => total + row.total, 0);
 	const [[activeMembers], [invited]] = members;
+	// Task 53: the team's time this week (the timesheets page has the rest).
+	const [logged] = await db
+		.select({ total: sql<number>`coalesce(sum(${tlTimeEntry.minutes}), 0)`.mapWith(Number) })
+		.from(tlTimeEntry)
+		.where(and(eq(tlTimeEntry.workspaceId, workspace.id), gte(tlTimeEntry.onDay, thisWeek)));
 	return {
 		stats: {
 			activeProjects: active.length,
@@ -167,7 +172,7 @@ export async function getOverview({ db }: Pick<Services, "db">): Promise<AdminOv
 			projects: sandboxProjects?.total ?? 0,
 			tasks: sandboxTasks?.total ?? 0,
 		},
-		members: { active: activeMembers?.total ?? 0, invited: invited?.total ?? 0 },
+		members: { active: activeMembers?.total ?? 0, invited: invited?.total ?? 0, loggedThisWeek: logged?.total ?? 0 },
 		today,
 		sprints: await activeSprints(db, [
 			{

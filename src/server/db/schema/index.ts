@@ -29,6 +29,7 @@ export * from "./taskline/collab"; // @taskline
 export * from "./taskline/project"; // @taskline
 export * from "./taskline/sprint"; // @taskline
 export * from "./taskline/task"; // @taskline
+export * from "./taskline/time"; // @taskline
 export * from "./taskline/views"; // @taskline
 export * from "./taskline/workspace"; // @taskline
 export * from "./test-crud";

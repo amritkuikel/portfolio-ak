@@ -155,6 +155,7 @@ export async function startSprint(services: TasklineServices, ws: string, key: s
 				startedAt: new Date(),
 				committedPoints: totals.scopePoints,
 				committedTasks: totals.scopeTasks,
+				committedMinutes: totals.scopeMinutes,
 			});
 		} catch (error) {
 			// Two starts at once: the partial unique index lets one through.
@@ -216,6 +217,7 @@ export async function completeSprint(services: TasklineServices, input: Complete
 			completedAt: new Date(),
 			completedPoints: totals.donePoints,
 			completedTasks: totals.doneTasks,
+			completedMinutes: totals.doneMinutes,
 		});
 		await recordActivity(tx, access, {
 			kind: "sprint.completed",

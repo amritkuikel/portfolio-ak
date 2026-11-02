@@ -37,9 +37,12 @@ export const tlSprint = pgTable(
 		/** The scope when it started (canceled tasks aside). */
 		committedPoints: integer(),
 		committedTasks: integer(),
+		/** Task 53: the estimates in minutes, for a project that estimates in time. */
+		committedMinutes: integer(),
 		/** What was completed when it completed. */
 		completedPoints: integer(),
 		completedTasks: integer(),
+		completedMinutes: integer(),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp({ withTimezone: true })
 			.defaultNow()
@@ -69,6 +72,9 @@ export const tlSprintSnapshot = pgTable(
 		donePoints: integer().notNull(),
 		scopeTasks: integer().notNull(),
 		doneTasks: integer().notNull(),
+		/** Task 53: the same in estimated minutes (0 before the migration). */
+		scopeMinutes: integer().notNull().default(0),
+		doneMinutes: integer().notNull().default(0),
 		takenAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [primaryKey({ columns: [table.sprintId, table.day] })],

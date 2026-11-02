@@ -11,7 +11,7 @@ import { tasklineNavQueryOptions } from "../queries";
 import type { TasklineNav } from "../types";
 import { TasklineShell } from "./taskline-shell";
 
-const NO_NAV: TasklineNav = { workspaces: [], projects: [], starred: [], recent: [] };
+const NO_NAV: TasklineNav = { workspaces: [], projects: [], starred: [], recent: [], timer: null, readAt: "" };
 
 /**
  * The signed-in app's frame as the `_shell` layout renders it: TanStack DB for the

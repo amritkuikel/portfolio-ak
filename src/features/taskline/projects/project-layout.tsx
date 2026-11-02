@@ -3,6 +3,7 @@ import { getRouteApi, Outlet } from "@tanstack/react-router";
 import {
 	ArchiveIcon,
 	CalendarDaysIcon,
+	ClockIcon,
 	ColumnsIcon,
 	LayoutDashboardIcon,
 	ListIcon,
@@ -37,7 +38,7 @@ const FACES = 5;
 
 /**
  * A project's frame (PLAN 11.5): its name, who is on it, and the view tabs (overview,
- * the backlog when sprints are on, board, list, calendar, and the lead's settings) around the view. It owns the page's <main>
+ * the backlog when sprints are on, board, list, calendar, time when tracked, and the lead's settings) around the view. It owns the page's <main>
  * and keeps the project fresh while it's open (rev polling, decision 0209).
  */
 export function ProjectLayout() {
@@ -149,6 +150,16 @@ export function ProjectLayout() {
 							<CalendarDaysIcon aria-hidden />
 							{m.taskline_view_calendar()}
 						</PageTab>
+						{project.settings.time ? (
+							<PageTab
+								{...tasklineLinks.time(ws, key)}
+								activeOptions={{ includeSearch: false }}
+								data-testid="view-time"
+							>
+								<ClockIcon aria-hidden />
+								{m.taskline_view_time()}
+							</PageTab>
+						) : null}
 						{project.can.manage ? (
 							<PageTab to="/app/taskline/$ws/p/$key/settings" params={{ ws, key }} data-testid="view-settings">
 								<SettingsIcon aria-hidden />

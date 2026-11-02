@@ -29,12 +29,13 @@ export const completedError = () =>
 /** The average completed work of the last three completed sprints (oldest first in `rows`). */
 export function velocityOf(rows: ReadonlyArray<VelocityRow>): Velocity {
 	const last = rows.slice(-VELOCITY_SPRINTS);
-	if (last.length === 0) return { points: null, tasks: null, sprints: 0 };
+	if (last.length === 0) return { points: null, tasks: null, minutes: null, sprints: 0 };
 	const average = (pick: (row: VelocityRow) => number) =>
 		Math.round((last.reduce((total, row) => total + pick(row), 0) / last.length) * 10) / 10;
 	return {
 		points: average((row) => row.completedPoints),
 		tasks: average((row) => row.completedTasks),
+		minutes: Math.round(average((row) => row.completedMinutes)),
 		sprints: last.length,
 	};
 }
@@ -71,11 +72,11 @@ export const sprintDto = (row: TlSprintRow): SprintSummary => ({
 	committed:
 		row.committedPoints === null || row.committedTasks === null
 			? null
-			: { points: row.committedPoints, tasks: row.committedTasks },
+			: { points: row.committedPoints, tasks: row.committedTasks, minutes: row.committedMinutes ?? 0 },
 	completed:
 		row.completedPoints === null || row.completedTasks === null
 			? null
-			: { points: row.completedPoints, tasks: row.completedTasks },
+			: { points: row.completedPoints, tasks: row.completedTasks, minutes: row.completedMinutes ?? 0 },
 });
 
 /** A project's sprints in some states: the active first, then by start (and when they were made). */
@@ -146,7 +147,14 @@ export async function deleteSprint(tx: Tx, sprintId: string): Promise<void> {
 	await tx.delete(tlSprint).where(eq(tlSprint.id, sprintId));
 }
 
-const ZERO: SprintTotals = { scopePoints: 0, donePoints: 0, scopeTasks: 0, doneTasks: 0 };
+const ZERO: SprintTotals = {
+	scopePoints: 0,
+	donePoints: 0,
+	scopeTasks: 0,
+	doneTasks: 0,
+	scopeMinutes: 0,
+	doneMinutes: 0,
+};
 
 /**
  * Each sprint's work now: its tasks outside the trash, canceled ones aside (scope), and
@@ -164,6 +172,8 @@ export async function totalsOf(db: Db, sprintIds: ReadonlyArray<string>): Promis
 			donePoints: sql<number>`coalesce(sum(${tlTask.points}) filter (where ${done}), 0)`.mapWith(Number),
 			scopeTasks: sql<number>`count(*) filter (where ${inScope})`.mapWith(Number),
 			doneTasks: sql<number>`count(*) filter (where ${done})`.mapWith(Number),
+			scopeMinutes: sql<number>`coalesce(sum(${tlTask.estimateMinutes}) filter (where ${inScope}), 0)`.mapWith(Number),
+			doneMinutes: sql<number>`coalesce(sum(${tlTask.estimateMinutes}) filter (where ${done}), 0)`.mapWith(Number),
 		})
 		.from(tlTask)
 		.innerJoin(tlStatus, eq(tlStatus.id, tlTask.statusId))
@@ -201,12 +211,14 @@ export async function snapshotsOf(db: Db, sprintId: string): Promise<SprintDay[]
 		.from(tlSprintSnapshot)
 		.where(eq(tlSprintSnapshot.sprintId, sprintId))
 		.orderBy(asc(tlSprintSnapshot.day));
-	return rows.map(({ day, scopePoints, donePoints, scopeTasks, doneTasks }) => ({
+	return rows.map(({ day, scopePoints, donePoints, scopeTasks, doneTasks, scopeMinutes, doneMinutes }) => ({
 		day,
 		scopePoints,
 		donePoints,
 		scopeTasks,
 		doneTasks,
+		scopeMinutes,
+		doneMinutes,
 	}));
 }
 
@@ -225,6 +237,8 @@ export async function velocityRows(db: Db, projectId: string, limit: number): Pr
 		completedPoints: row.completedPoints ?? 0,
 		committedTasks: row.committedTasks ?? 0,
 		completedTasks: row.completedTasks ?? 0,
+		committedMinutes: row.committedMinutes ?? 0,
+		completedMinutes: row.completedMinutes ?? 0,
 	}));
 }
 

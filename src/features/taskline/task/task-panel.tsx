@@ -34,8 +34,12 @@ import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { tasklineLinks } from "../links";
 import { tasklineKeys, tasklineMutations } from "../queries";
 import { CHECKLIST_MAX, type PatchTaskInput, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from "../schema";
+import { durationInput, formatDuration, parseDuration } from "../time/duration";
+import { TaskTime } from "../time/task-time";
+import { TimerButton } from "../time/timer";
 import {
 	type ChecklistItem,
+	ESTIMATE_MAX_MINUTES,
 	isClosedCategory,
 	POINTS_MAX,
 	type ProjectTasks,
@@ -147,7 +151,10 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 						</Link>
 					</Button>
 				) : null}
-				<div className="ms-auto flex gap-2">
+				<div className="ms-auto flex flex-wrap justify-end gap-2">
+					{task.time.enabled && task.time.canLog && task.deletedAt === null ? (
+						<TimerButton ws={ws} taskRef={task.ref} userId={userId} />
+					) : null}
 					{project.members.some((member) => member.userId === userId && !member.deactivated) ? (
 						<WatchButton task={task} userId={userId} ws={ws} />
 					) : null}
@@ -199,7 +206,8 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 						</div>
 					)}
 					<Tabs defaultValue="work">
-						<TabsList>
+						{/* Four tabs with their counts are wider than a phone: they wrap. */}
+						<TabsList className="max-w-full flex-wrap justify-start group-data-[orientation=horizontal]/tabs:h-auto">
 							<TabsTrigger value="work">{m.taskline_tab_work()}</TabsTrigger>
 							<TabsTrigger value="comments" data-testid="task-tab-comments">
 								{m.taskline_tab_comments()}
@@ -207,6 +215,16 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 									<span className="text-muted-foreground tabular-nums">{formatNumber(task.comments.length)}</span>
 								) : null}
 							</TabsTrigger>
+							{task.time.enabled ? (
+								<TabsTrigger value="time" data-testid="task-tab-time">
+									{m.taskline_time_title()}
+									{task.time.loggedMinutes > 0 ? (
+										<span className="text-muted-foreground tabular-nums">
+											{formatDuration(task.time.loggedMinutes)}
+										</span>
+									) : null}
+								</TabsTrigger>
+							) : null}
 							<TabsTrigger value="activity" data-testid="task-tab-activity">
 								{m.taskline_tab_activity()}
 							</TabsTrigger>
@@ -226,6 +244,11 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 								heading={Heading}
 							/>
 						</TabsContent>
+						{task.time.enabled ? (
+							<TabsContent value="time" className="pt-2">
+								<TaskTime task={task} userId={userId} ws={ws} heading={Heading} />
+							</TabsContent>
+						) : null}
 						<TabsContent value="activity" className="pt-2" data-testid="task-activity">
 							<Timeline now={now} items={activityItems(task.activity, project)} />
 						</TabsContent>
@@ -430,30 +453,40 @@ function TaskFields({
 							))}
 						</NativeSelect>
 					</div>
-					<div className={row}>
-						<label htmlFor={`${id}-points`} className={label}>
-							{m.taskline_field_points()}
-						</label>
-						<Input
-							id={`${id}-points`}
-							type="number"
-							inputMode="numeric"
-							min={0}
-							max={POINTS_MAX}
-							step={1}
-							defaultValue={task.points ?? ""}
-							key={`points:${task.points ?? ""}`}
-							disabled={!editable}
-							onBlur={(event) => {
-								const raw = event.target.value.trim();
-								const points = raw === "" ? null : Number(raw);
-								if (points !== null && (!Number.isInteger(points) || points < 0 || points > POINTS_MAX)) return;
-								if (points !== task.points) writes.patch({ points });
-							}}
-							data-testid="task-points"
-						/>
-					</div>
+					{project.project.settings.estimation === "points" ? (
+						<div className={row}>
+							<label htmlFor={`${id}-points`} className={label}>
+								{m.taskline_field_points()}
+							</label>
+							<Input
+								id={`${id}-points`}
+								type="number"
+								inputMode="numeric"
+								min={0}
+								max={POINTS_MAX}
+								step={1}
+								defaultValue={task.points ?? ""}
+								key={`points:${task.points ?? ""}`}
+								disabled={!editable}
+								onBlur={(event) => {
+									const raw = event.target.value.trim();
+									const points = raw === "" ? null : Number(raw);
+									if (points !== null && (!Number.isInteger(points) || points < 0 || points > POINTS_MAX)) return;
+									if (points !== task.points) writes.patch({ points });
+								}}
+								data-testid="task-points"
+							/>
+						</div>
+					) : null}
 				</>
+			) : null}
+			{project.project.settings.time || project.project.settings.estimation === "time" ? (
+				<EstimateField
+					task={task}
+					editable={editable}
+					id={`${id}-estimate`}
+					onChange={(estimateMinutes) => writes.patch({ estimateMinutes })}
+				/>
 			) : null}
 			<div className={row}>
 				<span className={label}>{m.taskline_field_labels()}</span>
@@ -510,6 +543,58 @@ function TaskFields({
 				<p className="text-caption text-muted-foreground">{m.taskline_reported_by({ name: reporter.name })}</p>
 			) : null}
 		</aside>
+	);
+}
+
+/** The estimate as a duration ("4h", "1h 30m", "1:30"), saved when the field is left; empty clears it. */
+function EstimateField({
+	task,
+	editable,
+	id,
+	onChange,
+}: {
+	task: TaskDetail;
+	editable: boolean;
+	id: string;
+	onChange: (minutes: number | null) => void;
+}) {
+	const [invalid, setInvalid] = useState(false);
+	const commit = (raw: string) => {
+		const text = raw.trim();
+		const minutes = text === "" ? null : parseDuration(text, ESTIMATE_MAX_MINUTES);
+		setInvalid(text !== "" && minutes === null);
+		if (text !== "" && minutes === null) return;
+		if (minutes !== task.estimateMinutes) onChange(minutes);
+	};
+	return (
+		<div className="flex flex-col gap-1.5">
+			<label htmlFor={id} className="text-caption font-medium text-muted-foreground">
+				{m.taskline_field_estimate()}
+			</label>
+			<Input
+				id={id}
+				key={`estimate:${task.estimateMinutes ?? ""}`}
+				defaultValue={task.estimateMinutes === null ? "" : durationInput(task.estimateMinutes)}
+				placeholder={m.taskline_time_duration_placeholder()}
+				autoComplete="off"
+				disabled={!editable}
+				aria-invalid={invalid || undefined}
+				aria-describedby={invalid ? `${id}-error` : undefined}
+				onBlur={(event) => commit(event.target.value)}
+				onKeyDown={(event) => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						commit(event.currentTarget.value);
+					}
+				}}
+				data-testid="task-estimate"
+			/>
+			{invalid ? (
+				<p id={`${id}-error`} className="text-caption text-danger">
+					{m.taskline_time_error_duration()}
+				</p>
+			) : null}
+		</div>
 	);
 }
 

@@ -30,13 +30,25 @@ export function notificationSentence(kind: NotificationKind, data: NotificationD
 			return data.sprintEvent === "completed"
 				? m.taskline_notify_sprint_completed({ actor, sprint: data.sprint ?? "", project: data.project ?? "" }, t)
 				: m.taskline_notify_sprint_started({ actor, sprint: data.sprint ?? "", project: data.project ?? "" }, t);
+		case "timer":
+			return m.taskline_notify_timer({ ref: data.ref ?? data.title ?? "", project: data.project ?? "" }, t);
 		default:
 			return m.taskline_notify_other({ project: data.project ?? "" }, t);
 	}
 }
 
-/** The kinds sent so far (Task 50's, and Task 52's sprints); the rest come with their modules and aren't offered yet. */
-export const SENT_KINDS = ["assigned", "mentioned", "comment", "status", "due", "overdue", "added", "sprint"] as const;
+/** The kinds sent so far (Task 50's, Task 52's sprints, Task 53's timer); the rest come with their modules and aren't offered yet. */
+export const SENT_KINDS = [
+	"assigned",
+	"mentioned",
+	"comment",
+	"status",
+	"due",
+	"overdue",
+	"added",
+	"sprint",
+	"timer",
+] as const;
 export type SentKind = (typeof SENT_KINDS)[number];
 
 /** The kinds as their settings' labels (the "My settings" page and the admin's defaults). */
@@ -49,6 +61,7 @@ export const NOTIFY_KIND_LABELS: Record<SentKind, () => string> = {
 	overdue: () => m.taskline_notify_kind_overdue(),
 	added: () => m.taskline_notify_kind_added(),
 	sprint: () => m.taskline_notify_kind_sprint(),
+	timer: () => m.taskline_notify_kind_timer(),
 };
 
 export const MODE_LABELS: Record<NotifyMode, () => string> = {
