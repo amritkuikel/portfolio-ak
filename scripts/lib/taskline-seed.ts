@@ -135,6 +135,41 @@ const PROJECTS = [
 	},
 ] as const;
 
+/**
+ * Task 54: WEB's milestones (a beta next week, the launch in three weeks) with the first
+ * and second ten tasks, and a few dependencies between them (the navigation blocks the
+ * contrast check, the copy the launch date, the contact form the phone tests, the
+ * redirects the old site's archive).
+ */
+async function seedTimeline(query: DemoQuery, projectId: string, tasks: ReadonlyArray<SeededTask>) {
+	const positions = generateKeysBetween(null, null, 2);
+	const milestones: string[] = [];
+	for (const [index, [name, due]] of [
+		["Beta", 7],
+		["Launch", 21],
+	].entries()) {
+		const milestone = await query(
+			`insert into "tl_milestone" ("project_id", "name", "due_on", "position") values ($1, $2, $3, $4) returning "id"`,
+			[projectId, name, day(Number(due)), positions[index]],
+		);
+		milestones.push(firstId(milestone.rows, `milestone ${name}`));
+	}
+	for (const [index, task] of tasks.entries()) {
+		await query(`update "tl_task" set "milestone_id" = $2 where "id" = $1`, [task.id, milestones[index < 10 ? 0 : 1]]);
+	}
+	for (const [blocker, blocked] of [
+		[1, 7],
+		[0, 3],
+		[2, 12],
+		[9, 18],
+	]) {
+		await query(`insert into "tl_task_dependency" ("blocker_id", "blocked_id") values ($1, $2)`, [
+			tasks[blocker ?? 0]?.id,
+			tasks[blocked ?? 0]?.id,
+		]);
+	}
+}
+
 /** A calendar day `offset` days from today (UTC; demo data needs no time zone). */
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -327,8 +362,8 @@ export async function seedTaskline(
 			const closed = status >= 3;
 			const number = index + 1;
 			const task = await query(
-				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at", "rank", "estimate_minutes")
-				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning "id"`,
+				`insert into "tl_task" ("workspace_id", "project_id", "number", "type", "title", "status_id", "priority", "assignee_id", "reporter_id", "position", "due_on", "completed_at", "rank", "estimate_minutes", "start_on")
+				 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) returning "id"`,
 				[
 					workspaceId,
 					projectId,
@@ -345,6 +380,8 @@ export async function seedTaskline(
 					ranks[index] ?? "a0",
 					// Task 53: most tasks are estimated, in whole hours.
 					index % 4 === 3 ? null : ((index % 5) + 1) * 60,
+					// Task 54: a dated task starts one to four days before it's due.
+					index % 3 === 0 ? null : day((index % 11) - 4 - (index % 4)),
 				],
 			);
 			const taskId = firstId(task.rows, `task ${project.key}-${number}`);
@@ -371,6 +408,7 @@ export async function seedTaskline(
 		}
 		await query(`update "tl_project" set "task_seq" = $2 where "id" = $1`, [projectId, project.tasks.length]);
 		if (project.key === "APP") await seedSprints(query, projectId, made);
+		if (project.key === "WEB") await seedTimeline(query, projectId, made);
 		await query(
 			`insert into "tl_activity" ("workspace_id", "project_id", "actor_id", "kind", "data") values ($1, $2, $3, 'project.created', $4)`,
 			[workspaceId, projectId, leadId, JSON.stringify({ key: project.key, name: project.name })],

@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, waitFor } from "storybook/test";
+import { expect, fn, waitFor, within } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { patchTasklineTask } from "../../../../.storybook/mocks/functions/taskline/tasks";
 import { logTasklineTime } from "../../../../.storybook/mocks/functions/taskline/time";
+import { removeTasklineDependency } from "../../../../.storybook/mocks/functions/taskline/timeline";
 import { sampleProjectTasks, sampleTaskDetail, sampleTasklineMember } from "../../../../.storybook/mocks/taskline";
 import { formatDuration } from "../time/duration";
 import { TaskPanel } from "./task-panel";
@@ -81,6 +82,23 @@ export const Time: Story = {
 		await waitFor(() =>
 			expect(logTasklineTime).toHaveBeenCalledWith({
 				data: expect.objectContaining({ ws: "team", ref: "WEB-4", minutes: 45 }),
+			}),
+		);
+	},
+};
+
+/** Its dependencies (Task 54): blocked by an open task, the project's rule said, one in another project; a removal. */
+export const Dependencies: Story = {
+	play: async ({ canvas, userEvent }) => {
+		const section = within(canvas.getByTestId("task-dependencies"));
+		await expect(section.getByTestId("task-blocked_by")).toHaveTextContent("WEB-2");
+		await expect(section.getByTestId("task-blocks")).toHaveTextContent("Operations");
+		await expect(section.getByTestId("task-blocked-rule")).toBeVisible();
+		await expect(canvas.getByTestId("task-milestone")).toBeVisible();
+		await userEvent.click(section.getByRole("button", { name: m.taskline_dependencies_remove({ task: "OPS-3" }) }));
+		await waitFor(() =>
+			expect(removeTasklineDependency).toHaveBeenCalledWith({
+				data: { ws: "team", ref: "WEB-4", relation: "blocks", other: "OPS-3" },
 			}),
 		);
 	},

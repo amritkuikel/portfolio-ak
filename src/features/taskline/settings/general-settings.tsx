@@ -55,6 +55,8 @@ const projectFormSchema = z.object({
 	estimation: z.enum(["points", "time"]),
 	/** Task 53: the Time tab, a task's time and timer. */
 	time: z.boolean(),
+	/** Task 54: a blocked task can't be completed. */
+	blockCompletionWhileBlocked: z.boolean(),
 });
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
@@ -69,6 +71,7 @@ const toValues = (project: ProjectDetail): ProjectFormValues => ({
 	sprints: project.settings.sprints,
 	estimation: project.settings.estimation,
 	time: project.settings.time,
+	blockCompletionWhileBlocked: project.settings.blockCompletionWhileBlocked,
 });
 
 /** General: the project form (saved against its version), its state and health, and the archive. */
@@ -109,6 +112,7 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 						sprints: value.sprints,
 						estimation: value.estimation,
 						time: value.time,
+						blockCompletionWhileBlocked: value.blockCompletionWhileBlocked,
 					},
 				});
 				toast.success(m.crud_toast_saved());
@@ -203,6 +207,19 @@ function ProjectForm({ project, userId, ws }: { project: ProjectDetail; userId: 
 							<field.SwitchField
 								label={m.taskline_settings_time_on()}
 								description={m.taskline_settings_time_on_hint()}
+							/>
+						)}
+					</form.AppField>
+				</FormSection>
+				<FormSection
+					title={m.taskline_settings_dependencies()}
+					description={m.taskline_settings_dependencies_description()}
+				>
+					<form.AppField name="blockCompletionWhileBlocked">
+						{(field) => (
+							<field.SwitchField
+								label={m.taskline_settings_block_completion()}
+								description={m.taskline_settings_block_completion_hint()}
 							/>
 						)}
 					</form.AppField>

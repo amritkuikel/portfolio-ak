@@ -23,7 +23,7 @@ import { projectTasksQueryOptions, tasklineMutations, taskPageQueryOptions, work
 import { useSavedViews } from "../saved-views";
 import type { BulkTasksInput } from "../schema";
 import { LIST_GROUPS, type ListGroup, TASKS_TABLE_ID } from "../search";
-import { DueDate, LabelChip, StatusName, TaskTypeIcon } from "../task/task-bits";
+import { BlockedBadge, DueDate, LabelChip, StatusName, TaskTypeIcon } from "../task/task-bits";
 import { TaskSheetLink } from "../task/task-link";
 import { isClosedCategory, type ProjectTasks, TASK_PRIORITIES, type TaskPriority, type TaskSummary } from "../types";
 
@@ -73,6 +73,7 @@ function taskColumns(project: ProjectTasks, ws: string, edits: Edits): DataTable
 					>
 						{task.title}
 					</TaskSheetLink>
+					{task.blocked && task.completedAt === null ? <BlockedBadge /> : null}
 				</span>
 			),
 			csv: (task) => task.title,

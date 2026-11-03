@@ -194,6 +194,27 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		path: "/app/taskline/team/p/WEB/calendar?mode=week&by=start",
 		label: "a week by start date",
 	},
+	// Timeline, milestones and dependencies (Task 54): the demo team's WEB has milestones and dependencies.
+	{ route: "/app/taskline/$ws/p/$key/timeline", as: "admin", path: "/app/taskline/team/p/WEB/timeline" },
+	{
+		route: "/app/taskline/$ws/p/$key/timeline",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/timeline?zoom=day&group=milestone",
+		label: "days by milestone",
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/timeline",
+		as: "admin",
+		path: "/app/taskline/team/p/APP/timeline?zoom=month&group=assignee",
+		label: "months by assignee",
+	},
+	{ route: "/app/taskline/$ws/p/$key/milestones", as: "admin", path: "/app/taskline/team/p/WEB/milestones" },
+	{
+		route: "/app/taskline/$ws/p/$key/milestones",
+		as: "admin",
+		path: "/app/taskline/team/p/APP/milestones",
+		label: "none yet",
+	},
 	// Sprints and backlog (Task 52): the demo team's APP plans in sprints.
 	{ route: "/app/taskline/$ws/p/$key/backlog", as: "admin", path: "/app/taskline/team/p/APP/backlog" },
 	{

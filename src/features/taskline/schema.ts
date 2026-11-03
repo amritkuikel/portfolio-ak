@@ -6,6 +6,7 @@ import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
 	DAY_MINUTES,
+	DEPENDENCY_RELATIONS,
 	ESTIMATE_MAX_MINUTES,
 	NOTIFY_KINDS,
 	NOTIFY_MODES,
@@ -199,6 +200,8 @@ export const createTaskInput = z.strictObject({
 	points: points.nullable().optional(),
 	/** Task 53: the estimate in minutes. */
 	estimateMinutes: estimate.nullable().optional(),
+	/** Task 54: the milestone it leads to. */
+	milestoneId: id.nullable().optional(),
 });
 
 /** The title and description: saved with the version they started from. */
@@ -224,6 +227,7 @@ export const patchTaskInput = z.strictObject({
 	sprintId: id.nullable().optional(),
 	points: points.nullable().optional(),
 	estimateMinutes: estimate.nullable().optional(),
+	milestoneId: id.nullable().optional(),
 });
 
 /** A drop on the board: a status and a position in it (an order key the browser computed). */
@@ -491,6 +495,44 @@ export const timesheetCellInput = z.strictObject({
 export type LogTimeInput = z.infer<typeof logTimeInput>;
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntryInput>;
 export type TimesheetCellInput = z.infer<typeof timesheetCellInput>;
+
+// ---- Timeline, milestones and dependencies (Task 54) ----------------------------------------
+
+export const MILESTONE_NAME_MAX = 80;
+export const MILESTONE_DESCRIPTION_MAX = 2000;
+
+export const createMilestoneInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	id: id.optional(),
+	name: required({ max: MILESTONE_NAME_MAX }),
+	description: optionalText({ max: MILESTONE_DESCRIPTION_MAX }).optional(),
+	dueOn: isoDate().nullable().optional(),
+});
+/** A milestone's fields, its place (an order key the browser computed), or whether it's complete. */
+export const updateMilestoneInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	id,
+	name: required({ max: MILESTONE_NAME_MAX }).optional(),
+	description: optionalText({ max: MILESTONE_DESCRIPTION_MAX }).optional(),
+	dueOn: isoDate().nullable().optional(),
+	position: position.optional(),
+	completed: z.boolean().optional(),
+});
+export const milestoneInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+
+/** A dependency seen from the task `ref`: `other` blocks it (`blocked_by`) or it blocks `other` (`blocks`). */
+export const dependencyInput = z.strictObject({
+	ws: ws(),
+	ref: taskRef(),
+	relation: z.enum(DEPENDENCY_RELATIONS),
+	other: taskRef(),
+});
+
+export type CreateMilestoneInput = z.infer<typeof createMilestoneInput>;
+export type UpdateMilestoneInput = z.infer<typeof updateMilestoneInput>;
+export type DependencyInput = z.infer<typeof dependencyInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

@@ -4,7 +4,7 @@ import { type FilterOption, SearchFilter, SelectFilter } from "@/components/filt
 import { choiceChip, defineFilters, textChip } from "@/lib/crud/filters";
 import { m } from "@/paraglide/messages";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
-import { DUE_FILTERS, type DueFilter, type PRIORITY_FILTERS, type TaskFilters } from "../search";
+import { type BLOCKED_FILTERS, DUE_FILTERS, type DueFilter, type PRIORITY_FILTERS, type TaskFilters } from "../search";
 import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type TaskType } from "../types";
 
 /**
@@ -13,7 +13,7 @@ import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type
  * filter that's applied. `extra` is the view's own control (swimlanes, grouping).
  */
 
-type Context = Pick<ProjectTasks, "statuses" | "members" | "labels" | "sprints"> & {
+type Context = Pick<ProjectTasks, "statuses" | "members" | "labels" | "sprints" | "milestones"> & {
 	project: Pick<ProjectTasks["project"], "settings">;
 };
 
@@ -29,6 +29,17 @@ const DUE_LABELS: Record<Exclude<DueFilter, "all">, () => string> = {
 	overdue: m.taskline_filter_due_overdue,
 	week: m.taskline_filter_due_week,
 	none: m.taskline_filter_due_none,
+};
+
+/** Task 54: the milestone filter's value as words. */
+const milestoneText = (value: string, context: Context) =>
+	value === "none"
+		? m.taskline_milestone_none()
+		: (context.milestones.find((milestone) => milestone.id === value)?.name ?? m.taskline_activity_a_milestone());
+
+const BLOCKED_LABELS: Record<Exclude<(typeof BLOCKED_FILTERS)[number], "all">, () => string> = {
+	yes: m.taskline_filter_blocked_yes,
+	no: m.taskline_filter_blocked_no,
 };
 
 const assigneeText = (value: string, context: Context) =>
@@ -57,6 +68,10 @@ const taskFilterChips = defineFilters<TaskFilters, Context>([
 	choiceChip("type", m.taskline_field_type, (value: TaskType) => TYPE_LABELS[value]()),
 	choiceChip("due", m.taskline_field_due, (value: Exclude<DueFilter, "all">) => DUE_LABELS[value]()),
 	choiceChip("sprint", m.taskline_field_sprint, sprintText),
+	choiceChip("milestone", m.taskline_field_milestone, milestoneText),
+	choiceChip("blocked", m.taskline_filter_blocked, (value: Exclude<(typeof BLOCKED_FILTERS)[number], "all">) =>
+		BLOCKED_LABELS[value](),
+	),
 ]);
 
 export function TaskFilterBar({
@@ -150,6 +165,25 @@ export function TaskFilterBar({
 							]}
 						/>
 					) : null}
+					{/* Task 54: shown while the project has milestones, or a link still sets it. */}
+					{context.milestones.length > 0 || search.milestone !== "all" ? (
+						<SelectFilter
+							name="milestone"
+							label={m.taskline_field_milestone()}
+							value={search.milestone}
+							options={[
+								all,
+								{ value: "none", label: m.taskline_milestone_none() },
+								...context.milestones.map((milestone) => ({ value: milestone.id, label: milestone.name })),
+							]}
+						/>
+					) : null}
+					<SelectFilter
+						name="blocked"
+						label={m.taskline_filter_blocked()}
+						value={search.blocked}
+						options={[all, { value: "yes", label: BLOCKED_LABELS.yes() }, { value: "no", label: BLOCKED_LABELS.no() }]}
+					/>
 					{extra}
 				</FilterBar>
 				{tools ? <div className="ms-auto flex items-center gap-2">{tools}</div> : null}

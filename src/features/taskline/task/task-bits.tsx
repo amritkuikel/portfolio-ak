@@ -1,4 +1,4 @@
-import { CalendarIcon } from "lucide-react";
+import { BanIcon, CalendarIcon } from "lucide-react";
 import { UserAvatar } from "@/components/data-display/user-avatar";
 import { isoDateInstant } from "@/lib/i18n/date-only";
 import { formatDate } from "@/lib/i18n/intl";
@@ -99,6 +99,22 @@ export function Assignee({ member, size = "sm" }: { member: TasklineMember | und
 		<span className="inline-flex shrink-0" title={member.name}>
 			<UserAvatar name={member.name} size={size} />
 			<span className="sr-only">{m.taskline_assigned_to({ name: member.name })}</span>
+		</span>
+	);
+}
+
+/** Task 54: an open task blocks this one (in any project of the workspace). */
+export function BlockedBadge({ className }: { className?: string }) {
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center gap-1 rounded-full bg-warning-subtle px-1.5 text-caption text-warning",
+				className,
+			)}
+			data-testid="taskline-blocked"
+		>
+			<BanIcon className="size-3" aria-hidden />
+			{m.taskline_blocked()}
 		</span>
 	);
 }

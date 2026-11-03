@@ -27,6 +27,8 @@ export type ActivityContext = {
 	statuses: ReadonlyArray<TasklineStatus>;
 	/** Task 52: the open sprints, for "planned it in Sprint 2" (a completed one reads as "a sprint"). */
 	sprints?: ReadonlyArray<{ id: string; name: string }>;
+	/** Task 54: the milestones, for "set its milestone to Launch" (a deleted one reads as "a milestone"). */
+	milestones?: ReadonlyArray<{ id: string; name: string }>;
 };
 
 const text = (value: ActivityValue | undefined) => (typeof value === "string" ? value : "");
@@ -83,6 +85,14 @@ function fieldPhrase(actor: string, data: ActivityData, context: ActivityContext
 			return to === null || to === undefined
 				? m.taskline_activity_points_removed({ actor })
 				: m.taskline_activity_points({ actor, points: formatNumber(Number(to) || 0) });
+		case "milestoneId":
+			return to
+				? m.taskline_activity_milestone({
+						actor,
+						milestone:
+							context.milestones?.find((milestone) => milestone.id === to)?.name ?? m.taskline_activity_a_milestone(),
+					})
+				: m.taskline_activity_milestone_removed({ actor });
 		case "estimateMinutes":
 			return to === null || to === undefined
 				? m.taskline_activity_estimate_removed({ actor })
@@ -165,6 +175,24 @@ export function activitySentence(
 			return data.auto === true
 				? m.taskline_activity_time_stopped({ duration: formatDuration(Number(data.minutes) || 0) })
 				: m.taskline_activity_time({ actor, duration: formatDuration(Number(data.minutes) || 0) });
+		case "milestone.created":
+			return m.taskline_activity_milestone_created({ actor, milestone: text(data.name) });
+		case "milestone.updated":
+			return m.taskline_activity_milestone_updated({ actor, milestone: text(data.name) });
+		case "milestone.deleted":
+			return m.taskline_activity_milestone_deleted({ actor, milestone: text(data.name) });
+		case "milestone.completed":
+			return m.taskline_activity_milestone_completed({ actor, milestone: text(data.name) });
+		case "milestone.reopened":
+			return m.taskline_activity_milestone_reopened({ actor, milestone: text(data.name) });
+		case "dependency.added":
+			return data.relation === "blocks"
+				? m.taskline_activity_blocks({ actor, task: text(data.ref) })
+				: m.taskline_activity_blocked_by({ actor, task: text(data.ref) });
+		case "dependency.removed":
+			return data.relation === "blocks"
+				? m.taskline_activity_blocks_removed({ actor, task: text(data.ref) })
+				: m.taskline_activity_blocked_by_removed({ actor, task: text(data.ref) });
 		default:
 			return m.taskline_activity_changed({ actor });
 	}

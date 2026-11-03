@@ -27,6 +27,7 @@ import {
 	tlMember,
 	tlStatus,
 	tlTask,
+	tlTaskDependency,
 	tlTaskLabel,
 	tlTaskWatcher,
 } from "@/server/db/schema";
@@ -37,7 +38,7 @@ import { byPosition } from "../workflow/repository";
 
 export const taskRef = (key: string, number: number) => `${key}-${number}`;
 
-export function taskSummary(row: TlTaskRow, key: string, labelIds: string[]): TaskSummary {
+export function taskSummary(row: TlTaskRow, key: string, labelIds: string[], blocked: boolean): TaskSummary {
 	return {
 		id: row.id,
 		ref: taskRef(key, row.number),
@@ -59,6 +60,8 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[]): Ta
 		points: row.points,
 		rank: row.rank,
 		estimateMinutes: row.estimateMinutes,
+		milestoneId: row.milestoneId,
+		blocked,
 	};
 }
 
@@ -100,12 +103,26 @@ export async function labelIdsOf(db: Db, taskIds: string[]): Promise<Map<string,
 	return map;
 }
 
+/** An open task blocks: outside the trash and not closed (completed or canceled), in any project (Task 54). */
+const OPEN_BLOCKER = sql`exists (select 1 from ${tlTaskDependency} join ${tlTask} as blocker on blocker.id = ${tlTaskDependency.blockerId} where ${tlTaskDependency.blockedId} = ${tlTask.id} and blocker.deleted_at is null and blocker.completed_at is null)`;
+
+/** Which of these tasks an open task blocks. */
+export async function openBlockedIds(db: Db, taskIds: ReadonlyArray<string>): Promise<Set<string>> {
+	if (taskIds.length === 0) return new Set();
+	const rows = await db
+		.selectDistinct({ id: tlTaskDependency.blockedId })
+		.from(tlTaskDependency)
+		.innerJoin(tlTask, eq(tlTask.id, tlTaskDependency.blockerId))
+		.where(
+			and(inArray(tlTaskDependency.blockedId, [...taskIds]), isNull(tlTask.deletedAt), isNull(tlTask.completedAt)),
+		);
+	return new Set(rows.map((row) => row.id));
+}
+
 export async function summaries(db: Db, rows: TlTaskRow[], key: string): Promise<TaskSummary[]> {
-	const labels = await labelIdsOf(
-		db,
-		rows.map((row) => row.id),
-	);
-	return rows.map((row) => taskSummary(row, key, labels.get(row.id) ?? []));
+	const ids = rows.map((row) => row.id);
+	const [labels, blocked] = await Promise.all([labelIdsOf(db, ids), openBlockedIds(db, ids)]);
+	return rows.map((row) => taskSummary(row, key, labels.get(row.id) ?? [], blocked.has(row.id)));
 }
 
 /** A project's tasks outside the trash, in board order (status, then position). */
@@ -230,6 +247,7 @@ export type TaskPatch = Partial<
 		| "sprintId"
 		| "points"
 		| "estimateMinutes"
+		| "milestoneId"
 		| "rank"
 	>
 >;
@@ -371,6 +389,9 @@ export type TaskListFilters = {
 	due?: "overdue" | "week" | "none";
 	/** A sprint's id, `none` (the backlog), or `nobody` (`active` when there's none: matches nothing). */
 	sprint?: string;
+	/** Task 54: a milestone's id or `none`; blocked by an open task, or not. */
+	milestone?: string;
+	blocked?: boolean;
 	today: string;
 	weekEnd: string;
 };
@@ -414,6 +435,12 @@ export function listWhere(projectId: string, filters: TaskListFilters): SQL | un
 				: filters.sprint
 					? eq(tlTask.sprintId, filters.sprint)
 					: undefined,
+		filters.milestone === "none"
+			? isNull(tlTask.milestoneId)
+			: filters.milestone
+				? eq(tlTask.milestoneId, filters.milestone)
+				: undefined,
+		filters.blocked === undefined ? undefined : filters.blocked ? OPEN_BLOCKER : sql`not ${OPEN_BLOCKER}`,
 	);
 }
 

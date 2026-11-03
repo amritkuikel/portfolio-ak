@@ -31,6 +31,7 @@ const idOr = <const T extends readonly [string, ...string[]]>(...words: T) =>
 export const DUE_FILTERS = ["all", "overdue", "week", "none"] as const;
 export type DueFilter = (typeof DUE_FILTERS)[number];
 export const PRIORITY_FILTERS = ["all", "0", "1", "2", "3", "4"] as const;
+export const BLOCKED_FILTERS = ["all", "yes", "no"] as const;
 
 /**
  * The project's filters (the project layout's FilterBar): the board applies them to
@@ -45,6 +46,9 @@ export const taskFilterParams = {
 	due: enumParam(DUE_FILTERS, "all"),
 	/** Task 52: the active sprint, the backlog (in no sprint), or one sprint. */
 	sprint: idOr("all", "active", "none"),
+	/** Task 54: one milestone, or none; blocked by an open task, or not. */
+	milestone: idOr("all", "none"),
+	blocked: enumParam(BLOCKED_FILTERS, "all"),
 };
 
 export type TaskFilters = { q: string } & {
@@ -151,3 +155,23 @@ export const timesheetSearch = z.object({ week: dayParam });
 /** A project's time: estimate against actual by task or by member, and the open task. */
 export const PROJECT_TIME_VIEWS = ["task", "member"] as const;
 export const projectTimeSearch = z.object({ by: enumParam(PROJECT_TIME_VIEWS, "task"), task: taskParam });
+
+// ---- Task 54: the timeline ----------------------------------------------------------------------
+
+export const TIMELINE_ZOOMS = ["day", "week", "month"] as const;
+export type TimelineZoom = (typeof TIMELINE_ZOOMS)[number];
+export const TIMELINE_GROUPS = ["none", "epic", "milestone", "assignee"] as const;
+export type TimelineGroupBy = (typeof TIMELINE_GROUPS)[number];
+
+/** The timeline: the filters, the zoom, the grouping, the day it's around (omitted: today), and the open task. */
+export const timelineSearch = z.object({
+	q: searchParam(),
+	...taskFilterParams,
+	zoom: enumParam(TIMELINE_ZOOMS, "week"),
+	group: enumParam(TIMELINE_GROUPS, "none"),
+	date: dayParam,
+	task: taskParam,
+});
+
+/** The milestones page: the open task (a sheet, masked as its page). */
+export const milestonesSearch = z.object({ task: taskParam });

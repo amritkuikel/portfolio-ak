@@ -22,6 +22,7 @@ import {
 	tlSavedView,
 	tlStar,
 	tlTask,
+	tlTaskDependency,
 	tlTaskLabel,
 	tlTaskWatcher,
 	tlTimeEntry,
@@ -37,6 +38,7 @@ import { nextTaskNumber } from "./rev";
 import { richText } from "./rules";
 import * as sprints from "./sprints/repository";
 import * as tasks from "./tasks/repository";
+import * as timeline from "./timeline/repository";
 import * as workflow from "./workflow/repository";
 import * as workspaces from "./workspace/repository";
 
@@ -67,6 +69,9 @@ type SampleTask = {
 	sprint?: 0 | 1 | 2;
 	/** Task 53: its estimate, in hours. */
 	estimate?: number;
+	/** Task 54: its start (days from today), and its milestone (0 the design sign-off, 1 the launch). */
+	start?: number;
+	milestone?: 0 | 1;
 };
 
 const TEAMMATES = [
@@ -93,6 +98,8 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		points: 3,
 		sprint: 1,
 		estimate: 4,
+		start: -1,
+		milestone: 1,
 	},
 	{
 		title: (t) => m.taskline_seed_task_navigation({}, t),
@@ -105,6 +112,8 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		points: 5,
 		sprint: 1,
 		estimate: 12,
+		start: -5,
+		milestone: 1,
 	},
 	{
 		title: (t) => m.taskline_seed_task_mobile_menu({}, t),
@@ -115,8 +124,21 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		points: 2,
 		sprint: 1,
 		estimate: 3,
+		start: -5,
+		due: -2,
+		milestone: 1,
 	},
-	{ title: (t) => m.taskline_seed_task_contrast({}, t), status: 1, assignee: 1, priority: 2, parent: 2, points: 2 },
+	{
+		title: (t) => m.taskline_seed_task_contrast({}, t),
+		status: 1,
+		assignee: 1,
+		priority: 2,
+		parent: 2,
+		points: 2,
+		start: 0,
+		due: 2,
+		milestone: 1,
+	},
 	{
 		title: (t) => m.taskline_seed_task_contact_form({}, t),
 		status: 2,
@@ -133,6 +155,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		points: 3,
 		sprint: 1,
 		estimate: 6,
+		start: -3,
 	},
 	{
 		title: (t) => m.taskline_seed_task_launch_date({}, t),
@@ -142,6 +165,8 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		due: 7,
 		points: 2,
 		sprint: 2,
+		start: 6,
+		milestone: 1,
 	},
 	{ title: (t) => m.taskline_seed_task_analytics({}, t), status: 0, assignee: null, priority: 1, points: 5 },
 	{ title: (t) => m.taskline_seed_task_blog({}, t), status: 0, assignee: 2, priority: 0, labels: [2] },
@@ -154,7 +179,27 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		points: 8,
 		sprint: 0,
 		estimate: 10,
+		start: -14,
+		due: -9,
+		milestone: 0,
 	},
+];
+
+/**
+ * Task 54: the milestones (the design signed off, done; the launch ahead), in days from
+ * today, and which sample tasks block which: the logo blocks the navigation, the
+ * navigation and the copy block the launch date, and the copy blocks the contrast
+ * check, which starts before the copy is due (the timeline warns about it).
+ */
+const MILESTONES = [
+	{ name: m.taskline_seed_milestone_design, due: -9, completed: true },
+	{ name: m.taskline_seed_milestone_launch, due: 8, completed: false },
+] as const;
+const DEPENDENCIES: ReadonlyArray<readonly [blocker: number, blocked: number]> = [
+	[9, 2],
+	[2, 6],
+	[1, 6],
+	[1, 4],
 ];
 
 /**
@@ -245,6 +290,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 			assigneeId: memberFor(sample.assignee) ?? null,
 			reporterId: owner.id,
 			parentId: sample.parent === undefined ? null : (ids[sample.parent] ?? null),
+			startOn: sample.start === undefined ? null : addDays(today, sample.start),
 			dueOn: sample.due === undefined ? null : addDays(today, sample.due),
 			checklist: (sample.checklist ?? []).map((text, index) => ({
 				id: crypto.randomUUID(),
@@ -267,6 +313,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
 	await seedSprints(tx, created, ids, today, t);
 	await seedTime(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, today, t });
+	await seedTimeline(tx, project.id, ids, today, t);
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
@@ -412,6 +459,33 @@ async function seedTime(
 		];
 	});
 	if (values.length > 0) await tx.insert(tlTimeEntry).values(values);
+}
+
+/** Task 54: the project's milestones with their tasks, and the dependencies between the sample tasks. */
+async function seedTimeline(tx: Tx, projectId: string, taskIds: string[], today: string, t: { locale: Locale }) {
+	const keys = generateKeysBetween(null, null, MILESTONES.length);
+	const milestones: string[] = [];
+	for (const [index, sample] of MILESTONES.entries()) {
+		const milestone = await timeline.insertMilestone(tx, {
+			projectId,
+			name: sample.name({}, t),
+			description: index === 1 ? m.taskline_seed_milestone_launch_description({}, t) : "",
+			dueOn: addDays(today, sample.due),
+			completedAt: sample.completed ? new Date(`${addDays(today, sample.due)}T12:00:00Z`) : null,
+			position: keys[index] ?? "a0",
+		});
+		milestones.push(milestone.id);
+	}
+	for (const [index, milestoneId] of milestones.entries()) {
+		const mine = TASKS.flatMap((sample, at) => (sample.milestone === index && taskIds[at] ? [taskIds[at]] : []));
+		if (mine.length > 0) await tx.update(tlTask).set({ milestoneId }).where(inArray(tlTask.id, mine));
+	}
+	const pairs = DEPENDENCIES.flatMap(([blocker, blocked]) => {
+		const blockerId = taskIds[blocker];
+		const blockedId = taskIds[blocked];
+		return blockerId && blockedId ? [{ blockerId, blockedId }] : [];
+	});
+	if (pairs.length > 0) await tx.insert(tlTaskDependency).values(pairs);
 }
 
 const escapeHtml = (text: string) =>

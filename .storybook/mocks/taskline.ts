@@ -173,6 +173,8 @@ const summary = (
 	points: null,
 	rank: `c${String(number).padStart(3, "0")}`,
 	estimateMinutes: null,
+	milestoneId: null,
+	blocked: false,
 	...extra,
 });
 
@@ -182,18 +184,42 @@ export const sampleTasks: TaskSummary[] = [
 		assigneeId: "m-asha",
 		labelIds: ["l-design"],
 		priority: 3,
+		startOn: "2026-10-27",
+		dueOn: "2026-11-04",
+		milestoneId: "ms-launch",
 	}),
-	summary(2, "Write the homepage copy", "st-todo", "a1", { assigneeId: "m-sita", dueOn: "2026-10-01" }),
-	summary(3, "Sketch the mobile menu", "st-doing", "a0", { parentId: "t-1", assigneeId: "m-asha" }),
+	summary(2, "Write the homepage copy", "st-todo", "a1", {
+		assigneeId: "m-sita",
+		startOn: "2026-09-28",
+		dueOn: "2026-10-01",
+		milestoneId: "ms-launch",
+	}),
+	summary(3, "Sketch the mobile menu", "st-doing", "a0", {
+		parentId: "t-1",
+		assigneeId: "m-asha",
+		startOn: "2026-10-29",
+		dueOn: "2026-11-02",
+		blocked: true,
+		milestoneId: "ms-launch",
+	}),
 	summary(4, "Fix the broken contact form", "st-doing", "a1", {
 		type: "bug",
 		priority: 4,
 		labelIds: ["l-bug"],
 		assigneeId: "m-bikash",
 		checklist: { done: 1, total: 3 },
+		startOn: "2026-10-30",
+		dueOn: "2026-11-03",
+		blocked: true,
 	}),
 	summary(5, "Check the contrast in dark mode", "st-doing", "a2", { parentId: "t-1" }),
-	summary(6, "Replace the logo files", "st-done", "a0", { completedAt: "2026-10-29T10:00:00.000Z", priority: 1 }),
+	summary(6, "Replace the logo files", "st-done", "a0", {
+		completedAt: "2026-10-29T10:00:00.000Z",
+		priority: 1,
+		startOn: "2026-10-20",
+		dueOn: "2026-10-24",
+		milestoneId: "ms-design",
+	}),
 ];
 
 export const sampleProjectTasks: ProjectTasks = {
@@ -236,6 +262,29 @@ export const sampleProjectTasks: ProjectTasks = {
 	readAt: "2026-10-31T06:00:00.000Z",
 	sprints: [],
 	velocity: { points: null, tasks: null, minutes: null, sprints: 0 },
+	milestones: [
+		{
+			id: "ms-design",
+			name: "Design signed off",
+			description: "",
+			dueOn: "2026-10-24",
+			completedAt: "2026-10-24T10:00:00.000Z",
+			position: "a0",
+		},
+		{
+			id: "ms-launch",
+			name: "Launch",
+			description: "The new site goes live.",
+			dueOn: "2026-11-12",
+			completedAt: null,
+			position: "a1",
+		},
+	],
+	dependencies: [
+		{ blockerId: "t-6", blockedId: "t-1" },
+		{ blockerId: "t-1", blockedId: "t-3" },
+		{ blockerId: "t-2", blockedId: "t-4" },
+	],
 	sprintCount: 0,
 };
 
@@ -381,6 +430,36 @@ export const sampleTaskDetail: TaskDetail = {
 	watching: true,
 	watcherIds: ["m-asha", "m-bikash"],
 	estimateMinutes: 360,
+	dependencies: {
+		blockedBy: [
+			{
+				id: "t-2",
+				ref: "WEB-2",
+				title: "Write the homepage copy",
+				projectKey: "WEB",
+				projectName: "Website relaunch",
+				elsewhere: false,
+				closed: false,
+				startOn: "2026-09-28",
+				dueOn: "2026-10-01",
+			},
+		],
+		blocks: [
+			{
+				id: "t-ops-3",
+				ref: "OPS-3",
+				title: "Switch the DNS",
+				projectKey: "OPS",
+				projectName: "Operations",
+				elsewhere: true,
+				closed: false,
+				startOn: null,
+				dueOn: "2026-11-06",
+			},
+		],
+		hidden: 0,
+		blockCompletion: true,
+	},
 	time: {
 		loggedMinutes: 270,
 		billableMinutes: 90,

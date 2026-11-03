@@ -1,13 +1,13 @@
 import "@tanstack/react-start/server-only";
-import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { TasklineLabel, TasklineStatus } from "@/features/taskline/types";
-import { type TlLabelRow, type TlStatusRow, tlLabel, tlStatus, type tlTask } from "@/server/db/schema";
+import { type TlLabelRow, type TlStatusRow, tlLabel, tlStatus } from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
 
 /** A project's statuses and the labels its tasks can carry. */
 
 /** Order keys compare by code unit (src/lib/fractional-index.ts), not by the database's locale. */
-export const byPosition = (column: typeof tlStatus.position | typeof tlTask.position) => sql`${column} collate "C"`;
+export const byPosition = (column: AnyColumn) => sql`${column} collate "C"`;
 
 export const statusDto = (row: TlStatusRow): TasklineStatus => ({
 	id: row.id,

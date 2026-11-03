@@ -15,7 +15,9 @@
  * active one (its open tasks carried on) and starts the next, then reads the reports.
  * Time (Task 53): a guest's timer survives a reload and stops from the topbar, time is
  * logged by hand and typed in the timesheet; an admin's lock makes the days up to it
- * read only and refuses logging there.
+ * read only and refuses logging there. Timeline and dependencies (Task 54): a guest
+ * reschedules a task on the timeline by keyboard and reads the milestones; with the
+ * project's rule on, a blocked task can't be completed until its blockers are.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -621,5 +623,101 @@ test.describe("Taskline time from the admin", () => {
 			await page.getByTestId("time-lock-dialog").getByRole("button", { name: "Unlock everything" }).click();
 			await expect(page.getByText("Nothing is locked").first()).toBeVisible();
 		}
+	});
+});
+
+test.describe("Taskline timeline and dependencies", () => {
+	test("a guest reschedules a task on the timeline by keyboard, and its milestones show the progress", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await page.getByTestId("view-timeline").click();
+		await expect(page).toHaveURL(/\/app\/taskline\/sandbox\/p\/WEB\/timeline$/);
+		await expect(page.getByTestId("timeline-milestone").first()).toBeVisible();
+		await expect(page.getByTestId("timeline-arrow").first()).toBeAttached();
+		// The contrast check starts before the copy it waits on is due.
+		await expect(page.getByTestId("timeline-clash")).toHaveCount(1);
+
+		const bar = page.locator('[data-timeline-bar][aria-label*="WEB-2 "]');
+		const start = (await bar.getAttribute("data-start")) ?? "";
+		const end = (await bar.getAttribute("data-end")) ?? "";
+		await bar.focus();
+		const moved = nextSave(page);
+		await page.keyboard.press("Alt+ArrowRight");
+		await expect(page.getByTestId("taskline-announcement")).toHaveText(/^WEB-2 .+ now runs from/);
+		await moved;
+		await expect(bar).toBeFocused();
+		const resized = nextSave(page);
+		await page.keyboard.press("Alt+Shift+ArrowRight");
+		await resized;
+		const plus = (day: string, days: number) => {
+			const date = new Date(`${day}T12:00:00Z`);
+			date.setUTCDate(date.getUTCDate() + days);
+			return date.toISOString().slice(0, 10);
+		};
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(bar).toHaveAttribute("data-start", plus(start, 1));
+		await expect(bar).toHaveAttribute("data-end", plus(end, 2));
+
+		// The milestones: the launch's tasks, one done of them.
+		await page.getByTestId("view-milestones").click();
+		const launch = page.getByTestId("milestone").filter({ hasText: "Launch" });
+		await expect(launch.getByTestId("milestone-progress")).toHaveText("1 of 5 tasks done");
+		await expect(
+			page.getByTestId("milestone").filter({ hasText: "Design signed off" }).getByTestId("milestone-complete"),
+		).toBeVisible();
+	});
+
+	test("with the project's rule on, a blocked task can't be completed until its blockers are", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await open(page, "/app/taskline/sandbox/p/WEB/settings/general");
+		await page.getByRole("switch", { name: "A blocked task can't be completed" }).click();
+		const saved = nextSave(page);
+		await page.getByRole("button", { name: "Save changes" }).click();
+		await saved;
+		await expect(page.getByText("Changes saved.")).toBeVisible();
+
+		// WEB-7 waits on WEB-2 and WEB-3: moving it to Done is refused and put back.
+		await open(page, "/app/taskline/sandbox/t/WEB-7");
+		const dependencies = page.getByTestId("task-dependencies");
+		await expect(dependencies.getByTestId("task-blocked_by")).toContainText("WEB-2");
+		await expect(dependencies.getByTestId("task-blocked-rule")).toBeVisible();
+		const status = page.getByTestId("task-status");
+		const before = await status.inputValue();
+		await status.selectOption({ label: "Done" });
+		await expect(page.getByText(/WEB-7 is blocked by WEB-\d, WEB-\d/)).toBeVisible();
+		await expect(status).toHaveValue(before);
+
+		// A new dependency by reference: WEB-1 now blocks it too; removing it again.
+		await dependencies.getByTestId("task-dependency-relation").selectOption("blocked_by");
+		await dependencies.getByTestId("task-dependency-input").fill("WEB-1");
+		const added = nextSave(page);
+		await dependencies.getByRole("button", { name: "Add" }).click();
+		await added;
+		await expect(dependencies.getByTestId("task-blocked_by").getByTestId("task-dependency")).toHaveCount(3);
+		const removed = nextSave(page);
+		await dependencies.getByRole("button", { name: "Remove the dependency on WEB-1" }).click();
+		await removed;
+		await expect(dependencies.getByTestId("task-blocked_by").getByTestId("task-dependency")).toHaveCount(2);
+
+		// Once its blockers are done, it completes.
+		for (const ref of ["WEB-2", "WEB-3"]) {
+			await open(page, `/app/taskline/sandbox/t/${ref}`);
+			const done = nextSave(page);
+			await page.getByTestId("task-status").selectOption({ label: "Done" });
+			await done;
+		}
+		await open(page, "/app/taskline/sandbox/t/WEB-7");
+		const completed = nextSave(page);
+		await page.getByTestId("task-status").selectOption({ label: "Done" });
+		await completed;
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(page.getByTestId("task-status").locator("option:checked")).toHaveText("Done");
 	});
 });

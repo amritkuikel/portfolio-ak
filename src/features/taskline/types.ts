@@ -143,6 +143,15 @@ export const ACTIVITY_KINDS = [
 	"sprint.completed",
 	/** Task 53: `{ minutes, entryId }` (and `auto: true` when the daily job stopped a forgotten timer). */
 	"time.logged",
+	/** Task 54: `{ milestoneId, name }`. */
+	"milestone.created",
+	"milestone.updated",
+	"milestone.deleted",
+	"milestone.completed",
+	"milestone.reopened",
+	/** Task 54, on each task's history: `{ relation: "blocks" | "blocked_by", ref, title }`, the other task. */
+	"dependency.added",
+	"dependency.removed",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -250,6 +259,9 @@ export type TaskSummary = {
 	rank: string;
 	/** Task 53: the estimate in minutes. */
 	estimateMinutes: number | null;
+	/** Task 54: the milestone it leads to, and whether an open task (in any project) blocks it. */
+	milestoneId: string | null;
+	blocked: boolean;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -308,6 +320,8 @@ export type TaskDetail = TaskSummary & {
 	watcherIds: string[];
 	/** Task 53: the time logged on it. */
 	time: TaskTime;
+	/** Task 54: what blocks it and what it blocks. */
+	dependencies: TaskDependencies;
 };
 
 /** A project's tasks with what draws them: the board, the list and the task sheet start from it. */
@@ -329,6 +343,9 @@ export type ProjectTasks = {
 	velocity: Velocity;
 	/** How many sprints the project has had (completed ones too): the next one's suggested number. */
 	sprintCount: number;
+	/** Task 54: the milestones in order, and the dependencies between the tasks above (the timeline's arrows). */
+	milestones: Milestone[];
+	dependencies: Dependency[];
 };
 
 export type TrashedTask = { id: string; ref: string; title: string; deletedAt: string };
@@ -676,4 +693,54 @@ export type NotifySettingsView = {
 	member: boolean;
 	/** Whether email can reach them (guests' addresses can't). */
 	email: boolean;
+};
+
+// ---- Timeline, milestones and dependencies (Task 54) ------------------------------------------
+
+/** Milestones a project keeps. */
+export const MILESTONES_MAX = 50;
+/** Dependencies one task has on each side (what blocks it, what it blocks). */
+export const DEPENDENCIES_MAX = 50;
+
+export type Milestone = {
+	id: string;
+	name: string;
+	description: string;
+	dueOn: string | null;
+	completedAt: string | null;
+	/** Its place in the project's order (a fractional key). */
+	position: string;
+};
+
+/** `blockerId` blocks `blockedId`. */
+export type Dependency = { blockerId: string; blockedId: string };
+
+/** The relation as one task sees it: the other task blocks it, or it blocks the other. */
+export const DEPENDENCY_RELATIONS = ["blocked_by", "blocks"] as const;
+export type DependencyRelation = (typeof DEPENDENCY_RELATIONS)[number];
+
+/** The task at the other end of a dependency, where it lives, and whether it's still open. */
+export type LinkedTask = {
+	id: string;
+	ref: string;
+	title: string;
+	projectKey: string;
+	projectName: string;
+	/** Another project of the workspace (its link leaves this one). */
+	elsewhere: boolean;
+	closed: boolean;
+	startOn: string | null;
+	dueOn: string | null;
+};
+
+/**
+ * A task's dependencies, the ones in projects the caller may see; `hidden` counts the
+ * rest (a blocker in a private project still blocks, decision 0219).
+ */
+export type TaskDependencies = {
+	blockedBy: LinkedTask[];
+	blocks: LinkedTask[];
+	hidden: number;
+	/** Whether the project refuses completing it while an open task blocks it. */
+	blockCompletion: boolean;
 };

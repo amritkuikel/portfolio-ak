@@ -13,6 +13,7 @@ import * as adminProjects from "@/server/taskline/admin/projects";
 import * as settings from "@/server/taskline/admin/settings";
 import * as projects from "@/server/taskline/projects/service";
 import * as tasks from "@/server/taskline/tasks/service";
+import * as timeline from "@/server/taskline/timeline/service";
 import * as workspaceRepo from "@/server/taskline/workspace/repository";
 import * as workspaces from "@/server/taskline/workspace/service";
 import { createTestDb } from "../utils/test-db";
@@ -223,14 +224,23 @@ describe("projects", () => {
 			visibility: "team",
 			color: "teal",
 		});
-		await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Hero, with a comma" });
+		const hero = await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Hero, with a comma" });
+		// Task 54: a milestone and a dependency travel in the JSON.
+		const beta = await timeline.createMilestone(as("lead"), { ws: "team", key: "WEB", name: "Beta" });
+		const copy = await tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "Copy", milestoneId: beta.id });
+		await timeline.addDependency(as("lead"), { ws: "team", ref: copy.ref, relation: "blocked_by", other: hero.ref });
 		expect((await adminProjects.setArchived(admin(), { id: created.id, archived: true })).archived).toBe(true);
 		expect(await code(tasks.createTask(as("lead"), { ws: "team", key: "WEB", title: "No" }))).toBe("FORBIDDEN");
 		expect((await adminProjects.setArchived(admin(), { id: created.id, archived: false })).status).toBe("active");
 		const csv = await adminProjects.exportProject(admin(), { id: created.id, format: "csv" });
 		expect(csv.content.split("\n")[1]).toContain('WEB-1,"Hero, with a comma"');
 		const json = JSON.parse((await adminProjects.exportProject(admin(), { id: created.id, format: "json" })).content);
-		expect(json.tasks).toEqual([expect.objectContaining({ ref: "WEB-1", status: "To do" })]);
+		expect(json.tasks).toEqual([
+			expect.objectContaining({ ref: "WEB-1", status: "To do", milestone: null }),
+			expect.objectContaining({ ref: "WEB-2", milestone: "Beta" }),
+		]);
+		expect(json.milestones).toEqual([{ name: "Beta", description: "", dueOn: null, completedAt: null }]);
+		expect(json.dependencies).toEqual([{ blocker: "WEB-1", blocked: "WEB-2" }]);
 		expect(await audits("taskline.project.export")).toHaveLength(2);
 	});
 });

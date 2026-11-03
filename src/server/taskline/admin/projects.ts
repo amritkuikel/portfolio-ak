@@ -36,6 +36,7 @@ import * as projectRepo from "../projects/repository";
 import * as projects from "../projects/service";
 import { bumpRev } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf } from "../rules";
+import * as timeline from "../timeline/repository";
 import * as workflowRepo from "../workflow/repository";
 import * as members from "../workspace/repository";
 import { appServices, projectTarget, team, teamProject } from "./team";
@@ -316,7 +317,10 @@ export async function remove({ db, actor }: Services, { id, confirmKey }: { id: 
 	});
 }
 
-/** The project as a file: JSON (the project, its workflow, members and every task) or CSV (the tasks). */
+/**
+ * The project as a file: JSON (the project, its workflow, members, milestones, every task
+ * and the dependencies between them) or CSV (the tasks).
+ */
 export async function exportProject(
 	{ db, actor }: Services,
 	{ id, format }: { id: string; format: "json" | "csv" },
@@ -325,7 +329,7 @@ export async function exportProject(
 		const { workspace } = await team(tx);
 		const project = await teamProject(tx, workspace.id, id);
 		const view = await detail(tx, workspace.slug, project);
-		const [taskRows, labelRows, memberRows] = await Promise.all([
+		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows] = await Promise.all([
 			tx
 				.select()
 				.from(tlTask)
@@ -338,7 +342,11 @@ export async function exportProject(
 				.innerJoin(tlTask, eq(tlTask.id, tlTaskLabel.taskId))
 				.where(eq(tlTask.projectId, project.id)),
 			members.listMembers(tx, workspace.id, { deactivated: true }),
+			timeline.listMilestones(tx, project.id),
+			timeline.projectDependencies(tx, project.id),
 		]);
+		const milestoneName = new Map(milestoneRows.map((milestone) => [milestone.id, milestone.name]));
+		const refOf = new Map(taskRows.map((task) => [task.id, `${project.key}-${task.number}`]));
 		const statusName = new Map(view.statuses.map((status) => [status.id, status.name]));
 		const memberName = new Map(memberRows.map((member) => [member.id, member.displayName]));
 		const labelsOf = (taskId: string) =>
@@ -362,6 +370,7 @@ export async function exportProject(
 			createdAt: task.createdAt.toISOString(),
 			description: task.descriptionText,
 			checklist: task.checklist,
+			milestone: task.milestoneId ? (milestoneName.get(task.milestoneId) ?? null) : null,
 		}));
 		audit({
 			action: "taskline.project.export",
@@ -396,7 +405,18 @@ export async function exportProject(
 			statuses: statuses.map(({ name, category, color, wipLimit }) => ({ name, category, color, wipLimit })),
 			labels: labels.map(({ name, color }) => ({ name, color })),
 			counts,
+			milestones: milestoneRows.map(({ name, description, dueOn, completedAt }) => ({
+				name,
+				description,
+				dueOn,
+				completedAt: completedAt?.toISOString() ?? null,
+			})),
 			tasks: tasks.map((task) => ({ ...task, parent: task.parent ? `${project.key}-${task.parent}` : null })),
+			// Within the project; one to another project's task isn't the project's to export.
+			dependencies: dependencyRows.map((dependency) => ({
+				blocker: refOf.get(dependency.blockerId) ?? null,
+				blocked: refOf.get(dependency.blockedId) ?? null,
+			})),
 		};
 		return {
 			filename: `${project.key.toLowerCase()}-${stamp}.json`,

@@ -273,6 +273,13 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getTasklineTimesheet",
 		"getTasklineProjectTime",
 	],
+	"taskline/timeline.ts": [
+		"createTasklineMilestone",
+		"updateTasklineMilestone",
+		"deleteTasklineMilestone",
+		"addTasklineDependency",
+		"removeTasklineDependency",
+	],
 	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [
 		"listTasklineProjects",

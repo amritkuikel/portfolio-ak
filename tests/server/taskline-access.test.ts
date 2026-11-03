@@ -14,6 +14,7 @@ import * as sprints from "@/server/taskline/sprints/service";
 import * as imports from "@/server/taskline/tasks/import";
 import * as tasks from "@/server/taskline/tasks/service";
 import * as time from "@/server/taskline/time/service";
+import * as timeline from "@/server/taskline/timeline/service";
 import * as views from "@/server/taskline/views/service";
 import * as workflow from "@/server/taskline/workflow/service";
 import * as workspaceRepo from "@/server/taskline/workspace/repository";
@@ -595,6 +596,51 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 		need: "read",
 		run: ({ ws, key }, caller) => time.getProjectTime(caller, ws, key),
 	},
+	// Task 54: milestones and dependencies are the editors'.
+	{
+		name: "createMilestone",
+		need: "edit",
+		run: ({ ws, key }, caller) => timeline.createMilestone(caller, { ws, key, name: unique("Milestone") }),
+	},
+	{
+		name: "updateMilestone",
+		need: "edit",
+		run: async ({ ws, key, owner }, caller) => {
+			const milestone = await timeline.createMilestone(as(owner), { ws, key, name: unique("Milestone") });
+			return timeline.updateMilestone(caller, { ws, key, id: milestone.id, completed: true });
+		},
+	},
+	{
+		name: "deleteMilestone",
+		need: "edit",
+		run: async ({ ws, key, owner }, caller) => {
+			const milestone = await timeline.createMilestone(as(owner), { ws, key, name: unique("Milestone") });
+			return timeline.deleteMilestone(caller, ws, key, milestone.id);
+		},
+	},
+	{
+		name: "addDependency",
+		need: "edit",
+		run: async (context, caller) => {
+			const [blocked, blocker] = [await ownerTask(context), await ownerTask(context)];
+			return timeline.addDependency(caller, {
+				ws: context.ws,
+				ref: blocked.ref,
+				relation: "blocked_by",
+				other: blocker.ref,
+			});
+		},
+	},
+	{
+		name: "removeDependency",
+		need: "edit",
+		run: async (context, caller) => {
+			const [blocked, blocker] = [await ownerTask(context), await ownerTask(context)];
+			const input = { ws: context.ws, ref: blocked.ref, relation: "blocked_by" as const, other: blocker.ref };
+			await timeline.addDependency(as(context.owner), input);
+			return timeline.removeDependency(caller, input);
+		},
+	},
 ];
 
 const TODAY = () => todayInZone(APP_TIME_ZONE);
@@ -645,6 +691,7 @@ describe("the Taskline access matrix", () => {
 	for (const { title, context, levels } of MATRIX) {
 		describe(title, () => {
 			for (const [caller, level] of Object.entries(levels) as Array<[Caller, Level]>) {
+				// Every operation once with its fixtures, some seventy writes on PGlite: slow under the full suite.
 				it(`${caller}: ${level}`, async () => {
 					await setUp();
 					const outcomes: Record<string, string> = {};
@@ -656,7 +703,7 @@ describe("the Taskline access matrix", () => {
 							operation.memberOnly && allowed === "ok" && NO_MEMBER.has(caller) ? "FORBIDDEN" : allowed;
 					}
 					expect(outcomes).toEqual(wanted);
-				});
+				}, 60_000);
 			}
 		});
 	}

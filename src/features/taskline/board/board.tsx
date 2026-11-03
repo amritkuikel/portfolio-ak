@@ -9,7 +9,7 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { TASK_TITLE_MAX } from "../schema";
-import { Assignee, DueDate, LabelChip, PriorityIcon, StatusName, TaskTypeIcon } from "../task/task-bits";
+import { Assignee, BlockedBadge, DueDate, LabelChip, PriorityIcon, StatusName, TaskTypeIcon } from "../task/task-bits";
 import {
 	isClosedCategory,
 	type TasklineLabel,
@@ -352,6 +352,7 @@ function BoardCard({
 								{formatNumber(task.points)}
 							</span>
 						) : null}
+						{task.blocked && !closed ? <BlockedBadge /> : null}
 					</span>
 					{props.renderOpen(
 						task,

@@ -166,6 +166,8 @@ export function draftTask(
 		// The server ranks it last in the backlog; until then it sorts after every key ("~" is past base 62).
 		rank: DRAFT_RANK,
 		estimateMinutes: null,
+		milestoneId: null,
+		blocked: false,
 	};
 }
 

@@ -45,6 +45,9 @@ export function matchesFilters(
 	if (filters.sprint === "none" && task.sprintId !== null) return false;
 	if (filters.sprint === "active" && (activeSprintId === null || task.sprintId !== activeSprintId)) return false;
 	if (!["all", "none", "active"].includes(filters.sprint) && task.sprintId !== filters.sprint) return false;
+	if (filters.milestone === "none" && task.milestoneId !== null) return false;
+	if (!["all", "none"].includes(filters.milestone) && task.milestoneId !== filters.milestone) return false;
+	if (filters.blocked !== "all" && task.blocked !== (filters.blocked === "yes")) return false;
 	return true;
 }
 
@@ -57,7 +60,9 @@ export const hasFilters = (filters: TaskFilters) =>
 	filters.priority !== "all" ||
 	filters.type !== "all" ||
 	filters.due !== "all" ||
-	filters.sprint !== "all";
+	filters.sprint !== "all" ||
+	filters.milestone !== "all" ||
+	filters.blocked !== "all";
 
 /** The filters out of a view's search (which carries other params too). */
 export const filtersOf = (search: TaskFilters): TaskFilters => ({
@@ -69,4 +74,6 @@ export const filtersOf = (search: TaskFilters): TaskFilters => ({
 	type: search.type,
 	due: search.due,
 	sprint: search.sprint,
+	milestone: search.milestone,
+	blocked: search.blocked,
 });

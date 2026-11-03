@@ -41,6 +41,8 @@ import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as sprints from "../sprints/repository";
 import { taskTime } from "../time/rules";
+import * as timeline from "../timeline/repository";
+import { assertCompletable, taskDependencies } from "../timeline/rules";
 import * as workflow from "../workflow/repository";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
@@ -82,7 +84,7 @@ export async function taskDetail(
 	row: TlTaskRow,
 	{ imageStore: store, user }: { imageStore: ImageStore | null | undefined; user: TasklineServices["user"] },
 ): Promise<TaskDetail> {
-	const [summary, subtasks, activity, comments, watcherIds, files, time] = await Promise.all([
+	const [summary, subtasks, activity, comments, watcherIds, files, time, dependencies] = await Promise.all([
 		summaryOf(db, access, row),
 		repo.subtasksOf(db, row.id).then((rows) => repo.summaries(db, rows, access.project.key)),
 		taskActivity(db, row.id),
@@ -90,6 +92,7 @@ export async function taskDetail(
 		collab.watcherIds(db, row.id),
 		collab.filesOf(db, store, collab.TASK_FILES, [row.id]),
 		taskTime(db, access, user, row.id),
+		taskDependencies(db, access, row.id),
 	]);
 	const commentFiles = await collab.filesOf(
 		db,
@@ -124,6 +127,7 @@ export async function taskDetail(
 		watching: me !== null && watcherIds.includes(me),
 		watcherIds,
 		time,
+		dependencies,
 	};
 }
 
@@ -182,6 +186,12 @@ async function checkParent(db: Db, access: ProjectAccess, parentId: string | nul
 
 const parentError = () => ruleError("CONFLICT", "Taskline: bad parent", m.taskline_error_parent());
 
+/** A milestone of the task's project (Task 54). */
+async function checkMilestone(db: Db, access: ProjectAccess, milestoneId: string | null | undefined) {
+	if (!milestoneId) return;
+	if (!(await timeline.getMilestone(db, access.project.id, milestoneId))) throw notFound("Milestone");
+}
+
 /**
  * The type a task may be given: one the workspace offers (Task 49). Unnamed, it is
  * `task`, or the first one offered when the admin turned `task` off.
@@ -195,7 +205,7 @@ function taskType(access: ProjectAccess, type: TaskType | undefined): TaskType {
 
 export async function listTasks({ db, user }: TasklineServices, ws: string, key: string): Promise<ProjectTasks> {
 	const access = await resolveProject(db, user, ws, key);
-	const [statuses, labels, memberRows, rows, stars, counts, planning] = await Promise.all([
+	const [statuses, labels, memberRows, rows, stars, counts, planning, milestones, dependencies] = await Promise.all([
 		workflow.listStatuses(db, access.project.id),
 		workflow.listLabels(db, access.workspace.id, access.project.id),
 		members.listMembers(db, access.workspace.id, { deactivated: true }),
@@ -203,6 +213,8 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		projects.starsOf(db, access.member?.id ?? null, [access.project.id]),
 		projects.openTaskCounts(db, [access.project.id]),
 		sprints.projectSprints(db, access.project.id),
+		timeline.listMilestones(db, access.project.id),
+		timeline.projectDependencies(db, access.project.id),
 	]);
 	return {
 		project: projects.projectDetail(access.project, {
@@ -222,6 +234,8 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		sprints: planning.sprints,
 		velocity: planning.velocity,
 		sprintCount: planning.sprintCount,
+		milestones: milestones.map(timeline.milestoneDto),
+		dependencies,
 	};
 }
 
@@ -247,6 +261,8 @@ async function listFilters(db: Db, access: ProjectAccess, input: TaskListInput):
 		priority: input.priority === "all" ? undefined : Number(input.priority),
 		type: input.type === "all" ? undefined : input.type,
 		due: input.due === "all" ? undefined : input.due,
+		milestone: input.milestone === "all" ? undefined : input.milestone,
+		blocked: input.blocked === "all" ? undefined : input.blocked === "yes",
 		today,
 		weekEnd: addDays(today, 6),
 	};
@@ -290,6 +306,7 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 			const status = await workflow.getStatus(tx, access.project.id, input.statusId);
 			if (!status) throw notFound("Status");
 			const moving = rows.filter((row) => row.statusId !== status.id);
+			await assertCompletable(tx, access, moving, status.category);
 			const keys = generateKeysBetween(await repo.lastInStatus(tx, status.id), null, moving.length);
 			for (const [index, row] of moving.entries()) {
 				await repo.patchTask(tx, row.id, {
@@ -409,6 +426,7 @@ export async function createTask(
 		await checkParent(tx, access, input.parentId);
 		await checkLabels(tx, access, labelIds);
 		if (input.sprintId) await sprints.checkSprint(tx, access.project.id, input.sprintId);
+		await checkMilestone(tx, access, input.milestoneId);
 		const text = richText(description);
 		const task = await repo.insertTask(tx, {
 			...(id ? { id } : {}),
@@ -431,6 +449,7 @@ export async function createTask(
 			sprintId: input.sprintId ?? null,
 			points: input.points ?? null,
 			estimateMinutes: input.estimateMinutes ?? null,
+			milestoneId: input.milestoneId ?? null,
 		});
 		await repo.setLabels(tx, task.id, labelIds);
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
@@ -490,6 +509,9 @@ export async function patchTask(
 		if (fields.sprintId && fields.sprintId !== before.sprintId) {
 			await sprints.checkSprint(tx, access.project.id, fields.sprintId);
 		}
+		if (fields.milestoneId && fields.milestoneId !== before.milestoneId) {
+			await checkMilestone(tx, access, fields.milestoneId);
+		}
 		const entries: ActivityEntry[] = [];
 		let task = before;
 		if (Object.keys(fields).length > 0) {
@@ -528,6 +550,7 @@ export async function moveTask(
 		const { access, task: before } = await resolveEditable(tx, user, ws, ref);
 		const status = await workflow.getStatus(tx, access.project.id, statusId);
 		if (!status) throw notFound("Status");
+		if (before.statusId !== statusId) await assertCompletable(tx, access, [before], status.category);
 		const completedAt = isClosedCategory(status.category) ? (before.completedAt ?? new Date()) : null;
 		const task = await repo.patchTask(tx, before.id, { statusId, position, completedAt });
 		let notify: string[] = [];

@@ -20,6 +20,10 @@ export const tasklineLinks = {
 	board: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/board", params: { ws, key } }),
 	list: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/list", params: { ws, key } }),
 	calendar: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/calendar", params: { ws, key } }),
+	/** Task 54: the timeline and the milestones. */
+	timeline: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/timeline", params: { ws, key } }),
+	milestones: (ws: string, key: string) =>
+		linkOptions({ to: "/app/taskline/$ws/p/$key/milestones", params: { ws, key } }),
 	backlog: (ws: string, key: string) => linkOptions({ to: "/app/taskline/$ws/p/$key/backlog", params: { ws, key } }),
 	sprint: (ws: string, key: string, sprintId: string) =>
 		linkOptions({ to: "/app/taskline/$ws/p/$key/sprints/$sprintId", params: { ws, key, sprintId }, search: {} }),

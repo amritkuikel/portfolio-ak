@@ -37,6 +37,7 @@ import { CHECKLIST_MAX, type PatchTaskInput, TASK_DESCRIPTION_MAX, TASK_TITLE_MA
 import { durationInput, formatDuration, parseDuration } from "../time/duration";
 import { TaskTime } from "../time/task-time";
 import { TimerButton } from "../time/timer";
+import { TaskDependencies } from "../timeline/dependencies";
 import {
 	type ChecklistItem,
 	ESTIMATE_MAX_MINUTES,
@@ -231,6 +232,7 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 						</TabsList>
 						<TabsContent value="work" className="flex flex-col gap-6 pt-2">
 							<Subtasks task={task} project={project} userId={userId} ws={ws} editable={editable} heading={Heading} />
+							<TaskDependencies task={task} userId={userId} ws={ws} editable={editable} heading={Heading} />
 							<Checklist task={task} editable={editable} onChange={writes.checklist} heading={Heading} />
 							<TaskFiles task={task} userId={userId} ws={ws} editable={editable} heading={Heading} />
 						</TabsContent>
@@ -479,6 +481,27 @@ function TaskFields({
 						</div>
 					) : null}
 				</>
+			) : null}
+			{project.milestones.length > 0 || task.milestoneId ? (
+				<div className={row}>
+					<label htmlFor={`${id}-milestone`} className={label}>
+						{m.taskline_field_milestone()}
+					</label>
+					<NativeSelect
+						id={`${id}-milestone`}
+						value={task.milestoneId ?? ""}
+						disabled={!editable}
+						onChange={(event) => writes.patch({ milestoneId: event.target.value || null })}
+						data-testid="task-milestone"
+					>
+						<option value="">{m.taskline_milestone_none()}</option>
+						{project.milestones.map((milestone) => (
+							<option key={milestone.id} value={milestone.id}>
+								{milestone.name}
+							</option>
+						))}
+					</NativeSelect>
+				</div>
 			) : null}
 			{project.project.settings.time || project.project.settings.estimation === "time" ? (
 				<EstimateField

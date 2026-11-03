@@ -72,6 +72,13 @@ import {
 	updateTasklineTimeEntry,
 } from "@/functions/taskline/time";
 import {
+	addTasklineDependency,
+	createTasklineMilestone,
+	deleteTasklineMilestone,
+	removeTasklineDependency,
+	updateTasklineMilestone,
+} from "@/functions/taskline/timeline";
+import {
 	createTasklineLabel,
 	createTasklineStatus,
 	deleteTasklineLabel,
@@ -85,10 +92,12 @@ import type {
 	BulkTasksInput,
 	CompleteSprintInput,
 	CreateLabelInput,
+	CreateMilestoneInput,
 	CreateProjectInput,
 	CreateSprintInput,
 	CreateStatusInput,
 	CreateTaskInput,
+	DependencyInput,
 	ImportTasksInput,
 	InboxInput,
 	LogTimeInput,
@@ -101,6 +110,7 @@ import type {
 	TimesheetCellInput,
 	UpdateCommentInput,
 	UpdateLabelInput,
+	UpdateMilestoneInput,
 	UpdateProjectInput,
 	UpdateSprintInput,
 	UpdateStatusInput,
@@ -446,4 +456,16 @@ export const tasklineMutations = {
 		write(queryClient, userId, (input: TimesheetCellInput) => setTasklineTimesheetCell({ data: input })),
 	copyWeek: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: { ws: string; week: string }) => copyTasklineTimesheetWeek({ data: input })),
+	createMilestone: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateMilestoneInput) => createTasklineMilestone({ data: input })),
+	updateMilestone: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateMilestoneInput) => updateTasklineMilestone({ data: input })),
+	deleteMilestone: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			deleteTasklineMilestone({ data: input }),
+		),
+	addDependency: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: DependencyInput) => addTasklineDependency({ data: input })),
+	removeDependency: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: DependencyInput) => removeTasklineDependency({ data: input })),
 };

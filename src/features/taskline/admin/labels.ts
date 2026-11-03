@@ -63,6 +63,13 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, () => string> = {
 	"sprint.started": m.taskline_admin_kind_sprint_started,
 	"sprint.completed": m.taskline_admin_kind_sprint_completed,
 	"time.logged": m.taskline_admin_kind_time_logged,
+	"milestone.created": m.taskline_admin_kind_milestone_created,
+	"milestone.updated": m.taskline_admin_kind_milestone_updated,
+	"milestone.deleted": m.taskline_admin_kind_milestone_deleted,
+	"milestone.completed": m.taskline_admin_kind_milestone_completed,
+	"milestone.reopened": m.taskline_admin_kind_milestone_reopened,
+	"dependency.added": m.taskline_admin_kind_dependency_added,
+	"dependency.removed": m.taskline_admin_kind_dependency_removed,
 };
 
 /** A week's capacity in hours, from the stored minutes. */

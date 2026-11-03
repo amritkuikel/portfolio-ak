@@ -158,8 +158,10 @@ import { Route as TasklineAppTasklineShellWsPKeyBacklogRouteImport } from './rou
 import { Route as TasklineAppTasklineShellWsPKeyBoardRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/board'
 import { Route as TasklineAppTasklineShellWsPKeyCalendarRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
 import { Route as TasklineAppTasklineShellWsPKeyListRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/list'
+import { Route as TasklineAppTasklineShellWsPKeyMilestonesRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/milestones'
 import { Route as TasklineAppTasklineShellWsPKeySettingsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/route'
 import { Route as TasklineAppTasklineShellWsPKeyTimeRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/time'
+import { Route as TasklineAppTasklineShellWsPKeyTimelineRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/timeline'
 import { Route as TasklineAppTasklineShellWsPKeySettingsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/index'
 import { Route as TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
 import { Route as TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
@@ -963,6 +965,12 @@ const TasklineAppTasklineShellWsPKeyListRoute =
     path: '/list',
     getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsPKeyMilestonesRoute =
+  TasklineAppTasklineShellWsPKeyMilestonesRouteImport.update({
+    id: '/milestones',
+    path: '/milestones',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeySettingsRouteRoute =
   TasklineAppTasklineShellWsPKeySettingsRouteRouteImport.update({
     id: '/settings',
@@ -973,6 +981,12 @@ const TasklineAppTasklineShellWsPKeyTimeRoute =
   TasklineAppTasklineShellWsPKeyTimeRouteImport.update({
     id: '/time',
     path: '/time',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
+  } as any)
+const TasklineAppTasklineShellWsPKeyTimelineRoute =
+  TasklineAppTasklineShellWsPKeyTimelineRouteImport.update({
+    id: '/timeline',
+    path: '/timeline',
     getParentRoute: () => TasklineAppTasklineShellWsPKeyRouteRoute,
   } as any)
 const TasklineAppTasklineShellWsPKeySettingsIndexRoute =
@@ -1161,7 +1175,9 @@ export interface FileRoutesByFullPath {
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/app/taskline/$ws/p/$key/milestones': typeof TasklineAppTasklineShellWsPKeyMilestonesRoute
   '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
+  '/app/taskline/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1295,7 +1311,9 @@ export interface FileRoutesByTo {
   '/app/taskline/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/app/taskline/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/app/taskline/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/app/taskline/$ws/p/$key/milestones': typeof TasklineAppTasklineShellWsPKeyMilestonesRoute
   '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
+  '/app/taskline/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1456,7 +1474,9 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/$ws/p/$key/board': typeof TasklineAppTasklineShellWsPKeyBoardRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/calendar': typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/list': typeof TasklineAppTasklineShellWsPKeyListRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/milestones': typeof TasklineAppTasklineShellWsPKeyMilestonesRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
@@ -1611,7 +1631,9 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
+    | '/app/taskline/$ws/p/$key/milestones'
     | '/app/taskline/$ws/p/$key/time'
+    | '/app/taskline/$ws/p/$key/timeline'
     | '/app/taskline/$ws/p/$key/'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
@@ -1745,7 +1767,9 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/board'
     | '/app/taskline/$ws/p/$key/calendar'
     | '/app/taskline/$ws/p/$key/list'
+    | '/app/taskline/$ws/p/$key/milestones'
     | '/app/taskline/$ws/p/$key/time'
+    | '/app/taskline/$ws/p/$key/timeline'
     | '/app/taskline/$ws/p/$key'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
@@ -1905,7 +1929,9 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/$ws/p/$key/board'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/calendar'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/list'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/milestones'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/time'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/timeline'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
@@ -2980,6 +3006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyListRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/milestones': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/milestones'
+      path: '/milestones'
+      fullPath: '/app/taskline/$ws/p/$key/milestones'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyMilestonesRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key/settings': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings'
       path: '/settings'
@@ -2992,6 +3025,13 @@ declare module '@tanstack/react-router' {
       path: '/time'
       fullPath: '/app/taskline/$ws/p/$key/time'
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyTimeRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
+    }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/timeline': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/timeline'
+      path: '/timeline'
+      fullPath: '/app/taskline/$ws/p/$key/timeline'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeyTimelineRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeyRouteRoute
     }
     '/_taskline/app/taskline/_shell/$ws/p/$key/settings/': {
@@ -3082,7 +3122,9 @@ interface TasklineAppTasklineShellWsPKeyRouteRouteChildren {
   TasklineAppTasklineShellWsPKeyBoardRoute: typeof TasklineAppTasklineShellWsPKeyBoardRoute
   TasklineAppTasklineShellWsPKeyCalendarRoute: typeof TasklineAppTasklineShellWsPKeyCalendarRoute
   TasklineAppTasklineShellWsPKeyListRoute: typeof TasklineAppTasklineShellWsPKeyListRoute
+  TasklineAppTasklineShellWsPKeyMilestonesRoute: typeof TasklineAppTasklineShellWsPKeyMilestonesRoute
   TasklineAppTasklineShellWsPKeyTimeRoute: typeof TasklineAppTasklineShellWsPKeyTimeRoute
+  TasklineAppTasklineShellWsPKeyTimelineRoute: typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   TasklineAppTasklineShellWsPKeyIndexRoute: typeof TasklineAppTasklineShellWsPKeyIndexRoute
   TasklineAppTasklineShellWsPKeySprintsSprintIdRoute: typeof TasklineAppTasklineShellWsPKeySprintsSprintIdRoute
 }
@@ -3099,8 +3141,12 @@ const TasklineAppTasklineShellWsPKeyRouteRouteChildren: TasklineAppTasklineShell
       TasklineAppTasklineShellWsPKeyCalendarRoute,
     TasklineAppTasklineShellWsPKeyListRoute:
       TasklineAppTasklineShellWsPKeyListRoute,
+    TasklineAppTasklineShellWsPKeyMilestonesRoute:
+      TasklineAppTasklineShellWsPKeyMilestonesRoute,
     TasklineAppTasklineShellWsPKeyTimeRoute:
       TasklineAppTasklineShellWsPKeyTimeRoute,
+    TasklineAppTasklineShellWsPKeyTimelineRoute:
+      TasklineAppTasklineShellWsPKeyTimelineRoute,
     TasklineAppTasklineShellWsPKeyIndexRoute:
       TasklineAppTasklineShellWsPKeyIndexRoute,
     TasklineAppTasklineShellWsPKeySprintsSprintIdRoute:

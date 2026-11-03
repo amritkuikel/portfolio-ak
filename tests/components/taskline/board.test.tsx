@@ -41,6 +41,8 @@ const task = (id: string, title: string, statusId: string, position: string, pri
 	points: null,
 	rank: "c000",
 	estimateMinutes: null,
+	milestoneId: null,
+	blocked: false,
 });
 
 const STATUSES = [status("todo", "To do", "a0"), status("doing", "Doing", "a1", 1)];

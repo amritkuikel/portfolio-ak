@@ -1595,14 +1595,14 @@ The procedure is section 10.1's, with these differences:
 | 51 | More views: calendar, my work, saved views, search, CSV import | high | Done (decision 0215) |
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Done (decisions 0216–0217) |
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Done (decision 0218) |
-| 54 | Timeline, milestones and dependencies | xhigh | Planned |
+| 54 | Timeline, milestones and dependencies | xhigh | Done (decision 0219) |
 | 55 | Custom fields | high | Planned |
 | 56 | Automations and recurring tasks | xhigh | Planned |
 | 57 | Templates, reports and project updates | high | Planned |
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0219 after Task 53).
+- **Decisions:** numbered from the next free one (0220 after Task 54).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -2006,20 +2006,27 @@ Estimates, the timer, time by hand, My timesheet, a project's time and the admin
   - Run `pnpm db:migrate` on Neon (`0023_taskline_time`).
   - `pnpm db:seed-taskline` gives the demo team time only on a database where the team has no projects yet (the seed writes projects once).
 
-### Task 54: Timeline, milestones and dependencies (planned)
+### Task 54: Timeline, milestones and dependencies (done)
 
-- **Milestones:** `tl_milestone` and a milestones page (progress by their tasks); `tl_task` gains `milestone_id`.
-- **Dependencies:**
-  - `tl_task_dependency`: "blocks" and "blocked by" in the task sheet, across projects in one workspace if both are visible to the user;
-  - cycles refused (a recursive CTE);
-  - a "blocked" badge and filter;
-  - the optional project rule "a blocked task can't be completed".
-- **Timeline:** a Gantt drawn as SVG.
-  - Layout: rows grouped by epic, milestone or assignee; day, week or month zoom; a today line; non-working days shaded (settings); milestones as diamonds; dependency arrows; a warning when a blocker ends after the blocked task starts.
-  - Changes: drag, or Alt + ←/→ (move) and Alt + Shift + ←/→ (resize), announced.
-  - Accessibility: a visually hidden table alongside it (as the charts do).
-  - The layout math lives in a pure module, unit tested.
-- **Tests:** PGlite (cycles, the completion rule), unit (bar layout, arrows, working days), e2e (keyboard rescheduling, a blocked task refused).
+Milestones, dependencies across a workspace's projects, the completion rule and the timeline (decision 0219; [docs/guides/taskline.md](guides/taskline.md), "Timeline, milestones and dependencies").
+
+- **Schema:** `0024_taskline_timeline`: `tl_milestone` (project, name, description, day, completion, order key; 50 per project) and `tl_task_dependency` (blocker, blocked; a check refuses a task on itself; both sides cascade); `tl_task.milestone_id` (`set null`). Activity kinds `milestone.created`, `updated`, `deleted`, `completed`, `reopened`, `dependency.added`, `removed` (each side of a dependency gets its entry naming the other task).
+- **Server:** `timeline/{repository,rules,service}.ts`: milestones (create, edit, reorder without history, complete and reopen, delete; editors), dependencies (both tasks in one workspace, possibly two projects, the caller able to edit both; idempotent; a loop refused by a recursive CTE under the workspace's advisory lock, so two opposite adds at once can't both pass; 50 on a side; both projects' `rev`), `taskDependencies` (the visible links and a count of the hidden ones) and `assertCompletable` (the project's `blockCompletionWhileBlocked`: moving into a completed status refused while an open task blocks it, naming the visible blockers; canceling allowed), called by `moveTask` and the list's bulk status change. `TaskSummary` gained `milestoneId` and `blocked` (an open blocker anywhere, one query per page of summaries), `TaskDetail` its `dependencies`, `ProjectTasks` the milestones and the project's own dependencies; the list filters by milestone and `blocked` in SQL; `createTask` and `patchTask` take a milestone of the project. Five functions in `src/functions/taskline/timeline.ts` (in the guard test and the access matrix). The admin's JSON export carries the milestones, each task's milestone and the project's dependencies; the admin's activity has the new kinds.
+- **Pages:** the Timeline tab (`$ws/p/$key/timeline`: `?zoom=day|week|month`, `?group=none|epic|milestone|assignee`, `?date=`, the filters; bars from start to due over an `aria-hidden` SVG of the grid, days off, today's line, milestone diamonds and dependency arrows, conflicts in the danger colour with "Starts before WEB-2 ends"; bars are buttons: drag to move, drag the end to resize, Alt + ← → and Alt + Shift + ← →, announced; a hidden table with the same facts; the geometry in `timeline/layout.ts`); the Milestones tab (`$ws/p/$key/milestones`: progress, late and done, the tasks, add, edit, complete, reorder, delete); the task's Milestone field and Dependencies section (blocked by, blocks, from other projects, hidden ones counted, add by reference or search, remove); a "Blocked" badge on board cards and list rows; the Milestone and Blocked filters on every view; the lead's "A blocked task can't be completed" switch.
+- **Sandbox and demo team:** start dates on seven of WEB's tasks, the milestones "Design signed off" (done) and "Launch", four dependencies (one starting before its blocker ends), in the guest's language; the claim keeps them. The demo team's WEB has a beta and a launch milestone, start dates (every project) and four dependencies.
+- **Tests:** PGlite `taskline-timeline.test.ts` (7: milestones and their tasks, history and order, the cap; dependencies blocking until the blocker closes or goes to the trash, both pages, the list's filter, removal and purge; self, direct and transitive loops, two opposite adds at once, the cap; across projects, edit on both, the hidden count; the completion rule on the board and in bulk, canceling allowed; the sandbox in Nepali and the claim into WEB2), the access matrix (+5 operations; its cases got a 60 s timeout: about seventy writes each, past 15 s under the full suite), the admin's export; unit `taskline-timeline.test.ts` (12: ranges, paging, ticks, days off, bars cut and outside, rows and groups, conflicts, arrows, keyboard steps, drags, a milestone's progress); jsdom `timeline.test.tsx` (4: keyboard moves and resizes with the focus kept, scheduling an undated task, the marks and the table, readers); stories `Taskline/Timeline` (days, by milestone in weeks, reader) and the task's Dependencies. `pnpm test`: 126 files, 1,136 tests; `test:storybook` 100 files, 472 tests. E2E (11.1): `taskline.spec.ts` (16 flows, the two new ones: a guest reschedules a task on the timeline by keyboard, saved across a reload, and reads the milestones; with the project's rule on, a blocked task is refused Done and put back, a dependency is added by reference and removed, and the task completes once its blockers are) and the review of every `/app/taskline` page with the timeline (weeks; days by milestone; months by assignee) and the milestones (with and without): 480 checks, all passing.
+- **Numbers:** every page's JavaScript 268.1 kB gzip (267.5 before; budget 275): two route definitions. 101 new messages in each language, the Nepali written by hand. Build, `build-storybook`, `i18n:check`, `db:check` and the bundle check green.
+- **Deviations:**
+  - The bars are HTML buttons positioned over the SVG, not SVG shapes: focus rings and names inside SVG aren't reliable (0219). The grid, days off, today's line and the arrows are the SVG.
+  - Adding or removing a dependency needs edit on both tasks' projects, not only the one being changed: a dependency limits what the other task may do.
+  - A blocker in a project the caller can't see still blocks; the task's page counts it without naming it.
+  - Changing a status's category to completed (the lead's workflow settings) closes its tasks without the completion rule.
+  - The timeline has no saved views (`tl_saved_view.view` is list, board or calendar); its zoom, grouping and filters are in the URL.
+  - Not planned but done: the Milestone filter on every view, the milestones and dependencies in the admin's JSON export, start dates and milestones in the demo team.
+  - Fixed on the way: `formatDayMonth` and `formatMonthShort` sat inside `apps` markers in `lib/i18n/intl.ts`, so `strip-demo --keep-taskline` would have removed what Taskline's sprints (and now the timeline) import; they are core now.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0024_taskline_timeline`).
+  - `pnpm db:seed-taskline` gives the demo team milestones and dependencies only on a database where the team has no projects yet (the seed writes projects once).
 
 ### Task 55: Custom fields (planned)
 

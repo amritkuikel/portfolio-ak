@@ -248,7 +248,6 @@ export const formatMonthYear = (date: Date, locale: Locale = getLocale()): strin
 		? toDevanagariDigits(`${date.getFullYear()} ${NE_MONTHS[date.getMonth()] ?? ""}`)
 		: cached("month-year|en", () => new Intl.DateTimeFormat("en", { year: "numeric", month: "long" })).format(date);
 
-// apps:start
 /**
  * A calendar day ("YYYY-MM-DD") as a short day and month: "Oct 30" / "अक्टोबर ३०". The
  * date is a calendar day, not an instant, so no time zone applies (chart axes, 0191).
@@ -274,7 +273,6 @@ export const formatMonthShort = (month: string, locale: Locale = getLocale()): s
 				instant,
 			);
 };
-// apps:end
 
 /** Short weekday from a local Date: "Mon" / "सोम". */
 export const formatWeekdayShort = (date: Date, locale: Locale = getLocale()): string =>
