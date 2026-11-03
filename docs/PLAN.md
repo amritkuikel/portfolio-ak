@@ -1597,12 +1597,12 @@ The procedure is section 10.1's, with these differences:
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Done (decision 0218) |
 | 54 | Timeline, milestones and dependencies | xhigh | Done (decision 0219) |
 | 55 | Custom fields | high | Done (decision 0220) |
-| 56 | Automations and recurring tasks | xhigh | Planned |
+| 56 | Automations and recurring tasks | xhigh | Done (decisions 0221–0222) |
 | 57 | Templates, reports and project updates | high | Planned |
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0221 after Task 55).
+- **Decisions:** numbered from the next free one (0223 after Task 56).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1760,7 +1760,7 @@ The procedure is section 10.1's, with these differences:
 | `tl_time_entry` | workspace_id, project_id, task_id?, member_id, on_day, minutes, started_at, ended_at (null = running), note, billable; partial unique: one running timer per member (the service keeps one per person). `tl_task` gains estimate_minutes; sprints and snapshots their minutes | 53 |
 | `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
 | `tl_field` | workspace_id, project_id?, name, type (text / number / select / multi_select / date / member / checkbox / url), options jsonb (with ids), required, position, archived_at. `tl_task` gains `fields` jsonb (GIN) | 55 |
-| `tl_automation`, `tl_automation_run` | automation: workspace_id, project_id?, name, enabled, trigger, conditions and actions jsonb, version. Run: automation_id, task_id?, outcome (ok / skipped / failed), detail, at. `tl_task` gains recurrence jsonb | 56 |
+| `tl_automation`, `tl_automation_run` | automation: workspace_id, project_id?, name, enabled, trigger, conditions and actions jsonb, created_by_id, version. Run: automation_id, task_id? (set null), outcome (ok / skipped / failed), detail, key (once per task and due date for the daily job), at. `tl_task` gains recurrence jsonb, `tl_comment` automation (the rule's name) | 56 |
 | `tl_template`, `tl_project_update` | template: workspace_id, name, description, definition jsonb (built-ins live in code). Update: project_id, author_id, health, body, created_at | 57 |
 
 - **`workspaceSettings`** (Zod, defaults in code):
@@ -1793,7 +1793,7 @@ The procedure is section 10.1's, with these differences:
   - digests;
   - sprint snapshots (52);
   - auto-stopping timers older than 12 h (53);
-  - automation time triggers and recurrence catch-up (56);
+  - automation time triggers and recurrence catch-up (56; run before the notices and digests, which then carry what they said);
   - purging trash past retention;
   - expiring invitations.
 
@@ -2049,18 +2049,28 @@ Custom fields on tasks, the workspace's and a project's (decision 0220; [docs/gu
   - Run `pnpm db:migrate` on Neon (`0025_taskline_fields`).
   - `pnpm db:seed-taskline` gives the demo team fields only on a database where the team has no projects yet (the seed writes projects once).
 
-### Task 56: Automations and recurring tasks (planned)
+### Task 56: Automations and recurring tasks (done)
 
-- **Engine (`src/server/taskline/automations/`):**
-  - triggers: task created; status or category changed; assignee, priority or label changed; comment added; all subtasks done; sprint started; due soon and overdue (from the cron);
-  - conditions on type, priority, labels, assignee and fields;
-  - actions: set status, assignee, priority, label, sprint or a relative due date; add a comment; notify a member or the lead; create subtasks;
-  - it runs in the write's transaction inside a savepoint: a failed automation is logged in `tl_automation_run` and the user's change stands;
-  - no chaining (automations don't trigger automations), and at most 10 actions.
-- **Builder:** a form in the admin (`/admin/taskline/automations`, workspace rules) and in project settings (project rules), with a "would match N open tasks" preview, enable and disable, and the run log.
-- **Recurrence:** a rule on the task (daily, weekly on chosen days, monthly or yearly; an interval; an end). Completing the task creates the next one (fields, labels and the checklist reset), and the cron catches up missed ones.
-- **Tests:** unit (matching, the next date in Asia/Kathmandu), PGlite (savepoint rollback, no chaining, recurrence), e2e (Done → the automation's action and notification).
-- **Decision:** a savepoint per run, depth 1.
+Automations, the workspace's and a project's, and recurring tasks (decisions 0221, 0222; [docs/guides/taskline.md](guides/taskline.md), "Automations and recurring tasks").
+
+- **Schema:** `0026_taskline_automations`: `tl_automation` (workspace, project or none, name, enabled, trigger, conditions and actions jsonb, creator, version) and `tl_automation_run` (automation, task `set null`, outcome ok / skipped / failed, detail, a `key` with a partial unique index for the daily job's once-per-due-date runs); `tl_task.recurrence` (jsonb) and `tl_comment.automation` (the name of the rule that wrote it). Activity kinds `automation.created`, `updated`, `deleted` and `task.recurred`; audit actions `taskline.automation.create`, `update`, `delete` on the target `taskline-automation`.
+- **Rules** (`features/taskline/automation-rules.ts`, pure and shared): ten triggers, six kinds of condition, ten kinds of action as one Zod definition; `matchesConditions` and `triggerMatches`. `recurrence.ts`: the rule as stored (anchor, place in the series), `nextOccurrence`, `nextDue` (never before today), `dueByNow` (the catch-up), the shifted start.
+- **Server:** `automations/{repository,service,engine,hooks,recurrence,scope}.ts`. The services hand the engine their events at the end of the change's transaction (create, patch, move, bulk, comment, sprint start; parents whose subtasks are all closed); each enabled rule whose trigger fires checks the task as it is now, then runs its actions in a savepoint: a refusal rolls that rule back, is logged as failed, and the change stands. No chaining (the engine writes through repositories). Its history is `via: "automation"` (`recordSystemActivity`), its comments are signed with its name, its notices name it (the `automation` kind, now offered in "My settings"). Saving checks the rule names only what its scope has (a workspace rule: categories, workspace labels and fields, members). The daily job gained two steps before the notices and digests: the time triggers (once per task and due date, the run log pruned after 30 days) and the recurrence catch-up. Closing a repeating task creates the next one (a copy, checklist unticked, the rule moved to it). Six app functions (`src/functions/taskline/automations.ts`, the lead's) and six admin ones (`taskline-admin/automations.ts`, `taskline:configure`, audited), in the guard test; six operations in the access matrix; the repeat is set through `patchTasklineTask`. The admin's JSON export carries a project's rules and each task's repeat.
+- **Pages:** the lead's `$ws/p/$key/settings/automations` and `/admin/taskline/automations` (one shared editor: each rule as a sentence with its last run, an on/off switch, edit, delete; the builder, a sheet loaded when opened, with sortable conditions and actions and "would match N open tasks now"; the run log); the task's Repeat field and its dialog; history and notice sentences in both languages.
+- **Sandbox and demo team:** WEB's three rules in the guest's language (subtasks done closes the parent; new bugs to Bikash with the Bug label, one run in the log; a reminder two days ahead) and a monthly blog post; the claim moves the rules and remaps the members and merged labels they name. The demo team: a workspace rule (urgent bugs tell the lead), WEB's subtask rule with two runs, a weekly task in OPS.
+- **Tests:** PGlite `taskline-automations.test.ts` (12: rights, references, versions, the cap and the audit; a run's actions, history, notice and log; the savepoint's rollback; no chaining; conditions and disabled rules; subtasks done, a viewer's comment, a label, a sprint's start; the daily job once per due date; the preview; a series moving and ending; the catch-up once; the sandbox's seed and claim), the access matrix (+6 operations), the demo seed's rules; unit `taskline-automations.test.ts` (9: conditions, triggers, the definition's refusals, the form both ways, weeks from either week start, month ends and leap years, the catch-up, ends, Kathmandu's day); stories `Taskline/Automations` (rules, builder), `Taskline/Admin` (Automations) and `Taskline/Task` (Repeat). `pnpm test`: 130 files, 1,178 tests. Stories run in both projects for the changed files: 6 files, 30 tests. E2E (11.1): `taskline.spec.ts` (19 flows, the new one: the admin builds a rule in WEB's settings, completes a task from its sheet, reads the automation in its history and the run log, the lead finds its notice in her inbox, and the rule is deleted), `rbac.spec.ts` and `apps.spec.ts` (22 passed), and the review of every `/app/taskline` and `/admin/taskline` page with the new ones (720 checks), all passing.
+- **Numbers:** every page's JavaScript 269.6 kB gzip (269.0 before; budget 275): two route definitions; the builder and the repeat dialog load when opened. 215 new messages in each language, the Nepali written by hand. Build, the bundle check, `i18n:check`, `knip` and `db:check` green.
+- **Deviations:**
+  - `pnpm typecheck` runs `tsc` with a 4 GB heap (0222): two more routes put it past Node's default 2 GB here.
+  - The CSV import and the tasks a repeat or an automation creates fire no automations; a status's category changed in the workflow settings fires none either.
+  - Canceling a repeating task also makes the next one (it skips an occurrence); trashing it or "Stop repeating" ends the series. The catch-up makes only the latest occurrence that has come, not each missed one.
+  - Runs are logged for every fired trigger, matching or not (kept 30 days), so "why didn't it run?" has an answer.
+  - A rule acts with its own rights (a viewer's comment can fire one that assigns), and the member whose change fired it isn't notified of what it did.
+  - Fixed on the way: a rule that commented and notified lost its notice to the comment's (one notice per person per change): its own notices go first.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0026_taskline_automations`).
+  - `pnpm test:storybook` (all stories) was stopped by Claude Code when the machine ran low on memory; the changed stories passed in both projects. Run it once before pushing.
+  - `taskDetail` reads with `Promise.all` inside writes' transactions, which pg warns about in the e2e server's log ("client.query() when the client is already executing a query"); left as it was.
 
 ### Task 57: Templates, reports and project updates (planned)
 

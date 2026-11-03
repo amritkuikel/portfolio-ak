@@ -2,7 +2,9 @@ import { z } from "zod";
 import { isOrderKey } from "@/lib/fractional-index";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { automationCondition, automationDefinition } from "./automation-rules";
 import { FIELD_NAME_MAX, fieldDefinition, fieldOptions, fieldValuesPatch } from "./fields";
+import { recurrenceRule } from "./recurrence";
 import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
@@ -233,6 +235,8 @@ export const patchTaskInput = z.strictObject({
 	milestoneId: id.nullable().optional(),
 	/** Task 55: custom field values to set (null clears one); the others stay. */
 	fields: fieldValuesPatch().optional(),
+	/** Task 56: how it repeats (null: it stops repeating). */
+	recurrence: recurrenceRule.nullable().optional(),
 });
 
 /** A drop on the board: a status and a position in it (an order key the browser computed). */
@@ -564,6 +568,33 @@ export const deleteFieldInput = z.strictObject({ ws: ws(), key: projectKey(), id
 export type CreateFieldInput = z.infer<typeof createFieldInput>;
 export type UpdateFieldInput = z.infer<typeof updateFieldInput>;
 export type FieldChanges = Omit<UpdateFieldInput, "ws" | "key">;
+
+// ---- Automations (Task 56) -----------------------------------------------------------------
+
+/** A project's own automations (its lead's), as the builder saves them. */
+export const createAutomationInput = z.strictObject({ ws: ws(), key: projectKey(), automation: automationDefinition });
+/** The builder's form, against the version it started from. */
+export const updateAutomationInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	id,
+	version: z.number().int().positive(),
+	automation: automationDefinition,
+});
+/** On or off at once (last write wins; the version stays). */
+export const toggleAutomationInput = z.strictObject({ ws: ws(), key: projectKey(), id, enabled: z.boolean() });
+export const automationInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+/** The builder's "would match N open tasks". */
+export const previewAutomationInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	conditions: z.array(automationCondition).max(10),
+});
+
+export type CreateAutomationInput = z.infer<typeof createAutomationInput>;
+export type UpdateAutomationInput = z.infer<typeof updateAutomationInput>;
+export type ToggleAutomationInput = z.infer<typeof toggleAutomationInput>;
+export type PreviewAutomationInput = z.infer<typeof previewAutomationInput>;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

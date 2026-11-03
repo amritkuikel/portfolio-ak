@@ -17,6 +17,8 @@ import type { TlSprintRow } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import { assertCan, type ProjectAccess, resolveProject, type TasklineServices } from "../access";
 import { recordActivity } from "../activity";
+import { runAutomations } from "../automations/engine";
+import { sprintStartEvents } from "../automations/hooks";
 import { actorOf, type NotifyEvent, produce } from "../notify/produce";
 import * as projects from "../projects/repository";
 import { bumpRev } from "../rev";
@@ -169,9 +171,9 @@ export async function startSprint(services: TasklineServices, ws: string, key: s
 			data: { sprintId: id, name: sprint.name, points: totals.scopePoints, tasks: totals.scopeTasks },
 		});
 		await bumpRev(tx, access.project.id);
-		const notify = await produce(tx, access, actorOf(access, user.id), [
-			await sprintEvent(tx, access, sprint, "started"),
-		]);
+		const actor = actorOf(access, user.id);
+		const notify = await produce(tx, access, actor, [await sprintEvent(tx, access, sprint, "started")]);
+		notify.push(...(await runAutomations(tx, access, actor, await sprintStartEvents(tx, id))));
 		return { sprint: repo.sprintDto(sprint), notify };
 	});
 	deliverAfter(services, notify);

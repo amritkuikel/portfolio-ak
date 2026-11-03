@@ -37,7 +37,7 @@ export const tasklineLinks = {
 	settings: (
 		ws: string,
 		key: string,
-		section: "general" | "members" | "workflow" | "labels" | "fields" | "trash" = "general",
+		section: "general" | "members" | "workflow" | "labels" | "fields" | "automations" | "trash" = "general",
 	) => linkOptions({ to: `/app/taskline/$ws/p/$key/settings/${section}` as const, params: { ws, key } }),
 	task: (ws: string, ref: string) => linkOptions({ to: "/app/taskline/$ws/t/$ref", params: { ws, ref } }),
 };

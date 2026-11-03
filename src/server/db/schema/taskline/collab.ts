@@ -25,6 +25,8 @@ export const tlComment = pgTable(
 			.references(() => tlTask.id, { onDelete: "cascade" }),
 		/** A member, so the name survives the account; null once the member row is gone. */
 		authorId: uuid().references(() => tlMember.id, { onDelete: "set null" }),
+		/** Task 56: written by this automation (its name then; the author is null). */
+		automation: text(),
 		bodyHtml: text().notNull(),
 		bodyText: text().notNull().default(""),
 		/** The members the sanitized body mentions who may see the task (the server's reading, never the browser's). */

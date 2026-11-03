@@ -29,6 +29,7 @@ import type { SafeHtml } from "@/lib/safe-html";
 import { absoluteUrl } from "@/lib/seo";
 import { optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { RepeatField } from "../automations/repeat-field";
 import { endPosition } from "../board/moves";
 import { TaskFieldEditors } from "../custom-fields/task-field-editors";
 import { applyFieldPatch } from "../fields";
@@ -263,7 +264,15 @@ export function TaskPanel({ task, project, userId, ws, variant, onTrashed }: Tas
 						</TabsContent>
 					</Tabs>
 				</div>
-				<TaskFields task={task} project={project} editable={editable} writes={writes} heading={Heading} />
+				<TaskFields
+					task={task}
+					project={project}
+					userId={userId}
+					ws={ws}
+					editable={editable}
+					writes={writes}
+					heading={Heading}
+				/>
 			</div>
 		</div>
 	);
@@ -324,12 +333,16 @@ function TaskForm({ task, userId, ws }: { task: TaskDetail; userId: string; ws: 
 function TaskFields({
 	task,
 	project,
+	userId,
+	ws,
 	editable,
 	writes,
 	heading: Heading,
 }: {
 	task: TaskDetail;
 	project: ProjectTasks;
+	userId: string;
+	ws: string;
 	editable: boolean;
 	writes: ReturnType<typeof useTaskWrites>;
 	heading: "h2" | "h3";
@@ -569,6 +582,7 @@ function TaskFields({
 					/>
 				</div>
 			))}
+			<RepeatField task={task} userId={userId} ws={ws} editable={editable} />
 			<TaskFieldEditors
 				task={task}
 				project={project}

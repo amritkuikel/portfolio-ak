@@ -2,11 +2,14 @@ import { z } from "zod";
 import type { Paged } from "@/lib/list/paging";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { automationCondition, automationDefinition } from "../automation-rules";
 import { fieldDefinition } from "../fields";
 import { fieldChanges, LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX } from "../schema";
 import { DEFAULT_STATUS_MAX, defaultStatus, TEAM_SLUG_PATTERN, workspaceSettings } from "../settings";
 import {
 	type ActiveSprint,
+	type Automation,
+	type AutomationRun,
 	DAY_MINUTES,
 	PROJECT_HEALTHS,
 	PROJECT_ROLES,
@@ -296,6 +299,37 @@ export const adminUpdateFieldInput = z.strictObject(fieldChanges);
 export const adminDeleteFieldInput = z.strictObject({ id });
 export type AdminCreateFieldInput = z.infer<typeof adminCreateFieldInput>;
 export type AdminUpdateFieldInput = z.infer<typeof adminUpdateFieldInput>;
+
+// ---- Automations (Task 56) ----------------------------------------------------------------------
+
+/**
+ * /admin/taskline/automations: the workspace's rules (on every team project's tasks),
+ * the latest runs of every team automation, and what the builder offers a workspace
+ * rule (the workspace's labels and fields, the active members).
+ */
+export type AdminAutomations = {
+	/** The team's `$ws` (the runs' task links). */
+	ws: string;
+	automations: Automation[];
+	runs: AutomationRun[];
+	labels: TasklineLabel[];
+	members: TasklineMember[];
+	fields: TaskField[];
+	/** When the server read it: relative times start from here, so both renders agree. */
+	readAt: string;
+};
+
+export const adminCreateAutomationInput = z.strictObject({ automation: automationDefinition });
+export const adminUpdateAutomationInput = z.strictObject({
+	id,
+	version: z.number().int().positive(),
+	automation: automationDefinition,
+});
+export const adminToggleAutomationInput = z.strictObject({ id, enabled: z.boolean() });
+export const adminDeleteAutomationInput = z.strictObject({ id });
+export const adminPreviewAutomationInput = z.strictObject({ conditions: z.array(automationCondition).max(10) });
+export type AdminCreateAutomationInput = z.infer<typeof adminCreateAutomationInput>;
+export type AdminUpdateAutomationInput = z.infer<typeof adminUpdateAutomationInput>;
 
 // ---- Activity -----------------------------------------------------------------------------------
 

@@ -271,6 +271,18 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		path: "/app/taskline/team/p/OPS/settings/fields",
 		label: "none of its own",
 	},
+	// Automations (Task 56): the demo team's WEB has rules of its own, a workspace rule and runs; OPS has none of its own.
+	{
+		route: "/app/taskline/$ws/p/$key/settings/automations",
+		as: "admin",
+		path: "/app/taskline/team/p/WEB/settings/automations",
+	},
+	{
+		route: "/app/taskline/$ws/p/$key/settings/automations",
+		as: "admin",
+		path: "/app/taskline/team/p/OPS/settings/automations",
+		label: "none of its own",
+	},
 	{ route: "/app/taskline/$ws/p/$key/settings/trash", as: "admin", path: "/app/taskline/team/p/WEB/settings/trash" },
 	{
 		route: "/app/taskline/$ws/t/$ref",
@@ -298,6 +310,7 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/invitations", as: "admin" },
 	{ route: "/admin/taskline/workflows", as: "admin" },
 	{ route: "/admin/taskline/fields", as: "admin" },
+	{ route: "/admin/taskline/automations", as: "admin" },
 	{ route: "/admin/taskline/settings", as: "admin" },
 	{ route: "/admin/taskline/activity", as: "admin" },
 	{ route: "/admin/taskline/timesheets", as: "admin" },

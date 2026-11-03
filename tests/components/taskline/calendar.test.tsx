@@ -39,6 +39,7 @@ const task = (id: string, title: string, dueOn: string | null): TaskSummary => (
 	milestoneId: null,
 	blocked: false,
 	fields: {},
+	recurrence: null,
 });
 
 function Harness({ canEdit = true }: { canEdit?: boolean }) {

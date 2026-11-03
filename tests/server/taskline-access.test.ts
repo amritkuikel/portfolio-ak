@@ -6,6 +6,7 @@ import { addDays, todayInZone } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
+import * as automations from "@/server/taskline/automations/service";
 import * as collab from "@/server/taskline/collab/service";
 import * as fields from "@/server/taskline/fields/service";
 import * as home from "@/server/taskline/home/service";
@@ -100,6 +101,15 @@ async function setUp() {
 
 type Context = { ws: string; key: string; owner: Caller };
 type Need = "read" | "comment" | "edit" | "manage";
+/** A rule any scope can hold (it names nothing of a project's). */
+const AUTOMATION = () => ({
+	name: unique("Rule").slice(0, 80),
+	enabled: true,
+	trigger: { type: "task_created" as const },
+	conditions: [],
+	actions: [{ type: "set_priority" as const, priority: 2 as const }],
+});
+
 type Operation = {
 	name: string;
 	need: Need;
@@ -676,6 +686,52 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 			});
 			return fields.deleteField(caller, { ws, key, id: field.id });
 		},
+	},
+	// Task 56: a project's automations are its lead's, the preview and the run log too.
+	{
+		name: "listAutomations",
+		need: "manage",
+		run: ({ ws, key }, caller) => automations.listAutomations(caller, ws, key),
+	},
+	{
+		name: "createAutomation",
+		need: "manage",
+		run: ({ ws, key }, caller) => automations.createAutomation(caller, { ws, key, automation: AUTOMATION() }),
+	},
+	{
+		name: "updateAutomation",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const rule = await automations.createAutomation(as(owner), { ws, key, automation: AUTOMATION() });
+			return automations.updateAutomation(caller, {
+				ws,
+				key,
+				id: rule.id,
+				version: rule.version,
+				automation: AUTOMATION(),
+			});
+		},
+	},
+	{
+		name: "toggleAutomation",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const rule = await automations.createAutomation(as(owner), { ws, key, automation: AUTOMATION() });
+			return automations.toggleAutomation(caller, { ws, key, id: rule.id, enabled: false });
+		},
+	},
+	{
+		name: "deleteAutomation",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const rule = await automations.createAutomation(as(owner), { ws, key, automation: AUTOMATION() });
+			return automations.deleteAutomation(caller, { ws, key, id: rule.id });
+		},
+	},
+	{
+		name: "previewAutomation",
+		need: "manage",
+		run: ({ ws, key }, caller) => automations.previewAutomation(caller, { ws, key, conditions: [] }),
 	},
 ];
 

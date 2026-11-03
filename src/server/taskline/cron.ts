@@ -7,6 +7,10 @@ import { tlInvitation, tlMember, tlNotification, tlProject, tlTask, tlWorkspace 
 import type { Db } from "@/server/db/types";
 import type { EmailProvider } from "@/server/email/types";
 import { errorFields, log } from "@/server/log";
+import { runTimeRule } from "./automations/engine";
+import { catchUpRecurrences } from "./automations/recurrence";
+import * as automations from "./automations/repository";
+import { systemAccess } from "./automations/scope";
 import * as collab from "./collab/repository";
 import { type DeliveryResult, sendDigests } from "./notify/deliver";
 import { produce } from "./notify/produce";
@@ -28,16 +32,25 @@ import * as time from "./time/repository";
  * 6. Stopping timers that ran 12 hours (Task 53, 0218): each counts 12 hours, and its
  *    owner hears (the `timer` notification). It runs before the digests, which carry it.
  *
- * Task 56 adds automations.
+ * 7. Automations' time triggers (Task 56, 0221): each enabled "due soon" or "overdue"
+ *    rule on the open tasks it names, once per task and due date (the run's key); and
+ *    the run log past 30 days goes.
+ * 8. Repeating tasks whose next occurrence came while the last one is still open get
+ *    their next task (the missed occurrences skipped).
  */
 
 /** Overdue notices catch up this many days of missed runs, not the whole backlog. */
 const OVERDUE_CATCH_UP_DAYS = 3;
 const INVITATION_GRACE_DAYS = 30;
+/** How long the automations' run log keeps a run. */
+const RUN_LOG_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type CronStep = { ok: boolean; [detail: string]: unknown };
-export type CronResult = Record<"timers" | "notices" | "digests" | "sprints" | "trash" | "invitations", CronStep>;
+export type CronResult = Record<
+	"timers" | "notices" | "digests" | "sprints" | "trash" | "invitations" | "automations" | "recurrences",
+	CronStep
+>;
 
 /** Notices of tasks due tomorrow, or past due, to their assignees; never twice for one due date. */
 export async function dueNotices(db: Db, now = new Date()): Promise<{ due: number; overdue: number }> {
@@ -224,6 +237,46 @@ export async function expireInvitations(db: Db, now = new Date()): Promise<{ exp
 	return { expired: rows.length };
 }
 
+/**
+ * The time triggers: each enabled rule with "due soon" (due within its days, from today)
+ * or "overdue" (past due, catching up three days of missed runs, as the notices) on the
+ * open tasks of its scope's active projects. A task runs once per rule and due date: its
+ * run's key is claimed first, so a second run of the job (or a moved-back date) finds it.
+ */
+export async function automationTimeTriggers(db: Db, now = new Date()): Promise<{ runs: number; pruned: number }> {
+	let runs = 0;
+	for (const rule of await automations.enabledTimeRules(db)) {
+		const [workspace] = await db.select().from(tlWorkspace).where(eq(tlWorkspace.id, rule.workspaceId));
+		if (!workspace) continue;
+		const today = todayInZone(workspaceSettings.parse(workspace.settings).timeZone, now);
+		const window =
+			rule.trigger.type === "due_soon"
+				? and(gte(tlTask.dueOn, today), lte(tlTask.dueOn, addDays(today, rule.trigger.days)))
+				: and(gte(tlTask.dueOn, addDays(today, -OVERDUE_CATCH_UP_DAYS)), lt(tlTask.dueOn, today));
+		const candidates = await db
+			.select({ task: tlTask, project: tlProject })
+			.from(tlTask)
+			.innerJoin(tlProject, eq(tlProject.id, tlTask.projectId))
+			.where(
+				and(
+					eq(tlTask.workspaceId, workspace.id),
+					rule.projectId ? eq(tlTask.projectId, rule.projectId) : undefined,
+					isNull(tlTask.deletedAt),
+					isNull(tlTask.completedAt),
+					isNull(tlProject.archivedAt),
+					window,
+				),
+			);
+		for (const { task, project } of candidates) {
+			const access = systemAccess(workspace, project);
+			await db.transaction((tx) => runTimeRule(tx, access, rule, task));
+			runs++;
+		}
+	}
+	const pruned = await automations.pruneRuns(db, new Date(now.getTime() - RUN_LOG_DAYS * DAY_MS));
+	return { runs, pruned };
+}
+
 async function step(name: string, run: () => Promise<object>): Promise<CronStep> {
 	try {
 		return { ok: true, ...(await run()) };
@@ -239,6 +292,9 @@ export async function runTasklineCron(
 ): Promise<CronResult> {
 	return {
 		timers: await step("timers", () => stopForgottenTimers(db, now)),
+		// Before the notices and digests, which then carry what the automations said.
+		automations: await step("automations", () => automationTimeTriggers(db, now)),
+		recurrences: await step("recurrences", () => catchUpRecurrences(db, now)),
 		notices: await step("notices", () => dueNotices(db, now)),
 		digests: await step("digests", (): Promise<DeliveryResult> => sendDigests(db, { provider, now })),
 		sprints: await step("sprints", () => sprintSnapshots(db, now)),

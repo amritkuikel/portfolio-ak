@@ -85,6 +85,15 @@ export async function listLabels(db: Db, workspaceId: string, projectId: string)
 		.orderBy(asc(sql`lower(${tlLabel.name})`), asc(tlLabel.id));
 }
 
+/** The workspace's own labels (every project's), by name (Task 56's workspace rules). */
+export async function listWorkspaceLabels(db: Db, workspaceId: string): Promise<TlLabelRow[]> {
+	return db
+		.select()
+		.from(tlLabel)
+		.where(and(eq(tlLabel.workspaceId, workspaceId), isNull(tlLabel.projectId)))
+		.orderBy(asc(sql`lower(${tlLabel.name})`), asc(tlLabel.id));
+}
+
 /** A label of the project itself (not a workspace-wide one), or null. */
 export async function getProjectLabel(db: Db, projectId: string, labelId: string): Promise<TlLabelRow | null> {
 	const [row] = await db

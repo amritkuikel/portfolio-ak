@@ -42,6 +42,7 @@ const task = (id: string, statusId: string, position: string): TaskSummary => ({
 	milestoneId: null,
 	blocked: false,
 	fields: {},
+	recurrence: null,
 });
 
 // Given out of order on purpose: the layout sorts.

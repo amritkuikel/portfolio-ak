@@ -1,5 +1,7 @@
 import "@tanstack/react-start/server-only";
+import type { AutomationEvent } from "@/features/taskline/automation-rules";
 import { activeFields, parseFieldFilters } from "@/features/taskline/fields";
+import { storedRecurrence } from "@/features/taskline/recurrence";
 import {
 	type BulkTasksInput,
 	type CreateTaskInput,
@@ -18,6 +20,7 @@ import {
 	type ProjectRev,
 	type ProjectTasks,
 	type TaskDetail,
+	type TaskPriority,
 	type TaskSummary,
 	type TaskType,
 	type TrashedTask,
@@ -35,6 +38,8 @@ import type { Db, Tx } from "@/server/db/types";
 import { sanitizeRichText } from "@/server/rich-text/sanitize";
 import { assertCan, type ProjectAccess, resolveProject, type TasklineServices } from "../access";
 import { type ActivityEntry, fieldChanges, recordActivity, taskActivity } from "../activity";
+import { runAutomations } from "../automations/engine";
+import { afterStatusChanges } from "../automations/hooks";
 import * as collab from "../collab/repository";
 import * as fieldRepo from "../fields/repository";
 import { assertFieldsComplete, checkValues, projectFields, valueChanges } from "../fields/rules";
@@ -118,6 +123,7 @@ export async function taskDetail(
 		comments: comments.map((comment) => ({
 			id: comment.id,
 			authorId: comment.authorId,
+			automation: comment.automation,
 			html: sanitizeRichText(comment.bodyHtml),
 			mentions: comment.mentions,
 			attachments: commentFiles.get(comment.id) ?? [],
@@ -308,6 +314,7 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 		const ids = rows.map((row) => row.id);
 		const entries: ActivityEntry[] = [];
 		const events: NotifyEvent[] = [];
+		const fired: AutomationEvent[] = [];
 		if (input.trash) {
 			const at = new Date();
 			for (const row of rows) {
@@ -322,14 +329,17 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 			await assertCompletable(tx, access, moving, status.category);
 			await assertFieldsComplete(tx, access, moving, status.category);
 			const keys = generateKeysBetween(await repo.lastInStatus(tx, status.id), null, moving.length);
+			const moved: Array<{ before: TlTaskRow; after: TlTaskRow; status: typeof status }> = [];
 			for (const [index, row] of moving.entries()) {
-				await repo.patchTask(tx, row.id, {
+				const after = await repo.patchTask(tx, row.id, {
 					statusId: status.id,
 					position: keys[index] ?? row.position,
 					completedAt: isClosedCategory(status.category) ? (row.completedAt ?? new Date()) : null,
 				});
+				moved.push({ before: row, after, status });
 				entries.push({ kind: "task.moved", taskId: row.id, data: { from: row.statusId, to: status.id } });
 			}
+			fired.push(...(await afterStatusChanges(tx, access, moved)));
 			events.push(
 				...(await statusEvents(
 					tx,
@@ -345,6 +355,11 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 				if (changes.length === 0) continue;
 				await repo.patchTask(tx, row.id, fields);
 				entries.push(...changes);
+				fired.push(
+					input.assigneeId !== undefined
+						? { trigger: "assignee_changed", taskId: row.id }
+						: { trigger: "priority_changed", taskId: row.id, priority: input.priority as TaskPriority },
+				);
 				if (input.assigneeId) {
 					events.push({ kind: "assigned", taskId: row.id, to: [input.assigneeId], data: taskData(access, row) });
 				}
@@ -362,11 +377,14 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 				const to = input.addLabelId ? [...new Set([...from, labelId])].sort() : from.filter((each) => each !== labelId);
 				if (from.length === to.length) continue;
 				entries.push({ kind: "task.updated", taskId: id, data: { field: "labels", from, to } });
+				if (input.addLabelId) fired.push({ trigger: "label_added", taskId: id, labelId });
 			}
 		}
 		await recordActivity(tx, access, ...entries);
 		if (entries.length > 0) await bumpRev(tx, access.project.id);
-		const notify = await produce(tx, access, actorOf(access, user.id), events);
+		const actor = actorOf(access, user.id);
+		const notify = await produce(tx, access, actor, events);
+		notify.push(...(await runAutomations(tx, access, actor, fired)));
 		return { result: { count: entries.length }, notify };
 	});
 	deliverAfter(services, notify);
@@ -471,10 +489,13 @@ export async function createTask(
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
 		await recordActivity(tx, access, { kind: "task.created", taskId: task.id, data: { title: task.title } });
 		await bumpRev(tx, access.project.id);
-		const notify = await produce(tx, access, actorOf(access, user.id), [
+		const actor = actorOf(access, user.id);
+		const notify = await produce(tx, access, actor, [
 			{ kind: "assigned", taskId: task.id, to: [task.assigneeId], data: taskData(access, task) },
 		]);
-		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
+		notify.push(...(await runAutomations(tx, access, actor, [{ trigger: "task_created", taskId: task.id }])));
+		const after = (await repo.getById(tx, access.project.id, task.id)) ?? task;
+		return { detail: await taskDetail(tx, access, after, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;
@@ -514,7 +535,7 @@ export async function updateTask(
 /** Single fields (type, priority, assignee, parent, labels, dates); each change goes in the history. */
 export async function patchTask(
 	services: TasklineServices,
-	{ ws, ref, labelIds, fields: values, ...fields }: PatchTaskInput,
+	{ ws, ref, labelIds, fields: values, recurrence, ...fields }: PatchTaskInput,
 ): Promise<TaskDetail> {
 	const { db, user, imageStore } = services;
 	const { detail, notify } = await db.transaction(async (tx) => {
@@ -529,10 +550,17 @@ export async function patchTask(
 			await checkMilestone(tx, access, fields.milestoneId);
 		}
 		const entries: ActivityEntry[] = [];
+		const fired: AutomationEvent[] = [];
 		let task = before;
 		if (Object.keys(fields).length > 0) {
 			task = await repo.patchTask(tx, before.id, fields);
-			entries.push(...fieldChanges(task.id, before, fields));
+			const changes = fieldChanges(task.id, before, fields);
+			entries.push(...changes);
+			const changed = new Set(changes.map((entry) => entry.data?.field));
+			if (changed.has("assigneeId")) fired.push({ trigger: "assignee_changed", taskId: task.id });
+			if (changed.has("priority")) {
+				fired.push({ trigger: "priority_changed", taskId: task.id, priority: task.priority as TaskPriority });
+			}
 		}
 		if (labelIds) {
 			await checkLabels(tx, access, labelIds);
@@ -541,6 +569,22 @@ export async function patchTask(
 			if (JSON.stringify(current) !== JSON.stringify(next)) {
 				await repo.setLabels(tx, task.id, next);
 				entries.push({ kind: "task.updated", taskId: task.id, data: { field: "labels", from: current, to: next } });
+				for (const labelId of next.filter((each) => !current.includes(each))) {
+					fired.push({ trigger: "label_added", taskId: task.id, labelId });
+				}
+			}
+		}
+		if (recurrence !== undefined) {
+			// Task 56: a rule counts from the due day (else today); a changed rule keeps the task's place in its series.
+			const anchor = task.dueOn ?? task.startOn ?? todayInZone(access.settings.timeZone);
+			const stored = recurrence ? storedRecurrence(recurrence, anchor, task.recurrence?.n ?? 1) : null;
+			if (JSON.stringify(stored) !== JSON.stringify(task.recurrence)) {
+				task = await repo.patchTask(tx, task.id, { recurrence: stored });
+				entries.push({
+					kind: "task.updated",
+					taskId: task.id,
+					data: { field: "recurrence", to: stored ? stored.freq : null, interval: stored?.interval ?? null },
+				});
 			}
 		}
 		if (values && Object.keys(values).length > 0) {
@@ -557,9 +601,12 @@ export async function patchTask(
 		await recordActivity(tx, access, ...entries);
 		if (entries.length > 0) await bumpRev(tx, access.project.id);
 		const reassigned = fields.assigneeId && fields.assigneeId !== before.assigneeId ? fields.assigneeId : null;
-		const notify = await produce(tx, access, actorOf(access, user.id), [
+		const actor = actorOf(access, user.id);
+		const notify = await produce(tx, access, actor, [
 			{ kind: "assigned", taskId: task.id, to: [reassigned], data: taskData(access, task) },
 		]);
+		notify.push(...(await runAutomations(tx, access, actor, fired)));
+		if (fired.length > 0) task = (await repo.getById(tx, access.project.id, task.id)) ?? task;
 		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
@@ -581,7 +628,7 @@ export async function moveTask(
 			await assertFieldsComplete(tx, access, [before], status.category);
 		}
 		const completedAt = isClosedCategory(status.category) ? (before.completedAt ?? new Date()) : null;
-		const task = await repo.patchTask(tx, before.id, { statusId, position, completedAt });
+		let task = await repo.patchTask(tx, before.id, { statusId, position, completedAt });
 		let notify: string[] = [];
 		if (before.statusId !== statusId) {
 			await recordActivity(tx, access, {
@@ -589,12 +636,11 @@ export async function moveTask(
 				taskId: task.id,
 				data: { from: before.statusId, to: statusId },
 			});
-			notify = await produce(
-				tx,
-				access,
-				actorOf(access, user.id),
-				await statusEvents(tx, access, [{ task, statusName: status.name }]),
-			);
+			const actor = actorOf(access, user.id);
+			notify = await produce(tx, access, actor, await statusEvents(tx, access, [{ task, statusName: status.name }]));
+			const fired = await afterStatusChanges(tx, access, [{ before, after: task, status }]);
+			notify.push(...(await runAutomations(tx, access, actor, fired)));
+			task = (await repo.getById(tx, access.project.id, task.id)) ?? task;
 		}
 		await bumpRev(tx, access.project.id);
 		return { summary: await summaryOf(tx, access, task), notify };

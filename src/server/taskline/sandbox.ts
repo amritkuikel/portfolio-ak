@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { newOptionId } from "@/features/taskline/fields";
+import { storedRecurrence } from "@/features/taskline/recurrence";
 import { workspaceSettings } from "@/features/taskline/settings";
 import type { TaskFieldValues, TasklineColor, TaskPriority, TaskType } from "@/features/taskline/types";
 import { generateKeysBetween } from "@/lib/fractional-index";
@@ -12,6 +13,8 @@ import {
 	type TlMemberRow,
 	type TlWorkspaceRow,
 	tlActivity,
+	tlAutomation,
+	tlAutomationRun,
 	tlComment,
 	tlField,
 	tlImport,
@@ -318,6 +321,16 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	await seedTime(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, today, t });
 	await seedTimeline(tx, project.id, ids, today, t);
 	await seedFields(tx, { workspaceId: workspace.id, projectId: project.id, teammates, taskIds: ids, t });
+	await seedAutomations(tx, {
+		workspaceId: workspace.id,
+		projectId: project.id,
+		owner,
+		teammates,
+		labelIds: labels.map((label) => label.id),
+		taskIds: ids,
+		today,
+		t,
+	});
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
@@ -660,6 +673,92 @@ async function seedFields(
 	}
 }
 
+/**
+ * Task 56: three of WEB's own rules in the guest's language (a parent closes when its
+ * subtasks are done; new bugs go to Bikash with the Bug label, with one run already in
+ * the log, on the contact form; a reminder two days before a task is due), and the blog
+ * post repeating every month.
+ */
+async function seedAutomations(
+	tx: Tx,
+	{
+		workspaceId,
+		projectId,
+		owner,
+		teammates,
+		labelIds,
+		taskIds,
+		today,
+		t,
+	}: {
+		workspaceId: string;
+		projectId: string;
+		owner: TlMemberRow;
+		teammates: ReadonlyArray<{ id: string }>;
+		labelIds: ReadonlyArray<string>;
+		taskIds: ReadonlyArray<string>;
+		today: string;
+		t: { locale: Locale };
+	},
+) {
+	const bikash = teammates[1];
+	const bug = labelIds[1];
+	const scope = { workspaceId, projectId, createdById: owner.id };
+	const [, bugs] = await tx
+		.insert(tlAutomation)
+		.values([
+			{
+				...scope,
+				name: m.taskline_seed_automation_subtasks({}, t),
+				trigger: { type: "subtasks_done" },
+				conditions: [],
+				actions: [{ type: "set_status", category: "completed" }],
+			},
+			{
+				...scope,
+				name: m.taskline_seed_automation_bugs({}, t),
+				trigger: { type: "task_created" },
+				conditions: [{ type: "task_type", in: ["bug"] }],
+				actions: [
+					...(bikash ? [{ type: "assign" as const, to: bikash.id }] : []),
+					...(bug ? [{ type: "add_label" as const, labelId: bug }] : []),
+				],
+			},
+			{
+				...scope,
+				name: m.taskline_seed_automation_due({}, t),
+				trigger: { type: "due_soon", days: 2 },
+				conditions: [{ type: "assignee", is: "any" }],
+				actions: [{ type: "notify", to: "assignee", message: m.taskline_seed_automation_due_message({}, t) }],
+			},
+		])
+		.returning({ id: tlAutomation.id });
+	const contactForm = taskIds[5];
+	if (bugs && contactForm) {
+		await tx.insert(tlAutomationRun).values({
+			automationId: bugs.id,
+			taskId: contactForm,
+			outcome: "ok",
+			detail: { applied: 2 },
+			at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+		});
+	}
+	const blog = taskIds[8];
+	if (blog) {
+		await tx
+			.update(tlTask)
+			.set({ recurrence: storedRecurrence({ freq: "monthly", interval: 1 }, today) })
+			.where(eq(tlTask.id, blog));
+	}
+}
+
+/** Points every id an automation names (a member, a label) at another: uuids, so a text replace is exact. */
+async function replaceInAutomations(tx: Tx, from: string, to: string): Promise<void> {
+	await tx.execute(
+		sql`update ${tlAutomation} set trigger = replace(trigger::text, ${from}, ${to})::jsonb, conditions = replace(conditions::text, ${from}, ${to})::jsonb, actions = replace(actions::text, ${from}, ${to})::jsonb where position(${from} in trigger::text || conditions::text || actions::text) > 0`,
+	);
+}
+
 /** Points every reference to one member at another (the claim's merge). */
 async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 	await tx.update(tlTask).set({ assigneeId: to }).where(eq(tlTask.assigneeId, from));
@@ -690,6 +789,9 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 		sql`update ${tlTimeEntry} set ended_at = now(), minutes = least(720, greatest(1, round(extract(epoch from now() - started_at) / 60)::int)) where member_id = ${from} and started_at is not null and ended_at is null`,
 	);
 	await tx.update(tlTimeEntry).set({ memberId: to }).where(eq(tlTimeEntry.memberId, from));
+	// Automations (Task 56): who made a rule, and the members its conditions and actions name.
+	await tx.update(tlAutomation).set({ createdById: to }).where(eq(tlAutomation.createdById, from));
+	await replaceInAutomations(tx, from, to);
 	// Custom fields (Task 55): a person field's value is a member id.
 	await tx.execute(
 		sql`update ${tlTask} set fields = (select jsonb_object_agg(e.key, case when e.value = to_jsonb(${from}::text) and e.key in (select id::text from ${tlField} where type = 'member') then to_jsonb(${to}::text) else e.value end) from jsonb_each(${tlTask.fields}) as e) where exists (select 1 from jsonb_each(${tlTask.fields}) as e where e.value = to_jsonb(${from}::text))`,
@@ -747,6 +849,11 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 		.update(tlLabel)
 		.set({ workspaceId: target.id })
 		.where(and(eq(tlLabel.workspaceId, guest.id), sql`${tlLabel.projectId} is not null`));
+	// Task 56: the projects' own automations go with them (a sandbox has no workspace rules).
+	await tx
+		.update(tlAutomation)
+		.set({ workspaceId: target.id })
+		.where(and(eq(tlAutomation.workspaceId, guest.id), sql`${tlAutomation.projectId} is not null`));
 	await mergeWorkspaceLabels(tx, guest.id, target.id);
 	// Task 55: the projects' own fields go with them (a sandbox has no workspace fields of its own to merge).
 	await tx
@@ -779,6 +886,7 @@ async function mergeWorkspaceLabels(tx: Tx, fromWorkspaceId: string, toWorkspace
 		await tx.execute(
 			sql`insert into ${tlTaskLabel} (task_id, label_id) select task_id, ${same} from ${tlTaskLabel} where label_id = ${label.id} on conflict do nothing`,
 		);
+		await replaceInAutomations(tx, label.id, same);
 		await tx.delete(tlLabel).where(eq(tlLabel.id, label.id));
 	}
 	if (moving.length > 0) {

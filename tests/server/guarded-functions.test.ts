@@ -148,6 +148,14 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["updateTasklineWorkspaceLabel", "taskline:configure"],
 		["deleteTasklineWorkspaceLabel", "taskline:configure"],
 	],
+	"taskline-admin/automations.ts": [
+		["listTasklineWorkspaceAutomations", "taskline:configure"],
+		["createTasklineWorkspaceAutomation", "taskline:configure"],
+		["updateTasklineWorkspaceAutomation", "taskline:configure"],
+		["toggleTasklineWorkspaceAutomation", "taskline:configure"],
+		["deleteTasklineWorkspaceAutomation", "taskline:configure"],
+		["previewTasklineWorkspaceAutomation", "taskline:configure"],
+	],
 	"taskline-admin/fields.ts": [
 		["listTasklineWorkspaceFields", "taskline:configure"],
 		["createTasklineWorkspaceField", "taskline:configure"],
@@ -287,6 +295,14 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"removeTasklineDependency",
 	],
 	"taskline/fields.ts": ["createTasklineField", "updateTasklineField", "deleteTasklineField"],
+	"taskline/automations.ts": [
+		"listTasklineAutomations",
+		"createTasklineAutomation",
+		"updateTasklineAutomation",
+		"toggleTasklineAutomation",
+		"deleteTasklineAutomation",
+		"previewTasklineAutomation",
+	],
 	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [
 		"listTasklineProjects",

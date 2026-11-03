@@ -12,7 +12,9 @@ import {
 	sampleTaskDetail,
 	sampleTasklineMember,
 } from "../../../../.storybook/mocks/taskline";
+import { recurrenceText } from "../automations/recurrence-text";
 import { formatDuration } from "../time/duration";
+import type { Recurrence } from "../types";
 import { TaskPanel } from "./task-panel";
 
 /** The task, as the sheet over a view and its own page show it (Task 48). */
@@ -125,5 +127,24 @@ export const CustomFields: Story = {
 			}),
 		);
 		await expect(section.getByRole("checkbox")).toHaveAttribute("id", expect.stringContaining(FIELD_SIGNED_OFF));
+	},
+};
+
+const weekly: Recurrence = { freq: "weekly", interval: 1, weekdays: [0, 3], anchor: "2026-11-01", n: 1 };
+
+/** Its repeat (Task 56): how it repeats, and the dialog that changes it; saving sends the rule. */
+export const Repeat: Story = {
+	args: { task: { ...sampleTaskDetail, recurrence: weekly } },
+	play: async ({ canvas, userEvent }) => {
+		const field = within(canvas.getByTestId("task-repeat"));
+		await expect(field.getByText(recurrenceText(weekly))).toBeVisible();
+		await userEvent.click(field.getByTestId("task-repeat-edit"));
+		const dialog = within(await within(document.body).findByTestId("recurrence-dialog", {}, { timeout: 10_000 }));
+		await userEvent.click(dialog.getByRole("button", { name: m.crud_save() }));
+		await waitFor(() =>
+			expect(patchTasklineTask).toHaveBeenCalledWith({
+				data: { ws: "team", ref: "WEB-4", recurrence: { freq: "weekly", interval: 1, weekdays: [0, 3] } },
+			}),
+		);
 	},
 };

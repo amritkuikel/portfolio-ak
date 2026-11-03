@@ -183,6 +183,13 @@
 			"when": 1793710255851,
 			"tag": "0025_taskline_fields",
 			"breakpoints": true
+		},
+		{
+			"idx": 26,
+			"version": "7",
+			"when": 1793717177803,
+			"tag": "0026_taskline_automations",
+			"breakpoints": true
 		}
 	]
 }

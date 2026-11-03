@@ -30,6 +30,32 @@ export async function recordActivity(tx: Tx, access: ProjectAccess, ...entries: 
 }
 
 /**
+ * What Taskline did by itself (Task 56): an automation (`{ via: "automation", automation:
+ * its name }`) or a repeating task's next one made by the daily job (`{ via: "repeat" }`).
+ * No member acted, so `actor_id` is null.
+ */
+export type SystemActor = { via: "automation"; automation: string } | { via: "repeat" };
+
+export async function recordSystemActivity(
+	tx: Tx,
+	scope: Pick<ProjectAccess, "workspace" | "project">,
+	actor: SystemActor,
+	...entries: ActivityEntry[]
+): Promise<void> {
+	if (entries.length === 0) return;
+	await tx.insert(tlActivity).values(
+		entries.map((entry) => ({
+			workspaceId: scope.workspace.id,
+			projectId: scope.project.id,
+			taskId: entry.taskId ?? null,
+			actorId: null,
+			kind: entry.kind,
+			data: { ...entry.data, ...actor },
+		})),
+	);
+}
+
+/**
  * One `task.updated` entry per field of `after` that differs from the row `before`:
  * `{ field, from, to }`. The fields are scalars (type, priority, ids, dates).
  */

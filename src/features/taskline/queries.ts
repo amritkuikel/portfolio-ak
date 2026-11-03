@@ -1,5 +1,13 @@
 import { keepPreviousData, mutationOptions, type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
+	createTasklineAutomation,
+	deleteTasklineAutomation,
+	listTasklineAutomations,
+	previewTasklineAutomation,
+	toggleTasklineAutomation,
+	updateTasklineAutomation,
+} from "@/functions/taskline/automations";
+import {
 	addTasklineComment,
 	addTasklineTaskFiles,
 	deleteTasklineComment,
@@ -92,6 +100,7 @@ import type {
 	AddCommentInput,
 	BulkTasksInput,
 	CompleteSprintInput,
+	CreateAutomationInput,
 	CreateFieldInput,
 	CreateLabelInput,
 	CreateMilestoneInput,
@@ -110,6 +119,8 @@ import type {
 	SetProjectStateInput,
 	TaskListInput,
 	TimesheetCellInput,
+	ToggleAutomationInput,
+	UpdateAutomationInput,
 	UpdateCommentInput,
 	UpdateFieldInput,
 	UpdateLabelInput,
@@ -120,7 +131,7 @@ import type {
 	UpdateTaskInput,
 	UpdateTimeEntryInput,
 } from "./schema";
-import type { ChecklistItem, ProjectRole, SavedViewKind } from "./types";
+import type { AutomationCondition, ChecklistItem, ProjectRole, SavedViewKind } from "./types";
 
 /**
  * Taskline's reads and writes (Query; the board's TanStack DB collection reads the
@@ -162,7 +173,25 @@ export const tasklineKeys = {
 	timesheet: (userId: string, ws: string, week: string) =>
 		[...tasklineKeys.workspace(userId, ws), "timesheet", week] as const,
 	projectTime: (userId: string, ws: string, key: string) => [...tasklineKeys.project(userId, ws, key), "time"] as const,
+	/** Task 56: a project's automations and their runs, and the builder's preview of some conditions. */
+	automations: (userId: string, ws: string, key: string) =>
+		[...tasklineKeys.project(userId, ws, key), "automations"] as const,
+	automationPreview: (userId: string, ws: string, key: string) =>
+		[...tasklineKeys.project(userId, ws, key), "automation-preview"] as const,
 };
+
+/** A project's automations (its lead's settings page). */
+export const projectAutomationsQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.automations(userId, ws, key),
+		queryFn: () => listTasklineAutomations({ data: { ws, key } }),
+	});
+
+/** How many of the project's open tasks some conditions match now (the builder's preview, keyed by the conditions). */
+export const automationPreviewSource = (userId: string, ws: string, key: string) => ({
+	queryKey: tasklineKeys.automationPreview(userId, ws, key),
+	run: (conditions: AutomationCondition[]) => previewTasklineAutomation({ data: { ws, key, conditions } }),
+});
 
 /** My timesheet: the week holding `week` (any of its days). */
 export const timesheetQueryOptions = (userId: string, ws: string, week: string) =>
@@ -395,6 +424,17 @@ export const tasklineMutations = {
 	deleteField: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
 			deleteTasklineField({ data: input }),
+		),
+	/** Task 56: a project's own automations. */
+	createAutomation: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateAutomationInput) => createTasklineAutomation({ data: input })),
+	updateAutomation: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateAutomationInput) => updateTasklineAutomation({ data: input })),
+	toggleAutomation: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: ToggleAutomationInput) => toggleTasklineAutomation({ data: input })),
+	deleteAutomation: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			deleteTasklineAutomation({ data: input }),
 		),
 	addComment: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: AddCommentInput) => addTasklineComment({ data: input })),

@@ -5,6 +5,7 @@ import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin } from "../../../../.storybook/mocks/data";
 import { TASKLINE_NAME } from "../brand";
+import { TasklineAutomationsPage } from "./automations/automations-page";
 import { TasklineFieldsPage } from "./fields/fields-page";
 import { TasklineOverviewPage } from "./overview/overview-page";
 import { TasklineSettingsPage } from "./settings/settings-page";
@@ -80,5 +81,21 @@ export const Fields: Story = {
 		await userEvent.click(canvas.getAllByTestId("field-edit")[0] as HTMLElement);
 		const dialog = await within(document.body).findByTestId("field-dialog", {}, { timeout: 10_000 });
 		await expect(within(dialog).getByLabelText(m.taskline_field_name())).toHaveValue("Severity");
+	},
+};
+
+/** The team's automations (Task 56): a workspace rule naming only what every project shares, and every team rule's runs. */
+export const Automations: Story = {
+	parameters: { app: { session: sampleAdmin, route: "/admin/taskline/automations" } },
+	render: () => (
+		<Suspense>
+			<TasklineAutomationsPage />
+		</Suspense>
+	),
+	play: async ({ canvas }) => {
+		await expect(await canvas.findByRole("heading", { name: m.taskline_admin_automations_title() })).toBeVisible();
+		await expect(canvas.getAllByTestId("automation-row")).toHaveLength(1);
+		await expect(canvas.getByText(m.taskline_automation_when_due_soon({ days: formatNumber(2) }))).toBeVisible();
+		await expect(canvas.getAllByTestId("automation-run")).toHaveLength(3);
 	},
 };

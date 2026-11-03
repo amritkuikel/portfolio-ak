@@ -9,7 +9,10 @@ import type { NotificationData, NotificationKind, NotifyMode } from "./types";
  */
 export function notificationSentence(kind: NotificationKind, data: NotificationData, locale?: Locale): string {
 	const t = locale ? { locale } : undefined;
-	const actor = data.actor ?? m.taskline_notify_admin({}, t);
+	// Task 56: what an automation did names it, in the recipient's language.
+	const actor = data.automation
+		? m.taskline_notify_automation_actor({ name: data.automation }, t)
+		: (data.actor ?? m.taskline_notify_admin({}, t));
 	const ref = data.ref ?? "";
 	switch (kind) {
 		case "assigned":
@@ -32,12 +35,16 @@ export function notificationSentence(kind: NotificationKind, data: NotificationD
 				: m.taskline_notify_sprint_started({ actor, sprint: data.sprint ?? "", project: data.project ?? "" }, t);
 		case "timer":
 			return m.taskline_notify_timer({ ref: data.ref ?? data.title ?? "", project: data.project ?? "" }, t);
+		case "automation":
+			return data.message
+				? m.taskline_notify_automation_message({ actor, ref, message: data.message }, t)
+				: m.taskline_notify_automation({ actor, ref }, t);
 		default:
 			return m.taskline_notify_other({ project: data.project ?? "" }, t);
 	}
 }
 
-/** The kinds sent so far (Task 50's, Task 52's sprints, Task 53's timer); the rest come with their modules and aren't offered yet. */
+/** The kinds sent (Task 50's, Task 52's sprints, Task 53's timer, Task 56's automations); `invited` is an email of its own. */
 export const SENT_KINDS = [
 	"assigned",
 	"mentioned",
@@ -48,6 +55,7 @@ export const SENT_KINDS = [
 	"added",
 	"sprint",
 	"timer",
+	"automation",
 ] as const;
 export type SentKind = (typeof SENT_KINDS)[number];
 
@@ -62,6 +70,7 @@ export const NOTIFY_KIND_LABELS: Record<SentKind, () => string> = {
 	added: () => m.taskline_notify_kind_added(),
 	sprint: () => m.taskline_notify_kind_sprint(),
 	timer: () => m.taskline_notify_kind_timer(),
+	automation: () => m.taskline_notify_kind_automation(),
 };
 
 export const MODE_LABELS: Record<NotifyMode, () => string> = {

@@ -70,6 +70,7 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[], blo
 		milestoneId: row.milestoneId,
 		blocked,
 		fields: row.fields,
+		recurrence: row.recurrence,
 	};
 }
 
@@ -257,6 +258,7 @@ export type TaskPatch = Partial<
 		| "estimateMinutes"
 		| "milestoneId"
 		| "rank"
+		| "recurrence"
 	>
 >;
 

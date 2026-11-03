@@ -48,6 +48,7 @@ const task = (id: string, values: Partial<TaskSummary> = {}): TaskSummary => ({
 	milestoneId: null,
 	blocked: false,
 	fields: {},
+	recurrence: null,
 	...values,
 });
 

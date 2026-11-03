@@ -33,6 +33,7 @@ import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
 import { projectAccess, resolveWorkspace } from "../access";
 import { recordActivity } from "../activity";
+import * as automationRepo from "../automations/repository";
 import * as fieldRepo from "../fields/repository";
 import * as projectRepo from "../projects/repository";
 import * as projects from "../projects/service";
@@ -331,23 +332,25 @@ export async function exportProject(
 		const { workspace } = await team(tx);
 		const project = await teamProject(tx, workspace.id, id);
 		const view = await detail(tx, workspace.slug, project);
-		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows, fieldRows] = await Promise.all([
-			tx
-				.select()
-				.from(tlTask)
-				.where(and(eq(tlTask.projectId, project.id), isNull(tlTask.deletedAt)))
-				.orderBy(asc(tlTask.number)),
-			tx
-				.select({ taskId: tlTaskLabel.taskId, name: tlLabel.name })
-				.from(tlTaskLabel)
-				.innerJoin(tlLabel, eq(tlLabel.id, tlTaskLabel.labelId))
-				.innerJoin(tlTask, eq(tlTask.id, tlTaskLabel.taskId))
-				.where(eq(tlTask.projectId, project.id)),
-			members.listMembers(tx, workspace.id, { deactivated: true }),
-			timeline.listMilestones(tx, project.id),
-			timeline.projectDependencies(tx, project.id),
-			fieldRepo.listFields(tx, workspace.id, project.id),
-		]);
+		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows, fieldRows, automationRows] =
+			await Promise.all([
+				tx
+					.select()
+					.from(tlTask)
+					.where(and(eq(tlTask.projectId, project.id), isNull(tlTask.deletedAt)))
+					.orderBy(asc(tlTask.number)),
+				tx
+					.select({ taskId: tlTaskLabel.taskId, name: tlLabel.name })
+					.from(tlTaskLabel)
+					.innerJoin(tlLabel, eq(tlLabel.id, tlTaskLabel.labelId))
+					.innerJoin(tlTask, eq(tlTask.id, tlTaskLabel.taskId))
+					.where(eq(tlTask.projectId, project.id)),
+				members.listMembers(tx, workspace.id, { deactivated: true }),
+				timeline.listMilestones(tx, project.id),
+				timeline.projectDependencies(tx, project.id),
+				fieldRepo.listFields(tx, workspace.id, project.id),
+				automationRepo.listScope(tx, { workspaceId: workspace.id, projectId: project.id }),
+			]);
 		// Task 55: every field's value as words (archived fields too: their values are the project's).
 		const fieldDefs = fieldRows.map(fieldRepo.fieldDto);
 		const people = memberRows.map((member) => ({ id: member.id, name: member.displayName }));
@@ -386,6 +389,7 @@ export async function exportProject(
 			checklist: task.checklist,
 			milestone: task.milestoneId ? (milestoneName.get(task.milestoneId) ?? null) : null,
 			fields: valuesOf(task.fields),
+			recurrence: task.recurrence,
 		}));
 		audit({
 			action: "taskline.project.export",
@@ -437,6 +441,14 @@ export async function exportProject(
 				archived,
 				workspace: projectId === null,
 				options: options.map((option) => option.name),
+			})),
+			// Task 56: the project's own rules as stored (the ids they name are the project's).
+			automations: automationRows.map(({ name, enabled, trigger, conditions, actions }) => ({
+				name,
+				enabled,
+				trigger,
+				conditions,
+				actions,
 			})),
 			tasks: tasks.map((task) => ({ ...task, parent: task.parent ? `${project.key}-${task.parent}` : null })),
 			// Within the project; one to another project's task isn't the project's to export.

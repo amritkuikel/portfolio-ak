@@ -1,8 +1,11 @@
 import type {
+	Automation,
+	AutomationRun,
 	InboxPage,
 	NavProject,
 	NavWorkspace,
 	NotifySettingsView,
+	ProjectAutomations,
 	ProjectTasks,
 	ProjectTime,
 	SprintReport,
@@ -177,6 +180,7 @@ const summary = (
 	milestoneId: null,
 	blocked: false,
 	fields: {},
+	recurrence: null,
 	...extra,
 });
 
@@ -451,6 +455,7 @@ export const sampleTaskDetail: TaskDetail = {
 		{
 			id: "cm1",
 			authorId: "m-bikash",
+			automation: null,
 			html: '<p><span data-type="mention" class="mention" data-id="m-asha" data-label="Asha Gurung">@Asha Gurung</span> it only fails on Safari. I attached the console output.</p>',
 			mentions: ["m-asha"],
 			attachments: [],
@@ -462,6 +467,7 @@ export const sampleTaskDetail: TaskDetail = {
 		{
 			id: "cm2",
 			authorId: "m-asha",
+			automation: null,
 			html: "<p>Thanks, I'll take it from here.</p>",
 			mentions: [],
 			attachments: [],
@@ -703,4 +709,90 @@ export const sampleNotifySettings: NotifySettingsView = {
 	locale: null,
 	member: true,
 	email: true,
+};
+
+/** Task 56: WEB's own rules (one on, one off), a workspace rule, and the latest runs. */
+export const sampleAutomations: Automation[] = [
+	{
+		id: "0a000000-0000-4000-8000-000000000001",
+		projectId: "p-web",
+		name: "Ship bugs",
+		enabled: true,
+		trigger: { type: "status_changed", statusId: "st-done" },
+		conditions: [{ type: "task_type", in: ["bug"] }],
+		actions: [
+			{ type: "add_label", labelId: "l-bug" },
+			{ type: "notify", to: "reporter", message: "Check the release notes." },
+		],
+		version: 2,
+		lastRun: { outcome: "ok", at: "2026-10-31T09:00:00.000Z" },
+		createdAt: "2026-10-20T09:00:00.000Z",
+	},
+	{
+		id: "0a000000-0000-4000-8000-000000000002",
+		projectId: "p-web",
+		name: "New work goes to Bikash",
+		enabled: false,
+		trigger: { type: "task_created" },
+		conditions: [],
+		actions: [{ type: "assign", to: "m-bikash" }],
+		version: 1,
+		lastRun: null,
+		createdAt: "2026-10-21T09:00:00.000Z",
+	},
+];
+
+export const sampleWorkspaceAutomation: Automation = {
+	id: "0a000000-0000-4000-8000-000000000003",
+	projectId: null,
+	name: "Remind two days ahead",
+	enabled: true,
+	trigger: { type: "due_soon", days: 2 },
+	conditions: [{ type: "assignee", is: "any" }],
+	actions: [{ type: "notify", to: "assignee", message: "Due in two days." }],
+	version: 1,
+	lastRun: { outcome: "failed", at: "2026-10-31T01:15:00.000Z" },
+	createdAt: "2026-10-01T09:00:00.000Z",
+};
+
+export const sampleAutomationRuns: AutomationRun[] = [
+	{
+		id: "0b000000-0000-4000-8000-000000000001",
+		automationId: "0a000000-0000-4000-8000-000000000001",
+		automation: "Ship bugs",
+		projectKey: "WEB",
+		ref: "WEB-6",
+		title: "Contact form fails on Safari",
+		outcome: "ok",
+		detail: { applied: 2 },
+		at: "2026-10-31T09:00:00.000Z",
+	},
+	{
+		id: "0b000000-0000-4000-8000-000000000002",
+		automationId: "0a000000-0000-4000-8000-000000000001",
+		automation: "Ship bugs",
+		projectKey: "WEB",
+		ref: "WEB-3",
+		title: "Navigation",
+		outcome: "skipped",
+		detail: { reason: "conditions" },
+		at: "2026-10-30T15:00:00.000Z",
+	},
+	{
+		id: "0b000000-0000-4000-8000-000000000003",
+		automationId: "0a000000-0000-4000-8000-000000000001",
+		automation: "Ship bugs",
+		projectKey: null,
+		ref: null,
+		title: null,
+		outcome: "failed",
+		detail: { message: "Something it names no longer exists." },
+		at: "2026-10-29T15:00:00.000Z",
+	},
+];
+
+export const sampleProjectAutomations: ProjectAutomations = {
+	automations: sampleAutomations,
+	workspace: [sampleWorkspaceAutomation],
+	runs: sampleAutomationRuns,
 };

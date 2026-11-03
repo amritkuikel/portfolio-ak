@@ -16,6 +16,7 @@ import { enforceRateLimit } from "@/server/http/rate-limit";
 import { mentionedIds } from "@/server/rich-text/sanitize";
 import { assertCan, type ProjectAccess, type TasklineServices } from "../access";
 import { recordActivity } from "../activity";
+import { runAutomations } from "../automations/engine";
 import { actorOf, produce, taskData, viewers } from "../notify/produce";
 import { bumpRev } from "../rev";
 import { fieldError, notMemberError, richText } from "../rules";
@@ -98,11 +99,15 @@ export async function addComment(services: TasklineServices, input: AddCommentIn
 		await recordActivity(tx, access, { kind: "comment.added", taskId: task.id, data: { commentId: comment.id } });
 		await bumpRev(tx, access.project.id);
 		const data = { ...taskData(access, task), excerpt: excerptOf(body.text) };
-		const notify = await produce(tx, access, actorOf(access, user.id), [
+		const actor = actorOf(access, user.id);
+		const notify = await produce(tx, access, actor, [
 			{ kind: "mentioned", taskId: task.id, to: body.mentions, data },
 			{ kind: "comment", taskId: task.id, to: watchers, data },
 		]);
-		return { detail: await taskDetail(tx, access, task, { imageStore, user }), notify };
+		// Task 56: what a comment fires runs with the rule's rights, not the commenter's (a viewer may comment).
+		notify.push(...(await runAutomations(tx, access, actor, [{ trigger: "comment_added", taskId: task.id }])));
+		const after = (await resolveTask(tx, user, input.ws, input.ref)).task;
+		return { detail: await taskDetail(tx, access, after, { imageStore, user }), notify };
 	});
 	deliverAfter(services, notify);
 	return detail;

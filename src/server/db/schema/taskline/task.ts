@@ -19,6 +19,7 @@ import type {
 	ActivityData,
 	ActivityKind,
 	ChecklistItem,
+	Recurrence,
 	TaskFieldValues,
 	TaskType,
 } from "../../../../features/taskline/types";
@@ -74,6 +75,8 @@ export const tlTask = pgTable(
 		milestoneId: uuid().references(() => tlMilestone.id, { onDelete: "set null" }),
 		/** Task 55: custom field values by field id (`tl_field`), checked against their definitions by the server. */
 		fields: jsonb().$type<TaskFieldValues>().notNull().default({}),
+		/** Task 56: how it repeats; closing it creates the next task, which takes the rule over. */
+		recurrence: jsonb().$type<Recurrence>(),
 		/** The backlog's order (a fractional key across the project, compared with COLLATE "C"). */
 		rank: text().notNull(),
 		/** Bumped by each save of the title or the description only: other fields are last-write-wins. */

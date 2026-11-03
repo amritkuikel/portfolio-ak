@@ -289,7 +289,11 @@ export function Comments({
 						<CommentItem
 							key={comment.id}
 							comment={comment}
-							author={nameOf(comment.authorId)}
+							author={
+								comment.automation
+									? m.taskline_comment_by_automation({ name: comment.automation })
+									: nameOf(comment.authorId)
+							}
 							task={task}
 							userId={userId}
 							ws={ws}

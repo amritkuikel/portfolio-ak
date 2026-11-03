@@ -1,6 +1,14 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getTasklineActivityOptions, listTasklineActivity } from "@/functions/taskline-admin/activity";
 import {
+	createTasklineWorkspaceAutomation,
+	deleteTasklineWorkspaceAutomation,
+	listTasklineWorkspaceAutomations,
+	previewTasklineWorkspaceAutomation,
+	toggleTasklineWorkspaceAutomation,
+	updateTasklineWorkspaceAutomation,
+} from "@/functions/taskline-admin/automations";
+import {
 	createTasklineWorkspaceField,
 	deleteTasklineWorkspaceField,
 	listTasklineWorkspaceFields,
@@ -52,11 +60,13 @@ import {
 	setTasklineTimesheetLock,
 	updateTasklineAdminTimeEntry,
 } from "@/functions/taskline-admin/time";
-import type { ProjectHealth, ProjectRole, ProjectStatus, TasklineColor, TeamRole } from "../types";
+import type { AutomationCondition, ProjectHealth, ProjectRole, ProjectStatus, TasklineColor, TeamRole } from "../types";
 import { adminActivityKeys, adminMemberKeys, adminProjectKeys, adminTimeKeys, tasklineAdminKeys } from "./keys";
 import type {
+	AdminCreateAutomationInput,
 	AdminCreateFieldInput,
 	AdminCreateProjectInput,
+	AdminUpdateAutomationInput,
 	AdminUpdateFieldInput,
 	AdminUpdateProjectInput,
 	AdminUpdateTimeEntryInput,
@@ -89,6 +99,16 @@ export const invitationsQueryOptions = () =>
 
 export const adminWorkspaceQueryOptions = () =>
 	queryOptions({ queryKey: tasklineAdminKeys.workspace(), queryFn: () => getTasklineWorkspace() });
+
+/** Task 56: the workspace's automations, the team's runs, and what the builder offers. */
+export const adminAutomationsQueryOptions = () =>
+	queryOptions({ queryKey: tasklineAdminKeys.automations(), queryFn: () => listTasklineWorkspaceAutomations() });
+
+/** How many of the team's open tasks some conditions match now (the builder's preview, keyed by the conditions). */
+export const adminAutomationPreviewSource = () => ({
+	queryKey: tasklineAdminKeys.automationPreview(),
+	run: (conditions: AutomationCondition[]) => previewTasklineWorkspaceAutomation({ data: { conditions } }),
+});
 
 /** Task 55: the workspace's custom fields. */
 export const adminFieldsQueryOptions = () =>
@@ -254,6 +274,26 @@ export const tasklineAdminMutations = {
 		mutationOptions({
 			mutationKey: key("delete-field"),
 			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceField({ data: input }),
+		}),
+	createAutomation: () =>
+		mutationOptions({
+			mutationKey: key("create-automation"),
+			mutationFn: (input: AdminCreateAutomationInput) => createTasklineWorkspaceAutomation({ data: input }),
+		}),
+	updateAutomation: () =>
+		mutationOptions({
+			mutationKey: key("update-automation"),
+			mutationFn: (input: AdminUpdateAutomationInput) => updateTasklineWorkspaceAutomation({ data: input }),
+		}),
+	toggleAutomation: () =>
+		mutationOptions({
+			mutationKey: key("toggle-automation"),
+			mutationFn: (input: { id: string; enabled: boolean }) => toggleTasklineWorkspaceAutomation({ data: input }),
+		}),
+	deleteAutomation: () =>
+		mutationOptions({
+			mutationKey: key("delete-automation"),
+			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceAutomation({ data: input }),
 		}),
 	updateTimeEntry: () =>
 		mutationOptions({

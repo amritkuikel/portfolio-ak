@@ -1,6 +1,7 @@
 import { hashPassword } from "better-auth/crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import type { TasklineServices } from "@/server/taskline/access";
+import * as automations from "@/server/taskline/automations/service";
 import * as projects from "@/server/taskline/projects/service";
 import * as tasks from "@/server/taskline/tasks/service";
 import { seedTaskline, TASKLINE_TEAM } from "../../scripts/lib/taskline-seed.ts";
@@ -61,6 +62,14 @@ describe("Taskline demo seed", async () => {
 			"OPS",
 			"WEB",
 		]);
+		// Task 56: WEB's own rule with its runs, the team's rule beside it, and a repeating task in OPS.
+		const sita = TASKLINE_TEAM.find((each) => each.email.startsWith("sita@"));
+		const rules = await automations.listAutomations(await as(sita?.email ?? ""), "team", "WEB");
+		expect(rules.automations.map((rule) => rule.name)).toEqual(["Close a parent when its subtasks are done"]);
+		expect(rules.workspace.map((rule) => rule.name)).toEqual(["Urgent bugs tell the lead"]);
+		expect(rules.runs.map((run) => run.outcome)).toEqual(["failed", "ok"]);
+		const ops = await tasks.listTasks(admin, "team", "OPS");
+		expect(ops.tasks.filter((task) => task.recurrence?.freq === "weekly")).toHaveLength(1);
 		// Numbers continue after the seeded ones.
 		expect((await tasks.createTask(admin, { ws: "team", key: "OPS", title: "Next" })).ref).toBe("OPS-21");
 	});

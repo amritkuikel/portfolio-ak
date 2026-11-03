@@ -104,6 +104,9 @@ export type NotificationData = {
 	sprintEvent?: "started" | "completed";
 	/** Task 53: how long a timer the daily job stopped had counted. */
 	minutes?: number;
+	/** Task 56: the automation that caused it, and its "notify" action's message. */
+	automation?: string;
+	message?: string;
 };
 
 /** Everything `tl_activity.kind` holds; `data` carries the change (`{ from, to }` and the like). */
@@ -156,6 +159,12 @@ export const ACTIVITY_KINDS = [
 	"field.created",
 	"field.updated",
 	"field.deleted",
+	/** Task 56, a project's own automations: `{ id, name }` (and `enabled` when switched). */
+	"automation.created",
+	"automation.updated",
+	"automation.deleted",
+	/** Task 56, on a repeating task's history once it's closed: `{ ref }`, the next task of its series. */
+	"task.recurred",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -268,6 +277,8 @@ export type TaskSummary = {
 	blocked: boolean;
 	/** Task 55: its custom fields' values, by field id (an empty one isn't there). */
 	fields: TaskFieldValues;
+	/** Task 56: how it repeats (null: it doesn't). */
+	recurrence: Recurrence | null;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -300,6 +311,8 @@ export type TaskAttachment = {
 export type TaskComment = {
 	id: string;
 	authorId: string | null;
+	/** Task 56: the name of the automation that wrote it (its author is then null). */
+	automation: string | null;
 	html: string;
 	mentions: string[];
 	attachments: TaskAttachment[];
@@ -789,3 +802,159 @@ export type TaskField = {
  */
 export type FieldValue = string | number | boolean | string[];
 export type TaskFieldValues = Record<string, FieldValue>;
+
+// ---- Automations and recurring tasks (Task 56) -----------------------------------------------
+
+/** What starts an automation: a change to a task (in its write's transaction), or the daily job (the last two). */
+export const AUTOMATION_TRIGGERS = [
+	"task_created",
+	"status_changed",
+	"assignee_changed",
+	"priority_changed",
+	"label_added",
+	"comment_added",
+	"subtasks_done",
+	"sprint_started",
+	"due_soon",
+	"overdue",
+] as const;
+export type AutomationTriggerType = (typeof AUTOMATION_TRIGGERS)[number];
+/** The triggers the daily job fires (once per task and due date). */
+export const TIME_TRIGGERS: ReadonlyArray<AutomationTriggerType> = ["due_soon", "overdue"];
+
+/**
+ * A trigger and what narrows it: a status change into one status (a project's rule) or
+ * one category (either scope), a priority or a label it changed to, a number of days
+ * before the due date.
+ */
+export type AutomationTrigger =
+	| { type: "task_created" }
+	| { type: "status_changed"; statusId?: string; category?: StatusCategory }
+	| { type: "assignee_changed" }
+	| { type: "priority_changed"; priority?: TaskPriority }
+	| { type: "label_added"; labelId?: string }
+	| { type: "comment_added" }
+	| { type: "subtasks_done" }
+	| { type: "sprint_started" }
+	| { type: "due_soon"; days: number }
+	| { type: "overdue" };
+
+export const AUTOMATION_CONDITIONS = ["task_type", "priority", "category", "label", "assignee", "field"] as const;
+export type AutomationConditionType = (typeof AUTOMATION_CONDITIONS)[number];
+/** What the task must be for the actions to run (every condition, as the task is after the change). */
+export type AutomationCondition =
+	| { type: "task_type"; in: TaskType[] }
+	| { type: "priority"; in: TaskPriority[] }
+	| { type: "category"; in: StatusCategory[] }
+	| { type: "label"; labelId: string; has: boolean }
+	/** A member's id, `none` (unassigned) or `any` (assigned to someone). */
+	| { type: "assignee"; is: string }
+	/** A custom field's filter value, as the `cf` filters write it (`any`, `none`, an option id, `yes`…). */
+	| { type: "field"; fieldId: string; value: string };
+
+export const AUTOMATION_ACTIONS = [
+	"set_status",
+	"assign",
+	"set_priority",
+	"add_label",
+	"remove_label",
+	"set_sprint",
+	"set_due",
+	"comment",
+	"notify",
+	"subtasks",
+] as const;
+export type AutomationActionType = (typeof AUTOMATION_ACTIONS)[number];
+/** What an automation does to the task, in order. */
+export type AutomationAction =
+	| { type: "set_status"; statusId?: string; category?: StatusCategory }
+	/** A member's id, `none`, the project's `lead` or the task's `reporter`. */
+	| { type: "assign"; to: string }
+	| { type: "set_priority"; priority: TaskPriority }
+	| { type: "add_label"; labelId: string }
+	| { type: "remove_label"; labelId: string }
+	/** A sprint's id, the project's `active` sprint, or `none` (the backlog). */
+	| { type: "set_sprint"; to: string }
+	/** Due this many days after the day it runs. */
+	| { type: "set_due"; days: number }
+	| { type: "comment"; text: string }
+	/** A member's id, or the task's `assignee`, `reporter`, `watchers`, or the project's `lead`. */
+	| { type: "notify"; to: string; message: string }
+	| { type: "subtasks"; titles: string[] };
+
+/** At most this many actions and conditions per automation (11.5), and automations per scope. */
+export const AUTOMATION_ACTIONS_MAX = 10;
+export const AUTOMATION_CONDITIONS_MAX = 10;
+export const AUTOMATIONS_MAX = 50;
+
+export const AUTOMATION_OUTCOMES = ["ok", "skipped", "failed"] as const;
+export type AutomationOutcome = (typeof AUTOMATION_OUTCOMES)[number];
+/**
+ * Why a run went as it did: skipped because the task didn't match (`conditions`), had
+ * nothing to change (`unchanged`) or was past the per-change limit (`limit`); failed
+ * with the refusal's message; ok with how many actions changed something.
+ */
+export type AutomationRunDetail = {
+	reason?: "conditions" | "unchanged" | "limit";
+	message?: string;
+	applied?: number;
+};
+
+export type Automation = {
+	id: string;
+	/** Null: the workspace's (the admin's), on every team project's tasks. */
+	projectId: string | null;
+	name: string;
+	enabled: boolean;
+	trigger: AutomationTrigger;
+	conditions: AutomationCondition[];
+	actions: AutomationAction[];
+	version: number;
+	lastRun: { outcome: AutomationOutcome; at: string } | null;
+	createdAt: string;
+};
+
+export type AutomationRun = {
+	id: string;
+	automationId: string;
+	automation: string;
+	/** The task's project and reference (null once the task is deleted for good). */
+	projectKey: string | null;
+	ref: string | null;
+	title: string | null;
+	outcome: AutomationOutcome;
+	detail: AutomationRunDetail;
+	at: string;
+};
+
+/** A project's automations page: its own rules, the workspace's that apply too, and the latest runs of its own. */
+export type ProjectAutomations = {
+	automations: Automation[];
+	workspace: Automation[];
+	runs: AutomationRun[];
+};
+
+/** How many open tasks an automation's conditions match now (the builder's preview). */
+export type AutomationPreview = { count: number; capped: boolean };
+
+export const RECURRENCE_FREQS = ["daily", "weekly", "monthly", "yearly"] as const;
+export type RecurrenceFreq = (typeof RECURRENCE_FREQS)[number];
+export const RECURRENCE_INTERVAL_MAX = 99;
+export const RECURRENCE_COUNT_MAX = 999;
+
+/**
+ * A task's repeat (`tl_task.recurrence`): every `interval` days, weeks (on `weekdays`,
+ * 0 Sunday … 6 Saturday), months or years from `anchor` (the due day it was set from:
+ * a month's day, a year's month and day), ending on `until` or after `count` tasks.
+ * `n` is this task's place in the series (1 first). Closing it creates the next one,
+ * which takes the rule over.
+ */
+export type Recurrence = {
+	freq: RecurrenceFreq;
+	interval: number;
+	weekdays?: number[];
+	until?: string | null;
+	count?: number | null;
+	anchor: string;
+	n: number;
+};

@@ -6,6 +6,7 @@ import {
 	TagsIcon,
 	Trash2Icon,
 	UsersIcon,
+	ZapIcon,
 } from "lucide-react";
 import { SettingsLayout, SettingsNavLink } from "@/components/page/layouts";
 import { m } from "@/paraglide/messages";
@@ -40,6 +41,10 @@ export function ProjectSettingsLayout() {
 					<SettingsNavLink {...tasklineLinks.settings(ws, key, "fields")}>
 						<TablePropertiesIcon aria-hidden />
 						{m.taskline_settings_fields()}
+					</SettingsNavLink>
+					<SettingsNavLink {...tasklineLinks.settings(ws, key, "automations")}>
+						<ZapIcon aria-hidden />
+						{m.taskline_settings_automations()}
 					</SettingsNavLink>
 					<SettingsNavLink {...tasklineLinks.settings(ws, key, "trash")}>
 						<Trash2Icon aria-hidden />

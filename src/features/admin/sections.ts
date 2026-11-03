@@ -26,6 +26,7 @@ import {
 	UsersRoundIcon, // @taskline
 	WorkflowIcon, // @portfolio
 	WrenchIcon, // @portfolio
+	ZapIcon, // @taskline
 } from "lucide-react";
 import type { Permission } from "@/features/rbac/permissions";
 import { TASKLINE_NAME } from "@/features/taskline/brand"; // @taskline
@@ -234,6 +235,15 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		permission: "taskline:configure",
 		group: "taskline",
 		keywords: m.admin_keywords_taskline_fields,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/automations" }),
+		label: m.admin_nav_taskline_automations,
+		description: m.taskline_admin_automations_description,
+		icon: ZapIcon,
+		permission: "taskline:configure",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_automations,
 	},
 	{
 		...linkOptions({ to: "/admin/taskline/activity" }),

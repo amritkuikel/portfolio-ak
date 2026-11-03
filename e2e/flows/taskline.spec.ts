@@ -17,7 +17,10 @@
  * logged by hand and typed in the timesheet; an admin's lock makes the days up to it
  * read only and refuses logging there. Timeline and dependencies (Task 54): a guest
  * reschedules a task on the timeline by keyboard and reads the milestones; with the
- * project's rule on, a blocked task can't be completed until its blockers are.
+ * project's rule on, a blocked task can't be completed until its blockers are. Custom fields
+ * (Task 55): a lead adds a choice field, filters by it, and a required one stops Done.
+ * Automations (Task 56): a rule built in a project's settings acts when a task is done,
+ * logs its run, and tells the project's lead.
  */
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
@@ -781,5 +784,88 @@ test.describe("Taskline timeline and dependencies", () => {
 		await done;
 		await page.reload({ waitUntil: "networkidle" });
 		await expect(status.locator("option:checked")).toHaveText("Done");
+	});
+});
+
+test.describe("Taskline automations", () => {
+	test.use(signedIn("admin"));
+
+	test("a rule built in the project's settings acts when a task is done, logs its run, and tells the lead", async ({
+		page,
+		browser,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const stamp = Date.now().toString(36).slice(-5);
+		const name = `Ship it ${stamp}`;
+		const title = `Release notes ${stamp}`;
+
+		// A retry against the same server first clears what an earlier attempt left.
+		await open(page, "/app/taskline/team/p/WEB/settings/automations");
+		const leftovers = page
+			.getByTestId("project-automations")
+			.getByTestId("automation-row")
+			.filter({ hasText: /Ship it / });
+		while ((await leftovers.count()) > 0) {
+			const gone = nextSave(page);
+			await leftovers
+				.first()
+				.getByRole("button", { name: /^Delete “Ship it / })
+				.click();
+			await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+			await gone;
+		}
+
+		// The builder: when a task moves into a completed status, tell the lead and make it urgent.
+		await page.getByTestId("automation-new").click();
+		const dialog = page.getByTestId("automation-dialog");
+		await dialog.getByRole("textbox", { name: "Name" }).fill(name);
+		await expect(dialog.getByTestId("automation-preview")).toContainText("open tasks now");
+		await dialog.getByRole("combobox", { name: "Who" }).click();
+		await page.getByRole("option", { name: "The project's lead" }).click();
+		await dialog.getByRole("textbox", { name: /Message/ }).fill("Ready to ship");
+		await dialog.getByRole("button", { name: "Add an action" }).click();
+		await dialog.getByRole("combobox", { name: "Do" }).nth(1).click();
+		await page.getByRole("option", { name: "Set the priority" }).click();
+		await dialog.getByRole("combobox", { name: "Priority" }).click();
+		await page.getByRole("option", { name: "Urgent" }).click();
+		const created = nextSave(page);
+		await dialog.getByRole("button", { name: "Create automation" }).click();
+		await created;
+		const row = page.getByTestId("project-automations").getByTestId("automation-row").filter({ hasText: name });
+		await expect(row).toContainText("When a task moves into a Completed status");
+
+		// A new task, done from its sheet: the rule makes it urgent, and its history says so.
+		await open(page, "/app/taskline/team/p/WEB/board");
+		await addAndMove(page, title);
+		await page.getByTestId("taskline-card-open").filter({ hasText: title }).click();
+		const done = nextSave(page);
+		await page.getByTestId("task-status").selectOption({ label: "Done" });
+		await done;
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(page).toHaveURL(/\/app\/taskline\/team\/t\/WEB-\d+$/);
+		const ref = (page.url().match(/WEB-\d+$/) ?? [""])[0];
+		await expect(page.getByTestId("task-priority")).toHaveValue("4");
+		await page.getByTestId("task-tab-activity").click();
+		await expect(page.getByTestId("task-activity")).toContainText(`Automation “${name}” set the priority to Urgent`);
+
+		// The run log says it ran on that task.
+		await open(page, "/app/taskline/team/p/WEB/settings/automations");
+		await expect(page.getByTestId("automation-run").filter({ hasText: ref }).first()).toContainText("Ran");
+
+		// Sita leads WEB: the rule's notice is in her inbox.
+		const context = await browser.newContext({ baseURL: E2E.baseURL, storageState: { cookies: [], origins: [] } });
+		const lead = await context.newPage();
+		await signInAs(lead, "sita@taskline.example.com");
+		await open(lead, "/app/taskline/inbox");
+		await expect(lead.getByRole("link", { name: `Automation “${name}” on ${ref}: Ready to ship` })).toBeVisible();
+		await context.close();
+
+		// Deleted again, so the flows after this one meet the project as it was.
+		await row.getByRole("button", { name: `Delete “${name}”?` }).click();
+		const removed = nextSave(page);
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await removed;
+		await expect(row).toHaveCount(0);
 	});
 });

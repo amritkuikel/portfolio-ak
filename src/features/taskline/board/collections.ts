@@ -169,6 +169,7 @@ export function draftTask(
 		milestoneId: null,
 		blocked: false,
 		fields: {},
+		recurrence: null,
 	};
 }
 

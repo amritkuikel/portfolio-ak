@@ -5,6 +5,7 @@ import { UserAvatar } from "@/components/data-display/user-avatar";
 import { isoDateInstant } from "@/lib/i18n/date-only";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
+import { TASKLINE_NAME } from "../brand";
 import { fieldValueText } from "../fields";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { formatDuration } from "../time/duration";
@@ -41,7 +42,11 @@ const text = (value: ActivityValue | undefined) => (typeof value === "string" ? 
 function actorName(entry: Pick<TaskActivity, "actorId" | "data">, members: ActivityContext["members"]) {
 	if (entry.actorId)
 		return members.find((member) => member.id === entry.actorId)?.name ?? m.taskline_activity_someone();
-	return entry.data.via === "admin" ? m.taskline_activity_admin() : m.taskline_activity_someone();
+	if (entry.data.via === "admin") return m.taskline_activity_admin();
+	// Task 56: an automation (named), or the daily job making a repeating task's next one.
+	if (entry.data.via === "automation") return m.taskline_activity_automation({ name: text(entry.data.automation) });
+	if (entry.data.via === "repeat") return TASKLINE_NAME;
+	return m.taskline_activity_someone();
 }
 
 const memberName = (id: ActivityValue | undefined, members: ActivityContext["members"]) =>
@@ -107,6 +112,8 @@ function fieldPhrase(actor: string, data: ActivityData, context: ActivityContext
 				? m.taskline_activity_custom_set({ actor, field: name, value })
 				: m.taskline_activity_custom_changed({ actor, field: name });
 		}
+		case "recurrence":
+			return to ? m.taskline_activity_recurrence({ actor }) : m.taskline_activity_recurrence_stopped({ actor });
 		case "estimateMinutes":
 			return to === null || to === undefined
 				? m.taskline_activity_estimate_removed({ actor })
@@ -125,7 +132,11 @@ export function activitySentence(
 	const { data } = entry;
 	switch (entry.kind) {
 		case "task.created":
-			return m.taskline_activity_created({ actor });
+			return data.recurredFrom
+				? m.taskline_activity_created_repeat({ actor, task: text(data.recurredFrom) })
+				: m.taskline_activity_created({ actor });
+		case "task.recurred":
+			return m.taskline_activity_recurred({ actor, task: text(data.ref) });
 		case "task.updated":
 			return fieldPhrase(actor, data, context);
 		case "task.moved":
@@ -179,6 +190,10 @@ export function activitySentence(
 		case "field.updated":
 		case "field.deleted":
 			return m.taskline_activity_field_changed({ actor, field: text(data.name) });
+		case "automation.created":
+		case "automation.updated":
+		case "automation.deleted":
+			return m.taskline_activity_automation_changed({ actor, automation: text(data.name) });
 		case "sprint.created":
 			return m.taskline_activity_sprint_created({ actor, sprint: text(data.name) });
 		case "sprint.updated":

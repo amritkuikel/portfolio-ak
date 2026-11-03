@@ -61,6 +61,7 @@ const task = (
 	milestoneId: null,
 	blocked: false,
 	fields: {},
+	recurrence: null,
 });
 
 function Harness({ canEdit = true, onPoints = vi.fn() }: { canEdit?: boolean; onPoints?: () => void }) {

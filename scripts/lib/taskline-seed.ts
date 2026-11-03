@@ -216,6 +216,42 @@ async function seedFields(
 	}
 }
 
+/**
+ * Task 56: WEB's own rule (a parent closes when its subtasks are done) with two runs in
+ * its log, one that changed things and one that failed.
+ */
+async function seedAutomations(
+	query: DemoQuery,
+	workspaceId: string,
+	projectId: string,
+	tasks: ReadonlyArray<SeededTask>,
+) {
+	const rule = await query(
+		`insert into "tl_automation" ("workspace_id", "project_id", "name", "trigger", "conditions", "actions") values ($1, $2, 'Close a parent when its subtasks are done', $3, '[]', $4) returning "id"`,
+		[
+			workspaceId,
+			projectId,
+			JSON.stringify({ type: "subtasks_done" }),
+			JSON.stringify([{ type: "set_status", category: "completed" }]),
+		],
+	);
+	const ruleId = firstId(rule.rows, "automation");
+	const done = tasks.find((task) => task.done);
+	const open = tasks.find((task) => !task.done && !task.canceled);
+	if (done) {
+		await query(
+			`insert into "tl_automation_run" ("automation_id", "task_id", "outcome", "detail", "at") values ($1, $2, 'ok', '{"applied":1}', now() - interval '2 days')`,
+			[ruleId, done.id],
+		);
+	}
+	if (open) {
+		await query(
+			`insert into "tl_automation_run" ("automation_id", "task_id", "outcome", "detail", "at") values ($1, $2, 'failed', $3, now() - interval '1 day')`,
+			[ruleId, open.id, JSON.stringify({ message: "WEB-2 needs Signed off before it's completed." })],
+		);
+	}
+}
+
 /** A calendar day `offset` days from today (UTC; demo data needs no time zone). */
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -352,6 +388,19 @@ export async function seedTaskline(
 		[workspaceId, JSON.stringify(SEVERITY)],
 	);
 	const severityId = firstId(severity.rows, "field Severity");
+	// Task 56: a workspace rule: an urgent bug tells the project's lead.
+	await query(
+		`insert into "tl_automation" ("workspace_id", "name", "trigger", "conditions", "actions") values ($1, 'Urgent bugs tell the lead', $2, $3, $4)`,
+		[
+			workspaceId,
+			JSON.stringify({ type: "task_created" }),
+			JSON.stringify([
+				{ type: "task_type", in: ["bug"] },
+				{ type: "priority", in: [4] },
+			]),
+			JSON.stringify([{ type: "notify", to: "lead", message: "An urgent bug came in." }]),
+		],
+	);
 
 	let taskCount = 0;
 	for (const project of PROJECTS) {
@@ -472,6 +521,17 @@ export async function seedTaskline(
 		if (project.key === "WEB") {
 			await seedTimeline(query, projectId, made);
 			await seedFields(query, { workspaceId, projectId, reviewers: assignees, tasks: made });
+			await seedAutomations(query, workspaceId, projectId, made);
+		}
+		// Task 56: OPS's first open task repeats every week on Monday.
+		const repeating = made.find((task) => !task.done && !task.canceled);
+		if (project.key === "OPS" && repeating) {
+			const anchor = day(1);
+			await query(`update "tl_task" set "recurrence" = $2, "due_on" = $3 where "id" = $1`, [
+				repeating.id,
+				JSON.stringify({ freq: "weekly", interval: 1, weekdays: [1], anchor, n: 1 }),
+				anchor,
+			]);
 		}
 		await query(
 			`insert into "tl_activity" ("workspace_id", "project_id", "actor_id", "kind", "data") values ($1, $2, $3, 'project.created', $4)`,
