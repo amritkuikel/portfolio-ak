@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isOrderKey } from "@/lib/fractional-index";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
+import { FIELD_NAME_MAX, fieldDefinition, fieldOptions, fieldValuesPatch } from "./fields";
 import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
@@ -202,6 +203,8 @@ export const createTaskInput = z.strictObject({
 	estimateMinutes: estimate.nullable().optional(),
 	/** Task 54: the milestone it leads to. */
 	milestoneId: id.nullable().optional(),
+	/** Task 55: custom field values by field id (checked against the fields by the server). */
+	fields: fieldValuesPatch().optional(),
 });
 
 /** The title and description: saved with the version they started from. */
@@ -228,6 +231,8 @@ export const patchTaskInput = z.strictObject({
 	points: points.nullable().optional(),
 	estimateMinutes: estimate.nullable().optional(),
 	milestoneId: id.nullable().optional(),
+	/** Task 55: custom field values to set (null clears one); the others stay. */
+	fields: fieldValuesPatch().optional(),
 });
 
 /** A drop on the board: a status and a position in it (an order key the browser computed). */
@@ -378,6 +383,8 @@ export const importTaskRow = z.object({
 	labels: z.array(z.string().trim().min(1).max(LABEL_NAME_MAX)).max(LABELS_PER_TASK_MAX),
 	startOn: isoDate().nullable(),
 	dueOn: isoDate().nullable(),
+	/** Task 55: custom field values, already typed by the dialog (option and member names matched there). */
+	fields: fieldValuesPatch().optional(),
 });
 export type ImportTaskRow = z.infer<typeof importTaskRow>;
 
@@ -533,6 +540,30 @@ export const dependencyInput = z.strictObject({
 export type CreateMilestoneInput = z.infer<typeof createMilestoneInput>;
 export type UpdateMilestoneInput = z.infer<typeof updateMilestoneInput>;
 export type DependencyInput = z.infer<typeof dependencyInput>;
+
+// ---- Custom fields (Task 55) ----------------------------------------------------------------
+
+/** A project's own field (its lead's): what it is, in the definition's shape. */
+export const createFieldInput = z.strictObject({ ws: ws(), key: projectKey(), field: fieldDefinition });
+/**
+ * A field's changes: its name, whether it's required, a select's options (an option
+ * left out comes off every task), archived or not, or its place (an order key). Its
+ * type never changes: values of one type don't become another's.
+ */
+export const fieldChanges = {
+	id,
+	name: required({ max: FIELD_NAME_MAX }).optional(),
+	required: z.boolean().optional(),
+	options: fieldOptions().optional(),
+	archived: z.boolean().optional(),
+	position: position.optional(),
+};
+export const updateFieldInput = z.strictObject({ ws: ws(), key: projectKey(), ...fieldChanges });
+export const deleteFieldInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+
+export type CreateFieldInput = z.infer<typeof createFieldInput>;
+export type UpdateFieldInput = z.infer<typeof updateFieldInput>;
+export type FieldChanges = Omit<UpdateFieldInput, "ws" | "key">;
 
 /** A project by id: where an old Kanban board's link goes (0210). */
 export const projectByIdInput = z.strictObject({ id });

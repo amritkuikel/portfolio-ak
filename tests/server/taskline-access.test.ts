@@ -7,6 +7,7 @@ import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import * as schema from "@/server/db/schema";
 import type { TasklineServices } from "@/server/taskline/access";
 import * as collab from "@/server/taskline/collab/service";
+import * as fields from "@/server/taskline/fields/service";
 import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
@@ -639,6 +640,41 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 			const input = { ws: context.ws, ref: blocked.ref, relation: "blocked_by" as const, other: blocker.ref };
 			await timeline.addDependency(as(context.owner), input);
 			return timeline.removeDependency(caller, input);
+		},
+	},
+	// Task 55: a project's own fields are its lead's.
+	{
+		name: "createField",
+		need: "manage",
+		run: ({ ws, key }, caller) =>
+			fields.createField(caller, {
+				ws,
+				key,
+				field: { type: "text", name: unique("Field").slice(0, 40), required: false },
+			}),
+	},
+	{
+		name: "updateField",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const field = await fields.createField(as(owner), {
+				ws,
+				key,
+				field: { type: "text", name: unique("Field").slice(0, 40), required: false },
+			});
+			return fields.updateField(caller, { ws, key, id: field.id, required: true });
+		},
+	},
+	{
+		name: "deleteField",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const field = await fields.createField(as(owner), {
+				ws,
+				key,
+				field: { type: "checkbox", name: unique("Field").slice(0, 40), required: false },
+			});
+			return fields.deleteField(caller, { ws, key, id: field.id });
 		},
 	},
 ];

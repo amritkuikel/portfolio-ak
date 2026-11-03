@@ -5,12 +5,15 @@ import { UserAvatar } from "@/components/data-display/user-avatar";
 import { isoDateInstant } from "@/lib/i18n/date-only";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
+import { fieldValueText } from "../fields";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { formatDuration } from "../time/duration";
 import type {
 	ActivityData,
 	ActivityValue,
+	FieldValue,
 	TaskActivity,
+	TaskField,
 	TasklineMember,
 	TasklineStatus,
 	TaskPriority,
@@ -29,6 +32,8 @@ export type ActivityContext = {
 	sprints?: ReadonlyArray<{ id: string; name: string }>;
 	/** Task 54: the milestones, for "set its milestone to Launch" (a deleted one reads as "a milestone"). */
 	milestones?: ReadonlyArray<{ id: string; name: string }>;
+	/** Task 55: the custom fields, for "set Severity to High" (a deleted one keeps the name the entry saved). */
+	fields?: ReadonlyArray<TaskField>;
 };
 
 const text = (value: ActivityValue | undefined) => (typeof value === "string" ? value : "");
@@ -93,6 +98,15 @@ function fieldPhrase(actor: string, data: ActivityData, context: ActivityContext
 							context.milestones?.find((milestone) => milestone.id === to)?.name ?? m.taskline_activity_a_milestone(),
 					})
 				: m.taskline_activity_milestone_removed({ actor });
+		case "custom": {
+			const field = context.fields?.find((each) => each.id === data.fieldId);
+			const name = field?.name ?? text(data.name);
+			if (to === null || to === undefined) return m.taskline_activity_custom_cleared({ actor, field: name });
+			const value = field ? fieldValueText(field, to as FieldValue, context.members) : "";
+			return value
+				? m.taskline_activity_custom_set({ actor, field: name, value })
+				: m.taskline_activity_custom_changed({ actor, field: name });
+		}
 		case "estimateMinutes":
 			return to === null || to === undefined
 				? m.taskline_activity_estimate_removed({ actor })
@@ -161,6 +175,10 @@ export function activitySentence(
 		case "label.updated":
 		case "label.deleted":
 			return m.taskline_activity_label_changed({ actor });
+		case "field.created":
+		case "field.updated":
+		case "field.deleted":
+			return m.taskline_activity_field_changed({ actor, field: text(data.name) });
 		case "sprint.created":
 			return m.taskline_activity_sprint_created({ actor, sprint: text(data.name) });
 		case "sprint.updated":

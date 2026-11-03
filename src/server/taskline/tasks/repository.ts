@@ -16,7 +16,14 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import type { ProjectActivity, TaskPriority, TaskSummary, TaskType, TrashedTask } from "@/features/taskline/types";
+import type {
+	ProjectActivity,
+	TaskField,
+	TaskPriority,
+	TaskSummary,
+	TaskType,
+	TrashedTask,
+} from "@/features/taskline/types";
 import { generateKeyBetween, generateKeysBetween } from "@/lib/fractional-index";
 import { type Paged, parseSort } from "@/lib/list/paging";
 import { allOf, countRows, paginate, textSearch } from "@/server/db/list";
@@ -62,6 +69,7 @@ export function taskSummary(row: TlTaskRow, key: string, labelIds: string[], blo
 		estimateMinutes: row.estimateMinutes,
 		milestoneId: row.milestoneId,
 		blocked,
+		fields: row.fields,
 	};
 }
 
@@ -392,9 +400,38 @@ export type TaskListFilters = {
 	/** Task 54: a milestone's id or `none`; blocked by an open task, or not. */
 	milestone?: string;
 	blocked?: boolean;
+	/** Task 55: field filters (a `me` already the caller's member id, or null for nobody). */
+	fields?: ReadonlyArray<{ field: Pick<TaskField, "id" | "type">; value: string | null }>;
 	today: string;
 	weekEnd: string;
 };
+
+/**
+ * One field filter as SQL (`matchesFieldFilter` in the browser means the same): a value
+ * or none, a ticked box, a day before or from today, or one value (`@>`, so a
+ * multiple choice matches when it holds the option). Both `?` and `@>` use the GIN index.
+ */
+function fieldWhere(field: Pick<TaskField, "id" | "type">, value: string | null, today: string): SQL {
+	const has = sql`${tlTask.fields} ? ${field.id}`;
+	const contains = (json: unknown) => sql`${tlTask.fields} @> ${JSON.stringify({ [field.id]: json })}::jsonb`;
+	switch (value) {
+		case null:
+			return sql`false`;
+		case "any":
+			return has;
+		case "none":
+		case "no":
+			return sql`not (${has})`;
+		case "yes":
+			return contains(true);
+		case "past":
+			return sql`(${tlTask.fields} ->> ${field.id}::text) < ${today}`;
+		case "future":
+			return sql`(${tlTask.fields} ->> ${field.id}::text) >= ${today}`;
+		default:
+			return contains(field.type === "multi_select" ? [value] : value);
+	}
+}
 
 /** The list view's WHERE: a project's tasks outside the trash, filtered. */
 export function listWhere(projectId: string, filters: TaskListFilters): SQL | undefined {
@@ -441,6 +478,7 @@ export function listWhere(projectId: string, filters: TaskListFilters): SQL | un
 				? eq(tlTask.milestoneId, filters.milestone)
 				: undefined,
 		filters.blocked === undefined ? undefined : filters.blocked ? OPEN_BLOCKER : sql`not ${OPEN_BLOCKER}`,
+		...(filters.fields ?? []).map(({ field, value }) => fieldWhere(field, value, filters.today)),
 	);
 }
 

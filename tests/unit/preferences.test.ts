@@ -65,6 +65,14 @@ describe("parseCookieHeader", () => {
 });
 
 describe("preferences store", () => {
+	it("remembers a column hidden by default once shown, and forgets it when hidden again", () => {
+		const store = createPreferencesStore(DEFAULT_PREFERENCES);
+		store.actions.setColumnVisible("tasks", "field:a", true, true);
+		expect(store.state.tables.tasks).toEqual({ hiddenColumns: [], shownColumns: ["field:a"] });
+		store.actions.setColumnVisible("tasks", "field:a", false, true);
+		expect(store.state.tables.tasks).toEqual({ hiddenColumns: [], shownColumns: [] });
+	});
+
 	it("updates state and persists each preference to a cookie the server can read", () => {
 		const store = createPreferencesStore(DEFAULT_PREFERENCES);
 		store.actions.setTheme("dark");

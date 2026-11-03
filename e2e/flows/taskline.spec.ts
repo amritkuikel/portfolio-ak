@@ -720,4 +720,66 @@ test.describe("Taskline timeline and dependencies", () => {
 		await page.reload({ waitUntil: "networkidle" });
 		await expect(page.getByTestId("task-status").locator("option:checked")).toHaveText("Done");
 	});
+
+	test("a lead adds a choice field, a task gets a value, the list filters by it, and a required one stops Done", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		await startGuest(page);
+		await open(page, "/app/taskline/sandbox/p/WEB/settings/fields");
+		await page.getByTestId("field-new").click();
+		const dialog = page.getByTestId("field-dialog");
+		await dialog.getByRole("textbox", { name: "Name" }).fill("Severity");
+		await dialog.getByRole("textbox", { name: "Option 1" }).fill("Low");
+		await dialog.getByRole("textbox", { name: "Option 2" }).fill("High");
+		const created = nextSave(page);
+		await dialog.getByRole("button", { name: "Add field" }).click();
+		await created;
+		await expect(
+			page.getByTestId("project-fields").getByTestId("field-row").filter({ hasText: "Severity" }),
+		).toBeVisible();
+
+		// WEB-3 gets High (saved at once, kept across a reload).
+		await open(page, "/app/taskline/sandbox/t/WEB-3");
+		const fields = page.getByTestId("task-custom-fields");
+		const set = nextSave(page);
+		await fields.getByLabel("Severity").selectOption({ label: "High" });
+		await set;
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(fields.getByLabel("Severity").locator("option:checked")).toHaveText("High");
+
+		// The list filters by it: only WEB-3, with its chip.
+		await open(page, "/app/taskline/sandbox/p/WEB/list");
+		await page.getByTestId("task-filters").getByLabel("Severity").selectOption({ label: "High" });
+		await expect(page).toHaveURL(/[?&]cf=/);
+		await expect(page.getByTestId("task-row-open")).toHaveCount(1);
+		await expect(page.getByTestId("task-table").getByText("WEB-3", { exact: true })).toBeVisible();
+		await expect(page.getByText("Severity: High")).toBeVisible();
+
+		// A required box: WEB-3 can't be completed until it's ticked.
+		await open(page, "/app/taskline/sandbox/p/WEB/settings/fields");
+		await page.getByTestId("field-new").click();
+		await dialog.getByRole("textbox", { name: "Name" }).fill("QA passed");
+		await dialog.getByRole("combobox", { name: "Type" }).click();
+		await page.getByRole("option", { name: "Checkbox" }).click();
+		await dialog.getByRole("checkbox", { name: "Required" }).check();
+		const required = nextSave(page);
+		await dialog.getByRole("button", { name: "Add field" }).click();
+		await required;
+		await open(page, "/app/taskline/sandbox/t/WEB-3");
+		const status = page.getByTestId("task-status");
+		const before = await status.inputValue();
+		await status.selectOption({ label: "Done" });
+		await expect(page.getByText("WEB-3 needs QA passed before it's completed.")).toBeVisible();
+		await expect(status).toHaveValue(before);
+		const ticked = nextSave(page);
+		await fields.getByRole("checkbox", { name: /QA passed/ }).check();
+		await ticked;
+		const done = nextSave(page);
+		await status.selectOption({ label: "Done" });
+		await done;
+		await page.reload({ waitUntil: "networkidle" });
+		await expect(status.locator("option:checked")).toHaveText("Done");
+	});
 });

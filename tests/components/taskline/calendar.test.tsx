@@ -38,6 +38,7 @@ const task = (id: string, title: string, dueOn: string | null): TaskSummary => (
 	estimateMinutes: null,
 	milestoneId: null,
 	blocked: false,
+	fields: {},
 });
 
 function Harness({ canEdit = true }: { canEdit?: boolean }) {

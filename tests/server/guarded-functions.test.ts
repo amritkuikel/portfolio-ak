@@ -148,6 +148,12 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["updateTasklineWorkspaceLabel", "taskline:configure"],
 		["deleteTasklineWorkspaceLabel", "taskline:configure"],
 	],
+	"taskline-admin/fields.ts": [
+		["listTasklineWorkspaceFields", "taskline:configure"],
+		["createTasklineWorkspaceField", "taskline:configure"],
+		["updateTasklineWorkspaceField", "taskline:configure"],
+		["deleteTasklineWorkspaceField", "taskline:configure"],
+	],
 	"taskline-admin/activity.ts": [
 		["listTasklineActivity", "taskline:read"],
 		["getTasklineActivityOptions", "taskline:read"],
@@ -280,6 +286,7 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"addTasklineDependency",
 		"removeTasklineDependency",
 	],
+	"taskline/fields.ts": ["createTasklineField", "updateTasklineField", "deleteTasklineField"],
 	"taskline/workspaces.ts": ["getTasklineWorkspace", "startTasklineSandbox", "listTasklineMembers"],
 	"taskline/projects.ts": [
 		"listTasklineProjects",

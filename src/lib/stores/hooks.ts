@@ -49,11 +49,15 @@ export const useTablePreferences = (tableId: string, defaults: { pageSize: numbe
 	const store = usePreferencesStore();
 	const table = usePreferences((state) => state.tables[tableId] ?? NO_TABLE);
 	const hiddenColumns = table.hiddenColumns ?? [];
+	const shownColumns = table.shownColumns ?? [];
 	return {
 		pageSize: table.pageSize ?? defaults.pageSize,
 		hiddenColumns,
-		isColumnVisible: (column: string) => !hiddenColumns.includes(column),
+		/** A column the user hid is hidden, one they showed is shown; otherwise it's visible unless `defaultHidden`. */
+		isColumnVisible: (column: string, defaultHidden = false) =>
+			hiddenColumns.includes(column) ? false : shownColumns.includes(column) ? true : !defaultHidden,
 		setPageSize: (pageSize: number) => store.actions.setTablePageSize(tableId, pageSize),
-		setColumnVisible: (column: string, visible: boolean) => store.actions.setColumnVisible(tableId, column, visible),
+		setColumnVisible: (column: string, visible: boolean, defaultHidden = false) =>
+			store.actions.setColumnVisible(tableId, column, visible, defaultHidden),
 	};
 };

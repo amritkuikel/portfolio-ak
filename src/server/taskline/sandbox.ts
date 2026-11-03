@@ -1,7 +1,8 @@
 import "@tanstack/react-start/server-only";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { newOptionId } from "@/features/taskline/fields";
 import { workspaceSettings } from "@/features/taskline/settings";
-import type { TasklineColor, TaskPriority, TaskType } from "@/features/taskline/types";
+import type { TaskFieldValues, TasklineColor, TaskPriority, TaskType } from "@/features/taskline/types";
 import { generateKeysBetween } from "@/lib/fractional-index";
 import { addDays, todayInZone, weekdayOf } from "@/lib/i18n/date-only";
 import { APP_TIME_ZONE, formatNumber } from "@/lib/i18n/intl";
@@ -12,6 +13,7 @@ import {
 	type TlWorkspaceRow,
 	tlActivity,
 	tlComment,
+	tlField,
 	tlImport,
 	tlInvitation,
 	tlLabel,
@@ -32,6 +34,7 @@ import type { Tx } from "@/server/db/types";
 import type { GuestData } from "@/server/guests/data";
 import type { ProjectAccess, WorkspaceAccess } from "./access";
 import { recordActivity } from "./activity";
+import * as fieldRepo from "./fields/repository";
 import * as projects from "./projects/repository";
 import { insertProjectWithWorkflow } from "./projects/service";
 import { nextTaskNumber } from "./rev";
@@ -314,6 +317,7 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	await seedSprints(tx, created, ids, today, t);
 	await seedTime(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, today, t });
 	await seedTimeline(tx, project.id, ids, today, t);
+	await seedFields(tx, { workspaceId: workspace.id, projectId: project.id, teammates, taskIds: ids, t });
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
@@ -598,6 +602,64 @@ export function freeProjectKey(base: string, taken: ReadonlySet<string>): string
 	}
 }
 
+/**
+ * Task 55: the project's own fields (an area to choose, a reviewer, a sign-off box) in
+ * the guest's language, with values on most tasks: the panel, the list's columns and
+ * the filters have something to show.
+ */
+async function seedFields(
+	tx: Tx,
+	{
+		workspaceId,
+		projectId,
+		teammates,
+		taskIds,
+		t,
+	}: {
+		workspaceId: string;
+		projectId: string;
+		teammates: ReadonlyArray<{ id: string }>;
+		taskIds: string[];
+		t: { locale: Locale };
+	},
+) {
+	const options = [
+		{ id: newOptionId(), name: m.taskline_seed_option_design({}, t), color: "violet" as const },
+		{ id: newOptionId(), name: m.taskline_seed_option_content({}, t), color: "amber" as const },
+		{ id: newOptionId(), name: m.taskline_seed_option_engineering({}, t), color: "blue" as const },
+	];
+	const scope = { workspaceId, projectId };
+	const area = await fieldRepo.insertField(tx, {
+		...scope,
+		name: m.taskline_seed_field_area({}, t),
+		type: "select",
+		options,
+		position: "a0",
+	});
+	const reviewer = await fieldRepo.insertField(tx, {
+		...scope,
+		name: m.taskline_seed_field_reviewer({}, t),
+		type: "member",
+		position: "a1",
+	});
+	const signedOff = await fieldRepo.insertField(tx, {
+		...scope,
+		name: m.taskline_seed_field_signed_off({}, t),
+		type: "checkbox",
+		position: "a2",
+	});
+	for (const [index, taskId] of taskIds.entries()) {
+		const sample = TASKS[index];
+		const values: TaskFieldValues = {};
+		const option = options[index % options.length];
+		if (option && index < 8) values[area.id] = option.id;
+		const mate = teammates[index % teammates.length];
+		if (mate && index % 3 === 0) values[reviewer.id] = mate.id;
+		if (sample?.status === 3) values[signedOff.id] = true;
+		if (Object.keys(values).length > 0) await tx.update(tlTask).set({ fields: values }).where(eq(tlTask.id, taskId));
+	}
+}
+
 /** Points every reference to one member at another (the claim's merge). */
 async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 	await tx.update(tlTask).set({ assigneeId: to }).where(eq(tlTask.assigneeId, from));
@@ -628,6 +690,10 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 		sql`update ${tlTimeEntry} set ended_at = now(), minutes = least(720, greatest(1, round(extract(epoch from now() - started_at) / 60)::int)) where member_id = ${from} and started_at is not null and ended_at is null`,
 	);
 	await tx.update(tlTimeEntry).set({ memberId: to }).where(eq(tlTimeEntry.memberId, from));
+	// Custom fields (Task 55): a person field's value is a member id.
+	await tx.execute(
+		sql`update ${tlTask} set fields = (select jsonb_object_agg(e.key, case when e.value = to_jsonb(${from}::text) and e.key in (select id::text from ${tlField} where type = 'member') then to_jsonb(${to}::text) else e.value end) from jsonb_each(${tlTask.fields}) as e) where exists (select 1 from jsonb_each(${tlTask.fields}) as e where e.value = to_jsonb(${from}::text))`,
+	);
 }
 
 /**
@@ -682,6 +748,11 @@ export async function claimSandbox(tx: Tx, fromUserId: string, toUserId: string)
 		.set({ workspaceId: target.id })
 		.where(and(eq(tlLabel.workspaceId, guest.id), sql`${tlLabel.projectId} is not null`));
 	await mergeWorkspaceLabels(tx, guest.id, target.id);
+	// Task 55: the projects' own fields go with them (a sandbox has no workspace fields of its own to merge).
+	await tx
+		.update(tlField)
+		.set({ workspaceId: target.id })
+		.where(and(eq(tlField.workspaceId, guest.id), sql`${tlField.projectId} is not null`));
 	// What's left (the guest's own member row) goes with the workspace.
 	await tx.delete(tlWorkspace).where(eq(tlWorkspace.id, guest.id));
 }

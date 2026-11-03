@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { listSchema } from "@/lib/crud/schema";
-import { enumParam, pageParam, searchParam } from "@/lib/list/params";
+import { arrayParam, enumParam, pageParam, searchParam } from "@/lib/list/params";
 import { TASK_TYPES } from "./types";
 
 /**
@@ -34,6 +34,13 @@ export const PRIORITY_FILTERS = ["all", "0", "1", "2", "3", "4"] as const;
 export const BLOCKED_FILTERS = ["all", "yes", "no"] as const;
 
 /**
+ * Task 55: a custom field's filter, `<field id>:<value>` (`?cf=…&cf=…`, one per field;
+ * what a value means is in features/taskline/fields.ts). Here, not there: route files
+ * import this file, and the fields module would bring its messages and schemas along.
+ */
+export const FIELD_FILTER_PATTERN = /^([0-9a-f-]{36}):([\w-]{1,40})$/;
+
+/**
  * The project's filters (the project layout's FilterBar): the board applies them to
  * the tasks it has, the list sends them to the server. Same URL, both views.
  */
@@ -49,6 +56,8 @@ export const taskFilterParams = {
 	/** Task 54: one milestone, or none; blocked by an open task, or not. */
 	milestone: idOr("all", "none"),
 	blocked: enumParam(BLOCKED_FILTERS, "all"),
+	/** Task 55: the custom fields' filters. */
+	cf: arrayParam(z.string().regex(FIELD_FILTER_PATTERN), { max: 10 }),
 };
 
 export type TaskFilters = { q: string } & {

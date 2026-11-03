@@ -30,6 +30,8 @@ import { absoluteUrl } from "@/lib/seo";
 import { optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { endPosition } from "../board/moves";
+import { TaskFieldEditors } from "../custom-fields/task-field-editors";
+import { applyFieldPatch } from "../fields";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { tasklineLinks } from "../links";
 import { tasklineKeys, tasklineMutations } from "../queries";
@@ -86,7 +88,12 @@ function useTaskWrites(queryClient: QueryClient, userId: string, ws: string, tas
 	};
 	const patch = useMutation({
 		...tasklineMutations.patchTask(queryClient, userId),
-		onMutate: ({ ws: _ws, ref: _ref, ...changes }: PatchTaskInput) => optimistic(changes as Partial<TaskDetail>),
+		onMutate: ({ ws: _ws, ref: _ref, fields, ...changes }: PatchTaskInput) =>
+			optimistic({
+				...(changes as Partial<TaskDetail>),
+				// Task 55: a patch names some fields; the others keep their values.
+				...(fields ? { fields: applyFieldPatch(queryClient.getQueryData<TaskDetail>(key)?.fields ?? {}, fields) } : {}),
+			}),
 		onError: rollback,
 	});
 	const move = useMutation({
@@ -562,6 +569,12 @@ function TaskFields({
 					/>
 				</div>
 			))}
+			<TaskFieldEditors
+				task={task}
+				project={project}
+				editable={editable}
+				onChange={(fieldId, value) => writes.patch({ fields: { [fieldId]: value } })}
+			/>
 			{reporter ? (
 				<p className="text-caption text-muted-foreground">{m.taskline_reported_by({ name: reporter.name })}</p>
 			) : null}

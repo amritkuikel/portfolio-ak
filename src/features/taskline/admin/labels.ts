@@ -70,6 +70,9 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, () => string> = {
 	"milestone.reopened": m.taskline_admin_kind_milestone_reopened,
 	"dependency.added": m.taskline_admin_kind_dependency_added,
 	"dependency.removed": m.taskline_admin_kind_dependency_removed,
+	"field.created": m.taskline_admin_kind_field_created,
+	"field.updated": m.taskline_admin_kind_field_updated,
+	"field.deleted": m.taskline_admin_kind_field_deleted,
 };
 
 /** A week's capacity in hours, from the stored minutes. */

@@ -168,6 +168,7 @@ export function draftTask(
 		estimateMinutes: null,
 		milestoneId: null,
 		blocked: false,
+		fields: {},
 	};
 }
 

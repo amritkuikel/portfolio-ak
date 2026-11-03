@@ -47,6 +47,7 @@ const task = (id: string, values: Partial<TaskSummary> = {}): TaskSummary => ({
 	estimateMinutes: null,
 	milestoneId: null,
 	blocked: false,
+	fields: {},
 	...values,
 });
 

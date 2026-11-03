@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Suspense } from "react";
-import { expect } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin } from "../../../../.storybook/mocks/data";
 import { TASKLINE_NAME } from "../brand";
+import { TasklineFieldsPage } from "./fields/fields-page";
 import { TasklineOverviewPage } from "./overview/overview-page";
 import { TasklineSettingsPage } from "./settings/settings-page";
 import { TasklineWorkflowsPage } from "./workflows/workflows-page";
@@ -60,5 +61,24 @@ export const Workflows: Story = {
 	play: async ({ canvas }) => {
 		await expect(await canvas.findByRole("heading", { name: m.taskline_admin_workflows_title() })).toBeVisible();
 		await expect(canvas.getByLabelText(m.taskline_admin_label_name_of({ name: "Urgent" }))).toHaveValue("Urgent");
+	},
+};
+
+/** The team's custom fields (Task 55): a choice on twelve tasks, an archived text field; editing opens the form. */
+export const Fields: Story = {
+	parameters: { app: { session: sampleAdmin, route: "/admin/taskline/fields" } },
+	render: () => (
+		<Suspense>
+			<TasklineFieldsPage />
+		</Suspense>
+	),
+	play: async ({ canvas, userEvent }) => {
+		await expect(await canvas.findByRole("heading", { name: m.taskline_admin_fields_title() })).toBeVisible();
+		await expect(canvas.getAllByTestId("field-row")).toHaveLength(2);
+		await expect(canvas.getByText(m.taskline_field_tasks({ count: formatNumber(12) }))).toBeVisible();
+		await expect(canvas.getByText(m.taskline_field_archived())).toBeVisible();
+		await userEvent.click(canvas.getAllByTestId("field-edit")[0] as HTMLElement);
+		const dialog = await within(document.body).findByTestId("field-dialog", {}, { timeout: 10_000 });
+		await expect(within(dialog).getByLabelText(m.taskline_field_name())).toHaveValue("Severity");
 	},
 };

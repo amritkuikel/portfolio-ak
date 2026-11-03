@@ -8,6 +8,7 @@ import type {
 	SprintReport,
 	SprintSummary,
 	TaskDetail,
+	TaskField,
 	TasklineLabel,
 	TasklineMember,
 	TasklineNav,
@@ -175,8 +176,50 @@ const summary = (
 	estimateMinutes: null,
 	milestoneId: null,
 	blocked: false,
+	fields: {},
 	...extra,
 });
+
+/** Task 55: a workspace field and two of the project's (field ids are uuids: `?cf=` filters by them). */
+export const FIELD_SEVERITY = "0f1e5e00-0000-4000-8000-000000000001";
+export const FIELD_REVIEWER = "0f1e5e00-0000-4000-8000-000000000002";
+export const FIELD_SIGNED_OFF = "0f1e5e00-0000-4000-8000-000000000003";
+export const sampleFields: TaskField[] = [
+	{
+		id: FIELD_SEVERITY,
+		projectId: null,
+		name: "Severity",
+		type: "select",
+		options: [
+			{ id: "olow001", name: "Low", color: "gray" },
+			{ id: "omed001", name: "Medium", color: "amber" },
+			{ id: "ohigh01", name: "High", color: "red" },
+		],
+		required: false,
+		position: "a0",
+		archived: false,
+	},
+	{
+		id: FIELD_REVIEWER,
+		projectId: "p-web",
+		name: "Reviewer",
+		type: "member",
+		options: [],
+		required: false,
+		position: "a0",
+		archived: false,
+	},
+	{
+		id: FIELD_SIGNED_OFF,
+		projectId: "p-web",
+		name: "Signed off",
+		type: "checkbox",
+		options: [],
+		required: true,
+		position: "a1",
+		archived: false,
+	},
+];
 
 export const sampleTasks: TaskSummary[] = [
 	summary(1, "Design the new navigation", "st-todo", "a0", {
@@ -187,6 +230,7 @@ export const sampleTasks: TaskSummary[] = [
 		startOn: "2026-10-27",
 		dueOn: "2026-11-04",
 		milestoneId: "ms-launch",
+		fields: { [FIELD_SEVERITY]: "ohigh01", [FIELD_REVIEWER]: "m-sita" },
 	}),
 	summary(2, "Write the homepage copy", "st-todo", "a1", {
 		assigneeId: "m-sita",
@@ -286,6 +330,7 @@ export const sampleProjectTasks: ProjectTasks = {
 		{ blockerId: "t-2", blockedId: "t-4" },
 	],
 	sprintCount: 0,
+	fields: sampleFields,
 };
 
 /** Task 52: the same project with sprints on: an active sprint, the next one planned, and a backlog. */

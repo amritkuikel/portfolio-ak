@@ -10,7 +10,8 @@ import type {
 	ProjectExport,
 } from "@/features/taskline/admin/schema";
 import type { AdminProjectListInput } from "@/features/taskline/admin/search";
-import type { ProjectHealth, ProjectRole, ProjectStatus } from "@/features/taskline/types";
+import { fieldValueText } from "@/features/taskline/fields";
+import type { ProjectHealth, ProjectRole, ProjectStatus, TaskFieldValues } from "@/features/taskline/types";
 import { toCsv } from "@/lib/csv";
 import { m } from "@/paraglide/messages";
 import { changes } from "@/server/audit/record";
@@ -32,6 +33,7 @@ import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
 import { projectAccess, resolveWorkspace } from "../access";
 import { recordActivity } from "../activity";
+import * as fieldRepo from "../fields/repository";
 import * as projectRepo from "../projects/repository";
 import * as projects from "../projects/service";
 import { bumpRev } from "../rev";
@@ -329,7 +331,7 @@ export async function exportProject(
 		const { workspace } = await team(tx);
 		const project = await teamProject(tx, workspace.id, id);
 		const view = await detail(tx, workspace.slug, project);
-		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows] = await Promise.all([
+		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows, fieldRows] = await Promise.all([
 			tx
 				.select()
 				.from(tlTask)
@@ -344,7 +346,19 @@ export async function exportProject(
 			members.listMembers(tx, workspace.id, { deactivated: true }),
 			timeline.listMilestones(tx, project.id),
 			timeline.projectDependencies(tx, project.id),
+			fieldRepo.listFields(tx, workspace.id, project.id),
 		]);
+		// Task 55: every field's value as words (archived fields too: their values are the project's).
+		const fieldDefs = fieldRows.map(fieldRepo.fieldDto);
+		const people = memberRows.map((member) => ({ id: member.id, name: member.displayName }));
+		const valuesOf = (values: TaskFieldValues) =>
+			Object.fromEntries(
+				fieldDefs.flatMap((field) =>
+					values[field.id] === undefined
+						? []
+						: [[field.name, fieldValueText(field, values[field.id], people, { csv: true })]],
+				),
+			) as Record<string, string>;
 		const milestoneName = new Map(milestoneRows.map((milestone) => [milestone.id, milestone.name]));
 		const refOf = new Map(taskRows.map((task) => [task.id, `${project.key}-${task.number}`]));
 		const statusName = new Map(view.statuses.map((status) => [status.id, status.name]));
@@ -371,6 +385,7 @@ export async function exportProject(
 			description: task.descriptionText,
 			checklist: task.checklist,
 			milestone: task.milestoneId ? (milestoneName.get(task.milestoneId) ?? null) : null,
+			fields: valuesOf(task.fields),
 		}));
 		audit({
 			action: "taskline.project.export",
@@ -394,6 +409,10 @@ export async function exportProject(
 					{ header: "due", value: (task) => task.dueOn },
 					{ header: "completed", value: (task) => task.completedAt },
 					{ header: "created", value: (task) => task.createdAt },
+					...fieldDefs.map((field) => ({
+						header: field.name,
+						value: (task: (typeof tasks)[number]) => task.fields[field.name] ?? "",
+					})),
 				]),
 			};
 		}
@@ -410,6 +429,14 @@ export async function exportProject(
 				description,
 				dueOn,
 				completedAt: completedAt?.toISOString() ?? null,
+			})),
+			fields: fieldDefs.map(({ name, type, required, archived, options, projectId }) => ({
+				name,
+				type,
+				required,
+				archived,
+				workspace: projectId === null,
+				options: options.map((option) => option.name),
 			})),
 			tasks: tasks.map((task) => ({ ...task, parent: task.parent ? `${project.key}-${task.parent}` : null })),
 			// Within the project; one to another project's task isn't the project's to export.

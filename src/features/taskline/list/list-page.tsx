@@ -16,6 +16,7 @@ import { useListPage } from "@/hooks/use-list-page";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { endPosition } from "../board/moves";
+import { activeFields, fieldValueText } from "../fields";
 import { filtersOf, hasFilters } from "../filters";
 import { PRIORITY_LABELS } from "../labels";
 import { TaskFilterBar } from "../projects/task-filters";
@@ -168,6 +169,27 @@ function taskColumns(project: ProjectTasks, ws: string, edits: Edits): DataTable
 			),
 			csv: (task) => task.labelIds.map((id) => project.labels.find((label) => label.id === id)?.name ?? "").join(", "),
 		},
+		// Task 55: a column per custom field, hidden until shown from the Columns menu (and then in the CSV).
+		...activeFields(project.fields).map(
+			(field): DataTableColumn<TaskSummary> => ({
+				id: `field:${field.id}`,
+				header: () => field.name,
+				hideable: true,
+				defaultHidden: true,
+				cell: (task) => {
+					const value = task.fields[field.id];
+					const text = fieldValueText(field, value, project.members);
+					return field.type === "url" && typeof value === "string" ? (
+						<a href={value} target="_blank" rel="noopener noreferrer" className="underline">
+							{text}
+						</a>
+					) : (
+						<span className="whitespace-nowrap">{text}</span>
+					);
+				},
+				csv: (task) => fieldValueText(field, task.fields[field.id], project.members, { csv: true }),
+			}),
+		),
 		{
 			id: "due",
 			header: m.taskline_field_due,

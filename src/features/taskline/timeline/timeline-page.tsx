@@ -65,6 +65,7 @@ export function TimelinePage() {
 		me: workspace.me?.id ?? null,
 		today: project.today,
 		activeSprintId: project.sprints.find((sprint) => sprint.state === "active")?.id ?? null,
+		fields: project.fields,
 	};
 	const shown = tasks.filter(
 		(task) =>

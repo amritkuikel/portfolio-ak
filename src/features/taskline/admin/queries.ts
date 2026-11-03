@@ -1,6 +1,12 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getTasklineActivityOptions, listTasklineActivity } from "@/functions/taskline-admin/activity";
 import {
+	createTasklineWorkspaceField,
+	deleteTasklineWorkspaceField,
+	listTasklineWorkspaceFields,
+	updateTasklineWorkspaceField,
+} from "@/functions/taskline-admin/fields";
+import {
 	addTasklineMembers,
 	deactivateTasklineMember,
 	inviteTasklineMember,
@@ -49,7 +55,9 @@ import {
 import type { ProjectHealth, ProjectRole, ProjectStatus, TasklineColor, TeamRole } from "../types";
 import { adminActivityKeys, adminMemberKeys, adminProjectKeys, adminTimeKeys, tasklineAdminKeys } from "./keys";
 import type {
+	AdminCreateFieldInput,
 	AdminCreateProjectInput,
+	AdminUpdateFieldInput,
 	AdminUpdateProjectInput,
 	AdminUpdateTimeEntryInput,
 	InviteMemberInput,
@@ -81,6 +89,10 @@ export const invitationsQueryOptions = () =>
 
 export const adminWorkspaceQueryOptions = () =>
 	queryOptions({ queryKey: tasklineAdminKeys.workspace(), queryFn: () => getTasklineWorkspace() });
+
+/** Task 55: the workspace's custom fields. */
+export const adminFieldsQueryOptions = () =>
+	queryOptions({ queryKey: tasklineAdminKeys.fields(), queryFn: () => listTasklineWorkspaceFields() });
 
 export const adminWorkflowsQueryOptions = () =>
 	queryOptions({ queryKey: tasklineAdminKeys.workflows(), queryFn: () => getTasklineWorkflows() });
@@ -227,6 +239,21 @@ export const tasklineAdminMutations = {
 		mutationOptions({
 			mutationKey: key("delete-label"),
 			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceLabel({ data: input }),
+		}),
+	createField: () =>
+		mutationOptions({
+			mutationKey: key("create-field"),
+			mutationFn: (input: AdminCreateFieldInput) => createTasklineWorkspaceField({ data: input }),
+		}),
+	updateField: () =>
+		mutationOptions({
+			mutationKey: key("update-field"),
+			mutationFn: (input: AdminUpdateFieldInput) => updateTasklineWorkspaceField({ data: input }),
+		}),
+	deleteField: () =>
+		mutationOptions({
+			mutationKey: key("delete-field"),
+			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceField({ data: input }),
 		}),
 	updateTimeEntry: () =>
 		mutationOptions({

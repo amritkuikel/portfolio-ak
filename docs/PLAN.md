@@ -1596,13 +1596,13 @@ The procedure is section 10.1's, with these differences:
 | 52 | Sprints and backlog: planning, start and complete, burndown, velocity | high | Done (decisions 0216–0217) |
 | 53 | Time tracking: estimates, timer, timesheets, admin timesheets and locks | high | Done (decision 0218) |
 | 54 | Timeline, milestones and dependencies | xhigh | Done (decision 0219) |
-| 55 | Custom fields | high | Planned |
+| 55 | Custom fields | high | Done (decision 0220) |
 | 56 | Automations and recurring tasks | xhigh | Planned |
 | 57 | Templates, reports and project updates | high | Planned |
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0220 after Task 54).
+- **Decisions:** numbered from the next free one (0221 after Task 55).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -2028,14 +2028,26 @@ Milestones, dependencies across a workspace's projects, the completion rule and 
   - Run `pnpm db:migrate` on Neon (`0024_taskline_timeline`).
   - `pnpm db:seed-taskline` gives the demo team milestones and dependencies only on a database where the team has no projects yet (the seed writes projects once).
 
-### Task 55: Custom fields (planned)
+### Task 55: Custom fields (done)
 
-- **Definitions:** `tl_field` at workspace level (admin) and project level (lead). The definitions are a Zod union, and `toTaskFieldsSchema(fields)` builds what values must pass, Forms' pattern (0195).
-- **Values:** `tl_task.fields` jsonb keyed by field id, checked by the server on every write; select options stored by id, so renaming keeps values; archiving a field keeps its values.
-- **Where they show:** in the task sheet, as optional list columns, as `FilterBar` filters (by type), and in CSV export and the import mapping.
-- **Admin:** `/admin/taskline/fields`, plus the project settings tab.
-- **Tests:** unit (the schema per type), PGlite (validation, archive, option rename), e2e (a field set and filtered).
-- **Decision:** values in jsonb, checked against their definitions.
+Custom fields on tasks, the workspace's and a project's (decision 0220; [docs/guides/taskline.md](guides/taskline.md), "Custom fields").
+
+- **Schema:** `0025_taskline_fields`: `tl_field` (workspace, project or none, name unique per scope in any case, type, options jsonb with ids, required, order key, archived; checks on the name and the type) and `tl_task.fields` (jsonb by field id, a GIN index). Activity kinds `field.created`, `updated`, `deleted`; audit actions `taskline.field.create`, `update`, `delete` on the target `taskline-field`.
+- **Rules** (`features/taskline/fields.ts`, pure and shared): the definition as a Zod union over eight types (text, number, single and multiple choice, date, person, checkbox, link), `toTaskFieldsSchema` (what a change's values must be, in the browser and on the server), values as words, the filters (`?cf=<field>:<value>`) and CSV cells.
+- **Server:** `fields/{repository,rules,service}.ts`: definitions per scope (30 per scope under a lock, 50 options), changes (a type never changes; an option taken out comes off every task; archive keeps values, delete removes them), values checked on create, patch and import (a person an active member), merged in SQL so two fields changed at once both stay, a history entry per changed field; a required field refuses completing (the board, the task, the list's bulk change). `listTasks` carries the fields, summaries their values, the list filters in SQL (`?` and `@>`). Three app functions (`src/functions/taskline/fields.ts`, the lead's) and four admin ones (`taskline-admin/fields.ts`, `taskline:configure`, audited), in the guard test; three operations in the access matrix. The admin's project export carries the values as words.
+- **Pages:** the lead's `$ws/p/$key/settings/fields` and `/admin/taskline/fields` (one shared editor: type, required, archived, options, the tasks with a value for the admin; up and down, archive or restore, delete; a dialog loaded when opened, with the options sortable by keyboard); the task's side panel (an editor per type, required marked); a list column per field, hidden until shown (`DataTable`'s new `defaultHidden`, remembered as `shownColumns`), in the CSV when shown; a filter per field in every view's filter bar with its chip (several selects named `cf`: `formSearchPatch` collects them into a list, `FilterBar` re-syncs them); the CSV import maps a column per field and types the cells in the preview; history sentences ("set Severity to High").
+- **Sandbox and demo team:** WEB's own Area, Reviewer and Signed off in the guest's language, with values on most tasks; the claim moves them and turns the guest's person values into the account's. The demo team has the workspace's Severity on most tasks, and WEB's Reviewer and Signed off.
+- **Tests:** PGlite `taskline-fields.test.ts` (5: scopes, rights, names, the cap and the audit; values of each kind refused or kept, merging, history, option renames and removals, archive and delete; the required rule on the board and in bulk, canceling, archived; the list's filters by option, empty, value, me, past and future; the import; the export; the sandbox in Nepali and the claim), the access matrix (+3 operations), the demo seed's fields; unit `taskline-fields.test.ts` (10: definitions and inputs, every type's values, patches, required, words, filters, the URL param, CSV cells), `preferences.test.ts` (a column hidden by default), `search.test.ts` (selects of one name); stories `Taskline/Admin` (Fields) and `Taskline/Task` (CustomFields). `pnpm test`: 128 files, 1,155 tests; `test:storybook` 100 files, 476 tests. E2E (11.1): `taskline.spec.ts` (17 flows, the new one: a guest adds a choice field, gives WEB-3 a value that survives a reload, filters the list by it, then a required box stops Done until ticked), `rbac.spec.ts`, `apps.spec.ts` and `no-js.spec.ts` (6), and the review of every `/app/taskline` and `/admin/taskline` page with the new settings pages: 684 checks, all passing.
+- **Numbers:** every page's JavaScript 269.0 kB gzip (268.1 before; budget 275): two route definitions. 79 new messages in each language, the Nepali written by hand. Build, `build-storybook`, `i18n:check`, `knip` and the bundle check green.
+- **Deviations:**
+  - "Required" means needed before a task is completed, not on creation: the board's quick add and the import would otherwise need every required field.
+  - The list doesn't sort by a field (its sort is an enum in the URL contract); filters and columns do the finding.
+  - The admin's project page has no fields tab: the workspace's fields are `/admin/taskline/fields`, a project's are its lead's settings (one editor each, as workflows and labels, 0213).
+  - The demo team's Signed off isn't required: flows complete WEB's tasks in the team.
+  - Not planned but done: the history sentences for values, the admin's export, `DataTable`'s `defaultHidden` columns, and repeated selects in `FilterBar`.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0025_taskline_fields`).
+  - `pnpm db:seed-taskline` gives the demo team fields only on a database where the team has no projects yet (the seed writes projects once).
 
 ### Task 56: Automations and recurring tasks (planned)
 

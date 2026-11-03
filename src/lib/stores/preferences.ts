@@ -45,6 +45,8 @@ const tablePreferencesSchema = z.object({
 		.refine((value) => (PAGE_SIZES as ReadonlyArray<number>).includes(value))
 		.optional(),
 	hiddenColumns: z.array(z.string().max(64)).max(50).optional(),
+	/** Columns hidden until asked for (a column's `defaultHidden`) that the user showed. */
+	shownColumns: z.array(z.string().max(64)).max(50).optional(),
 });
 export type TablePreferences = z.infer<typeof tablePreferencesSchema>;
 
@@ -174,14 +176,19 @@ export const createPreferencesStore = (initial: Preferences) =>
 				setState((state) => ({ ...state, tables: withTable(state.tables, tableId, (t) => ({ ...t, pageSize })) }));
 				persistTables();
 			},
-			setColumnVisible: (tableId: string, column: string, visible: boolean) => {
+			/** A `defaultHidden` column is remembered as shown, the others as hidden (only what differs from the default). */
+			setColumnVisible: (tableId: string, column: string, visible: boolean, defaultHidden = false) => {
 				setState((state) => ({
 					...state,
 					tables: withTable(state.tables, tableId, (t) => {
 						const hidden = new Set(t.hiddenColumns ?? []);
+						const shown = new Set(t.shownColumns ?? []);
 						if (visible) hidden.delete(column);
-						else hidden.add(column);
-						return { ...t, hiddenColumns: [...hidden] };
+						else if (!defaultHidden) hidden.add(column);
+						if (visible && defaultHidden) shown.add(column);
+						else shown.delete(column);
+						const next = { ...t, hiddenColumns: [...hidden] };
+						return shown.size > 0 || t.shownColumns ? { ...next, shownColumns: [...shown].slice(-50) } : next;
 					}),
 				}));
 				persistTables();

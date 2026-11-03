@@ -88,6 +88,7 @@ export function BoardPage() {
 		me: workspace.me?.id ?? null,
 		today: project.today,
 		activeSprintId: project.sprints.find((sprint) => sprint.state === "active")?.id ?? null,
+		fields: project.fields,
 	};
 	const closedSince = addDays(project.today, -project.doneColumnDays);
 	const closedIds = new Set(project.statuses.filter((status) => isClosedCategory(status.category)).map((s) => s.id));

@@ -96,6 +96,7 @@ import { Route as AdminAdminRolesPermissionsRouteImport } from './routes/_admin/
 import { Route as AdminAdminSettingsAppearanceRouteImport } from './routes/_admin/admin/settings.appearance'
 import { Route as AdminAdminTasklineIndexRouteImport } from './routes/_admin/admin/taskline/index'
 import { Route as AdminAdminTasklineActivityRouteImport } from './routes/_admin/admin/taskline/activity'
+import { Route as AdminAdminTasklineFieldsRouteImport } from './routes/_admin/admin/taskline/fields'
 import { Route as AdminAdminTasklineInvitationsRouteImport } from './routes/_admin/admin/taskline/invitations'
 import { Route as AdminAdminTasklineMembersRouteImport } from './routes/_admin/admin/taskline/members'
 import { Route as AdminAdminTasklineProjectsRouteRouteImport } from './routes/_admin/admin/taskline/projects/route'
@@ -163,6 +164,7 @@ import { Route as TasklineAppTasklineShellWsPKeySettingsRouteRouteImport } from 
 import { Route as TasklineAppTasklineShellWsPKeyTimeRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/time'
 import { Route as TasklineAppTasklineShellWsPKeyTimelineRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/timeline'
 import { Route as TasklineAppTasklineShellWsPKeySettingsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/index'
+import { Route as TasklineAppTasklineShellWsPKeySettingsFieldsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/fields'
 import { Route as TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
 import { Route as TasklineAppTasklineShellWsPKeySettingsLabelsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
 import { Route as TasklineAppTasklineShellWsPKeySettingsMembersRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
@@ -610,6 +612,12 @@ const AdminAdminTasklineActivityRoute =
     path: '/activity',
     getParentRoute: () => AdminAdminTasklineRouteRoute,
   } as any)
+const AdminAdminTasklineFieldsRoute =
+  AdminAdminTasklineFieldsRouteImport.update({
+    id: '/fields',
+    path: '/fields',
+    getParentRoute: () => AdminAdminTasklineRouteRoute,
+  } as any)
 const AdminAdminTasklineInvitationsRoute =
   AdminAdminTasklineInvitationsRouteImport.update({
     id: '/invitations',
@@ -995,6 +1003,12 @@ const TasklineAppTasklineShellWsPKeySettingsIndexRoute =
     path: '/',
     getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
   } as any)
+const TasklineAppTasklineShellWsPKeySettingsFieldsRoute =
+  TasklineAppTasklineShellWsPKeySettingsFieldsRouteImport.update({
+    id: '/fields',
+    path: '/fields',
+    getParentRoute: () => TasklineAppTasklineShellWsPKeySettingsRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsPKeySettingsGeneralRoute =
   TasklineAppTasklineShellWsPKeySettingsGeneralRouteImport.update({
     id: '/general',
@@ -1113,6 +1127,7 @@ export interface FileRoutesByFullPath {
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/admin/taskline/fields': typeof AdminAdminTasklineFieldsRoute
   '/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
   '/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
   '/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
@@ -1179,6 +1194,7 @@ export interface FileRoutesByFullPath {
   '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/app/taskline/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/app/taskline/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/app/taskline/$ws/p/$key/settings/fields': typeof TasklineAppTasklineShellWsPKeySettingsFieldsRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
   '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
@@ -1254,6 +1270,7 @@ export interface FileRoutesByTo {
   '/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/admin/taskline/fields': typeof AdminAdminTasklineFieldsRoute
   '/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
   '/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
   '/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
@@ -1315,6 +1332,7 @@ export interface FileRoutesByTo {
   '/app/taskline/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/app/taskline/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/app/taskline/$ws/p/$key': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/app/taskline/$ws/p/$key/settings/fields': typeof TasklineAppTasklineShellWsPKeySettingsFieldsRoute
   '/app/taskline/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/app/taskline/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
   '/app/taskline/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
@@ -1412,6 +1430,7 @@ export interface FileRoutesById {
   '/_admin/admin/roles/permissions': typeof AdminAdminRolesPermissionsRoute
   '/_admin/admin/settings/appearance': typeof AdminAdminSettingsAppearanceRoute
   '/_admin/admin/taskline/activity': typeof AdminAdminTasklineActivityRoute
+  '/_admin/admin/taskline/fields': typeof AdminAdminTasklineFieldsRoute
   '/_admin/admin/taskline/invitations': typeof AdminAdminTasklineInvitationsRoute
   '/_admin/admin/taskline/members': typeof AdminAdminTasklineMembersRoute
   '/_admin/admin/taskline/settings': typeof AdminAdminTasklineSettingsRoute
@@ -1478,6 +1497,7 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/$ws/p/$key/time': typeof TasklineAppTasklineShellWsPKeyTimeRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/timeline': typeof TasklineAppTasklineShellWsPKeyTimelineRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/': typeof TasklineAppTasklineShellWsPKeyIndexRoute
+  '/_taskline/app/taskline/_shell/$ws/p/$key/settings/fields': typeof TasklineAppTasklineShellWsPKeySettingsFieldsRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels': typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
   '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members': typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
@@ -1569,6 +1589,7 @@ export interface FileRouteTypes {
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
     | '/admin/taskline/activity'
+    | '/admin/taskline/fields'
     | '/admin/taskline/invitations'
     | '/admin/taskline/members'
     | '/admin/taskline/settings'
@@ -1635,6 +1656,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/time'
     | '/app/taskline/$ws/p/$key/timeline'
     | '/app/taskline/$ws/p/$key/'
+    | '/app/taskline/$ws/p/$key/settings/fields'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
     | '/app/taskline/$ws/p/$key/settings/members'
@@ -1710,6 +1732,7 @@ export interface FileRouteTypes {
     | '/admin/roles/permissions'
     | '/admin/settings/appearance'
     | '/admin/taskline/activity'
+    | '/admin/taskline/fields'
     | '/admin/taskline/invitations'
     | '/admin/taskline/members'
     | '/admin/taskline/settings'
@@ -1771,6 +1794,7 @@ export interface FileRouteTypes {
     | '/app/taskline/$ws/p/$key/time'
     | '/app/taskline/$ws/p/$key/timeline'
     | '/app/taskline/$ws/p/$key'
+    | '/app/taskline/$ws/p/$key/settings/fields'
     | '/app/taskline/$ws/p/$key/settings/general'
     | '/app/taskline/$ws/p/$key/settings/labels'
     | '/app/taskline/$ws/p/$key/settings/members'
@@ -1867,6 +1891,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/roles/permissions'
     | '/_admin/admin/settings/appearance'
     | '/_admin/admin/taskline/activity'
+    | '/_admin/admin/taskline/fields'
     | '/_admin/admin/taskline/invitations'
     | '/_admin/admin/taskline/members'
     | '/_admin/admin/taskline/settings'
@@ -1933,6 +1958,7 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/$ws/p/$key/time'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/timeline'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/'
+    | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/fields'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/labels'
     | '/_taskline/app/taskline/_shell/$ws/p/$key/settings/members'
@@ -2572,6 +2598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTasklineActivityRouteImport
       parentRoute: typeof AdminAdminTasklineRouteRoute
     }
+    '/_admin/admin/taskline/fields': {
+      id: '/_admin/admin/taskline/fields'
+      path: '/fields'
+      fullPath: '/admin/taskline/fields'
+      preLoaderRoute: typeof AdminAdminTasklineFieldsRouteImport
+      parentRoute: typeof AdminAdminTasklineRouteRoute
+    }
     '/_admin/admin/taskline/invitations': {
       id: '/_admin/admin/taskline/invitations'
       path: '/invitations'
@@ -3041,6 +3074,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsIndexRouteImport
       parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
     }
+    '/_taskline/app/taskline/_shell/$ws/p/$key/settings/fields': {
+      id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/fields'
+      path: '/fields'
+      fullPath: '/app/taskline/$ws/p/$key/settings/fields'
+      preLoaderRoute: typeof TasklineAppTasklineShellWsPKeySettingsFieldsRouteImport
+      parentRoute: typeof TasklineAppTasklineShellWsPKeySettingsRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general': {
       id: '/_taskline/app/taskline/_shell/$ws/p/$key/settings/general'
       path: '/general'
@@ -3087,6 +3127,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren {
+  TasklineAppTasklineShellWsPKeySettingsFieldsRoute: typeof TasklineAppTasklineShellWsPKeySettingsFieldsRoute
   TasklineAppTasklineShellWsPKeySettingsGeneralRoute: typeof TasklineAppTasklineShellWsPKeySettingsGeneralRoute
   TasklineAppTasklineShellWsPKeySettingsLabelsRoute: typeof TasklineAppTasklineShellWsPKeySettingsLabelsRoute
   TasklineAppTasklineShellWsPKeySettingsMembersRoute: typeof TasklineAppTasklineShellWsPKeySettingsMembersRoute
@@ -3097,6 +3138,8 @@ interface TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren {
 
 const TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren: TasklineAppTasklineShellWsPKeySettingsRouteRouteChildren =
   {
+    TasklineAppTasklineShellWsPKeySettingsFieldsRoute:
+      TasklineAppTasklineShellWsPKeySettingsFieldsRoute,
     TasklineAppTasklineShellWsPKeySettingsGeneralRoute:
       TasklineAppTasklineShellWsPKeySettingsGeneralRoute,
     TasklineAppTasklineShellWsPKeySettingsLabelsRoute:
@@ -3424,6 +3467,7 @@ interface AdminAdminTasklineRouteRouteChildren {
   AdminAdminTasklineProjectsRouteRoute: typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   AdminAdminTasklineTimesheetsRouteRoute: typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   AdminAdminTasklineActivityRoute: typeof AdminAdminTasklineActivityRoute
+  AdminAdminTasklineFieldsRoute: typeof AdminAdminTasklineFieldsRoute
   AdminAdminTasklineInvitationsRoute: typeof AdminAdminTasklineInvitationsRoute
   AdminAdminTasklineMembersRoute: typeof AdminAdminTasklineMembersRoute
   AdminAdminTasklineSettingsRoute: typeof AdminAdminTasklineSettingsRoute
@@ -3438,6 +3482,7 @@ const AdminAdminTasklineRouteRouteChildren: AdminAdminTasklineRouteRouteChildren
     AdminAdminTasklineTimesheetsRouteRoute:
       AdminAdminTasklineTimesheetsRouteRouteWithChildren,
     AdminAdminTasklineActivityRoute: AdminAdminTasklineActivityRoute,
+    AdminAdminTasklineFieldsRoute: AdminAdminTasklineFieldsRoute,
     AdminAdminTasklineInvitationsRoute: AdminAdminTasklineInvitationsRoute,
     AdminAdminTasklineMembersRoute: AdminAdminTasklineMembersRoute,
     AdminAdminTasklineSettingsRoute: AdminAdminTasklineSettingsRoute,

@@ -2,8 +2,17 @@ import { type CsvDateFormat, parseCsvDay } from "@/lib/csv";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { locales } from "@/paraglide/runtime";
+import { activeFields, parseFieldCell } from "./fields";
 import { IMPORT_ROWS_MAX, type ImportTaskRow, importTaskRow, LABELS_PER_TASK_MAX } from "./schema";
-import { TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type TaskType } from "./types";
+import {
+	type FieldValue,
+	TASK_PRIORITIES,
+	TASK_TYPES,
+	type TaskField,
+	type TasklineMember,
+	type TaskPriority,
+	type TaskType,
+} from "./types";
 
 /**
  * The CSV import of tasks, its middle step (Task 51, Expenses' pattern, decision
@@ -30,7 +39,16 @@ export type TaskImportField = (typeof TASK_IMPORT_FIELDS)[number];
 /** Which column (0-based) holds each field; null is "not in the file" (the title is required). */
 export type TaskImportMapping = Record<TaskImportField, number | null>;
 export type TaskImportOptions = { header: boolean; dateFormat: CsvDateFormat };
-export type TaskImportProblem = { field: TaskImportField; message: string };
+/** A problem with a cell: one of the task's fields, or (`custom`) a custom field, named. */
+export type TaskImportProblem = { field: TaskImportField | "custom"; name?: string; message: string };
+/** Task 55: which column holds each custom field (by field id); null or missing: not in the file. */
+export type FieldImportMapping = Record<string, number | null>;
+/** What custom fields' cells need: the project's fields, its members (by name), and their columns. */
+export type FieldImportContext = {
+	fields: ReadonlyArray<TaskField>;
+	members: ReadonlyArray<Pick<TasklineMember, "id" | "name">>;
+	mapping: FieldImportMapping;
+};
 export type TaskPreviewRow = {
 	/** The row's number in the file, 1-based (the header is row 1). */
 	line: number;
@@ -77,6 +95,17 @@ export function guessTaskMapping(header: ReadonlyArray<string>): TaskImportMappi
 		return index === -1 ? null : index;
 	};
 	return Object.fromEntries(TASK_IMPORT_FIELDS.map((field) => [field, find(field)])) as TaskImportMapping;
+}
+
+/** Each offered custom field takes the first column named like it (any case). */
+export function guessFieldMapping(header: ReadonlyArray<string>, fields: ReadonlyArray<TaskField>): FieldImportMapping {
+	const names = header.map((cell) => cell.trim().toLowerCase());
+	return Object.fromEntries(
+		activeFields(fields).map((field) => {
+			const index = names.indexOf(field.name.toLowerCase());
+			return [field.id, index === -1 ? null : index];
+		}),
+	);
 }
 
 const PRIORITY_MESSAGES = {
@@ -126,7 +155,7 @@ export const parseLabels = (text: string): string[] => {
 	return labels.slice(0, LABELS_PER_TASK_MAX);
 };
 
-const FIELD_OF: Record<keyof ImportTaskRow, TaskImportField> = {
+const FIELD_OF: Record<Exclude<keyof ImportTaskRow, "fields">, TaskImportField> = {
 	title: "title",
 	description: "description",
 	status: "status",
@@ -143,6 +172,7 @@ export function previewTaskImport(
 	table: ReadonlyArray<ReadonlyArray<string>>,
 	mapping: TaskImportMapping,
 	options: TaskImportOptions,
+	custom?: FieldImportContext,
 ): TaskPreviewRow[] {
 	const body = options.header ? table.slice(1) : table;
 	const first = options.header ? 2 : 1;
@@ -174,11 +204,28 @@ export function previewTaskImport(
 			startOn: day("start"),
 			dueOn: day("due"),
 		};
-		const parsed = importTaskRow.safeParse(candidate);
+		// Task 55: each mapped custom field's cell, typed here (options and members matched by name).
+		const values: Record<string, FieldValue> = {};
+		for (const field of activeFields(custom?.fields ?? [])) {
+			const column = custom?.mapping[field.id] ?? null;
+			if (column === null) continue;
+			const parsedCell = parseFieldCell(field, cells[column] ?? "", {
+				dateFormat: options.dateFormat,
+				members: custom?.members ?? [],
+			});
+			if ("problem" in parsedCell) problems.push({ field: "custom", name: field.name, message: parsedCell.problem });
+			else if (parsedCell.value !== null) values[field.id] = parsedCell.value;
+		}
+		const parsed = importTaskRow.safeParse(
+			Object.keys(values).length > 0 ? { ...candidate, fields: values } : candidate,
+		);
 		if (!parsed.success) {
 			for (const issue of parsed.error.issues) {
 				const key = issue.path[0];
-				const field = typeof key === "string" && key in FIELD_OF ? FIELD_OF[key as keyof ImportTaskRow] : "title";
+				const field =
+					typeof key === "string" && key in FIELD_OF
+						? FIELD_OF[key as Exclude<keyof ImportTaskRow, "fields">]
+						: "title";
 				problems.push({ field, message: issue.message });
 			}
 		}

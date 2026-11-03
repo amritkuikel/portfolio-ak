@@ -4,7 +4,14 @@ import { m } from "@/paraglide/messages";
 import { patchTasklineTask } from "../../../../.storybook/mocks/functions/taskline/tasks";
 import { logTasklineTime } from "../../../../.storybook/mocks/functions/taskline/time";
 import { removeTasklineDependency } from "../../../../.storybook/mocks/functions/taskline/timeline";
-import { sampleProjectTasks, sampleTaskDetail, sampleTasklineMember } from "../../../../.storybook/mocks/taskline";
+import {
+	FIELD_REVIEWER,
+	FIELD_SEVERITY,
+	FIELD_SIGNED_OFF,
+	sampleProjectTasks,
+	sampleTaskDetail,
+	sampleTasklineMember,
+} from "../../../../.storybook/mocks/taskline";
 import { formatDuration } from "../time/duration";
 import { TaskPanel } from "./task-panel";
 
@@ -101,5 +108,22 @@ export const Dependencies: Story = {
 				data: { ws: "team", ref: "WEB-4", relation: "blocks", other: "OPS-3" },
 			}),
 		);
+	},
+};
+
+/** Its custom fields (Task 55): a workspace choice, a person, a required box still empty; a choice saves at once. */
+export const CustomFields: Story = {
+	args: { task: { ...sampleTaskDetail, fields: { [FIELD_SEVERITY]: "omed001", [FIELD_REVIEWER]: "m-sita" } } },
+	play: async ({ canvas, userEvent }) => {
+		const section = within(canvas.getByTestId("task-custom-fields"));
+		await expect(section.getByLabelText("Severity")).toHaveValue("omed001");
+		await expect(section.getByText(m.taskline_field_needed())).toBeVisible();
+		await userEvent.selectOptions(section.getByLabelText("Severity"), "ohigh01");
+		await waitFor(() =>
+			expect(patchTasklineTask).toHaveBeenCalledWith({
+				data: { ws: "team", ref: "WEB-4", fields: { [FIELD_SEVERITY]: "ohigh01" } },
+			}),
+		);
+		await expect(section.getByRole("checkbox")).toHaveAttribute("id", expect.stringContaining(FIELD_SIGNED_OFF));
 	},
 };

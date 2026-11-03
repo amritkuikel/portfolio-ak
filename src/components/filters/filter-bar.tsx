@@ -21,6 +21,10 @@ function syncControls(form: HTMLFormElement, values: SearchValues) {
 		const value = values[element.name];
 		if (element instanceof HTMLInputElement && element.type === "checkbox") {
 			element.checked = Array.isArray(value) ? value.map(String).includes(element.value) : false;
+		} else if (element instanceof HTMLSelectElement && Array.isArray(value)) {
+			// One of several selects sharing a list param: it shows the list's value among its options.
+			const values = value.map(String);
+			element.value = Array.from(element.options).find((option) => values.includes(option.value))?.value ?? "";
 		} else {
 			element.value = value === undefined || value === null ? "" : String(value);
 		}

@@ -19,6 +19,7 @@ import {
 	SettingsIcon, // @taskline
 	ShieldCheckIcon,
 	SquareKanbanIcon, // @taskline
+	TablePropertiesIcon, // @taskline
 	TimerIcon, // @taskline
 	UserRoundIcon, // @portfolio
 	UsersIcon,
@@ -224,6 +225,15 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		permission: "taskline:configure",
 		group: "taskline",
 		keywords: m.admin_keywords_taskline_workflows,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/fields" }),
+		label: m.admin_nav_taskline_fields,
+		description: m.taskline_admin_fields_description,
+		icon: TablePropertiesIcon,
+		permission: "taskline:configure",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_fields,
 	},
 	{
 		...linkOptions({ to: "/admin/taskline/activity" }),

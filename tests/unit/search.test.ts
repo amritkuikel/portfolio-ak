@@ -101,6 +101,16 @@ describe("formSearchPatch", () => {
 		expect(patch).toEqual({ q: "momo", status: "draft", tags: ["food", "nepal"], priceMin: undefined });
 	});
 
+	it("several selects of one name make a list of the chosen values (Taskline's field filters)", () => {
+		const patch = formSearchPatch(
+			form(`
+				<select name="cf"><option value="">any</option><option value="a:x" selected>x</option></select>
+				<select name="cf"><option value="" selected>any</option><option value="b:y">y</option></select>
+			`),
+		);
+		expect(patch).toEqual({ cf: ["a:x"] });
+	});
+
 	it("unchecking every box clears the param", () => {
 		const patch = formSearchPatch(form(`<input type="checkbox" name="tags" value="food" />`));
 		expect(patch).toEqual({ tags: [] });

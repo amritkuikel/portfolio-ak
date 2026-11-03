@@ -152,6 +152,10 @@ export const ACTIVITY_KINDS = [
 	/** Task 54, on each task's history: `{ relation: "blocks" | "blocked_by", ref, title }`, the other task. */
 	"dependency.added",
 	"dependency.removed",
+	/** Task 55, a project's own fields: `{ id, name }` (and `archived` when archived or restored). */
+	"field.created",
+	"field.updated",
+	"field.deleted",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -262,6 +266,8 @@ export type TaskSummary = {
 	/** Task 54: the milestone it leads to, and whether an open task (in any project) blocks it. */
 	milestoneId: string | null;
 	blocked: boolean;
+	/** Task 55: its custom fields' values, by field id (an empty one isn't there). */
+	fields: TaskFieldValues;
 };
 
 type ActivityScalar = string | number | boolean | null;
@@ -346,6 +352,8 @@ export type ProjectTasks = {
 	/** Task 54: the milestones in order, and the dependencies between the tasks above (the timeline's arrows). */
 	milestones: Milestone[];
 	dependencies: Dependency[];
+	/** Task 55: the custom fields its tasks can have (the workspace's, then the project's; archived ones too). */
+	fields: TaskField[];
 };
 
 export type TrashedTask = { id: string; ref: string; title: string; deletedAt: string };
@@ -744,3 +752,40 @@ export type TaskDependencies = {
 	/** Whether the project refuses completing it while an open task blocks it. */
 	blockCompletion: boolean;
 };
+
+// ---- Custom fields (Task 55) ------------------------------------------------------------------
+
+export const FIELD_TYPES = ["text", "number", "select", "multi_select", "date", "member", "checkbox", "url"] as const;
+export type FieldType = (typeof FIELD_TYPES)[number];
+export const isChoiceType = (type: FieldType) => type === "select" || type === "multi_select";
+
+/** Fields one scope keeps (the workspace's, or one project's), archived ones too. */
+export const FIELDS_MAX = 30;
+/** Options one select field offers. */
+export const FIELD_OPTIONS_MAX = 50;
+
+/** A choice of a select field: its id is what values hold, so renaming it keeps them. */
+export type FieldOption = { id: string; name: string; color: TasklineColor };
+
+/**
+ * A custom field (decision 0220): the workspace's (`projectId` null, the admin's) or a
+ * project's (its lead's). Archived, it keeps its values but is offered nowhere.
+ */
+export type TaskField = {
+	id: string;
+	projectId: string | null;
+	name: string;
+	type: FieldType;
+	options: FieldOption[];
+	/** A task can't be completed while it's empty. */
+	required: boolean;
+	position: string;
+	archived: boolean;
+};
+
+/**
+ * One value, by type: text and URLs as text, a number, a select's option id, a
+ * multi-select's option ids, a day (`YYYY-MM-DD`), a member's id, a ticked box (`true`).
+ */
+export type FieldValue = string | number | boolean | string[];
+export type TaskFieldValues = Record<string, FieldValue>;

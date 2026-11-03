@@ -34,8 +34,11 @@ export const tasklineLinks = {
 		linkOptions({ to: "/app/taskline/$ws/p/$key/time", params: { ws, key }, search: { by: "task" as const } }),
 	search: (ws: string, q?: string) =>
 		linkOptions({ to: "/app/taskline/$ws/search", params: { ws }, search: { q: q ?? "", page: 1 } }),
-	settings: (ws: string, key: string, section: "general" | "members" | "workflow" | "labels" | "trash" = "general") =>
-		linkOptions({ to: `/app/taskline/$ws/p/$key/settings/${section}` as const, params: { ws, key } }),
+	settings: (
+		ws: string,
+		key: string,
+		section: "general" | "members" | "workflow" | "labels" | "fields" | "trash" = "general",
+	) => linkOptions({ to: `/app/taskline/$ws/p/$key/settings/${section}` as const, params: { ws, key } }),
 	task: (ws: string, ref: string) => linkOptions({ to: "/app/taskline/$ws/t/$ref", params: { ws, ref } }),
 };
 

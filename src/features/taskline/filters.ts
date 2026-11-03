@@ -1,6 +1,7 @@
 import { addDays } from "@/lib/i18n/date-only";
+import { matchesFieldFilters, parseFieldFilters } from "./fields";
 import type { TaskFilters } from "./search";
-import type { TaskSummary } from "./types";
+import type { TaskField, TaskSummary } from "./types";
 
 /**
  * The project's filters applied in the browser: the board has every task of the
@@ -12,7 +13,13 @@ import type { TaskSummary } from "./types";
  * What a filter needs besides the task: the caller's member row (for `me`), today in
  * the workspace, and the project's active sprint (for `sprint=active`, Task 52).
  */
-export type FilterContext = { me: string | null; today: string; activeSprintId?: string | null };
+export type FilterContext = {
+	me: string | null;
+	today: string;
+	activeSprintId?: string | null;
+	/** Task 55: the project's custom fields, for `?cf=`. */
+	fields?: ReadonlyArray<TaskField>;
+};
 
 /** "web-12", "12" or words of the title (any case). */
 const matchesText = (task: TaskSummary, q: string) => {
@@ -25,7 +32,7 @@ const matchesText = (task: TaskSummary, q: string) => {
 export function matchesFilters(
 	task: TaskSummary,
 	filters: TaskFilters,
-	{ me, today, activeSprintId = null }: FilterContext,
+	{ me, today, activeSprintId = null, fields = [] }: FilterContext,
 ): boolean {
 	if (!matchesText(task, filters.q)) return false;
 	if (filters.status !== "all" && task.statusId !== filters.status) return false;
@@ -48,6 +55,9 @@ export function matchesFilters(
 	if (filters.milestone === "none" && task.milestoneId !== null) return false;
 	if (!["all", "none"].includes(filters.milestone) && task.milestoneId !== filters.milestone) return false;
 	if (filters.blocked !== "all" && task.blocked !== (filters.blocked === "yes")) return false;
+	if (filters.cf.length > 0 && !matchesFieldFilters(task, parseFieldFilters(filters.cf), fields, { me, today })) {
+		return false;
+	}
 	return true;
 }
 
@@ -62,7 +72,8 @@ export const hasFilters = (filters: TaskFilters) =>
 	filters.due !== "all" ||
 	filters.sprint !== "all" ||
 	filters.milestone !== "all" ||
-	filters.blocked !== "all";
+	filters.blocked !== "all" ||
+	filters.cf.length > 0;
 
 /** The filters out of a view's search (which carries other params too). */
 export const filtersOf = (search: TaskFilters): TaskFilters => ({
@@ -76,4 +87,5 @@ export const filtersOf = (search: TaskFilters): TaskFilters => ({
 	sprint: search.sprint,
 	milestone: search.milestone,
 	blocked: search.blocked,
+	cf: search.cf,
 });

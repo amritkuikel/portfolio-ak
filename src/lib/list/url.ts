@@ -38,9 +38,9 @@ export function formSearchPatch(form: HTMLFormElement, { exclude = [] }: { exclu
 	const patch: Record<string, unknown> = {};
 	for (const name of names) {
 		const values = data.getAll(name).filter((value): value is string => typeof value === "string" && value !== "");
-		const multiple = Array.from(form.elements).some(
-			(element) => (element as HTMLInputElement).name === name && (element as HTMLInputElement).type === "checkbox",
-		);
+		// Checkboxes, or several controls of one name (a select per custom field, all `cf`), make a list.
+		const named = Array.from(form.elements).filter((element) => (element as HTMLInputElement).name === name);
+		const multiple = named.length > 1 || named.some((element) => (element as HTMLInputElement).type === "checkbox");
 		patch[name] = multiple ? values : values[0];
 	}
 	return patch;

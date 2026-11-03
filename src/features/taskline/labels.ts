@@ -11,7 +11,7 @@ import {
 	ZapIcon,
 } from "lucide-react";
 import { m } from "@/paraglide/messages";
-import type { ProjectRole, StatusCategory, TaskPriority, TaskType } from "./types";
+import type { FieldType, ProjectRole, StatusCategory, TaskPriority, TaskType } from "./types";
 
 /** Taskline's names for its enums, and the icons that go with them (read at render time, never at module level). */
 
@@ -66,4 +66,16 @@ export const PROJECT_ROLE_LABELS: Record<ProjectRole, () => string> = {
 	lead: m.taskline_role_lead,
 	member: m.taskline_role_member,
 	viewer: m.taskline_role_viewer,
+};
+
+/** Task 55: a custom field's kinds. */
+export const FIELD_TYPE_LABELS: Record<FieldType, () => string> = {
+	text: m.taskline_field_type_text,
+	number: m.taskline_field_type_number,
+	select: m.taskline_field_type_select,
+	multi_select: m.taskline_field_type_multi_select,
+	date: m.taskline_field_type_date,
+	member: m.taskline_field_type_member,
+	checkbox: m.taskline_field_type_checkbox,
+	url: m.taskline_field_type_url,
 };

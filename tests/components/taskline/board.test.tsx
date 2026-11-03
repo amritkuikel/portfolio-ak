@@ -43,6 +43,7 @@ const task = (id: string, title: string, statusId: string, position: string, pri
 	estimateMinutes: null,
 	milestoneId: null,
 	blocked: false,
+	fields: {},
 });
 
 const STATUSES = [status("todo", "To do", "a0"), status("doing", "Doing", "a1", 1)];

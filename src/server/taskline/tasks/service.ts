@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { activeFields, parseFieldFilters } from "@/features/taskline/fields";
 import {
 	type BulkTasksInput,
 	type CreateTaskInput,
@@ -35,6 +36,8 @@ import { sanitizeRichText } from "@/server/rich-text/sanitize";
 import { assertCan, type ProjectAccess, resolveProject, type TasklineServices } from "../access";
 import { type ActivityEntry, fieldChanges, recordActivity, taskActivity } from "../activity";
 import * as collab from "../collab/repository";
+import * as fieldRepo from "../fields/repository";
+import { assertFieldsComplete, checkValues, projectFields, valueChanges } from "../fields/rules";
 import { actorOf, type NotifyEvent, produce, taskData } from "../notify/produce";
 import * as projects from "../projects/repository";
 import { bumpRev, nextTaskNumber, saveVersioned } from "../rev";
@@ -205,17 +208,19 @@ function taskType(access: ProjectAccess, type: TaskType | undefined): TaskType {
 
 export async function listTasks({ db, user }: TasklineServices, ws: string, key: string): Promise<ProjectTasks> {
 	const access = await resolveProject(db, user, ws, key);
-	const [statuses, labels, memberRows, rows, stars, counts, planning, milestones, dependencies] = await Promise.all([
-		workflow.listStatuses(db, access.project.id),
-		workflow.listLabels(db, access.workspace.id, access.project.id),
-		members.listMembers(db, access.workspace.id, { deactivated: true }),
-		repo.listTasks(db, access.project.id),
-		projects.starsOf(db, access.member?.id ?? null, [access.project.id]),
-		projects.openTaskCounts(db, [access.project.id]),
-		sprints.projectSprints(db, access.project.id),
-		timeline.listMilestones(db, access.project.id),
-		timeline.projectDependencies(db, access.project.id),
-	]);
+	const [statuses, labels, memberRows, rows, stars, counts, planning, milestones, dependencies, fields] =
+		await Promise.all([
+			workflow.listStatuses(db, access.project.id),
+			workflow.listLabels(db, access.workspace.id, access.project.id),
+			members.listMembers(db, access.workspace.id, { deactivated: true }),
+			repo.listTasks(db, access.project.id),
+			projects.starsOf(db, access.member?.id ?? null, [access.project.id]),
+			projects.openTaskCounts(db, [access.project.id]),
+			sprints.projectSprints(db, access.project.id),
+			timeline.listMilestones(db, access.project.id),
+			timeline.projectDependencies(db, access.project.id),
+			fieldRepo.listFields(db, access.workspace.id, access.project.id),
+		]);
 	return {
 		project: projects.projectDetail(access.project, {
 			starred: stars.has(access.project.id),
@@ -236,6 +241,7 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
 		sprintCount: planning.sprintCount,
 		milestones: milestones.map(timeline.milestoneDto),
 		dependencies,
+		fields: fields.map(fieldRepo.fieldDto),
 	};
 }
 
@@ -245,6 +251,12 @@ export async function listTasks({ db, user }: TasklineServices, ws: string, key:
  */
 async function listFilters(db: Db, access: ProjectAccess, input: TaskListInput): Promise<repo.TaskListFilters> {
 	const today = todayInZone(access.settings.timeZone);
+	const offered = activeFields(input.cf.length > 0 ? await projectFields(db, access) : []);
+	const fields = parseFieldFilters(input.cf).flatMap(({ fieldId, value }) => {
+		const field = offered.find((each) => each.id === fieldId);
+		// `me` is the caller's member row; a caller without one matches nothing (null).
+		return field ? [{ field, value: value === "me" ? (access.member?.id ?? null) : value }] : [];
+	});
 	const sprint =
 		input.sprint === "all"
 			? undefined
@@ -263,6 +275,7 @@ async function listFilters(db: Db, access: ProjectAccess, input: TaskListInput):
 		due: input.due === "all" ? undefined : input.due,
 		milestone: input.milestone === "all" ? undefined : input.milestone,
 		blocked: input.blocked === "all" ? undefined : input.blocked === "yes",
+		fields,
 		today,
 		weekEnd: addDays(today, 6),
 	};
@@ -307,6 +320,7 @@ export async function bulkUpdate(services: TasklineServices, input: BulkTasksInp
 			if (!status) throw notFound("Status");
 			const moving = rows.filter((row) => row.statusId !== status.id);
 			await assertCompletable(tx, access, moving, status.category);
+			await assertFieldsComplete(tx, access, moving, status.category);
 			const keys = generateKeysBetween(await repo.lastInStatus(tx, status.id), null, moving.length);
 			for (const [index, row] of moving.entries()) {
 				await repo.patchTask(tx, row.id, {
@@ -407,7 +421,7 @@ export async function getTask(
 
 export async function createTask(
 	services: TasklineServices,
-	{ ws, key, id, labelIds = [], description, ...input }: CreateTaskInput,
+	{ ws, key, id, labelIds = [], description, fields: values, ...input }: CreateTaskInput,
 ): Promise<TaskDetail> {
 	const { db, user, imageStore } = services;
 	const { detail, notify } = await db.transaction(async (tx) => {
@@ -427,6 +441,7 @@ export async function createTask(
 		await checkLabels(tx, access, labelIds);
 		if (input.sprintId) await sprints.checkSprint(tx, access.project.id, input.sprintId);
 		await checkMilestone(tx, access, input.milestoneId);
+		const checked = values ? await checkValues(tx, access, await projectFields(tx, access), values) : null;
 		const text = richText(description);
 		const task = await repo.insertTask(tx, {
 			...(id ? { id } : {}),
@@ -450,6 +465,7 @@ export async function createTask(
 			points: input.points ?? null,
 			estimateMinutes: input.estimateMinutes ?? null,
 			milestoneId: input.milestoneId ?? null,
+			fields: checked?.set ?? {},
 		});
 		await repo.setLabels(tx, task.id, labelIds);
 		await repo.addWatchers(tx, task.id, [task.reporterId, task.assigneeId]);
@@ -498,7 +514,7 @@ export async function updateTask(
 /** Single fields (type, priority, assignee, parent, labels, dates); each change goes in the history. */
 export async function patchTask(
 	services: TasklineServices,
-	{ ws, ref, labelIds, ...fields }: PatchTaskInput,
+	{ ws, ref, labelIds, fields: values, ...fields }: PatchTaskInput,
 ): Promise<TaskDetail> {
 	const { db, user, imageStore } = services;
 	const { detail, notify } = await db.transaction(async (tx) => {
@@ -527,6 +543,16 @@ export async function patchTask(
 				entries.push({ kind: "task.updated", taskId: task.id, data: { field: "labels", from: current, to: next } });
 			}
 		}
+		if (values && Object.keys(values).length > 0) {
+			const defs = await projectFields(tx, access);
+			const checked = await checkValues(tx, access, defs, values);
+			const changed = valueChanges(task.id, defs, task.fields, checked);
+			if (changed.length > 0) {
+				await fieldRepo.patchValues(tx, task.id, checked.set, checked.remove);
+				task = (await repo.getById(tx, access.project.id, task.id)) ?? task;
+				entries.push(...changed);
+			}
+		}
 		if (fields.assigneeId) await repo.addWatchers(tx, task.id, [fields.assigneeId]);
 		await recordActivity(tx, access, ...entries);
 		if (entries.length > 0) await bumpRev(tx, access.project.id);
@@ -550,7 +576,10 @@ export async function moveTask(
 		const { access, task: before } = await resolveEditable(tx, user, ws, ref);
 		const status = await workflow.getStatus(tx, access.project.id, statusId);
 		if (!status) throw notFound("Status");
-		if (before.statusId !== statusId) await assertCompletable(tx, access, [before], status.category);
+		if (before.statusId !== statusId) {
+			await assertCompletable(tx, access, [before], status.category);
+			await assertFieldsComplete(tx, access, [before], status.category);
+		}
 		const completedAt = isClosedCategory(status.category) ? (before.completedAt ?? new Date()) : null;
 		const task = await repo.patchTask(tx, before.id, { statusId, position, completedAt });
 		let notify: string[] = [];

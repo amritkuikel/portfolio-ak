@@ -15,7 +15,13 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import type { ActivityData, ActivityKind, ChecklistItem, TaskType } from "../../../../features/taskline/types";
+import type {
+	ActivityData,
+	ActivityKind,
+	ChecklistItem,
+	TaskFieldValues,
+	TaskType,
+} from "../../../../features/taskline/types";
 import { tlMilestone } from "./milestone";
 import { tlLabel, tlProject, tlStatus } from "./project";
 import { tlSprint } from "./sprint";
@@ -66,6 +72,8 @@ export const tlTask = pgTable(
 		estimateMinutes: integer(),
 		/** Task 54: the milestone it leads to; a deleted milestone leaves its tasks without one. */
 		milestoneId: uuid().references(() => tlMilestone.id, { onDelete: "set null" }),
+		/** Task 55: custom field values by field id (`tl_field`), checked against their definitions by the server. */
+		fields: jsonb().$type<TaskFieldValues>().notNull().default({}),
 		/** The backlog's order (a fractional key across the project, compared with COLLATE "C"). */
 		rank: text().notNull(),
 		/** Bumped by each save of the title or the description only: other fields are last-write-wins. */
@@ -89,6 +97,8 @@ export const tlTask = pgTable(
 		index("tl_task_search_idx").using("gin", table.search),
 		index("tl_task_sprint_idx").on(table.sprintId),
 		index("tl_task_milestone_idx").on(table.milestoneId),
+		/** The fields' filters: `?` (has a value) and `@>` (has this value) use it. */
+		index("tl_task_fields_idx").using("gin", table.fields),
 		check("tl_task_points_valid", sql`${table.points} between 0 and 100`),
 		check("tl_task_estimate_valid", sql`${table.estimateMinutes} between 0 and 60000`),
 		check("tl_task_type_valid", sql`${table.type} in ('task', 'bug', 'story', 'epic')`),

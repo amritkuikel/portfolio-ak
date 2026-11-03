@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { ImportTasksInput } from "@/features/taskline/schema";
-import { isClosedCategory, type TaskImportResult } from "@/features/taskline/types";
+import { type FieldValue, isClosedCategory, type TaskImportResult } from "@/features/taskline/types";
 import { AppError } from "@/lib/errors";
 import { generateKeysBetween } from "@/lib/fractional-index";
 import { lockQuota } from "@/server/db/quota";
@@ -11,6 +11,7 @@ import type { Db, Tx } from "@/server/db/types";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 import { assertCan, resolveProject, type TasklineServices } from "../access";
 import { recordActivity } from "../activity";
+import { checkValues, projectFields } from "../fields/rules";
 import { bumpRev, reserveTaskNumbers } from "../rev";
 import { quotaError, quotaScope, quotasOf, richText } from "../rules";
 import * as workflow from "../workflow/repository";
@@ -100,6 +101,9 @@ export async function importTasks(
 		const statuses = await workflow.listStatuses(tx, access.project.id);
 		const labels = await workflow.listLabels(tx, access.workspace.id, access.project.id);
 		const people = await members.listMembers(tx, access.workspace.id);
+		// Task 55: values come typed from the dialog; checked here against the fields, members among the active ones.
+		const fields = input.rows.some((row) => row.fields) ? await projectFields(tx, access) : [];
+		const activeIds = new Set(people.map((person) => person.id));
 		const fallback = statuses.find((status) => status.category === "unstarted") ?? statuses[0];
 		if (!fallback) throw new AppError("CONFLICT", "Project has no statuses");
 		const byName = <T>(rows: ReadonlyArray<T>, name: (row: T) => string) => {
@@ -118,6 +122,10 @@ export async function importTasks(
 		const offered = access.settings.taskTypes;
 		const defaultType = offered.includes("task") ? "task" : (offered[0] ?? "task");
 
+		const values: Array<Record<string, FieldValue>> = [];
+		for (const row of input.rows) {
+			values.push(row.fields ? (await checkValues(tx, access, fields, row.fields, activeIds)).set : {});
+		}
 		const planned = input.rows.map((row) => {
 			const status = row.status ? statusByName.get(row.status.toLowerCase()) : undefined;
 			if (row.status && !status) unmatched.statuses.add(row.status);
@@ -163,6 +171,7 @@ export async function importTasks(
 				startOn: row.startOn,
 				dueOn: row.dueOn,
 				completedAt: isClosedCategory(status.category) ? now : null,
+				fields: values[index] ?? {},
 			};
 		});
 		await repo.insertTasks(tx, tasks);

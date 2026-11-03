@@ -13,6 +13,8 @@ export const tasklineAdminKeys = {
 	invitations: () => [...ROOT, "invitations"] as const,
 	workspace: () => [...ROOT, "workspace"] as const,
 	workflows: () => [...ROOT, "workflows"] as const,
+	/** Task 55: the workspace's custom fields. */
+	fields: () => [...ROOT, "fields"] as const,
 	activityOptions: () => [...ROOT, "activity-options"] as const,
 	accounts: () => [...ROOT, "accounts"] as const,
 	/** Task 53: the timesheets' choices and lock, and utilization over some days. */

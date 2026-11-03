@@ -7,6 +7,7 @@ import {
 	updateTasklineComment,
 	watchTasklineTask,
 } from "@/functions/taskline/collab";
+import { createTasklineField, deleteTasklineField, updateTasklineField } from "@/functions/taskline/fields";
 import {
 	deleteTasklineSavedView,
 	findTasklineTasks,
@@ -91,6 +92,7 @@ import type {
 	AddCommentInput,
 	BulkTasksInput,
 	CompleteSprintInput,
+	CreateFieldInput,
 	CreateLabelInput,
 	CreateMilestoneInput,
 	CreateProjectInput,
@@ -109,6 +111,7 @@ import type {
 	TaskListInput,
 	TimesheetCellInput,
 	UpdateCommentInput,
+	UpdateFieldInput,
 	UpdateLabelInput,
 	UpdateMilestoneInput,
 	UpdateProjectInput,
@@ -383,6 +386,15 @@ export const tasklineMutations = {
 	deleteLabel: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
 			deleteTasklineLabel({ data: input }),
+		),
+	/** Task 55: a project's own custom fields. */
+	createField: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: CreateFieldInput) => createTasklineField({ data: input })),
+	updateField: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: UpdateFieldInput) => updateTasklineField({ data: input })),
+	deleteField: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: { ws: string; key: string; id: string }) =>
+			deleteTasklineField({ data: input }),
 		),
 	addComment: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: AddCommentInput) => addTasklineComment({ data: input })),

@@ -263,6 +263,14 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		path: "/app/taskline/team/p/WEB/settings/workflow",
 	},
 	{ route: "/app/taskline/$ws/p/$key/settings/labels", as: "admin", path: "/app/taskline/team/p/WEB/settings/labels" },
+	// Custom fields (Task 55): the demo team has a workspace field and WEB fields of its own.
+	{ route: "/app/taskline/$ws/p/$key/settings/fields", as: "admin", path: "/app/taskline/team/p/WEB/settings/fields" },
+	{
+		route: "/app/taskline/$ws/p/$key/settings/fields",
+		as: "admin",
+		path: "/app/taskline/team/p/OPS/settings/fields",
+		label: "none of its own",
+	},
 	{ route: "/app/taskline/$ws/p/$key/settings/trash", as: "admin", path: "/app/taskline/team/p/WEB/settings/trash" },
 	{
 		route: "/app/taskline/$ws/t/$ref",
@@ -289,6 +297,7 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/members", as: "admin" },
 	{ route: "/admin/taskline/invitations", as: "admin" },
 	{ route: "/admin/taskline/workflows", as: "admin" },
+	{ route: "/admin/taskline/fields", as: "admin" },
 	{ route: "/admin/taskline/settings", as: "admin" },
 	{ route: "/admin/taskline/activity", as: "admin" },
 	{ route: "/admin/taskline/timesheets", as: "admin" },

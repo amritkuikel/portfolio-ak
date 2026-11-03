@@ -1,8 +1,9 @@
-import { ActiveFilters } from "@/components/filters/active-filters";
+import { ActiveFilters, chipLabel } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
 import { type FilterOption, SearchFilter, SelectFilter } from "@/components/filters/filters";
 import { choiceChip, defineFilters, textChip } from "@/lib/crud/filters";
 import { m } from "@/paraglide/messages";
+import { activeFields, fieldFilterChoices, fieldFilterParam, fieldFilterText, parseFieldFilters } from "../fields";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { type BLOCKED_FILTERS, DUE_FILTERS, type DueFilter, type PRIORITY_FILTERS, type TaskFilters } from "../search";
 import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type TaskType } from "../types";
@@ -13,7 +14,7 @@ import { type ProjectTasks, TASK_PRIORITIES, TASK_TYPES, type TaskPriority, type
  * filter that's applied. `extra` is the view's own control (swimlanes, grouping).
  */
 
-type Context = Pick<ProjectTasks, "statuses" | "members" | "labels" | "sprints" | "milestones"> & {
+type Context = Pick<ProjectTasks, "statuses" | "members" | "labels" | "sprints" | "milestones" | "fields"> & {
 	project: Pick<ProjectTasks["project"], "settings">;
 };
 
@@ -72,6 +73,25 @@ const taskFilterChips = defineFilters<TaskFilters, Context>([
 	choiceChip("blocked", m.taskline_filter_blocked, (value: Exclude<(typeof BLOCKED_FILTERS)[number], "all">) =>
 		BLOCKED_LABELS[value](),
 	),
+	// Task 55: a chip per field filter ("Severity: High"), each removing only itself.
+	{
+		keys: ["cf"],
+		chips: (search: Pick<TaskFilters, "cf">, context: Context) =>
+			parseFieldFilters(search.cf).flatMap(({ fieldId, value }) => {
+				const field = context.fields.find((each) => each.id === fieldId);
+				const text = field ? fieldFilterText(field, value, context.members) : undefined;
+				const param = fieldFilterParam(fieldId, value);
+				return field && text
+					? [
+							{
+								id: `cf:${fieldId}`,
+								label: chipLabel(field.name, text),
+								remove: { cf: search.cf.filter((each) => each !== param) },
+							},
+						]
+					: [];
+			}),
+	},
 ]);
 
 export function TaskFilterBar({
@@ -184,6 +204,25 @@ export function TaskFilterBar({
 						value={search.blocked}
 						options={[all, { value: "yes", label: BLOCKED_LABELS.yes() }, { value: "no", label: BLOCKED_LABELS.no() }]}
 					/>
+					{/* Task 55: a select per custom field, all named `cf` (`?cf=<field>:<value>`, repeated). */}
+					{activeFields(context.fields).map((field) => {
+						const applied = parseFieldFilters(search.cf).find((filter) => filter.fieldId === field.id);
+						return (
+							<SelectFilter
+								key={field.id}
+								name="cf"
+								label={field.name}
+								value={applied ? fieldFilterParam(field.id, applied.value) : ""}
+								options={[
+									{ value: "", label: m.filters_any() },
+									...fieldFilterChoices(field, context.members, { member }).map((choice) => ({
+										value: fieldFilterParam(field.id, choice.value),
+										label: choice.label,
+									})),
+								]}
+							/>
+						);
+					})}
 					{extra}
 				</FilterBar>
 				{tools ? <div className="ms-auto flex items-center gap-2">{tools}</div> : null}

@@ -14,19 +14,23 @@ import { CSV_DATE_FORMATS, type CsvDateFormat } from "@/lib/csv";
 import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { activeFields } from "../fields";
 import {
+	type FieldImportMapping,
+	guessFieldMapping,
 	guessTaskMapping,
 	previewTaskImport,
 	TASK_IMPORT_FIELDS,
 	type TaskImportField,
 	type TaskImportMapping,
 	type TaskImportOptions,
+	type TaskImportProblem,
 	taskTableProblem,
 	unmatchedNames,
 } from "../import";
 import { PRIORITY_LABELS, TYPE_LABELS } from "../labels";
 import { tasklineMutations } from "../queries";
-import type { ProjectTasks } from "../types";
+import type { ProjectTasks, TaskField } from "../types";
 
 /** Rows shown in the preview table (every problem is listed below it). */
 const PREVIEW_ROWS = 10;
@@ -72,6 +76,7 @@ export default function ImportDialog({
 	const save = useMutation(tasklineMutations.importTasks(queryClient, userId));
 	const [source, setSource] = useState<CsvSource | null>(null);
 	const [mapping, setMapping] = useState<TaskImportMapping | null>(null);
+	const [fieldMapping, setFieldMapping] = useState<FieldImportMapping>({});
 	const [options, setOptions] = useState<TaskImportOptions>({ header: true, dateFormat: "ymd" });
 	// One key per preview: anything that changes the rows makes a new one (an import of other rows).
 	const [idempotencyKey, setKey] = useState(() => crypto.randomUUID());
@@ -79,10 +84,15 @@ export default function ImportDialog({
 	const load = (loaded: CsvSource | null) => {
 		setSource(loaded);
 		setMapping(loaded ? guessTaskMapping(loaded.table[0] ?? []) : null);
+		setFieldMapping(loaded ? guessFieldMapping(loaded.table[0] ?? [], project.fields) : {});
 		setKey(crypto.randomUUID());
 	};
 	const changeMapping = (field: TaskImportField, column: number | null) => {
 		setMapping((current) => (current ? { ...current, [field]: column } : current));
+		setKey(crypto.randomUUID());
+	};
+	const changeFieldMapping = (fieldId: string, column: number | null) => {
+		setFieldMapping((current) => ({ ...current, [fieldId]: column }));
 		setKey(crypto.randomUUID());
 	};
 	const changeOptions = (patch: Partial<TaskImportOptions>) => {
@@ -92,7 +102,14 @@ export default function ImportDialog({
 
 	const problem = source ? taskTableProblem(source.table, options) : null;
 	const ready = mapping !== null && mapping.title !== null;
-	const rows = source && ready && !problem ? previewTaskImport(source.table, mapping, options) : [];
+	const rows =
+		source && ready && !problem
+			? previewTaskImport(source.table, mapping, options, {
+					fields: project.fields,
+					members: project.members.filter((member) => !member.deactivated),
+					mapping: fieldMapping,
+				})
+			: [];
 	const valid = rows.flatMap((row) => (row.row ? [row.row] : []));
 	const invalid = rows.filter((row) => !row.row);
 	const missing = unmatchedNames(valid, {
@@ -133,6 +150,9 @@ export default function ImportDialog({
 							options={options}
 							onMapping={changeMapping}
 							onOptions={changeOptions}
+							fields={activeFields(project.fields)}
+							fieldMapping={fieldMapping}
+							onFieldMapping={changeFieldMapping}
 						/>
 					) : null}
 					{source && mapping ? (
@@ -175,12 +195,19 @@ function Columns({
 	options,
 	onMapping,
 	onOptions,
+	fields,
+	fieldMapping,
+	onFieldMapping,
 }: {
 	table: string[][];
 	mapping: TaskImportMapping;
 	options: TaskImportOptions;
 	onMapping: (field: TaskImportField, column: number | null) => void;
 	onOptions: (patch: Partial<TaskImportOptions>) => void;
+	/** Task 55: the project's custom fields, each mapped to a column or none. */
+	fields: ReadonlyArray<TaskField>;
+	fieldMapping: FieldImportMapping;
+	onFieldMapping: (fieldId: string, column: number | null) => void;
 }) {
 	const id = useId();
 	const names = csvColumnNames(table, options.header);
@@ -222,6 +249,30 @@ function Columns({
 						</NativeSelect>
 					</div>
 				))}
+				{fields.map((field) => (
+					<div key={field.id} className="flex flex-col gap-2">
+						<Label htmlFor={`${id}-cf-${field.id}`}>
+							{field.name}
+							<span className="font-normal text-muted-foreground">{m.field_optional()}</span>
+						</Label>
+						<NativeSelect
+							id={`${id}-cf-${field.id}`}
+							value={fieldMapping[field.id] == null ? "" : String(fieldMapping[field.id])}
+							onChange={(event) =>
+								onFieldMapping(field.id, event.target.value === "" ? null : Number(event.target.value))
+							}
+							data-testid="import-map-custom"
+						>
+							<option value="">{m.csv_not_in_file()}</option>
+							{names.map((name, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: columns are positions; names may repeat.
+								<option key={index} value={index}>
+									{name}
+								</option>
+							))}
+						</NativeSelect>
+					</div>
+				))}
 				<div className="flex flex-col gap-2">
 					<Label htmlFor={`${id}-format`}>{m.csv_date_format()}</Label>
 					<NativeSelect
@@ -243,6 +294,10 @@ function Columns({
 		</fieldset>
 	);
 }
+
+/** A problem's field: one of the task's, or a custom field by its name. */
+const problemLabel = (problem: TaskImportProblem) =>
+	problem.field === "custom" ? (problem.name ?? "") : FIELD_LABELS[problem.field]();
 
 function Preview({
 	rows,
@@ -340,7 +395,7 @@ function Preview({
 									</>
 								) : (
 									<td colSpan={5} className="p-2 text-danger">
-										{row.problems.map((each) => `${FIELD_LABELS[each.field]()}: ${each.message}`).join(" · ")}
+										{row.problems.map((each) => `${problemLabel(each)}: ${each.message}`).join(" · ")}
 									</td>
 								)}
 							</tr>
@@ -355,7 +410,7 @@ function Preview({
 						{invalid.slice(0, PROBLEM_ROWS).map((row) => (
 							<li key={row.line}>
 								<span className="font-medium">{m.taskline_import_line_number({ line: formatNumber(row.line) })}</span>{" "}
-								{row.problems.map((each) => `${FIELD_LABELS[each.field]()}: ${each.message}`).join(" · ")}
+								{row.problems.map((each) => `${problemLabel(each)}: ${each.message}`).join(" · ")}
 							</li>
 						))}
 					</ul>

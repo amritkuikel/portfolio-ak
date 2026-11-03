@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { Paged } from "@/lib/list/paging";
 import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
-import { LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX } from "../schema";
+import { fieldDefinition } from "../fields";
+import { fieldChanges, LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX } from "../schema";
 import { DEFAULT_STATUS_MAX, defaultStatus, TEAM_SLUG_PATTERN, workspaceSettings } from "../settings";
 import {
 	type ActiveSprint,
@@ -18,6 +19,7 @@ import {
 	TASK_TYPES,
 	TASKLINE_COLORS,
 	type TaskActivity,
+	type TaskField,
 	type TasklineColor,
 	type TasklineLabel,
 	type TasklineMember,
@@ -282,6 +284,18 @@ export type UpdateWorkflowsInput = z.infer<typeof updateWorkflowsInput>;
 export const workspaceLabelInput = z.strictObject({ name: required({ max: LABEL_NAME_MAX }), color });
 export const updateWorkspaceLabelInput = workspaceLabelInput.extend({ id });
 export const deleteWorkspaceLabelInput = z.strictObject({ id });
+
+// ---- Custom fields (Task 55) --------------------------------------------------------------------
+
+/** /admin/taskline/fields: the workspace's fields (on every team project's tasks), with how many tasks have a value. */
+export type AdminField = TaskField & { tasks: number };
+export type AdminFields = { fields: AdminField[] };
+
+export const adminCreateFieldInput = z.strictObject({ field: fieldDefinition });
+export const adminUpdateFieldInput = z.strictObject(fieldChanges);
+export const adminDeleteFieldInput = z.strictObject({ id });
+export type AdminCreateFieldInput = z.infer<typeof adminCreateFieldInput>;
+export type AdminUpdateFieldInput = z.infer<typeof adminUpdateFieldInput>;
 
 // ---- Activity -----------------------------------------------------------------------------------
 

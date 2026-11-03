@@ -73,6 +73,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"taskline.time.update": m.audit_action_taskline_time_update,
 	"taskline.time.delete": m.audit_action_taskline_time_delete,
 	"taskline.time.lock": m.audit_action_taskline_time_lock,
+	"taskline.field.create": m.audit_action_taskline_field_create,
+	"taskline.field.update": m.audit_action_taskline_field_update,
+	"taskline.field.delete": m.audit_action_taskline_field_delete,
 	// taskline:end
 	// @new-feature:audit-action-labels
 };
@@ -100,6 +103,7 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	"taskline-workspace": m.audit_target_taskline_workspace,
 	"taskline-label": m.audit_target_taskline_label,
 	"taskline-time-entry": m.audit_target_taskline_time_entry,
+	"taskline-field": m.audit_target_taskline_field,
 	// taskline:end
 	// @new-feature:audit-target-labels
 };

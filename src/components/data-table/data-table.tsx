@@ -45,6 +45,8 @@ export type DataTableColumn<Row> = {
 	sort?: string;
 	/** Listed in the Columns menu and hideable by the user. */
 	hideable?: boolean;
+	/** A hideable column that starts hidden: the user shows it from the Columns menu (optional extras). */
+	defaultHidden?: boolean;
 	/** The cell as plain text for the CSV export; columns without it are left out of the file. */
 	csv?: CsvColumn<Row>["value"];
 	headClassName?: string;
@@ -160,7 +162,9 @@ export function DataTable<Row extends RowData>({
 		...(hasActions ? [{ id: ACTIONS, enableHiding: false, header: () => null, cell: () => null }] : []),
 	];
 
-	const columnVisibility = Object.fromEntries(preferences.hiddenColumns.map((id) => [id, false]));
+	const columnVisibility = Object.fromEntries(
+		columns.map((column) => [column.id, preferences.isColumnVisible(column.id, column.defaultHidden)]),
+	);
 	const table = useTable({
 		features,
 		columns: definitions,
@@ -179,7 +183,9 @@ export function DataTable<Row extends RowData>({
 			const next = typeof updater === "function" ? updater(columnVisibility) : updater;
 			for (const column of columns) {
 				const visible = next[column.id] !== false;
-				if (visible !== preferences.isColumnVisible(column.id)) preferences.setColumnVisible(column.id, visible);
+				if (visible !== preferences.isColumnVisible(column.id, column.defaultHidden)) {
+					preferences.setColumnVisible(column.id, visible, column.defaultHidden);
+				}
 			}
 		},
 	});

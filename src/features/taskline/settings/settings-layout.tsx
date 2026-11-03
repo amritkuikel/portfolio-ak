@@ -1,5 +1,12 @@
 import { getRouteApi, Outlet } from "@tanstack/react-router";
-import { ListOrderedIcon, SlidersHorizontalIcon, TagsIcon, Trash2Icon, UsersIcon } from "lucide-react";
+import {
+	ListOrderedIcon,
+	SlidersHorizontalIcon,
+	TablePropertiesIcon,
+	TagsIcon,
+	Trash2Icon,
+	UsersIcon,
+} from "lucide-react";
 import { SettingsLayout, SettingsNavLink } from "@/components/page/layouts";
 import { m } from "@/paraglide/messages";
 import { tasklineLinks } from "../links";
@@ -29,6 +36,10 @@ export function ProjectSettingsLayout() {
 					<SettingsNavLink {...tasklineLinks.settings(ws, key, "labels")}>
 						<TagsIcon aria-hidden />
 						{m.taskline_settings_labels()}
+					</SettingsNavLink>
+					<SettingsNavLink {...tasklineLinks.settings(ws, key, "fields")}>
+						<TablePropertiesIcon aria-hidden />
+						{m.taskline_settings_fields()}
 					</SettingsNavLink>
 					<SettingsNavLink {...tasklineLinks.settings(ws, key, "trash")}>
 						<Trash2Icon aria-hidden />

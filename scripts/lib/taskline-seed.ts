@@ -170,6 +170,52 @@ async function seedTimeline(query: DemoQuery, projectId: string, tasks: Readonly
 	}
 }
 
+/** Task 55: the team's Severity choices. */
+const SEVERITY = [
+	{ id: "olow001", name: "Low", color: "gray" },
+	{ id: "omed001", name: "Medium", color: "amber" },
+	{ id: "ohigh01", name: "High", color: "red" },
+] as const;
+
+/** Task 55: WEB's own fields, a reviewer and a sign-off, with values on the first tasks and the done ones. */
+async function seedFields(
+	query: DemoQuery,
+	{
+		workspaceId,
+		projectId,
+		reviewers,
+		tasks,
+	}: {
+		workspaceId: string;
+		projectId: string;
+		reviewers: ReadonlyArray<string | null>;
+		tasks: ReadonlyArray<SeededTask>;
+	},
+) {
+	const reviewer = await query(
+		`insert into "tl_field" ("workspace_id", "project_id", "name", "type", "position") values ($1, $2, 'Reviewer', 'member', 'a0') returning "id"`,
+		[workspaceId, projectId],
+	);
+	const signed = await query(
+		`insert into "tl_field" ("workspace_id", "project_id", "name", "type", "required", "position") values ($1, $2, 'Signed off', 'checkbox', false, 'a1') returning "id"`,
+		[workspaceId, projectId],
+	);
+	const reviewerId = firstId(reviewer.rows, "field Reviewer");
+	const signedId = firstId(signed.rows, "field Signed off");
+	for (const [index, task] of tasks.entries()) {
+		const person = reviewers[index % reviewers.length];
+		const values = {
+			...(index < 8 && person ? { [reviewerId]: person } : {}),
+			...(task.done ? { [signedId]: true } : {}),
+		};
+		if (Object.keys(values).length === 0) continue;
+		await query(`update "tl_task" set "fields" = "fields" || $2::jsonb where "id" = $1`, [
+			task.id,
+			JSON.stringify(values),
+		]);
+	}
+}
+
 /** A calendar day `offset` days from today (UTC; demo data needs no time zone). */
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -300,6 +346,13 @@ export async function seedTaskline(
 	]);
 	if (Number(existingProjects.rows[0]?.total ?? 0) > 0) return { accounts, projects: 0, tasks: 0 };
 
+	// Task 55: a workspace field every project's tasks have (its option ids are fixed: demo data).
+	const severity = await query(
+		`insert into "tl_field" ("workspace_id", "name", "type", "options", "position") values ($1, 'Severity', 'select', $2, 'a0') returning "id"`,
+		[workspaceId, JSON.stringify(SEVERITY)],
+	);
+	const severityId = firstId(severity.rows, "field Severity");
+
 	let taskCount = 0;
 	for (const project of PROJECTS) {
 		const leadId = memberIds[project.lead] ?? null;
@@ -396,6 +449,14 @@ export async function seedTaskline(
 				}
 			}
 			made.push({ id: taskId, done: status === 3, canceled: status === 4 });
+			// Task 55: most tasks have a severity.
+			const level = SEVERITY[index % 4];
+			if (level) {
+				await query(`update "tl_task" set "fields" = $2 where "id" = $1`, [
+					taskId,
+					JSON.stringify({ [severityId]: level.id }),
+				]);
+			}
 			const labelId = labelIds[index % (labelIds.length + 1)];
 			if (labelId) {
 				await query(`insert into "tl_task_label" ("task_id", "label_id") values ($1, $2)`, [taskId, labelId]);
@@ -408,7 +469,10 @@ export async function seedTaskline(
 		}
 		await query(`update "tl_project" set "task_seq" = $2 where "id" = $1`, [projectId, project.tasks.length]);
 		if (project.key === "APP") await seedSprints(query, projectId, made);
-		if (project.key === "WEB") await seedTimeline(query, projectId, made);
+		if (project.key === "WEB") {
+			await seedTimeline(query, projectId, made);
+			await seedFields(query, { workspaceId, projectId, reviewers: assignees, tasks: made });
+		}
 		await query(
 			`insert into "tl_activity" ("workspace_id", "project_id", "actor_id", "kind", "data") values ($1, $2, $3, 'project.created', $4)`,
 			[workspaceId, projectId, leadId, JSON.stringify({ key: project.key, name: project.name })],
