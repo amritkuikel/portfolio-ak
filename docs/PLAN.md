@@ -2081,3 +2081,1737 @@ Milestones, dependencies across a workspace's projects, the completion rule and 
 - the Bikram Sambat calendar;
 - native and offline apps;
 - AI features.
+
+---
+
+## 12. Part 6: Parda, a movie, series and anime streaming product (Tasks 59–70, planned)
+
+Part 6 adds **Parda** (पर्दा, "the screen"), a streaming product with its own URL, shell and brand, built as a layer the way Taskline was (0208).
+- **Catalogue:** TMDB.
+- **Playback:** third-party embed players, Viduki first, held as admin-managed sources.
+- **Visitors** browse and watch without an account. Saving starts a guest session. The admin runs curation, sources, takedowns and reports from `/admin/parda`.
+
+Like sections 10 and 11, **each task can be done in a fresh session that has read nothing else** but CLAUDE.md, section 10.1 and this section. Where a task says "check", check the code or the docs, because versions and third-party players move.
+
+**Part 6 starts after Part 5 (Tasks 54–58), when the owner says so.**
+
+### 12.1 How to run a Part 6 task
+
+As 11.1, with these differences:
+- **Read:** CLAUDE.md, 10.1, then this whole section 12.
+- **e2e:** only for what the task changed, e.g. `pnpm test:e2e e2e/flows/parda.spec.ts` or the review of `/app/parda`. Use PowerShell for `--grep /app/...`, because Git Bash rewrites the path. The full `pnpm test:e2e` runs once, in Task 70.
+- **Commit:** `feat: Part 6 Task N, <name>`, one commit on `main`, not pushed.
+- **"Done" summary:** mark the task in 12.3 and replace its section with a summary (what changed, numbers, deviations, for the owner).
+- **Decisions:** numbered from the next free one when the task is written, nothing reserved. The first Part 6 decision records Parda as a layer at `/app/parda`, scoped guests (12.5) and the legal posture (12.2).
+
+### 12.2 Owner's choices (2026-11-03)
+
+| Topic | Choice |
+| --- | --- |
+| What it is | A full streaming product for movies, series and anime: discovery, complete title details, and playback first |
+| Where | **A layer of its own like Taskline**, at **`/app/parda`**, admin at `/admin/parda`, removable with `pnpm strip-demo` |
+| Name | **Parda** |
+| Look | **Dark by default, light allowed:** "system" resolves to dark in Parda, and an explicit Light choice wins. Its own tokens on Graphite, chosen from comps in Task 60 |
+| Catalogue | TMDB (read token in the local `.env` as `TMDB_READ_TOKEN`, never committed; the v3 API key isn't needed) |
+| Playback | **Viduki** (`https://viduki.net`), not VidCore (the owner found it slow). Sources are rows the admin adds, edits, removes and reorders, with no deploy |
+| Resume | **Viduki resumes by itself** (the owner checked). Parda only records and shows progress |
+| Ads | Popups and redirects are blocked by the iframe's `sandbox`. Ads drawn inside the player can't be removed from our page, and the player isn't proxied |
+| Legal | The streams are aggregated, not licensed, and TMDB is non-commercial only. So: a playback kill switch, a takedown list enforced everywhere, a notice page, `noindex` on watch pages, no ads and no payments |
+| Git | As Part 5 |
+
+### 12.3 Status
+
+| Task | Name | Effort | Status |
+| --- | --- | --- | --- |
+| 59 | Foundation: the `parda` layer, TMDB client and cache, sources and adapters, CSP, the legal controls, the player lab | xhigh | Planned |
+| 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Planned |
+| 61 | Shell, brand, auth pages and the media kit | high | Planned |
+| 62 | Home and hubs | high | Planned |
+| 63 | Title, credits, person and collection pages | xhigh | Planned |
+| 64 | The player, progress and Continue watching, guests | xhigh | Planned |
+| 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
+| 66 | Search and discover | high | Planned |
+| 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
+| 68 | Schedule and new-episode alerts | high | Planned |
+| 69 | Admin II: overview, curation, home layout | high | Planned |
+| 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
+
+- **Order is fixed.** The legal controls exist from 59 and get their admin UI in 65, right after public playback.
+- **Nav links and rails arrive with their routes and data,** never before.
+
+### 12.4 What exists today (facts the tasks rely on)
+
+Checked 2026-11-03; check again, because these services change.
+
+**TMDB:**
+- Bearer auth works. Images come from `https://image.tmdb.org/t/p/{size}`: posters w92…w780, backdrops w300/w780/w1280/original, plus logos, stills and profiles.
+- One `{movie|tv}/{id}?append_to_response=credits,videos,images,recommendations,similar,content_ratings,keywords,external_ids,watch/providers` call returns everything a title page needs.
+- Anime is `discover/tv?with_genres=16&with_original_language=ja` (about 5,500 titles).
+- The upper limit is about 40 requests per second per IP; respect 429.
+- Free for non-commercial use only. It requires the TMDB logo and the notice "This product uses the TMDB API but is not endorsed or certified by TMDB". Watch-provider data needs the JustWatch attribution.
+- **Nepali:**
+  - `ne-NP` had 0 of 20 overviews and 2 of 20 titles on popular movies;
+  - genre names are `null` in Nepali, so they are our own messages (19 movie + 16 TV genres);
+  - overviews fall back to English.
+- **Regions:** NP is missing from both the certification and the watch-provider regions (US and IN are present). The region falls back to the admin default.
+
+**Viduki:**
+- Servers `1` Multi Server, `2` Multi Language, `3` Multi Embeds, `4` Premium Embeds: `https://viduki.net/{n}/movie/{tmdb_or_imdb}?color={hex}` and `/{n}/tv/{id}/{season}/{episode}?color={hex}`. `color` is the only documented parameter.
+- postMessage events:
+  - `MEDIA_DATA`: `event.data.data` keyed by TMDB id. For a movie, `progress: { watched, duration }` in seconds; for TV, `show_progress["s1e1"].progress`.
+  - `viduki:all-servers-failed` (from server 1): `stage` is `initial`, `manual-switch` or `playback-error`, plus `status` and `media`.
+- Their docs check `event.origin === "https://www.viduki.net"` while the URLs are on `viduki.net`, so both are allowed until the lab shows which.
+- "Minimal ads". Their site loads `disable-devtool` and a devtools detector.
+
+**Reused from the repo** (copied as patterns when they belong to another layer, because `--keep-parda` must build alone, 0215):
+- `SectionBrand` and `useSectionAccent` (`src/lib/section-brand.ts`);
+- Taskline's shell, palette, manifest and cron routes (copied);
+- `GUEST_DATA` and `claimGuest` (`src/server/guests/`);
+- the kit: `FilterBar`, `SearchLink`, `Sheet`, `HoverCard`, `Tabs`, `ScrollRegion`, `Skeleton`, `EmptyState`, `useConfirm`, `useHotkeys` + `Kbd`, `Pagination`, charts;
+- `CloudImage`'s srcset pattern;
+- `enforceRateLimit` (`src/server/http/rate-limit.ts`);
+- `todayInZone`;
+- React Email and Resend.
+
+**What doesn't exist yet:**
+- a horizontal rail or carousel;
+- an image component for images that aren't from Cloudinary;
+- a server-side data cache;
+- a frame-only CSP option (`frameOrigins` also goes into `script-src`, for Turnstile);
+- an upstream-unavailable error code;
+- a way for a section to set its default theme. `.dark` comes from the preference in `preferenceHtmlProps`, `SystemThemeScript` and `ThemeSync` (`src/components/layout/theme.tsx`), and `ThemeColor` and `Toaster` follow it too.
+
+**Guests today:**
+- `seedGuest` seeds every `GUEST_DATA` owner (the apps' samples and a Taskline sandbox).
+- Anonymous sign-in is limited to 30 per IP per hour, shared with the apps' Try and Taskline's sandbox.
+- Guests are deleted 7 days after creation (`GUEST_LIFETIME_DAYS`).
+- `refresh()` calls `router.invalidate()`.
+
+**Bundle:** the entry was 267.5 of 275 KB after Task 53, and every route definition adds about 0.3 KB (0217).
+
+### 12.5 Architecture (every task follows it)
+
+**Paths:**
+
+| Part | Path |
+| --- | --- |
+| Routes | `src/routes/_parda/route.tsx` (pathless layout: `staticData: { brand: PARDA_BRAND }`, `pardaHead`, its own 404) and `src/routes/_parda/app/parda/**`; admin at `src/routes/_admin/admin/parda/**` |
+| Feature | `src/features/parda/`: `brand.ts`, `links.ts` (`pardaLinks`), `search.ts`, `keys.ts`, `queries.ts`, `lib/fonts.ts`, `shell/`, `kit/`, `home/`, `title/`, `player/` (UI and isomorphic `adapters/`), `search/`, `discover/`, `library/`, `profiles/`, `schedule/`, `admin/` |
+| Server | `src/server/parda/`: `tmdb/` (client, cache, mappers, `store.ts` singleton), `catalog/`, `library/` (`progress.ts`), `profiles/`, `player/sources.ts`, `notify/`, `admin/`, `guest-data.ts`, `cron.ts`, `manifest.ts`; each module a `repository.ts` + `service.ts`; `ownedByProfile` |
+| Functions | `src/functions/parda/*.ts` (catalogue: `withPardaCatalog`; library: `requirePardaViewer` → `withPardaServices`), `src/functions/parda-admin/*.ts` (`requirePermission` → `withServices`, TMDB from the singleton) |
+| Middleware | `src/middleware/parda.ts`. `withPardaCatalog`: optional session, active profile from a `pd_profile` cookie, region and cap, a per-IP limit without a session. `requirePardaViewer`: session (guests allowed), creating the default profile `on conflict do nothing` |
+| Schema | `src/server/db/schema/parda/*.ts`, tables `pd_*`, exported with `// @parda` |
+| Nitro | `src/server/routes/{parda-manifest,cron-parda}.ts` (cron copied from `cron-attachments.ts`), `vercel.json`, `vite.config.ts` with `// @parda` |
+| Styles | `src/styles/parda.css` scoped to `html[data-section=parda]`, imported in `app.css` inside `/* parda:start */ … /* parda:end */` |
+| Design | `.impeccable/surfaces/parda.md` (direction contract), `docs/design/parda.md` (DESIGN record); the portfolio's `.impeccable`/`DESIGN.md` paths in strip-demo narrowed to its own files, `.impeccable/config.json` in `SHARED` |
+| Storybook | `.storybook/mocks/functions/parda*.ts`, one per functions file |
+| Layer | `"parda"` in `LAYERS`; a full `SPECS.parda` (sentinel, paths, knipEntries, schema, `crons: ["/api/cron/parda"]`, `packageScripts: ["tmdb:record"]`); the CI strip matrix |
+
+**Shared changes (core, unmarked):**
+- **Theme:** `SectionBrand` gains `id` (rendered as `data-section` on `<html>`) and `defaultScheme?: "dark"`.
+  - The resolved theme feeds `preferenceHtmlProps`, `SystemThemeScript`, `ThemeSync` (given a `theme` prop), `ThemeColor` and `<Toaster>`. It's set during SSR, so there's no flash and portals match.
+  - The e2e review's light pass sets an explicit light cookie on Parda pages.
+- **Guests:** `guest_scope` in `startGuest`. A cookie set before `signIn.anonymous()` limits seeding to that section's owners; without it, behaviour is as today.
+- **Auth refresh:** while the player is mounted, auth refreshes use `refreshAuth(queryClient)`, so the iframe isn't remounted.
+- **CSP:** a frame-only `embedOrigins` in `src/lib/http/csp.ts`.
+- **`Rail`:** CSS scroll-snap, previous and next buttons, a named `region`, items as links, no JS before interaction.
+- **Error code:** `UPSTREAM_UNAVAILABLE` (503) in `src/lib/errors.ts`, plus its messages.
+
+**Catalogue:**
+- **Env** (the `CLOUDINARY_*` pattern in `src/server/env.ts`): `TMDB_READ_TOKEN`, `TMDB_API_BASE`, `TMDB_IMAGE_BASE`, `PARDA_VIDUKI_BASE`.
+  - They also go in `.env.example`, the README, `scripts/diagnose.ts`, the `OFF` lists of `scripts/dev-offline.ts` and `tests/setup/env.ts`, the harness `APP_ENV` regex, and `tests/unit/env.test.ts`.
+  - Without a token, Parda shows "catalogue not configured".
+- **Client:** `createTmdb(config, fetcher = fetch)`. 8 s timeout, one retry on 5xx, one `Retry-After` wait on 429, `include_adult=false`, `log()`.
+  - **Rails degrade** to an inline "couldn't load", because `onCaughtError` logs AppErrors of 500 and above. Only a title page throws, to a 503 page.
+- **Lean DTOs:** Zod mappers keep only the fields pages use, because the dehydrated state is in the HTML.
+- **Cache** `tmdb/cache.ts`: LRU with a TTL per class (configuration and genres 7 d, details 24 h, lists 1 h, search 10 min), stale-while-revalidate, in-flight coalescing.
+  - Keyed by `{path, params, locale, region, cap, cache_epoch}`. Purge bumps `pd_settings.cache_epoch`.
+  - Takedowns and sources are read from Postgres with a 30 s TTL. No CDN page caching (0147).
+- **Locale:** `ne-NP` filled in from the cached `en-US` response.
+- **Images:** `TmdbImage` takes a server-built `{ src, srcSet, width, height }`, with fixed aspects (2:3, 16:9). The billboard is preloaded with the same `imagesrcset` and `imagesizes`; everything else is lazy.
+- **Kids:** rails use discover `certification.lte` + `certification_country`. Search, trending and recommendations are filtered through `pd_title.certification`.
+- **Takedowns and caps** are applied in `catalog/service.ts` only, and tested from every entry point.
+- **Fixtures:**
+  - `scripts/record-tmdb-fixtures.ts` (`pnpm tmdb:record`) writes `tests/fixtures/tmdb/`.
+  - Tests inject the fixtures as the fetcher.
+  - `e2e/harness/tmdb.ts` serves them, placeholder images, and a **fake Viduki player** (a complete document that passes axe, posting `MEDIA_DATA` and `all-servers-failed` on cue).
+  - CI never calls TMDB or Viduki.
+
+**Playback:**
+- **Sources** (`pd_source`): name (en/ne), movie and TV URL templates (`{id}`, `{imdb}`, `{season}`, `{episode}`, `{color}`, `{lang}`), origins, adapter, sandbox (strict or relaxed), auto-fallback, enabled, position.
+  - Seeded with Viduki 1–4 from `PARDA_VIDUKI_BASE` (the fake player in e2e).
+  - Validated when saved: https only, and every template host must be in the row's origins.
+  - `player/sources.ts` fills templates server-side.
+- **Adapters** (`features/parda/player/adapters/`) are the only code per provider:
+  - `viduki` turns `MEDIA_DATA` into progress and `all-servers-failed` into a failure;
+  - `none` ignores messages.
+  - A message counts only when `event.origin` is in the source's origins and `event.source` is its iframe.
+- **CSP:** `embedOrigins` is built from the enabled sources plus `https://www.youtube-nocookie.com`, read in `.server()` in `security-headers.ts` and cached 30 s. `img-src` gains the TMDB image origin and `https://i.ytimg.com`.
+- **The iframe:** `allow="autoplay; encrypted-media; fullscreen; picture-in-picture"` (no `allowfullscreen`), `referrerpolicy="origin"`, and `sandbox` without `allow-popups` or `allow-top-navigation`. `allow-same-origin` stays, for Viduki's own resume storage. A poster facade on title pages; the iframe loads at once on the watch page.
+- **Progress:**
+  - Real `watched` and `duration` from the adapter, saved at most every 15 s and on `pagehide` (`fetch keepalive`), throttled inside the upsert.
+  - **Resume is Viduki's job:** no start time and no prompt. Its storage is per browser, so on another device a toast says "You were at 34:10" when the first report is more than 60 s behind ours.
+- **`pd_play`:** one row per playback (`playback_id`), `viewer_kind`, the source, failed (an `all-servers-failed`, or no `MEDIA_DATA` within 45 s). `set null` foreign keys, no IP or user agent.
+
+**Continue watching rules** (`library/progress.ts`, unit-tested case by case):
+- **Started** after 60 s or 2%. **Finished** at ≥ 92%, or ≤ 5 min left on a movie, ≤ 2 min on an episode.
+- **What a series shows:**
+  - the episode in progress;
+  - after a finished one, the **next unwatched**: across seasons, skipping specials and marked episodes;
+  - when the next one hasn't aired, the series moves to Schedule;
+  - when it's complete, it leaves the rail.
+- **Order:** latest first. After 6 months untouched it leaves the rail but stays in History. *Remove* hides a title until it's played again.
+- **Marks** (watched or unwatched, by episode, season or series) move the pointer. *Rewatch* clears our record only.
+- **Without a session,** progress is kept in localStorage (50 entries, try/catch) and imported once when a session starts. Accounts sync across devices.
+
+**Data model** (each table in the task that first needs it):
+
+| Table | Holds | Task |
+| --- | --- | --- |
+| `pd_settings` (one row, `version`) | region, languages, kids' cap, banner, `playback_enabled`, `cache_epoch` | 59 |
+| `pd_source` (`version`) | the sources above | 59 |
+| `pd_title` | snapshot by media type + TMDB id: titles en/ne, poster, backdrop, year, genres, runtime, certification, popularity rank, `refreshed_at` | 59 |
+| `pd_blocked_title` | takedowns: reason, who, when | 59 |
+| `pd_profile` | owner (cascade), name, avatar, kids, cap, PIN hash, region, audio language, autoplay | 64 |
+| `pd_progress` | profile, title, season, episode, watched, duration, finished, marked, `updated_at`; unique per episode | 64 |
+| `pd_continue_state` | per profile and title: hidden until played, rewatch reset | 64 |
+| `pd_play`, `pd_report` | playbacks; viewer reports (kind, note, status, resolved by) | 64 |
+| `pd_search_stat` | day, normalized query, count, zero results (search page only, no user) | 66 |
+| `pd_list_item` | profile, kind (`watchlist` or `favourite`), title, added | 67 |
+| `pd_favourite_person`, `pd_rating` | favourite people; like or not for me | 67 |
+| `pd_follow_state`, `pd_notification` | last episode seen per followed series; alerts | 68 |
+| `pd_billboard`, `pd_collection` (+ `_item`), `pd_rail`, `pd_daily_stat` | curation, layouts, rollups | 69 |
+
+**Routes** (few, for the bundle):
+- **Pages:**
+  - `/app/parda`, `/$hub` (movies, series, anime), `/discover`, `/search`;
+  - `/$type/$id` (movie or series, with a slug; a wrong slug gets a 301) and `/$type/$id/credits`;
+  - `/person/$id`, `/collection/$id`, `/c/$slug`.
+- **Watching and the library:** `/watch/$type/$id` (`?s=&e=`), `/library/$tab`, `/schedule`.
+- **Accounts and the rest:** `/profiles`, `/sign-in`, `/sign-up`, `/about`.
+- **Admin:** `/admin/parda` plus sources, titles, reports, settings, curation and layout, and the player lab.
+
+**SEO:**
+- **Indexable:** home, hubs, discover, title, credits, person, collection and curated pages. They use `seo({ siteName: "Parda" })` and JSON-LD, and are listed in `INDEXABLE`. Pages titled from TMDB also go in `CONTENT_TITLED`.
+- **`noindex`:** watch, library, profiles, schedule, sign-in and sign-up.
+- **Sitemap** through `SITEMAP_SOURCES`, from `pd_title`: the top 500 popular titles, the billboard and collection titles, minus takedowns.
+
+**Admin:**
+- Permissions `parda:read`, `parda:curate`, `parda:moderate` and `parda:configure`, with labels, audit actions and targets, `ADMIN_SECTIONS` and commands.
+- `assertRoutePermission` on each admin route. Every write `withAudit`.
+
+**Guard test:**
+- `PARDA_PUBLIC_FUNCTIONS`, a regex check that catalogue functions start with `withPardaCatalog`;
+- `PARDA_FUNCTIONS` for the library functions;
+- admin functions in `GUARDED_FUNCTIONS`;
+- `tests/server/parda-access.test.ts`: own profile, another's, a guest, a kids cap, a blocked title, playback off.
+
+### 12.6 Rules for every Part 6 task
+
+- **Design flow** (Task 60 sets it, every UI task follows it):
+  - build with `ui-ux-pro-max:ui-styling` on shadcn;
+  - finish with `impeccable` critique and polish, plus Playwright MCP screenshots at 390/768/1280 in en/ne, dark and light, fixing what they show;
+  - the admin overview uses `dataviz`.
+  - Never imitate a real streaming service's look.
+- **Layer independence:** nothing is imported from the portfolio, apps or Taskline layers. Shared code is core and unmarked (0215).
+- **Every new page:** in `e2e/support/pages.ts` (a `parda:start/end` block) and `tests/unit/route-seo.test.ts`.
+- **Every new functions file:** its Storybook mock and its guard-test entry. **Every library function:** its row in the access matrix.
+- **Catalogue reads** go through `catalog/service.ts` (takedowns, caps, the epoch).
+- **Strings:** both message files. TMDB text falls back to English.
+- **Player size:** `width: min(100%, (100dvh − bar) · 16/9)` with `aspect-ratio: 16/9`, never `100vw`. Console warnings fail e2e, so keep iframe attributes warning-free.
+- **Bundle:** no page grows the entry beyond the budget. Loaders `await import()` their queries (0194). Measure after each task.
+- **Docs:** `docs/guides/parda.md` (a section per module), decisions, CLAUDE.md.
+
+### Task 59: Foundation, spikes and the legal controls (planned)
+
+- **Layer:** `LAYERS`, a full `SPECS.parda` (narrowing the portfolio's `.impeccable` paths), markers, and the CI strip matrix.
+- **Catalogue:** the env variables, the TMDB client, cache and singleton, the mappers, the locale fill-in, the genre messages, and `UPSTREAM_UNAVAILABLE`.
+- **Fixtures:** the recorder and fixtures; the e2e stand-in with the fake Viduki player.
+- **Playback:** `pd_source` seeded with Viduki 1–4, template filling and validation, the `viduki` and `none` adapters, and the CSP's `embedOrigins` (30 s cache).
+- **Controls:** `pd_settings` (`playback_enabled`, `cache_epoch`), `pd_title` and `pd_blocked_title`, with the takedown filter in `catalog/service.ts`; `cron-parda.ts` with the `pd_title` refresh (top 500 popular).
+- **Player lab** `/admin/parda/player-lab` (`parda:configure`; the fake player in e2e): it embeds each source and logs every message. It settles:
+  - the real origin and payload shapes, and how often `MEDIA_DATA` arrives;
+  - that Viduki's self-resume works inside our sandbox;
+  - each server under the strict sandbox, and any console warnings;
+  - the ads per server (the cleanest one is seeded first);
+  - mobile behaviour;
+  - which TV discover certification filters work.
+
+  The findings go in the guide.
+- **Housekeeping:** temporary knip entries, removed by Task 64. Measure the bundle headroom.
+- **Tests:** client (timeout, 429, 5xx, mapping, fill-in), cache (TTL, coalescing, LRU, epoch), templates, adapters, the dynamic CSP, env, markers, the takedown filter.
+- **Decisions:** Parda as a layer, scoped guests and the legal posture; the TMDB client and cache; sources as data with code adapters and a dynamic CSP.
+
+### Task 60: Design direction and the theme plumbing (planned)
+
+- **impeccable `shape`:** the direction contract in `.impeccable/surfaces/parda.md` (THESIS / OWN-WORLD / STORY / FIRST VIEWPORT / FORM / FINISH) and comps of Home, Title and Player at 390 and 1280, dark and light.
+  - It's fed by `ui-ux-pro-max` (palettes, font pairings with Devanagari, media and carousel UX), `taste-skill` (`design-taste-frontend`, its app-screens run and look-and-fix loop) and `frontend-design`. `awesome-design` is used only for token rigour.
+- **The owner picks a comp.**
+- **Then:**
+  - `parda.css` for both themes, one display face for Latin and Devanagari (at most two preloads per locale, in `features/parda/lib/fonts.ts`);
+  - motion rules: one ease, and only transform and opacity, under `prefers-reduced-motion: no-preference`;
+  - `tests/unit/parda-tokens.test.ts`: 4.5:1 in both themes, including text over the billboard scrim;
+  - a "Parda/Tokens" story;
+  - the shared theme changes (12.5), with the review's explicit light pass.
+- **Decision:** dark by default with light allowed, and how a section resolves its theme.
+
+### Task 61: Shell, brand, auth pages and the media kit (planned)
+
+- **Layout and brand:** the `_parda` layout, `PARDA_BRAND`, `pardaLinks`, the manifest route, `public/parda`, the `· Parda` suffix.
+- **Header:** transparent over the billboard, solid on scroll (CSS `animation-timeline` with a static fallback), the user menu, language, theme. Nav links arrive with their routes; this task adds Home and About.
+- **Phone tab bar.** **Footer** with the TMDB logo and notice. **The notice page** `/about`. **The 404.**
+- **Sign-in and sign-up,** copied from Taskline's.
+- **Kit:**
+  - images and cards: `TmdbImage`, `PosterCard` (hover preview on `pointer: fine`), `BackdropCard`, `EpisodeCard`, `PersonCard`;
+  - `Rail` (shared) and `Top10Rail`;
+  - badges: `RatingBadge`, `CertBadge`, `ProgressBar`;
+  - the `Billboard`, with a visible pause button (WCAG 2.2.2) that pauses on hover and focus and never auto-advances under reduced motion;
+  - skeletons for each.
+  - Every piece has a story.
+
+### Task 62: Home and hubs (planned)
+
+- **Pages:** `/app/parda` and `/$hub` (movies, series, anime), with catalogue rails from a config in code (Task 69 makes it editable).
+  - Rails: Top 10 today (from `trending/{type}/day`), Trending, Popular, Top rated, Upcoming, genre rails (linking to Discover).
+  - Anime: airing today, this season, popular, top rated, anime films, keyword rails.
+- **Loading:** the billboard and the first two rails are awaited; the rest stream behind skeletons of the right size (CLS 0).
+- **Nav:** the Movies, Series and Anime links.
+
+### Task 63: Title, credits, person and collection pages (planned)
+
+- **Title page** `/$type/$id`, in this order:
+  1. **Hero:** backdrop, logo or title, poster, tagline. Meta: year · certification · runtime or seasons · ★ (votes) · genres; status and the next episode for series.
+  2. **Actions:** one primary action (a plain *Play* until Task 64), then Trailer, My List and ♥ (live in Task 67), Like, Mark watched, Share.
+  3. **Overview.**
+  4. **Episodes:**
+     - seasons as `?season` through `SearchLink`, each with poster, year, count and your progress;
+     - episodes with still, number, title, runtime, air date, rating and a watched bar;
+     - Upcoming marks, specials last, a "New episode" banner;
+     - an episode detail sheet (guest stars, director, writers).
+  5. **Cast** rail, and the full **credits** page by department.
+  6. **Key crew.**
+  7. **Details:** dates, original title and language, spoken languages, networks, companies, countries, budget and revenue, content ratings by country, alternative titles, keywords linking to Discover.
+  8. **Where to watch legally,** with the JustWatch attribution.
+  9. **Videos** and a **gallery** (keyboard browsing).
+  10. **Franchise** banner, More like this, Similar.
+  11. **Reviews** (collapsed) and **external links.**
+  12. **JSON-LD.**
+- **Other pages:** person (bio, known for, filmography by year and department, links) and collection (in order).
+- **"Surprise me".**
+- **SEO:** `CONTENT_TITLED`, slug redirects, the sitemap source, og = backdrop.
+
+### Task 64: The player, progress and Continue watching (planned)
+
+- **Watch route:**
+  - the source switcher ("Server 2 · Multi Language") and auto-fallback ("Trying server 2…", then "Not available right now" with the trailer and *Report*);
+  - the sandbox, and progress from the adapter (recording only);
+  - the "You were at…" toast;
+  - Up next: a 10 s countdown near the end, Cancel, honouring the profile;
+  - the episodes `Sheet`, shortcuts outside the iframe (`N`, `P`, `E`, `T`, `Esc`), theater mode;
+  - *Report a problem*, rate limited.
+- **Continue watching,** fully, as in 12.5: the rail, the CTAs (*Resume · 23 min left*, *Next: S2 E6*, *Rewatch*), episode and season bars, marks, *Remove*.
+- **Storage:** localStorage progress without a session. Tables `pd_profile`, `pd_progress`, `pd_continue_state`, `pd_play`, `pd_report`.
+- **Middleware:** `requirePardaViewer` and `withPardaCatalog`.
+- **Guests:**
+  - `guest_scope` and Parda's `GUEST_DATA` entry: seed is a no-op; the claim merges profiles, as `claimSandbox` merges labels;
+  - a guest starts on the first save, and local progress is imported;
+  - the banner with the deletion date.
+- **Tests:**
+  - PGlite: the upsert throttle, started and finished, next unwatched across seasons, specials, unaired, marks, rewatch, claim merge, scoped seeding.
+  - e2e with the fake player:
+    - progress → reload → the CTA, the bars and the rail show it;
+    - a failure → server 2;
+    - the end → Up next → the next episode;
+    - marking a season watched moves the CTA.
+
+### Task 65: Admin I, control (planned)
+
+- **Sources:** add, edit, delete, enable and reorder (the CRUD standard, dnd-kit order, server field errors for templates and origins), "test a title" (the lab), and the kill switch.
+  - e2e: add a source → it frames → disable it → it's gone from the switcher and the CSP.
+- **Titles:** the takedown list (CRUD standard). A blocked title 404s and leaves rails, search, discover and the sitemap.
+- **Reports queue:** filter, resolve, bulk resolve.
+- **Settings:** region, languages, kids' cap, banner, purge (epoch).
+- **Permissions, sections, commands;** every write audited.
+
+### Task 66: Search and discover (planned)
+
+- **Overlay:** Mod+K and `/`, debounced `search/multi`, keyboard navigation, recently viewed and recent searches, trending.
+- **Search page:** All / Movies / Series / People tabs, pagination, suggestions for an empty result. `pd_search_stat` is written from this page only.
+- **Discover:** the URL contract in `search.ts`, `FilterBar` (type, genres, years, rating, runtime, language, status, network or studio, sort), the 500-page cap.
+- **Nav and limits:** the Search and Discover links; a rate limit without a session.
+
+### Task 67: Library and profiles (planned)
+
+- **Library** `/library/$tab`:
+  - **My List** (watch later; sort and type filter);
+  - **Favourites:** ♥ titles and people;
+  - **Continue watching**;
+  - **History:** by day, remove one, clear all.
+  - The + My List and ♥ buttons on cards, the title page and the player. Like and Not for me.
+  - The Because you liked and New from people you love rails. The My List nav link.
+- **Profiles:**
+  - the picker with 2 or more profiles; create, edit, delete; avatars;
+  - **kids** with a certification cap and a PIN (hashed, rate limited);
+  - region per profile (falling back to `x-vercel-ip-country` when TMDB supports it, then the admin default);
+  - audio language, autoplay next.
+- **Accounts:** the email digest opt-in.
+
+### Task 68: Schedule and new-episode alerts (planned)
+
+- **Schedule** `/schedule`: the next 14 days of followed series plus anime airing this week, by day in the viewer's zone (`todayInZone`).
+- **Cron:** the new-episode check, batched and under 40 requests per second, writing `pd_follow_state` and `pd_notification`.
+- **Bell inbox,** and the New episodes rail.
+- **Digest email:** React Email, sent after the transaction commits (as 0214).
+
+### Task 69: Admin II, overview and curation (planned)
+
+- **Overview:** plays (today / 7 / 30 days), unique viewers, guests vs accounts, watch time, top titles, top and zero-result searches, open reports, server failure rate (charts with `dataviz`).
+  - Built on the rollup cron, `pd_daily_stat` and the 90-day prune of `pd_play`.
+- **Curation:**
+  - billboard slots: a TMDB title picker, order, start and end dates, tagline in en/ne;
+  - collections: en/ne, slug, ordered titles, published; shown as rails and at `/c/$slug`.
+- **Home layout:** `pd_rail` per hub, reordered with dnd-kit and seeded from Task 62's config.
+
+### Task 70: Wrap-up (planned)
+
+- **Full e2e:** `pnpm test:e2e`, plus Lighthouse (mobile ≥ 95 on home and a title), the bundle per page, and `EXPLAIN` of the library queries.
+- **Template matrix:** strip-demo with `--keep-parda` alone and with the other layers.
+- **Docs:** `docs/guides/parda.md` complete; CLAUDE.md (guide table, "Where things are", layout, commands, pitfalls).
+- **Review:**
+  - the `impeccable-finish-reviewer` agent against the contract, then fixes;
+  - `impeccable-documenter` (`docs/design/parda.md`);
+  - `/code-review` (high) and `/security-review`, with fixes;
+  - the measurements as a decision.
+
+**Out of scope for Part 6:**
+- viewer comments and reviews (TMDB's are shown);
+- downloads and watch parties;
+- title requests;
+- proxying or rewriting a player to strip its ads;
+- payments and ads of our own;
+- native apps.
+
+---
+
+## 13. Part 7: Chaal, a chess app on Lichess (Tasks 71–85, planned)
+
+Part 7 adds **Chaal** (चाल, "a move"), a chess product built on the Lichess API. It has its own URL, shell and brand, and is a layer the way Taskline and Parda are (0208).
+- **Data and online play:** Lichess (`lichess.org`, the opening explorer, the tablebase).
+- **Engine:** Stockfish in the browser, for analysis and offline play.
+- **Visitors** use everything public without an account: analysis and the engine, puzzles, TV, broadcasts, players, tournaments and local games. To play online or record anything on Lichess, they connect a Lichess account to their session (a guest's or a member's).
+- **The admin** runs features, limits, connections, health and curation from `/admin/chaal`.
+
+Like sections 10–12, **each task can be done in a fresh session that has read nothing else** but CLAUDE.md, section 10.1 and this section. Where a task says "check", check the code or the docs, because versions and the Lichess API move.
+
+**Part 7 starts after Part 6 (Tasks 59–70), when the owner says so.**
+
+### 13.1 How to run a Part 7 task
+
+As 12.1, with these differences:
+- **Read:** CLAUDE.md, 10.1, then this whole section 13.
+- **e2e:** only for what the task changed, e.g. `pnpm test:e2e e2e/flows/chaal.spec.ts` or the review of `/app/chaal`. Use PowerShell for `--grep /app/...`, because Git Bash rewrites the path. The full `pnpm test:e2e` runs once, in Task 85.
+- **Commit:** `feat: Part 7 Task N, <name>`, one commit on `main`, not pushed.
+- **"Done" summary:** mark the task in 13.3 and replace its section with a summary (what changed, numbers, deviations, for the owner).
+- **Decisions:** numbered from the next free one when the task is written, nothing reserved. The first Part 7 decision records Chaal as a layer at `/app/chaal`, the connect-to-session identity, the token vault and streams through the server (13.5).
+
+### 13.2 Owner's choices (2026-11-03)
+
+| Topic | Choice |
+| --- | --- |
+| What it is | A full chess app on Lichess: play online, against the Lichess AI, against the local engine and over the board; puzzles; analysis with engine, explorer and tablebase; TV and broadcasts; players and their games; tournaments, teams and studies |
+| Where | **A layer of its own like Taskline**, at **`/app/chaal`**, admin at `/admin/chaal`, removable with `pnpm strip-demo` |
+| Name | **Chaal**, a working name (the base path lives in `features/chaal/links.ts`) |
+| Identity | **Connect Lichess to a session.** Public features need nothing. Connecting (OAuth PKCE) attaches a Lichess account to the session's user, guest or member. A guest's connection and data are claimed on sign-up |
+| Engine | **Stockfish (WASM) in a Web Worker,** the single-threaded lite build. GPL-3.0, shipped unmodified as separate files with its licence and source linked, and loaded only when needed |
+| Board | **Our own board on Graphite + chess.js** (BSD-2) for the rules. No chessground or chessops (GPL-3.0) |
+| Admin | **Admin controls for everything that needs them:** feature switches, limits, OAuth scopes, defaults, connections and blocks, API health, curation, overview |
+| Look | **Very good and clean UI/UX:** our own brand on Graphite, board first, quiet chrome. The owner picks a comp in Task 72. Never imitates Lichess or chess.com |
+| Fair play | Lichess's rules are product rules: no engine, cloud eval or explorer for a game the user is playing; one request at a time; attribution and "not affiliated" |
+| Git | As Part 5 |
+
+### 13.3 Status
+
+| Task | Name | Effort | Status |
+| --- | --- | --- | --- |
+| 71 | Foundation: the `chaal` layer, the Lichess client and cache, fixtures and the fake Lichess, connecting (OAuth, vault), spikes | xhigh | Planned |
+| 72 | Design direction: comps (the owner picks), tokens, boards, pieces, sounds | high | Planned |
+| 73 | Shell, brand, home, auth pages, settings, about | high | Planned |
+| 74 | The board kit and the game model | xhigh | Planned |
+| 75 | Analysis board and the engine | xhigh | Planned |
+| 76 | Play offline: the computer and over the board | high | Planned |
+| 77 | Play online I: streams, challenges, the Lichess AI, the live game | xhigh | Planned |
+| 78 | Play online II: quick pairing, correspondence, notifications | high | Planned |
+| 79 | Admin I: settings, connections and blocks, API health | high | Planned |
+| 80 | Puzzles | high | Planned |
+| 81 | Players and games | high | Planned |
+| 82 | Watch: TV, live games, broadcasts | high | Planned |
+| 83 | Community: tournaments, teams, studies | high | Planned |
+| 84 | Admin II: overview and curation | high | Planned |
+| 85 | Wrap-up: full e2e, accessibility pass, template matrix, finish review | medium | Planned |
+
+- **Order is fixed.** The feature switches exist from Task 71, and the admin gets their UI in Task 79, right after online play.
+- **Nav links arrive with their routes,** never before.
+
+### 13.4 What exists today (facts the tasks rely on)
+
+**Lichess API** (spec v2.0.178, checked 2026-11-03; check again):
+- **OAuth:**
+  - PKCE `S256` only; "unregistered and public clients… choose any unique client id".
+  - Authorize at `https://lichess.org/oauth`; get the token with `POST /api/token` (form encoded, with the same `client_id` and `redirect_uri` as the authorize request); revoke with `DELETE /api/token` (204).
+  - Tokens last about a year, with no refresh. They match `[A-Za-z0-9_]` and can be up to 512 characters long.
+  - Lichess: tokens must never be shipped to users.
+- **Scopes we use:** `board:play`, `challenge:read`, `challenge:write`, `puzzle:read`, `puzzle:write`, `follow:read`, `follow:write`, `study:read`, `study:write`, `team:read`, `team:write`, `tournament:write`, `preference:read`.
+- **Limits:** "Only make one request at a time". On a 429, wait a minute (sometimes longer). Documented endpoints send `Access-Control-Allow-Origin: *`.
+- **Streams (ndjson):**
+  - `/api/stream/event`:
+    - an empty line every 7 s;
+    - on open it sends all current challenges and games;
+    - **only one per token**: opening another closes the previous one.
+  - `/api/board/game/stream/{id}`: `gameFull` first, then `gameState`, `chatLine` and `opponentGone`. It closes when the game ends.
+  - Public: `/api/stream/game/{id}`, `/api/tv/feed` and `/api/tv/{channel}/feed`.
+  - `/api/board/seek`:
+    - sends empty lines until the seek is accepted;
+    - disconnecting cancels the seek;
+    - open the event stream first.
+  - Broadcast rounds are PGN streams: `/api/stream/broadcast/round/{id}.pgn`.
+- **Board API:**
+  - normal accounts; "Engine assistance, or any kind of outside help, is forbidden";
+  - **Rapid, Classical and Correspondence only**. Blitz is allowed for direct challenges, AI games and bulk pairing; bullet is not allowed at all;
+  - seeks take `time` 0–180 min plus `increment` 0–180 s, or `days` 1/2/3/5/7/10/14;
+  - moves: `POST /api/board/game/{id}/move/{uci}` (`offeringDraw`), plus `draw/{accept}`, `takeback/{accept}`, `resign`, `abort`, `claim-victory`, `claim-draw`, `berserk` and chat.
+- **Lichess AI:** `POST /api/challenge/ai` with level 1–8, a clock of 0–10800 s plus 0–60 s increment (or `days`), colour and fen. The game arrives on the event stream.
+- **Puzzles** are public domain:
+  - `daily` and `{id}`;
+  - `next` (`angle`, `difficulty` easiest…hardest, `color`; it returns only unseen puzzles when authenticated, and is not for mass download);
+  - `batch/{angle}`: GET with `nb` 1–50, and POST to submit solutions (`puzzle:write`);
+  - `dashboard/{days}`, `replay/{days}/{theme}` and `activity` (`puzzle:read`).
+- **Analysis:**
+  - `GET /api/cloud-eval`: cached positions only, `multiPv` up to 5, 404 when not cached; "a few positions here and there";
+  - the explorer at `explorer.lichess.org` (`/masters`, `/lichess`, and `/player`, which is ndjson) declares OAuth2 security; **Task 71 checks whether a token is required**;
+  - the tablebase at `tablebase.lichess.org/standard`.
+- **Tournaments:**
+  - `GET /api/tournament` is public; join and withdraw need `tournament:write`; the games export is public (20 games/s without a token);
+  - Swiss tournaments are listed through `/api/team/{id}/swiss`.
+- **Not checked yet (Task 71):**
+  - stream behaviour on Vercel (maximum duration, buffering);
+  - whether the explorer needs a token;
+  - CORS on public streams;
+  - the TV feed and broadcast payloads;
+  - chat details;
+  - a Board API rematch (none is known).
+
+**The repo** (as of Part 5; check after Part 6):
+- **CSP:**
+  - built by `src/lib/http/csp.ts` (`buildCsp`) and applied by `src/middleware/security-headers.ts` to `text/html` responses in production only;
+  - `script-src` uses a nonce plus `'strict-dynamic'`; `style-src` is `'self' 'unsafe-inline'`; `connect-src` is `'self'` plus Sentry, PostHog and Cloudinary;
+  - no `worker-src`, no `'wasm-unsafe-eval'`;
+  - Part 6 adds `embedOrigins`, read in `.server()`;
+  - COOP `same-origin` comes from routeRules (`vite.config.ts`). There's no COEP, so no `SharedArrayBuffer`: single-threaded Stockfish.
+- **Auth:**
+  - Better Auth 1.7 (`src/server/auth/auth.ts`): admin, emailOTP, twoFactor, anonymous (`onLinkAccount: linkGuest`), and Google;
+  - no `genericOAuth`;
+  - no app-level encryption helper.
+- **Outbound HTTP:**
+  - clients take `fetcher = fetch` (`createCloudinary`);
+  - Part 6 adds `createTmdb` (8 s timeout, retries, 429), an LRU cache (`src/server/parda/tmdb/cache.ts`), `UPSTREAM_UNAVAILABLE`, `guest_scope`, `SectionBrand.id`/`data-section`, and an e2e stand-in server (`e2e/harness/tmdb.ts`).
+- **Not in `src` yet:** no SSE, ndjson or streaming code, no Web Worker, no WASM. Nitro routes are registered in `vite.config.ts` (`nitro({ routes })`, `defineHandler`).
+- **To reuse:**
+  - the dnd-kit model in `src/features/taskline/calendar/calendar.tsx` (`useDraggable`, `useDroppable`, `Accessibility.configure`);
+  - `enforceRateLimit` (`src/server/http/rate-limit.ts`);
+  - env in `src/server/env.ts`, plus the dev-offline `OFF` list, `tests/setup/env.ts`, the harness `APP_ENV` regex and `tests/unit/env.test.ts`.
+- **Bundle:** the entry was 267.5 of 275 KB after Task 53, and each route definition adds about 0.3 KB (0217). Check after Part 6.
+
+### 13.5 Architecture (every task follows it)
+
+**Paths:**
+
+| Part | Path |
+| --- | --- |
+| Routes | `src/routes/_chaal/route.tsx` (pathless layout: `staticData: { brand: CHAAL_BRAND }`, `chaalHead`, its own 404) and `src/routes/_chaal/app/chaal/**`; admin at `src/routes/_admin/admin/chaal/**` |
+| Feature | `src/features/chaal/`: `brand.ts`, `links.ts` (`chaalLinks`), `search.ts`, `keys.ts`, `queries.ts`, `chess/` (chess.js wrapper, game tree, PGN, clocks, figurines, spoken moves), `board/` (the kit), `engine/` (worker client), `live/` (streams, tab leader), `shell/`, `home/`, `play/`, `game/`, `analysis/`, `puzzles/`, `watch/`, `players/`, `events/`, `teams/`, `studies/`, `settings/`, `admin/` |
+| Server | `src/server/chaal/`: `lichess/` (client, queue, ndjson, schemas, cache, store), `connect/` (`oauth.ts`, `vault.ts`, repository, service), `play/`, `puzzles/`, `analysis/`, `local/`, `admin/`, `stats.ts`, `guest-data.ts`, `cron.ts`, `manifest.ts` |
+| Functions | `src/functions/chaal/*.ts` (public reads: `withChaalPublic`; personal: `requireChaalUser` → `withChaalServices`), `src/functions/chaal-admin/*.ts` (`requirePermission` → `withServices`) |
+| Middleware | `src/middleware/chaal.ts` |
+| Nitro routes | `src/server/routes/chaal-{oauth,stream,manifest,cron}.ts`: `/api/chaal/oauth/{start,callback}`, `/api/chaal/stream/{events,game/:id,seek}`, the manifest and `/api/cron/chaal`; `vite.config.ts` and `vercel.json` with `// @chaal`, and knip entries. These aren't in the client route tree, so they don't cost entry bytes |
+| Schema | `src/server/db/schema/chaal/*.ts`, tables `ch_*`, exported with `// @chaal` |
+| Assets | `public/chaal/` (icons, pieces, sounds); `public/chaal/engine/` is filled from the `stockfish` package by `pnpm engine:copy` (hashed names, gitignored, `COPYING` included) |
+| Styles | `src/styles/chaal.css`, scoped to `html[data-section=chaal]` |
+| Storybook | `.storybook/mocks/functions/chaal*.ts`, one per functions file |
+| Layer | `"chaal"` in `LAYERS`; a full `SPECS.chaal` (sentinel, paths, knipEntries, **every** schema file, crons, packageScripts `lichess:record` and `engine:copy`); the CI strip matrix |
+
+**Shared changes (core, unmarked):**
+- **CSP:** on `/app/chaal` pages, `connect-src https://lichess.org` (public streams) and `worker-src 'self'`.
+  - The engine files get their own header through routeRules: `script-src 'self' 'wasm-unsafe-eval'`.
+  - A page-level `'wasm-unsafe-eval'` is added only if the Task 71 spike shows the worker needs it.
+- **Cache:** if Parda's LRU (TTL, stale-while-revalidate, coalescing, epoch) is generic, its core moves to `src/server/cache/lru.ts` and both layers use it (0215). Otherwise Chaal has its own.
+
+**The Lichess client** (`server/chaal/lichess/`):
+- **Constructor:** `createLichess({ apiBase, explorerBase, tablebaseBase, userAgent }, fetcher = fetch)`.
+- **Env** (the `CLOUDINARY_*` pattern, with `.env.example`, README, diagnose, `OFF` lists, the harness regex and the env test):
+  - `LICHESS_API_BASE`, `LICHESS_EXPLORER_BASE`, `LICHESS_TABLEBASE_BASE`;
+  - `LICHESS_CLIENT_ID` (default `chaal`);
+  - `CHAAL_TOKEN_KEY` (32 bytes, base64; without it, connecting is off and public features still work);
+  - optional `LICHESS_APP_TOKEN`: a personal token with no scopes, server only, for explorer calls when the visitor has no token and the explorer needs one.
+- **JSON calls:** an 8 s timeout, one retry on 5xx for GETs, and Zod-mapped lean DTOs (the dehydrated state is in the HTML).
+- **One request at a time:**
+  - a serial lane per key and per instance: `public`, or a connection, which has a separate **play lane** so moves never wait behind reads;
+  - a 429 sets a cooldown (60 s, doubling on repeats): in `ch_connection.cooldown_until`, or in `ch_settings` for public calls, read with a 5 s TTL so every instance sees it;
+  - during a cooldown, reads serve the stale cache, or else `RATE_LIMITED` with a "Lichess asks us to wait a minute" state.
+- **User-Agent:** `Chaal/<version> (+<site>/app/chaal/about)`. **Logging:** `log()` on every call (class, status, ms; never the token), plus counters for the health page.
+- **Cache TTLs:**
+  - the daily puzzle until the next UTC midnight;
+  - TV channels 5 s;
+  - profiles and the tournament list 60 s;
+  - broadcasts 5 min;
+  - leaderboards 1 h;
+  - the explorer: masters 7 d, Lichess 1 h;
+  - the tablebase 30 d;
+  - cloud eval 1 d.
+
+  Keys carry `cache_epoch`. Personal reads aren't shared between users.
+- **Fixtures:**
+  - `scripts/record-lichess-fixtures.ts` (`pnpm lichess:record`) writes `tests/fixtures/lichess/`;
+  - `e2e/harness/lichess.ts` is a **fake Lichess**:
+    - OAuth (an Approve page), the token, the account;
+    - the event stream, and a game stream with a scripted opponent and clocks (moves checked with chess.js);
+    - the AI, seeks, TV feeds, puzzles, the explorer, the tablebase, cloud eval, tournaments, teams, studies and broadcasts.
+  - CI never calls Lichess.
+
+**Connecting Lichess** (`server/chaal/connect/`):
+- **Start** (`GET /api/chaal/oauth/start?return=`):
+  - needs a session; the page starts a scoped guest first (`guest_scope=chaal`);
+  - `return` must be an `/app/chaal` path (no open redirect);
+  - the state and `code_verifier` go in a sealed, HttpOnly, SameSite=Lax cookie for 10 minutes;
+  - the scopes come from the enabled features.
+- **Callback:**
+  - checks the state, exchanges the code, reads `/api/account`, and upserts `ch_connection`;
+  - a Lichess account belongs to one site user: connecting it from another is refused with a clear message (only the claim moves a guest's).
+- **Vault** (`vault.ts`):
+  - AES-256-GCM through WebCrypto with `CHAAL_TOKEN_KEY`, and a key id prefix so the key can be rotated;
+  - the token is decrypted only inside a service call;
+  - never logged, returned or dehydrated; a test checks the HTML and every function's output.
+- **Disconnect:** `DELETE /api/token` (best effort), then the row is deleted.
+- **A 401 from Lichess** sets `revoked_at` and the UI shows "Reconnect".
+- **Scopes by feature:**
+  - play → `board:play challenge:read challenge:write`
+  - puzzles → `puzzle:read puzzle:write`
+  - social → `follow:read follow:write`
+  - studies → `study:read study:write`
+  - teams → `team:read team:write`
+  - tournaments → `tournament:write`
+  - preferences → `preference:read`
+
+  A connection that lacks a scope a newly enabled feature needs shows "Reconnect to allow …".
+
+**Live play** (`features/chaal/live/`, `server/routes/chaal-stream.ts`):
+- **Token streams go through our server.** The stream routes check the session and the connection, open the Lichess stream, and pass each line on as ndjson after the Zod mapping (unknown types are dropped, keepalives pass through).
+- **Duration:** the route closes a little before the function's maximum duration (Task 71 measures it), and the client reconnects at once. Nothing is lost, because both streams restate everything when they open.
+- **One event stream per token:** one tab holds it under a Web Lock (`chaal-events`) and shares events over a `BroadcastChannel`. Another tab takes over when that one closes.
+- **Public live data** (TV feeds, spectating with `/api/stream/game/{id}`, broadcast PGN) is read **by the browser from lichess.org**, so viewers don't share our server's IP limits (if CORS allows; else through our stream route).
+- **Clocks** come from `wtime`/`btime` at receipt plus a monotonic local clock, so a reconnect doesn't make them jump.
+- **Moves:** `makeMove` (UCI format checked; Lichess judges legality). The board shows the move at once and rolls back on a refusal. One premove is sent when the turn arrives.
+- **Fair play:**
+  - while the user has a real-time game in progress, the engine, cloud eval and the explorer are off everywhere in Chaal, with a banner saying why;
+  - a correspondence game can't be opened in analysis until it ends.
+
+**The engine** (`features/chaal/engine/`):
+- **Build:** the `stockfish` package's lite single-threaded build (check the version; about 7 MB with NNUE). It ships with immutable cache headers, its licence, and a source link on `/about`.
+- **API:** `createEngine()`, UCI over postMessage:
+  - `analyse(fen, { multiPv, depth | movetime })` streams `{ depth, multipv, score, pv }`;
+  - `bestMove(fen, { level })` maps levels 1–8 to `Skill Level`/`UCI_Elo`;
+  - `stop` and `quit`.
+- **Lifecycle:** one engine per page, started on demand with download progress, paused when the tab is hidden, and ended on leave. Limits (depth, hash, multi-PV) come from `ch_settings`.
+- **Bundle:** the client is a lazy import, and the worker files are outside the bundle.
+
+**Rules and the board** (`features/chaal/chess/`, `board/`):
+- **Rules:** chess.js for legality, SAN, FEN and the draw rules.
+- **Our game tree** (`tree.ts`): each node has id, ply, uci, san, fen, children, comments, NAGs, eval and clock.
+- **PGN** with variations, comments and NAGs (`pgn.ts`: our own, or `@mliebelt/pgn-parser` (Apache-2.0); Task 74 checks). Imports are capped at 500 KB and 2,000 plies.
+- **Standard chess only.** Variant games show in archives with "Open on Lichess".
+- **The board:**
+  - SVG, `aspect-ratio: 1`, sized by its container (CLS 0); coordinates inside the board; orientation;
+  - drag with `@dnd-kit/react` (as `calendar.tsx`) plus click-click;
+  - legal-move dots, capture rings, last move, check, selection and premove marks;
+  - a promotion picker (auto-queen is a setting);
+  - arrows and circles in analysis;
+  - a 150 ms slide with one ease, none under reduced motion.
+- **Keyboard and screen readers:**
+  - the board is a focusable grid: arrow keys move a cursor, Enter or Space picks up and drops;
+  - a move input ("Nf3", "e2e4") with legal suggestions;
+  - moves are spoken in words in both languages ("Knight to f3, check"), through one polite live region.
+- **Notation:** figurine SAN on screen (it reads the same in both languages); letters in PGN.
+- **Pieces, boards and sounds:**
+  - the cburnett pieces (CC BY-SA 3.0, attributed; check the licence);
+  - 3–4 board colour themes as token sets;
+  - CC0 or our own sounds, silent until the first interaction.
+- **Kit:** `Board`, `MiniBoard` (static SVG drawn on the server), `MoveList`, `Clock`, `PlayerStrip`, `EvalBar`, `EvalGraph` (Recharts, lazy), `Material`, `GameControls`, `OpeningName`, `PromotionPicker`, `ResultBanner`, and skeletons. Every piece has a story.
+
+**Data model** (each table arrives in the task that first needs it):
+
+| Table | Holds | Task |
+| --- | --- | --- |
+| `ch_settings` (one row, `version`) | feature switches, quick-pair controls, AI max level, rated allowed, chat, guests may connect, extra scopes, defaults (board, pieces, sounds), engine limits, banner and maintenance (en/ne), `cache_epoch`, public cooldown | 71 |
+| `ch_connection` | user (unique, cascade), Lichess id (unique), username, title, sealed token, scopes, connected and last used, `cooldown_until`, `revoked_at` | 71 |
+| `ch_block` | a site user or a Lichess username, reason, by, at | 71 |
+| `ch_preference` | per user: board, pieces, sounds, volume, auto-queen, premove, confirm moves, coordinates, notation, zen. Without a session these live in localStorage, imported once | 73 |
+| `ch_analysis` | owner, title, the tree (jsonb), start FEN, updated | 75 |
+| `ch_local_game` | owner, mode (engine or board), level, colour, clock, PGN, result, status, times | 76 |
+| `ch_activity` | user (`set null`), kind (game started by mode, puzzle, analysis, connect), at. Pruned after 90 days | 77 |
+| `ch_api_stat`, `ch_api_error` | hourly calls, errors, 429s and ms per endpoint class (instance counters flushed with `waitUntil`); the last 500 errors, never a token | 79 |
+| `ch_puzzle_attempt` | owner, puzzle, won, ms, themes, rating, synced to Lichess | 80 |
+| `ch_featured`, `ch_home_section`, `ch_daily_stat` | curation, home order, rollups | 84 |
+
+**Routes** (few, for the entry budget; merged into params if the budget is tight):
+- **Public:**
+  - `/app/chaal`, `/play`, `/analysis`;
+  - `/puzzles` and `/puzzles/$id`;
+  - `/watch` and `/watch/$channel`;
+  - `/broadcasts` and `/broadcasts/$id`;
+  - `/players` and `/players/$username` (`?tab=games`);
+  - `/game/$id`;
+  - `/tournaments` and `/tournaments/$id`;
+  - `/teams` and `/teams/$id`;
+  - `/studies` and `/studies/$id`;
+  - `/about`.
+- **Personal:** `/local/$id`, `/settings`, `/sign-in`, `/sign-up`.
+- **Admin:** `/admin/chaal` (overview), plus `settings`, `connections`, `health` and `curation`, with a temporary `lab` page.
+
+**SEO:**
+- **Indexable:** home, play, analysis, puzzles, watch, broadcasts, players (leaderboards), tournaments and about. They use `seo({ siteName: "Chaal" })` and JSON-LD (`WebApplication`), and are listed in `INDEXABLE` and the sitemap.
+- **`noindex`:** profiles, games, a puzzle by id, teams, studies, local games, settings and the auth pages (third-party content and people's names).
+
+**Admin:**
+- permissions `chaal:read`, `chaal:configure`, `chaal:moderate` and `chaal:curate`, with labels, audit actions and targets, `ADMIN_SECTIONS` and commands;
+- `assertRoutePermission` on each admin route; every write `withAudit`.
+
+**Guard test:**
+- `CHAAL_PUBLIC_FUNCTIONS` (they must start with `withChaalPublic`);
+- `CHAAL_FUNCTIONS`;
+- admin functions in `GUARDED_FUNCTIONS`;
+- `tests/server/chaal-access.test.ts` covers: no session, a guest, a member, a blocked user, a feature that is off, a missing scope, a revoked token, and another user's game or analysis.
+
+**Guests:** Chaal's `GUEST_DATA` entry seeds nothing. Its claim:
+- moves the connection (unless the account already has one; then the guest's token is revoked);
+- moves preferences (the account's own win);
+- moves local games, analyses and puzzle attempts.
+
+### 13.6 Rules for every Part 7 task
+
+- **Design flow** (the owner: "very good and clean"):
+  - as 12.6: `ui-ux-pro-max:ui-styling` on shadcn, then `impeccable` critique and polish;
+  - Playwright MCP screenshots at 390/768/1280, en/ne, dark and light, fixing what they show;
+  - `dataviz` for admin charts.
+- **Chaal's UX rules:**
+  - **Board first:** on play, puzzle and analysis pages the board is the largest thing on screen, sized `min(container, 100dvh − chrome)`.
+    - A phone never scrolls to reach the board, the clocks or the move buttons.
+    - Actions sit within thumb reach.
+  - **Calm:** one primary action per screen and quiet chrome. Zen mode (`z`) during play leaves only the board, clocks and names.
+  - **Instant:** a move shows within a frame. The connection state is a small dot, and a reconnect banner appears only after 3 s without a connection.
+  - **Keyboard:**
+    - ←/→/Home/End step through moves; `f` flips the board; `/` opens the move input; `z` toggles zen; `?` lists the shortcuts;
+    - ⌘K finds players, pages and actions.
+  - **Every state is designed:** empty, loading (sized skeletons), error, offline, "Lichess asks us to wait", feature off, not connected, missing scope.
+  - **Motion:** one ease, transform and opacity only, and reduced motion respected.
+  - **Not a copy:** never imitate Lichess or chess.com. The footer and `/about` say "Powered by Lichess, not affiliated", and every Lichess game and profile links to lichess.org.
+- **Layer independence** (0215): nothing is imported from the portfolio, apps, Taskline or Parda; patterns are copied.
+- **Lichess calls** go only through the client (lanes, cooldown, log, counters). Tokens exist only inside services.
+- **Admin controls:**
+  - every feature's `ch_settings` switch and its server check arrive with the feature;
+  - from Task 79 on, each task also adds its controls to the admin, in the same task.
+- **Every new page:** e2e pages (a `chaal:start/end` block) and the route-SEO test.
+- **Every functions file:** a Storybook mock, a guard-test entry, and a row in the access matrix.
+- **Strings:**
+  - both message files;
+  - chess words come from the guide's en/ne glossary, and the puzzle themes are our own messages;
+  - opening names stay as Lichess gives them.
+- **Untrusted text:** names, bios, chat and study comments are shown as text, never HTML; links get `rel="nofollow ugc noopener"`.
+- **Bundle:**
+  - loaders `await import()` their queries (0194);
+  - chess.js and the board load only with the pages that use them, and the engine is never in a page's JavaScript;
+  - measure after every task.
+- **Docs:** `docs/guides/chaal.md` (a section per module plus the glossary), decisions, CLAUDE.md.
+
+### Task 71: Foundation, spikes and connecting Lichess (planned)
+
+- **Layer:**
+  - `LAYERS`, `SPECS.chaal`, markers, the CI strip matrix;
+  - the permissions in the catalog (no admin pages yet).
+- **Client:**
+  - the env variables;
+  - `createLichess` with its lanes, cooldown, ndjson reader, DTOs and cache (the core move if Parda's is generic);
+  - the store singleton, logging and counters.
+- **Fixtures:** the recorder, the fixtures, and the fake Lichess in the e2e harness.
+- **Connecting:**
+  - the OAuth start and callback routes, the vault, and `ch_connection`;
+  - disconnect and the 401 handling;
+  - `ch_settings` (switches, scopes) and `ch_block`;
+  - the middleware (`withChaalPublic`, `requireChaalUser`, `withChaalServices`);
+  - `GUEST_DATA` and the claim.
+- **Lab** `/admin/chaal/lab` (`chaal:configure`): connect, show the account and scopes, open the event stream, and time a stream.
+- **Spikes** (findings go in the guide):
+  1. streams through Nitro on Vercel: maximum duration, unbuffered flushing, reconnects;
+  2. the engine: the package version and size, a worker with its own header versus a page-level `'wasm-unsafe-eval'`, speed on a mid-range phone;
+  3. whether the explorer needs a token;
+  4. Board API seeks, chat and endings in practice;
+  5. the TV, broadcast and spectator payloads;
+  6. CORS on public streams.
+- **Tests:**
+  - the client (timeout, 5xx, 429 across lanes, DTOs);
+  - ndjson (split chunks, keepalives);
+  - the vault (round trip, wrong key, rotation prefix);
+  - OAuth (state, return path, verifier);
+  - connection rules (uniqueness, claim);
+  - env and markers.
+- **Decisions:** Chaal as a layer and its identity; the Lichess client; the token vault and streams through the server.
+
+### Task 72: Design direction (planned)
+
+- **`impeccable` shape:**
+  - the contract in `.impeccable/surfaces/chaal.md`;
+  - comps of Home, a live game, Analysis and a puzzle at 390 and 1280, dark and light;
+  - fed by `ui-ux-pro-max`, `taste-skill` (its app-screens run) and `frontend-design`.
+- **The owner picks a comp.**
+- **Then:**
+  - `chaal.css` for both themes;
+  - 3–4 board themes and the piece set, with the licence checked;
+  - the sounds;
+  - one display face for Latin and Devanagari, at most two preloads;
+  - the motion rules;
+  - `tests/unit/chaal-tokens.test.ts`: text at 4.5:1, square highlights at 3:1;
+  - a "Chaal/Tokens" story.
+- **Decision:** the look.
+
+### Task 73: Shell, brand, home, auth pages, settings and about (planned)
+
+- **Layout and brand:** the `_chaal` layout, `CHAAL_BRAND`, `chaalLinks`, the manifest, `public/chaal`, and the `· Chaal` suffix.
+- **Shell:**
+  - a top bar on desktop and a phone tab bar (Play, Puzzles, Analysis, Watch, More);
+  - the user menu (connection status, Connect or Disconnect, settings, language, theme, Admin);
+  - the settings banner, the palette, the shortcuts dialog;
+  - the 404 and error pages inside the frame.
+- **Sign-in and sign-up,** copied.
+- **`/settings`:**
+  - preferences (`ch_preference`, with localStorage without a session);
+  - the connection, with its scopes and Reconnect;
+  - deleting local data.
+- **`/about`:** attribution, credits, licences and the Stockfish source.
+- **Home, first version:**
+  - a hero with a server-drawn mini board;
+  - entry cards;
+  - the footer.
+
+### Task 74: The board kit and the game model (planned)
+
+- **`chess/`:**
+  - the chess.js wrapper, the tree and PGN (with variations);
+  - FEN checks, clock maths, SAN and UCI, figurines;
+  - the spoken-move text in en/ne.
+- **`board/`:**
+  - drag, click, the keyboard grid and the move input;
+  - promotion, highlights, arrows, animation, sounds.
+- **The rest of the kit:** `MoveList` (a tree for analysis, compact for play), `Clock`, `PlayerStrip`, `EvalBar`, `EvalGraph`, `Material`, `GameControls`, `MiniBoard`.
+- **Tests:**
+  - stories for every state (a11y en/ne × light/dark);
+  - component tests: drag, click, keyboard, promotion, an illegal move, announcements;
+  - unit tests: PGN round trips with variations, and 50 known positions (mate, stalemate, insufficient material, threefold repetition, the fifty-move rule).
+- **Measure** the kit's size.
+
+### Task 75: Analysis board and the engine (planned)
+
+- **`/analysis`:**
+  - the URL holds `fen`, `moves`, `ply` and `orientation`;
+  - import FEN, PGN, or a Lichess game URL or id; export PGN, FEN and a share link.
+- **The engine:**
+  - `engine:copy`, the worker client;
+  - multi-PV lines and depth, the eval bar and graph, the best-move arrow.
+- **Lichess data:**
+  - cloud eval first when it's cached;
+  - the explorer: masters, Lichess (speeds, ratings) and a player;
+  - the opening name and ECO code;
+  - the tablebase at 7 pieces or fewer.
+- **Tree editing:** add, promote and delete variations, comments, NAGs, arrows.
+- **"My analyses"** (`ch_analysis`).
+- **Also:**
+  - the fair-play hook and banner (fed by Task 77);
+  - the CSP from the spike.
+- **Tests:**
+  - the engine client against a fake worker;
+  - one e2e run of the real engine at low depth;
+  - the tree operations, the DTOs, saving and claiming.
+
+### Task 76: Play offline: the computer and over the board (planned)
+
+- **`/play` hub, first version.**
+- **Against the computer:**
+  - levels 1–8, colour, an optional clock;
+  - takebacks and resign;
+  - no engine hints until the game ends.
+- **Over the board:**
+  - clocks with increment;
+  - flipping after each move, or a tablet mode with the far side rotated.
+- **Saving and history:**
+  - `ch_local_game`, saved per move (debounced), with resume, a history list, export, and "Analyse";
+  - works in localStorage without a session and is imported when one starts.
+- **Tests.**
+
+### Task 77: Play online I: streams, challenges, the Lichess AI and the live game (planned)
+
+- **Streams:** the event and game stream routes, the tab leader, and reconnects.
+- **Challenges:**
+  - to a username, with only Board-legal controls, colour, rated, or days;
+  - incoming and outgoing, with accept, decline (with a reason) and cancel;
+  - an open-challenge link.
+- **The Lichess AI:** levels 1–8 and clocks.
+- **`/game/$id` live:**
+  - optimistic moves and a premove, the clocks;
+  - draw and takeback offers;
+  - resign, abort, claim victory, claim draw;
+  - the opponent-gone countdown, chat (if allowed);
+  - the game-over panel (result, rating change, "Analyse" once finished, "Play again with these settings").
+- **The fair-play lock, `ch_activity`, and the play switch** (pages show a calm "off" state; functions refuse).
+- **Tests:**
+  - stream mapping;
+  - two tabs (leader election);
+  - a reconnect mid-game;
+  - a full game against the scripted opponent;
+  - refusals and scopes.
+
+### Task 78: Play online II: quick pairing, correspondence and notifications (planned)
+
+- **Quick-pair tiles,** with allowed controls only: Rapid 10+0, 10+5, 15+10; Classical 30+0, 30+20; correspondence 1/3/7/14 days; custom within the limits.
+  - Uses the seek stream (cancelled on leave), with rated or casual and a rating range.
+- **Correspondence:** "My games" ordered by your turn, with time left and a nav badge.
+- **Notifications:** toasts and a bell for challenges and your turn, from the event stream, plus sounds.
+- **Also:** berserk in arena games, and the phone play layout (portrait and landscape).
+- **Tests.**
+
+### Task 79: Admin I: settings, connections and API health (planned)
+
+- **`settings`:**
+  - feature switches, showing the scopes each one adds;
+  - quick-pair controls, the AI's max level, rated play, chat, whether guests may connect;
+  - defaults, engine limits, the banner and maintenance mode (en/ne);
+  - purge the cache (epoch).
+- **`connections`** (the CRUD standard):
+  - site user, Lichess user, scopes, dates, status;
+  - revoke one or many;
+  - block a user or a username;
+  - CSV.
+- **`health`:**
+  - calls, errors and 429s by hour and endpoint class;
+  - current cooldowns, recent errors;
+  - a "test Lichess" ping.
+- **Wiring:** permissions, sections and commands; every write audited. The lab stays or goes.
+- **e2e:**
+  - play off → pages show "off" and functions refuse;
+  - revoke → the user sees Reconnect;
+  - block → connecting is refused.
+
+### Task 80: Puzzles (planned)
+
+- **`/puzzles`:** the daily puzzle (server-rendered, indexable) and training.
+- **The trainer:**
+  - the opponent's move animates;
+  - feedback on a wrong move, with a retry;
+  - a hint, the solution, Next;
+  - the rating and themes shown afterwards.
+- **Choosing puzzles:** themes (our own messages) by difficulty and colour.
+- **Streak mode** (our own) with the best streak saved.
+- **Connected users:** `next` and `batch` at their rating, results posted in batches, and Lichess's dashboard and replay.
+- **Others:** `ch_puzzle_attempt` and a local dashboard.
+- **Prefetching:** 15 puzzles ahead.
+- **Tests.**
+
+### Task 81: Players and games (planned)
+
+- **`/players`:** leaderboards per rating category.
+- **`/players/$username`:**
+  - the header: title, flag, online or playing, follow, "Challenge";
+  - rating cards and the rating history chart (lazy);
+  - rating details and activity;
+  - the current game, the crosstable with you, recent games.
+- **`?tab=games`:** filters in the URL (rating category, colour, rated, result, opponent, dates), pages by `until` over the ndjson export.
+- **`/game/$id` replay:**
+  - moves and per-move clocks;
+  - Lichess's eval graph and move judgements when the game has been analysed;
+  - PGN, "Analyse", and a lichess.org link.
+- **Also:** user search in the palette, and the following list.
+- **Tests.**
+
+### Task 82: Watch: TV, live games and broadcasts (planned)
+
+- **`/watch`:** a grid of TV channels, server-rendered, then live from the browser feeds. **`/watch/$channel`:** the big board.
+- **Spectating** any game: `/game/$id` in spectator mode.
+- **Broadcasts:** `/broadcasts` (official, top, search) and `/broadcasts/$id` (rounds, a boards grid, a focused board on the PGN stream, replays).
+- **Live streamers** (links out).
+- **Tests** with fake feeds.
+
+### Task 83: Community: tournaments, teams and studies (planned)
+
+- **Arenas:**
+  - `/tournaments` (created, started, finished);
+  - `/tournaments/$id`: standings, podium, top game, join (password or team), withdraw, "pair me ASAP".
+- **Swiss** through teams.
+- **Teams:** search, my teams, and `/teams/$id` (description as text, members, tournaments, join or leave).
+- **Studies:**
+  - mine, by a user, and public;
+  - `/studies/$id`: chapters in the analysis viewer;
+  - "Save to study" from analysis (`study:write`).
+- **Each area's switch and admin controls.**
+- **Tests.**
+
+### Task 84: Admin II: overview and curation (planned)
+
+- **Overview:**
+  - connected players and active users at 7 and 30 days;
+  - games by mode, puzzles solved, analyses;
+  - the API health summary;
+  - charts with `dataviz`.
+  - Built on the rollup cron (`ch_daily_stat`) and the prunes.
+- **Curation:**
+  - featured broadcasts, tournaments, studies and puzzle themes (en/ne titles, order, dates);
+  - the home sections' order (dnd-kit), the announcement;
+  - the home page reads them.
+- **Tests.**
+
+### Task 85: Wrap-up (planned)
+
+- **Full e2e:** `pnpm test:e2e`.
+- **Accessibility:** a full game, a puzzle and an analysis by keyboard only and with NVDA.
+- **Measurements:**
+  - Lighthouse (mobile ≥ 95 on home and puzzles);
+  - the bundle per page;
+  - the engine's numbers.
+- **Template matrix:** `--keep-chaal` alone and with the other layers.
+- **Docs:** `docs/guides/chaal.md` complete, with its glossary; CLAUDE.md (guide table, "Where things are", layout, commands, pitfalls).
+- **Review:**
+  - the `impeccable-finish-reviewer` agent against the contract, then fixes;
+  - `impeccable-documenter` (`docs/design/chaal.md`);
+  - `/code-review` (high) and `/security-review`, with fixes;
+  - the measurements as a decision.
+
+**Out of scope for Part 7:**
+- variants (Chess960, Crazyhouse…);
+- the Bot API;
+- hosting games or ratings of our own;
+- our own websockets;
+- puzzle races;
+- private messages (`msg:write`);
+- creating tournaments or broadcasts;
+- native apps;
+- AI commentary.
+
+---
+
+## 14. Part 8: Kharcha, a personal expense tracker and bill splitter (Tasks 86–97, planned)
+
+Part 8 grows the Expenses showcase app into **Kharcha** (खर्च, "spending"), a personal expense tracker and bill splitter with its own URL, shell and brand. It is built as a layer the way Taskline is (0208).
+- **Track:** your own spending, with receipts, categories, tags, payment methods, budgets, recurring expenses, search and insights.
+- **Split:** bills with friends and groups (a trip, a flat), in any split, with balances per currency, and settling up recorded.
+- **UX reference:** New Expensify (`https://new.expensify.com`):
+  - conversations with expense cards;
+  - the expense in a side panel;
+  - search with typed filters and saved searches;
+  - a to-do Home;
+  - one primary action per screen.
+
+  We copy its patterns, never its look, name, art or copy.
+- **Visitors** try it as a guest with sample data and placeholder friends, claimed on sign-up. The admin runs limits and defaults from `/admin/kharcha`.
+
+Like sections 10–13, **each task can be done in a fresh session that has read nothing else** but CLAUDE.md, section 10.1 and this section. Where a task says "check", check the code, because it moves.
+
+**Part 8 starts after Part 5 (Tasks 54–58), when the owner says so.**
+- It doesn't depend on Parts 6 or 7.
+- Where they have already added a core piece Kharcha can use (`guest_scope`, the `.impeccable` path narrowing), Kharcha uses it. Otherwise it does without or adds it as 12.5 describes.
+
+### 14.1 How to run a Part 8 task
+
+As 12.1, with these differences:
+- **Read:** CLAUDE.md, 10.1, then this whole section 14.
+- **e2e:** only for what the task changed, e.g. `pnpm test:e2e e2e/flows/kharcha.spec.ts` or the review of `/app/kharcha`. Use PowerShell for `--grep /app/...`, because Git Bash rewrites the path. The full `pnpm test:e2e` runs once, in Task 97.
+- **Commit:** `feat: Part 8 Task N, <name>`, one commit on `main`, not pushed.
+- **"Done" summary:** mark the task in 14.3 and replace its section with a summary (what changed, numbers, deviations, left for the owner).
+- **Decisions:** numbered from the next free one when the task is written, nothing reserved. The first Part 8 decision records:
+  - Kharcha as a layer at `/app/kharcha`;
+  - people as the identity;
+  - the ledger;
+  - money per currency (14.5).
+
+### 14.2 Owner's choices (2026-11-03)
+
+| Topic | Choice |
+| --- | --- |
+| What it is | A **personal expense tracker and bill splitter**, with UX on the level of New Expensify |
+| Not in it | No AI: no receipt reading, auto-categorizing or assistant. No bank, card or wallet connections. No accounting exports or app integrations. No company or office expenses: workspaces, approvals, expense reports, reimbursement, per diem, mileage, invoices, travel, company cards. No real money movement: settling up records a payment made elsewhere |
+| Where | **A layer of its own like Taskline**, at **`/app/kharcha`**, admin at `/admin/kharcha`, removable with `pnpm strip-demo` |
+| Name | **Kharcha**, a working name (the base path lives in `features/kharcha/links.ts`) |
+| The Expenses app | **Replaced**, as Kanban was (0210). Each owner's categories, expenses, budgets and import keys move into Kharcha with the same ids, guests included. `/apps/expenses/*` redirects, and its code is removed (Task 95, once Kharcha does everything it did) |
+| Visitors | Try it as a guest: seeded personal spending, placeholder friends and two groups, claimed on sign-up (0186) |
+| Money | Integer minor units per currency. Totals and balances are per currency and never converted on their own. A payment in another currency uses a rate the user types |
+| Look | Our own brand on Graphite, dark and light, from a comp the owner picks in Task 87. Never imitates Expensify |
+| Git | As Part 5 |
+
+### 14.3 Status
+
+| Task | Name | Effort | Status |
+| --- | --- | --- | --- |
+| 86 | Foundation: the `kharcha` layer, people, the money core (splits, ledger, balances), access, activity, guests | xhigh | Planned |
+| 87 | Design direction: UX notes, comps (the owner picks), tokens, brand, the kit | high | Planned |
+| 88 | Shell, brand, landing, auth pages, Home, onboarding, the create menu | high | Planned |
+| 89 | Expenses and receipts: add and edit, the expense panel, categories, tags, methods, rules, a first Spend list | xhigh | Planned |
+| 90 | Friends, groups and splitting: people, invites and joining, groups, the split editor, threads, freshness | xhigh | Planned |
+| 91 | Balances and settling up: balances everywhere, settle up, simplify, remind | high | Planned |
+| 92 | Conversations, notifications and email: comments, mentions, reactions, unread, digests, the daily job | high | Planned |
+| 93 | Spend: the search language, filters, saved searches, views and charts, bulk actions, CSV import and export | xhigh | Planned |
+| 94 | Budgets, recurring expenses and insights | high | Planned |
+| 95 | Expenses moved in: migration, redirects, the old app removed | high | Planned |
+| 96 | Admin: overview, settings, default categories, abuse controls | medium | Planned |
+| 97 | Wrap-up: full e2e, accessibility pass, template matrix, finish review | medium | Planned |
+
+- **Order is fixed.**
+  - 86–89 make a working personal tracker.
+  - 90–92 add splitting and the conversations.
+  - 93–94 add finding and planning.
+  - 95 replaces Expenses once Kharcha covers everything it did.
+  - 96 adds the admin.
+- **Nav links and to-dos arrive with their routes and data,** never before.
+
+### 14.4 What exists today (facts the tasks rely on)
+
+Checked 2026-11-03, after Task 53; check again.
+
+**The Expenses app (0192, Task 43), replaced in Task 95:**
+- **Tables** (`src/server/db/schema/apps/expenses.ts`, migration `0014_expenses_habits`; every `owner_id` cascades):
+  - `expense_category`: name unique per owner in any case, colour from `APP_COLORS`, one of 12 icons;
+  - `expense_transaction`:
+    - `amount_minor` bigint > 0;
+    - currency as text, NPR or USD in code;
+    - `occurred_on` date;
+    - note up to 200 characters;
+    - category set null;
+    - `import_key`.
+  - `expense_budget`: category (cascade), `month` as its first day, currency, amount; unique (category, month, currency);
+  - `expense_import`: key, fingerprint, result.
+- **Code:**
+  - `src/features/apps/expenses/`:
+    - `types.ts`: `MINOR_UNITS = 100` hard-coded, `toMinor` and `toMajor`;
+    - `schema.ts`, `search.ts`;
+    - `queries.ts`: Query only, no DB collections;
+    - `format.ts`;
+    - `import.ts`: `previewImport`, `guessMapping`;
+    - `icons.ts`;
+    - components: `expenses-home.tsx`, the dialogs, `categories-page.tsx`, `import-page.tsx`.
+  - `src/server/apps/expenses/{repository,service}.ts`: `ownedBy`, `seedExpenses`, `claimExpenses` (merges same-name categories), `expensesUsage`.
+  - `src/functions/apps/expenses.ts`: 11 functions, `requireAppUser` → `withAppServices`.
+  - Routes `src/routes/_apps/apps/expenses/{index,categories,import}.tsx`.
+- **Quotas:** 5,000 expenses, 30 categories; imports of 1,000 rows, 10 an hour.
+- **Lists that name it** (Task 95 removes it from each):
+  - `APP_SLUGS` and `APPS` (`src/features/apps/registry.ts`), `APP_SERVERS` (`src/server/apps/registry.ts`, spread into `GUEST_DATA`);
+  - the guard test's `APP_FUNCTIONS`;
+  - `SPECS.apps` in strip-demo (paths and schema);
+  - `e2e/support/pages.ts`, `e2e/harness/inbox.ts` (`reviewExpenses`), `e2e/support/fixtures.ts`, `tests/unit/route-seo.test.ts`;
+  - `e2e/flows/expenses-habits.spec.ts` (Habits stays);
+  - 131 `expenses_*` messages;
+  - `docs/guides/apps.md` ("Expenses (0192)");
+  - portfolio projects' `app_slug`.
+- **Not in it:** receipts, tags, merchants, payment methods, recurring expenses, splits, search, and filters beyond month and currency.
+
+**How Kanban moved into Taskline (0210), the pattern to copy:**
+- **Migration:** `drizzle/0017_kanban_to_taskline.sql` (`drizzle-kit generate --custom`, PL/pgSQL) copied the rows with the same ids, guests included, wrote activity and rewrote `app_slug`. `0018_drop_kanban.sql` dropped the old tables. Tested by `tests/server/taskline-kanban-migration.test.ts`.
+- **Redirects** live inside the new layer (`src/routes/_taskline/apps/kanban/`), so they survive without the apps layer.
+
+**Taskline, the layer to copy from** (copied as patterns, never imported, because `--keep-kharcha` must build alone, 0215):
+- **Routes:** the section route `src/routes/_taskline/route.tsx` (`staticData: { brand }`, title, `NOINDEX`, font preloads, its own 404), then the public pages, then `_shell/route.tsx`:
+  - signed in only: `beforeLoad` redirects to sign-in;
+  - the nav query is imported lazily.
+- **Feature:**
+  - `brand.ts`: a `SectionBrand` with accent, icons and manifest;
+  - `links.ts`: `linkOptions` helpers;
+  - `shell/`: public frame, auth frame, shell layout, sidebar, palette, shortcuts dialog, user menu, mark.
+  - The manifest is a Nitro route (`src/server/routes/taskline-manifest.ts`), registered in `vite.config.ts` with `// @taskline`.
+- **Middleware** `src/middleware/taskline.ts`: `requireTasklineUser` (a session, guests included; sets `{ id, isGuest, permissions }`) → `withTasklineServices` (`db`, `imageStore`, `deliver`).
+- **Server:**
+  - `access.ts` (the resolver, `assertCan`), `activity.ts`;
+  - `rev.ts`: `saveVersioned`, `staleError`;
+  - `notify/{produce,deliver,inbox}.ts`:
+    - `produce` runs in the transaction;
+    - `deliverInstant` runs after the commit with `waitUntil`, coalescing within 5 minutes;
+    - `sendDigests` runs from the daily job.
+  - `cron.ts` + `src/server/routes/cron-taskline.ts`: bearer `CRON_SECRET` with `timingSafeEqual`, `vercel.json` at `15 1 * * *`;
+  - `sandbox.ts`: `seedSandbox`, `claimSandbox`, `TASKLINE_GUEST_DATA`;
+  - invitations accepted in `databaseHooks.session.create.after` (`src/server/auth/auth.ts`, inside markers);
+  - comments and files in `collab/service.ts`: rate limits through `enforceRateLimit`, attachments with an `entity_type`, the upload scope in `src/features/attachments/constants.ts`.
+- **Email:** templates in `src/server/email/templates/emails.tsx` and `index.ts`, in markers, with preview fixtures.
+- **Tests:**
+  - `tests/server/taskline-access.test.ts`: callers × operations, expecting ok, NOT_FOUND or FORBIDDEN;
+  - `tests/server/guarded-functions.test.ts`: `TASKLINE_FUNCTIONS` with the middleware regex. Every functions file must be listed.
+- **Storybook:** `@/functions/*` is aliased to `.storybook/mocks/functions/*`, so each functions file needs a mock.
+- **strip-demo:**
+  - `LAYERS` in `scripts/lib/strip-markers.ts`;
+  - `SPECS.taskline` in `scripts/strip-demo.ts`: sentinel, paths, `packageScripts`, `crons`, schema. List every schema file: Taskline's list misses three;
+  - the matrix in `.github/workflows/ci.yml`.
+
+**Core to reuse:**
+- **Money:**
+  - `formatCurrency`, `parseLocaleNumber`, `currencySymbol`, `DEFAULT_CURRENCY = "NPR"`, `APP_TIME_ZONE` (`src/lib/i18n/intl.ts`);
+  - `NE_CURRENCY_SYMBOLS` (`intl-ne.ts`: NPR, USD, INR);
+  - `currency()` (`src/lib/validation.ts`, two decimals at most);
+  - `CurrencyField` (reads Devanagari input).
+- **Dates:**
+  - `src/lib/i18n/date-only.ts`: `todayInZone`, `addDays`, `addMonths`, `monthDays`, `weekdayOf`, `dayRangeInZone`;
+  - `formatMonthShort` and `formatDayMonth` are still inside apps markers in `intl.ts`.
+- **CSV:** `src/lib/csv.ts` (`parseCsv`, `parseCsvDay`, `toCsv`, `downloadCsv`) and `CsvSourcePicker`.
+- **Server:** `lockQuota` (`src/server/db/quota.ts`), `enforceRateLimit`, `withAudit`, `requirePermission`, `zodInput`, `loadDetailOr404`, `waitUntil`.
+- **Attachments:**
+  - the flow: sign, upload direct, `confirmUpload`, `syncEntityAttachments`, then the cron cleans up;
+  - scopes are in `UPLOAD_RULES`;
+  - guests lack `attachments:upload`, so an app passes its own `UploadTransport`, as Notes and Taskline do.
+- **Kit:**
+  - `DataTable` (bulk actions, CSV, saved views), `FilterBar`, `Sheet`, `ScrollRegion`, `StatCard`, `EmptyState`, `useConfirm`, `FormDialog`, `useHotkeys`, `StaleVersionAlert`;
+  - charts (`AreaChart`, `BarChart`, `LineChart`, `DonutChart` with `colors`, `Sparkline`), lazy in `ChartFrame`;
+  - accents on `data-accent`: indigo, violet, emerald (Taskline's), amber, rose. A new one goes in `ACCENTS`, `app.css` and `design-tokens.test.ts`.
+- **Guests:**
+  - `GUEST_DATA` (`src/server/guests/data.ts`);
+  - `seedGuest` and `claimGuest`, each in one transaction; the claim moves attachments;
+  - 30 anonymous sign-ins per IP per hour; guests are deleted after 7 days.
+
+**Bundle:**
+- The entry was 267.5 of 275 KB after Task 53, and each route definition adds about 0.3 KB to every page (0217).
+- Kharcha plans about 16 route files (≈ 4–5 KB) and removes Expenses' 3.
+- If Parts 6 or 7 ran first, measure the headroom in Task 86, and settle it as a decision before Task 88.
+
+### 14.5 Architecture (every task follows it)
+
+**Paths:**
+
+| Part | Path |
+| --- | --- |
+| Routes | `src/routes/_kharcha/route.tsx` (pathless: `staticData: { brand: KHARCHA_BRAND }`, `kharchaHead`, its own 404), `src/routes/_kharcha/app/kharcha/**` (public pages, then `_shell/**`), the old addresses in `src/routes/_kharcha/apps/expenses/$.tsx`; admin at `src/routes/_admin/admin/kharcha/**` |
+| Feature | `src/features/kharcha/`: `brand.ts`, `links.ts` (`kharchaLinks`), `types.ts`, `schema.ts`, `search.ts`, `queries.ts`, `money/` (isomorphic: `split.ts`, `ledger.ts`, `simplify.ts`), `kit/` (`Money`, `PersonAvatar`, `ExpenseCard`, `PaymentCard`, `ReceiptViewer`…), `shell/`, `home/`, `expenses/`, `people/`, `groups/`, `threads/`, `settle/`, `spend/` (with `query/`, the search language), `insights/`, `budgets/`, `recurring/`, `settings/`, `admin/` |
+| Server | `src/server/kharcha/`: `access.ts`, `people.ts` (`ensurePerson`, `mergePerson`), `ledger.ts`, `activity.ts`, `rev.ts`, `notify/`, `<module>/{repository,service}.ts`, `guest-data.ts`, `cron.ts`, `manifest.ts`, `admin/` |
+| Functions | `src/functions/kharcha/*.ts` (`requireKharchaUser` → `withKharchaServices`), `src/functions/kharcha-admin/*.ts` (`requirePermission` → `withServices`), and the public invite lookup `src/functions/kharcha/join.ts` (rate limited) |
+| Middleware | `src/middleware/kharcha.ts` |
+| Schema | `src/server/db/schema/kharcha/*.ts`, tables `kh_*`, exported with `// @kharcha` |
+| Nitro | `src/server/routes/{kharcha-manifest,cron-kharcha}.ts`; `vite.config.ts` and `vercel.json` with `// @kharcha`; `knip.json` entries |
+| Storybook | `.storybook/mocks/functions/kharcha*/…`, one per functions file; fixtures in `.storybook/mocks/kharcha.ts` |
+| Layer | `"kharcha"` in `LAYERS`; `SPECS.kharcha`: sentinel `src/server/kharcha`, paths, every schema file, `crons: ["/api/cron/kharcha"]`, `packageScripts: ["db:seed-kharcha"]`; `--keep-kharcha` in the CI matrix |
+| Docs | `docs/guides/kharcha.md` (a section per module), its row in CLAUDE.md's guide table |
+
+**Shared changes (core, unmarked):**
+- **Currencies:** `src/lib/i18n/currency.ts`.
+  - `CURRENCIES`: the ISO codes Kharcha can offer (NPR, INR, USD, EUR, GBP, AUD, CAD, JPY, CNY, AED, QAR, SAR, MYR, KRW, SGD, THB…).
+  - `minorDigits(code)`, from `Intl.NumberFormat(…).resolvedOptions().maximumFractionDigits`: JPY 0, NPR 2, KWD 3.
+  - `toMinor` and `toMajor` by those digits, and a `money(code)` Zod helper for amounts with the currency's own digits.
+  - `NE_CURRENCY_SYMBOLS` extended to the offered list.
+- **Dates:** `formatMonthShort` and `formatDayMonth` leave the apps markers (0215).
+
+**People (the identity everywhere):**
+- **`kh_person`** is anyone money can be owed to or by:
+  - a user: `user_id` unique, set null on account delete, `display_name` kept;
+  - or a contact someone added: a name, an optional email and `created_by`.
+- **Email is unique among people** (lowercase). Two users who add the same friend's address share one person, so when that friend signs up, both see their balances.
+- **A name-only contact is private to its creator.** Adding an email to it later merges it into the person who already has that address.
+- **`mergePerson(tx, from, to)`** remaps every reference, then deletes `from`, in one transaction:
+  - payers, shares, ledger, payments, members, friends, comments, reactions, activity.
+  - It's used by the guest claim, by adding an email to a contact, and by joining, and is tested reference by reference.
+- **Joining:**
+  - a person with an email is linked to the user who signs in with that **verified** address (`databaseHooks.session.create.after`, in markers, as Taskline's invitations);
+  - an invite link's token (single use, 14 days) can instead link it to a signed-in account with another address, after a confirm.
+- **A user's own person** is created on first use (`ensurePerson`, `on conflict do nothing`), together with their `kh_profile`.
+
+**Money core** (`features/kharcha/money/`, isomorphic and pure, with unit and property tests):
+- **An expense** has:
+  - an amount: minor units > 0. A refund is its own kind and counts as negative spending;
+  - a currency;
+  - payers: each a person and an amount, together the amount;
+  - shares: each a person and what they owe, together the amount.
+- **Split methods**, each giving exact shares:
+  - equal; exact amounts; percentages (in basis points, so integers); shares (weights); adjustments (equal, plus or minus per person);
+  - **itemized:** lines assigned to people and split equally among them, with tax and service charge spread in proportion (presets: VAT 13%, service charge 10%);
+  - "they owe the full amount" and "I owe the full amount".
+- **Rounding:** largest remainder in minor units, ties broken by the order shares were entered, so the same input always gives the same shares.
+- **The ledger** (`kh_ledger`):
+  - each expense and payment writes who owes whom, in its own transaction, and rewrites those rows on edit, delete and restore;
+  - debtors and creditors are matched greedily in entry order, which is exact in integers. With one payer it is simply "each person owes the payer their share";
+  - a payment from X to Y writes "Y owes X" for its amount.
+- **Balances** are sums over the ledger: per pair, per group and overall, each per currency.
+  - **Invariants,** tested on every write path:
+    - each expense's rows add up to its debts;
+    - the nets of every group, and of everyone, sum to zero.
+- **Simplify** (a group setting, per currency):
+  - nets matched largest debtor to largest creditor, at most n − 1 suggestions;
+  - suggestions only: records never change.
+- **Across currencies:** a payment settles a debt in that debt's currency. It may note what was paid in another currency at a typed rate (`paid_currency`, `paid_amount`, `rate`). Nothing is converted on its own.
+- **Spending** (what search, budgets and insights total) is **your share** of each expense, not what you paid. Payments are never spending.
+
+**Access** (`src/server/kharcha/access.ts`):
+- What the caller can't see is a 404. What they can see but not change is FORBIDDEN, with a reason (0187, 0204).
+
+| Caller | Personal expense | Shared expense, no group | A group and its expenses |
+| --- | --- | --- | --- |
+| Its owner or a participant | everything | view, edit, delete, restore, comment | — |
+| A current group member | — | — | view, add, edit, delete, restore, comment, settle |
+| A former member (left or removed) | — | still a participant of their own | the history, read only |
+| Anyone else, guests included | 404 | 404 | 404 |
+| `kharcha:read` | the admin's counts only, never the data (0186) | same | same |
+
+- **Resolvers first:** `resolveExpense`, `resolveGroup`, `resolveFriend` and `resolvePayment` run before anything else in every service.
+- **Private lists:** categories, tags, payment methods and rules belong to one person.
+  - On a shared expense, each participant's share carries **their own** category and tags.
+  - These default from the creator's built-in key: the creator's Food becomes the participant's Food.
+- **Leaving or removing:** leaving a group, or removing a member, needs a zero balance in that group. Otherwise it's FORBIDDEN, with the amounts.
+
+**Data model** (`kh_` tables; each task adds its own; a column that points at a later table arrives with that table):
+
+| Table | Holds | Task |
+| --- | --- | --- |
+| `kh_settings` (one row, `version`) | the admin's quotas, offered currencies, default categories (en/ne names, icon, colour, order), invites and reminders on or off, receipt limits, digest hour | 86 |
+| `kh_person` | user_id? (unique, set null), email? (unique, lowercase), display_name, color, created_by?, created_at | 86 |
+| `kh_profile` | user_id (key, cascade), person_id, home_currency, time_zone (default `APP_TIME_ZONE`), locale (for email), default_split, `notify` jsonb, focus, onboarded_at, pay_note (shown to friends: how to pay you), invites_blocked_at, rev | 86 |
+| `kh_friend` | owner person, friend person, nickname, hidden; made both ways by adding or by the first shared expense | 86 |
+| `kh_group`, `kh_group_member` | group: name, kind (trip / home / couple / event / other), color, icon, default currency, `settings` jsonb (default split, simplify), start_on, end_on, created_by, archived_at, version. Member: group, person, role (owner / member), joined_at, left_at | 86 |
+| `kh_expense` | group_id?, created_by, kind (expense / refund), title, merchant, notes, amount_minor, currency, spent_on, `split` jsonb (method, inputs, itemized lines), version, deleted_at (trash); later: recurring_id (94), import_key (93), a `simple` tsvector over title, merchant and notes (93) | 86 |
+| `kh_expense_payer`, `kh_expense_share` | payer: expense, person, amount, method_id? (theirs, 89). Share: expense, person, owed, category_id? (theirs, 89) | 86 |
+| `kh_payment` | group_id?, from_person, to_person, amount_minor, currency, paid_currency?, paid_amount?, rate?, method (a label), note, paid_on, created_by, version, deleted_at | 86 |
+| `kh_ledger` | source (an expense or a payment), group_id?, debtor, creditor, amount_minor, currency; indexes per pair and per group | 86 |
+| `kh_activity` | group_id?, pair (person_lo, person_hi)?, expense_id?, payment_id?, actor, kind, data jsonb (from / to), at | 86 |
+| `kh_category`, `kh_tag`, `kh_share_tag`, `kh_method` | personal. Category: owner, key? (the built-ins'), name (unique in any case), color, icon, position, archived_at. Tag: owner, name. A share's tags. Payment methods: Cash, eSewa, Khalti, a card, as labels only | 89 |
+| `kh_receipt_draft`; receipts as `attachment` rows (`entity_type` `kh_expense` or `kh_receipt_draft`) | a receipt uploaded before its details: owner, created_at; it becomes an expense | 89 |
+| `kh_merchant_rule` | owner, match (contains / equals), pattern, then a category, tags, a method | 89 |
+| `kh_invite` | person, email, invited_by, group_id?, token hash, expires_at, sent_at, accepted_at | 90 |
+| `kh_comment`, `kh_reaction`, `kh_read`, `kh_notification` | comment: thread (a group, a pair or an expense), author, body text, mentions, edited_at, deleted_at. Reaction: comment, person, emoji (a fixed set). Read: person, thread, last_read_at. Notification: Taskline's shape | 92 |
+| `kh_saved_search`, `kh_import` | saved search: owner, name, query, position. Import: idempotency key, owner, fingerprint, result | 93 |
+| `kh_budget`, `kh_budget_month`, `kh_budget_alert` | budget: owner, category? (null = everything), currency, period (week / month / year), amount, starts_on. Month: one month's own amount. Alert: budget, period start, threshold (80 / 100), sent once | 94 |
+| `kh_recurring` | owner, template jsonb (an expense with its payers, shares, split and group), cadence (weekly / monthly / yearly, every n), next_on, ends_on?, paused, last_made_on; each occurrence made once (unique) | 94 |
+| `kh_daily_stat` | day, counts for the admin's overview | 96 |
+
+**Server patterns:**
+- **Every write is one transaction:**
+  1. resolve access;
+  2. make the change;
+  3. `writeLedger`;
+  4. `recordActivity`;
+  5. bump the `rev` of everyone the change touches;
+  6. `produce` the notifications;
+  7. `deliver` after the commit.
+- **Text fields save with `version`** (`saveVersioned`, `StaleVersionAlert`), as in Taskline (0205).
+- **Trash:** a deleted expense or payment can be restored for 30 days by anyone who could edit it. Its ledger rows go and come back with it.
+- **Quotas** under `lockQuota` per person, with defaults in `kh_settings` and smaller ones for guests:
+  - 10,000 expenses;
+  - 50 groups, 50 members per group;
+  - 500 friends;
+  - 100 categories, 200 tags;
+  - 30 recurring expenses, 30 budgets;
+  - 10 receipts per expense.
+- **Rate limits:**
+  - uploads: 60 an hour;
+  - comments: 60 per 10 minutes;
+  - invites: 20 a day, none for guests;
+  - reminders: one per friend per day;
+  - imports: 10 an hour.
+
+**Freshness:**
+- One `rev` per person (`kh_profile.rev`), bumped for everyone a change touches.
+- Open pages poll `getMyRev` every 15 s while visible, and on focus; a change refetches the page's queries.
+- Unread counts are polled every 60 s.
+- No websockets (0209).
+
+**Client state:**
+- TanStack Query only, so TanStack DB never loads on Kharcha's pages.
+- Edits, comments and payments patch the cached pages optimistically.
+- Loaders `await import()` their queries (0194).
+
+**UX** (patterns from New Expensify, in our own look):
+- **Desktop:**
+  - a nav rail: Home, Spend, People, Insights, and Account at the bottom;
+  - a list pane: conversations or results;
+  - the content;
+  - the expense in a right-hand panel: a masked sheet with `unmaskOnReload: true`, so a reload opens the expense page.
+- **Phones:**
+  - bottom tabs and a floating **+**: Add expense, Split a bill, Settle up, Add a receipt, Add a friend, New group;
+  - every panel is full screen.
+- **Conversations:** each friend and each group is a thread holding:
+  - expense and payment cards: amount, who paid, your part, the receipt thumbnail, settled or not;
+  - comments;
+  - system lines ("Asha changed the amount from … to …");
+  - a composer whose **+** adds an expense right there.
+- **One primary action per screen,** changing with the state (Settle up, Remind, Add expense). Everything else goes in a More menu.
+- **Search:**
+  - a bar with chips and a typed language (`category:food amount>500 date:this-month with:asha`);
+  - saved searches in the nav;
+  - results as a list, a table or a chart.
+- **Home is a to-do list:**
+  - receipts that need details, debts to settle, budgets near their limit, recurring expenses due, possible duplicates;
+  - then the totals ("you owe" and "you're owed", per currency) and this month against last.
+- **Fix badges** on expenses: uncategorized, a possible duplicate, a receipt without details.
+- **Receipts:**
+  - drop a file anywhere to start an expense;
+  - a viewer with zoom, rotation and pages (a PDF opens in a new tab);
+  - camera capture on phones.
+- **Focus mode** shows only unread and unsettled conversations.
+- **Keyboard:** the ⌘K palette and shortcuts (`useHotkeys`, the shortcuts dialog).
+- **Money** is drawn by one `Money` component:
+  - tabular figures;
+  - the direction in words and an icon as well as colour ("you're owed", "you owe");
+  - Devanagari digits in Nepali.
+
+**Notifications and email** (Task 92, Taskline's `produce`, `deliver` and digest pattern):
+- **Kinds:**
+  - added you to a group;
+  - an expense involving you was added, edited or deleted;
+  - a payment to you;
+  - a mention, or a comment in your thread;
+  - a reminder;
+  - a budget at 80% or 100%;
+  - a recurring expense was made.
+- **Instant email** by default only for "added you", payments and reminders. The rest go in the daily digest. Each kind can be changed in settings.
+- **People without an account** get email only for an invite or a reminder, never more than one a day, with a one-click unsubscribe (`List-Unsubscribe`) that stops all of it.
+- **Templates:** `kharcha-invite`, `kharcha-notification`, `kharcha-reminder` and `kharcha-digest`.
+  - In the recipient's language, or the inviter's for people without an account.
+  - Branded Kharcha.
+  - Guests, and contacts without an email, get none.
+- **`GET /api/cron/kharcha`** runs daily at 01:30 UTC (07:15 Kathmandu). Each step is idempotent:
+  - recurring expenses due (with catch-up, 94);
+  - budget alerts not yet sent (94);
+  - digests;
+  - purging trash older than 30 days;
+  - expiring invites;
+  - pruning read notifications older than 90 days;
+  - the admin's daily counts (96).
+
+**Routes** (under `/app/kharcha`; few, for the bundle):
+- **Public:**
+  - `/`, the landing: `seo()`, sitemap, JSON-LD `SoftwareApplication`; signed-in visitors go to `/home`;
+  - `/sign-in` and `/sign-up`;
+  - `/join/$token` (noindex).
+- **Shell:**
+  - `/home`;
+  - `/spend`: the list contract plus `q`, `view` and `groupBy`;
+  - `/insights/$tab`: overview, budgets, trends, statement;
+  - `/people`: friends and groups;
+  - `/g/$groupId`: the group's thread, with `?tab=` for balances, totals and settings;
+  - `/f/$personId`: the friend's thread;
+  - `/e/$expenseId`: the expense page, also a masked panel from anywhere;
+  - `/import`;
+  - `/settings/$tab`: profile, preferences, categories, tags, methods, rules, recurring, notifications;
+  - `/account`.
+- **Old addresses:** `/apps/expenses/$` → a 301 to the matching page.
+- **Admin:** `/admin/kharcha` (overview) and `/admin/kharcha/settings` (default categories as a tab), in a `kharcha` group in `ADMIN_GROUPS`.
+
+**SEO:** only the landing is indexable (`INDEXABLE`, the sitemap). Everything else is `noindex`, through the shell layout and `privateHead()`.
+
+**Admin:**
+- Permissions `kharcha: ["read", "configure"]`, with labels, audit actions and targets, `ADMIN_SECTIONS` and commands.
+- `assertRoutePermission` on each admin route; every write `withAudit`.
+- The admin sees counts, never anyone's expenses (0186).
+
+**Guard tests:**
+- `KHARCHA_FUNCTIONS` with the middleware regex;
+- the public `join.ts` in its own list;
+- admin files in `GUARDED_FUNCTIONS`;
+- `tests/server/kharcha-access.test.ts` runs every operation as each of these callers: the owner, a friend on the expense, a group member, a former member, a stranger, a guest, an admin.
+
+### 14.6 Rules for every Part 8 task
+
+- **Design flow** (Task 87 sets it, every UI task follows it):
+  - build with `ui-ux-pro-max:ui-styling` on shadcn;
+  - finish with `impeccable` critique and polish, plus Playwright MCP screenshots at 390/768/1280 in en/ne, dark and light, fixing what they show;
+  - charts and stat tiles use `dataviz`.
+  - Expensify is a reference for flows only: never its colours, logo, illustrations or copy.
+- **Layer independence:** nothing is imported from the portfolio, apps, Taskline, Parda or Chaal layers. Shared code is core and unmarked (0215).
+- **Money:**
+  - integers in minor units end to end, and no floating point anywhere;
+  - every write path keeps the ledger's invariants, and a test proves it.
+- **Every new page:** in `e2e/support/pages.ts` (a `kharcha:start/end` block) and `tests/unit/route-seo.test.ts`.
+- **Every new functions file:** its Storybook mock and its guard-test entry. **Every app function:** its rows in the access matrix.
+- **The guest seed and the claim** grow with each module, in both languages, and the guest flow in e2e keeps passing.
+- **Strings:** both message files, prefix `kharcha_`; Nepali digits through `formatCurrency`.
+- **Dates:** days are `YYYY-MM-DD`. "Today" and month edges are in the profile's time zone (`todayInZone`).
+- **Keyboard first:** every action works from the keyboard, the split editor included; shortcuts are listed in the shortcuts dialog.
+- **Bundle:** no page grows the entry beyond the budget. Charts, the receipt viewer and the split editor are lazy. Measure after each task.
+- **Docs:** `docs/guides/kharcha.md`, decisions, CLAUDE.md.
+
+### Task 86: Foundation (planned)
+
+Kharcha's data, money core, access and server, tested on PGlite, with no UI. Expenses is untouched.
+
+- **Layer:** `kharcha` in `LAYERS`, `SPECS.kharcha`, markers, the CI strip matrix.
+- **Core:** `src/lib/i18n/currency.ts` with `money()`; `formatMonthShort` and `formatDayMonth` out of the apps markers.
+- **Tables:** `kh_settings`, `kh_person`, `kh_profile`, `kh_friend`, `kh_group`, `kh_group_member`, `kh_expense`, `kh_expense_payer`, `kh_expense_share`, `kh_payment`, `kh_ledger`, `kh_activity`, and their migration.
+- **Money core:** split methods, rounding, the ledger, balances and simplify, pure and isomorphic.
+  - Unit tests per method.
+  - Property tests over random expenses:
+    - shares and payers add up;
+    - nets sum to zero;
+    - the same input gives the same output.
+- **Server:**
+  - `ensurePerson`, `mergePerson`, `access.ts`, `writeLedger`, `activity.ts`, `rev.ts`, quotas;
+  - services for expenses, payments, groups, members and friends;
+  - the middleware `requireKharchaUser` → `withKharchaServices`, and the function files the services need (listed in the guard test, with temporary knip entries until their pages exist).
+- **Permissions:** `kharcha:*` in the catalog, with labels and audit actions.
+- **Guests:** `KHARCHA_GUEST_DATA` in `GUEST_DATA`, scoped if `guest_scope` exists.
+  - The seed: the guest's person; three months of personal spending; placeholder friends (Asha, Bikash, Sita); the groups "Pokhara trip" and "Flat 3B" with shared expenses and one payment; in the guest's language.
+  - The claim goes through `mergePerson`.
+- **Dev data:** `pnpm db:seed-kharcha --password "…"`: three demo accounts who share a group and a few expenses (`dev:local` seeds it fresh). The e2e harness uses it.
+- **Bundle:** measure the headroom; the decision on the route budget, if one is needed.
+- **Tests (PGlite):**
+  - the services;
+  - the ledger's invariants after each kind of change: create; change the amount, payers or shares; delete; restore; pay;
+  - the first access matrix;
+  - `mergePerson`, reference by reference;
+  - the seed and the claim;
+  - quotas.
+- **Decisions:**
+  - Kharcha as a layer;
+  - people as the identity;
+  - the ledger and per-currency money.
+
+### Task 87: Design direction (planned)
+
+- **UX notes:** study New Expensify's flows from its public help pages (and screenshots of the app, if the owner shares some). Write into the direction contract what we take (14.5, "UX") and what we never take.
+- **Comps:** three, made with `impeccable` (shape), each showing:
+  - Home;
+  - a group thread with the expense panel open;
+  - the split editor.
+
+  Each at 390 and 1280, dark and light. **The owner picks one.**
+- **Records:**
+  - `.impeccable/surfaces/kharcha.md`, the direction contract;
+  - `docs/design/kharcha.md`;
+  - the portfolio's `.impeccable` paths narrowed in strip-demo, if Part 6 hasn't already done it.
+- **Tokens on Graphite:**
+  - the accent, as a new preset if none fits (`ACCENTS`, `app.css`, `design-tokens.test.ts`);
+  - the owed and owe colours, contrast-tested in both themes;
+  - the wordmark, in Latin and Devanagari, and the icons.
+- **The kit in Storybook:** `Money`, `PersonAvatar` (initials, colours), `ExpenseCard`, `PaymentCard`, `BalancePill`, `CategoryIcon`, `FixBadge`, and the empty states. Stories in en/ne × light/dark, so a11y runs on them.
+
+### Task 88: Shell, brand and Home (planned)
+
+- **The section:** the `_kharcha` route, brand, `links.ts`, the title suffix `· Kharcha`, the manifest and icons (`public/kharcha/`), its own 404 and error pages.
+- **Public pages:**
+  - the landing (`seo()`, JSON-LD, sitemap);
+  - `/sign-in` and `/sign-up` in a Kharcha auth frame;
+  - `/account` (the shared account sections).
+- **The signed-in shell** (14.5, "UX"):
+  - the nav rail and list pane on desktop; bottom tabs and the floating **+** on phones;
+  - the guest banner and `ConfirmProvider`;
+  - the palette and the shortcuts dialog;
+  - the user menu: language, theme, Admin when allowed, sign out.
+- **Freshness:** `getMyRev` polling.
+- **Home:** the to-do list, the totals and recent activity, from what exists so far. Later tasks add their own to-dos.
+- **Onboarding** on the first visit, skippable:
+  - home currency and time zone;
+  - "track my spending" or "split with people", which sets what Home shows first.
+- **The + menu,** with what exists. Add expense arrives in 89.
+- **The `/apps` gallery:** a featured Kharcha card, inside markers.
+- **Tests, stories, review pages.**
+
+### Task 89: Expenses and receipts (planned)
+
+- **Tables:** `kh_category`, `kh_tag`, `kh_share_tag`, `kh_method`, `kh_receipt_draft`, `kh_merchant_rule`. Each person's categories are seeded from the `kh_settings` defaults on first use.
+- **Add and edit an expense** (a dialog on desktop, full screen on phones), personal only in this task; splitting arrives in 90. Its fields:
+  - amount and currency (Devanagari input), and the date;
+  - the merchant, completed from your history;
+  - title, category, tags, payment method, notes;
+  - receipts;
+  - expense or refund.
+- **The expense page `/e/$expenseId`,** also a masked panel:
+  - details and receipts;
+  - activity (each edit, from → to);
+  - Fix badges;
+  - delete to the trash, and restore.
+- **Receipts:**
+  - Kharcha's `UploadTransport` and an upload scope (`kharcha`: images and PDF, 10 MB), several per expense;
+  - the receipt viewer, camera capture, drop anywhere;
+  - receipt drafts: upload now, add the details later; listed on Home.
+- **Helpers without AI:**
+  - merchant rules (Settings → Rules);
+  - the last category used for a merchant;
+  - possible duplicates: same amount and currency, within a day, a similar merchant; dismissible.
+- **Settings tabs:**
+  - categories: the built-ins and your own, colours, icons, order, archive. Deleting one moves its expenses to uncategorized;
+  - tags; payment methods; rules.
+- **A first `/spend`:** this month by default, newest first, on the URL list contract. Task 93 adds the language and the views.
+- **Tests, stories, review pages;** e2e: a guest adds an expense with a receipt.
+
+### Task 90: Friends, groups and splitting (planned)
+
+- **People** `/people`: friends and groups, search, each with its net balance.
+- **Add a friend:**
+  - by name only (a private contact), or by email (an invite, optionally emailed). Guests can add names only;
+  - nicknames; hide a friend.
+- **Invites and joining** (`kh_invite`):
+  - `/join/$token`: a public lookup showing the inviter's name and the group, rate limited;
+  - joining on a verified sign-in, and by token after a confirm;
+  - adding an email to a contact merges it (`mergePerson`).
+- **Groups:**
+  - create one: name, kind, colour and icon, currency, a trip's dates;
+  - members: add friends or new people, or remove one at a zero balance; leave at a zero balance;
+  - settings: the default split, simplify;
+  - archive.
+- **The split editor** (lazy):
+  - who paid: one person or several;
+  - how: equal, exact, percent, shares, adjustment, or itemized with the VAT and service-charge presets;
+  - a live remainder ("रु 120 left to assign");
+  - a keyboard-only path;
+  - a summary sentence ("You paid रु 3,000; Asha owes you रु 1,000").
+- **The expense dialog** gains "Split with" (friends or a group), and each participant's share carries their own category.
+- **Threads** `/g/$groupId` and `/f/$personId`, first version: the cards and the system lines, plus a friend's balance in each group with links. Comments arrive in 92.
+- **Tests:**
+  - access-matrix rows; splits through the services; the merge on joining; invite limits;
+  - e2e: a guest splits a bill in their group.
+
+### Task 91: Balances and settling up (planned)
+
+- **Balances** everywhere:
+  - Home's totals per currency;
+  - each friend, overall and per group;
+  - each group: every member's net, pairwise or simplified;
+  - a group's Totals tab: spent per member and per category.
+- **Settle up:**
+  - full or partial; pick the person, with simplify's suggestions;
+  - a method label, a note and a date;
+  - another currency at a typed rate;
+  - payment cards; edit, and delete to the trash.
+- **Remind:** an email to users and invited contacts, once a day per friend, behind an admin switch. Your "pay me" note is shown to friends.
+- **Settled states:** a group that is all settled offers to archive; a friend at zero shows as settled.
+- **Tests:** balances after every kind of change, simplify, other currencies, partial payments, the remind limits; e2e: settle up in a group.
+
+### Task 92: Conversations, notifications and email (planned)
+
+- **Comments** in friend and group threads and on expenses:
+  - plain text with @mentions and links;
+  - edit and delete;
+  - reactions from a fixed emoji set.
+- **Threads:**
+  - an unread state per thread;
+  - the list pane ordered by latest activity, with badges;
+  - focus mode.
+- **Notifications** (`kh_notification`): Home's Updates and a bell with the unread count; mark read.
+- **Email:** instant and digest, settings per kind, unsubscribing for people without an account, and the four templates.
+- **The daily job** `/api/cron/kharcha`, with the steps that exist so far: digests, the trash purge, invite expiry, notification pruning.
+- **Tests:** the access rows, produce and deliver, coalescing, unsubscribe, the cron steps; e2e: a mention notifies the other demo account.
+
+### Task 93: Spend: search, views and bulk actions (planned)
+
+- **The search language** (`spend/query/`): tokenizer, parser, AST and printer, unit-tested both ways.
+  - **Fields:**
+    - `type:` (expense, refund, payment), `category:`, `tag:`;
+    - `merchant:` (contains) and `merchant=` (exact);
+    - `amount>`, `<` and `=` (in the currency's major units), `currency:`;
+    - `date:` (today, this-week, last-month, this-year, `YYYY-MM`, or a range with `date>`);
+    - `group:`, `with:` (a person), `paid-by:`, `method:`;
+    - `has:receipt`;
+    - `is:shared`, `is:personal`, `is:unsettled`, `is:duplicate`, `is:uncategorized`.
+  - **Operators:** `-` negates, quotes group words, commas mean OR.
+  - **Other words** search title, merchant and notes (the `simple` tsvector).
+- **The compiler:** the AST becomes Drizzle SQL with parameters only, and every field comes from an allow-list.
+- **The bar:**
+  - chips and `FilterBar`, both ways: a chip writes `q`;
+  - suggestions while typing (fields and your values: categories, tags, friends, groups);
+  - a plain form without JS.
+- **Views:**
+  - a list grouped by day;
+  - a table (`DataTable`, with a column chooser);
+  - charts (bar, donut, line), grouped by category, merchant, tag, method, group, friend, day, week, month or year.
+
+  Totals are per currency.
+- **Saved searches** (`kh_saved_search`):
+  - shown in the nav; rename, reorder from the keyboard, delete;
+  - built-in ones: This month, Uncategorized, Unsettled, Receipts.
+- **Bulk actions:** categorize, tag, set the method, delete to the trash, export the selection.
+- **CSV:**
+  - export: your share and the total, with localized headers the import reads back;
+  - `/import`, Expenses' pipeline moved and extended (`kh_import`):
+    - merchant, tags and method columns;
+    - a mapping preview;
+    - an idempotency key;
+    - 1,000 rows.
+- **Tests:** the parser and printer, the compiler against injection and every field, bulk actions, import and export; e2e: a saved search.
+
+### Task 94: Budgets, recurring expenses and insights (planned)
+
+- **Budgets:**
+  - per category or overall, per currency;
+  - weekly, monthly or yearly, with one month's own amount;
+  - progress on Home and in insights;
+  - alerts at 80% and 100%, once per period.
+- **Recurring expenses:**
+  - from any expense ("Repeat…"), personal or shared (rent with flatmates);
+  - weekly, monthly, yearly or every n; an end date; pause; skip the next one;
+  - made by the daily job with catch-up, each occurrence once;
+  - listed in Settings → Recurring, and on Home the day before.
+- **Insights** `/insights/$tab`:
+  - **overview:** this month against last, by category, top merchants, daily spend, a calendar heatmap;
+  - **budgets;**
+  - **trends:** 12 months by category, by tag, and shared spending by friend or group;
+  - **statement:** a date-range summary (totals, by category, every expense), printable with a print stylesheet, so "Save as PDF" is the browser's.
+
+  Charts use `dataviz`, each with a table for screen readers (`ChartFrame`).
+- **Tests:** budget periods and alerts, recurrence dates (month ends, leap days, catch-up), the insight sums; e2e: a budget alert and a recurring expense made by the cron.
+
+### Task 95: Expenses moved in (planned)
+
+- **A custom migration** (`drizzle-kit generate --custom`). For each owner, guests included:
+  - a person and a profile;
+  - categories, with the same ids (colours mapped to Kharcha's palette, icons kept or mapped);
+  - expenses, with the same ids: one payer and one share, the note as the title;
+  - budgets: each category and currency's latest month becomes a monthly budget from its first month, and earlier different amounts become one-month amounts;
+  - import keys.
+
+  Then a second migration drops the four tables. Tested on fixture rows, like `taskline-kanban-migration.test.ts`.
+- **Portfolio:** projects with `app_slug` `expenses` become `kharcha`.
+- **Redirects** (`src/routes/_kharcha/apps/expenses/$.tsx`):
+  - `/apps/expenses` → `/app/kharcha` (301);
+  - `/categories` → Settings → Categories;
+  - `/import` → `/import`;
+  - `?month=` → a Spend search.
+- **Removed:**
+  - Expenses' code, its registry and `APP_SERVERS` entries, the 131 `expenses_*` messages;
+  - its tests and stories, its strip-demo paths and schema, the harness helper, its review pages;
+  - the "Expenses" section of apps.md.
+
+  `expenses-habits.spec.ts` becomes `habits.spec.ts`.
+- **Tests;** e2e: the redirects, and a migrated user's data in Kharcha.
+- **Left for the owner:** `pnpm db:migrate` against Neon.
+
+### Task 96: Admin (planned)
+
+- **Overview** `/admin/kharcha` (`kharcha:read`), with `dataviz` charts built on `kh_daily_stat` from the daily job. Counts only, never anyone's amounts or names (0186):
+  - people with data, and active people at 7 and 30 days;
+  - expenses, groups, payments and receipts per day;
+  - invites sent and accepted;
+  - guests trying it.
+- **Settings** `/admin/kharcha/settings` (`kharcha:configure`; `kh_settings` with `version`):
+  - quotas and offered currencies;
+  - default categories (en/ne names, icon, colour, order);
+  - the invite and reminder switches;
+  - receipt limits and the digest hour.
+- **Abuse:** invites per sender (the top senders, as counts), and suspending a sender's invites and reminders (audited).
+- **Tests;** review pages.
+
+### Task 97: Wrap-up (planned)
+
+- **Full e2e:** `pnpm test:e2e`.
+- **Accessibility:** adding an expense, splitting a bill, settling up and searching, by keyboard only and with NVDA.
+- **Measurements:** Lighthouse (mobile ≥ 95 on the landing, Home and Spend), the bundle per page, `EXPLAIN ANALYZE` of Spend and balances on a 10,000-expense seed.
+- **Template matrix:** `--keep-kharcha` alone and with the other layers.
+- **Docs:**
+  - `docs/guides/kharcha.md` complete;
+  - CLAUDE.md: the guide table, "Where things are", the layout, commands, pitfalls.
+- **Review:**
+  - the `impeccable-finish-reviewer` agent against the contract, then fixes;
+  - `impeccable-documenter` (`docs/design/kharcha.md`);
+  - `/code-review` (high) and `/security-review`, with fixes;
+  - the measurements as a decision.
+
+**Out of scope for Part 8:**
+- AI of any kind: receipt reading, categorizing, an assistant;
+- bank, card or wallet connections, and real payments (eSewa and Khalti are labels);
+- accounting exports and other app integrations;
+- company features: workspaces, approvals, expense reports, reimbursement, per diem, mileage, invoices, travel, cards;
+- automatic currency conversion and rate feeds;
+- income and account balances (it's a spending tracker);
+- chat rooms and direct messages beyond the friend and group threads;
+- offline-first sync, and native apps;
+- the Bikram Sambat calendar (a later option).
