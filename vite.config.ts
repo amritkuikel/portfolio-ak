@@ -108,6 +108,8 @@ export default defineConfig(async ({ command, mode }) => {
 					"/api/cron/attachments": { handler: "./src/server/routes/cron-attachments.ts", method: "GET" },
 					"/api/cron/guests": { handler: "./src/server/routes/cron-guests.ts", method: "GET" },
 					"/api/cron/taskline": { handler: "./src/server/routes/cron-taskline.ts", method: "GET" }, // @taskline
+					"/api/cron/parda": { handler: "./src/server/routes/cron-parda.ts", method: "GET" }, // @parda
+					"/parda/api/**": { handler: "./src/server/routes/parda-player.ts", method: "GET" }, // @parda
 					// Nitro routes so dev serves them to manifest fetches too (see the file). One per locale.
 					"/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
 					"/ne/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
@@ -121,7 +123,11 @@ export default defineConfig(async ({ command, mode }) => {
 				},
 				// Security headers on every response (pages, assets, API). The CSP is per
 				// request (nonce) and is added by src/middleware/security-headers.ts.
-				routeRules: { "/**": { headers: STATIC_SECURITY_HEADERS } },
+				routeRules: {
+					"/**": { headers: STATIC_SECURITY_HEADERS },
+					// Parda's placeholder player is framed by this app's own pages (decision 0230).
+					"/parda/api/**": { headers: { "x-frame-options": "SAMEORIGIN" } }, // @parda
+				},
 				rolldownConfig: {
 					onwarn(warning, warn) {
 						if (NITRO_IGNORED_CODES.has(warning.code ?? "")) return;

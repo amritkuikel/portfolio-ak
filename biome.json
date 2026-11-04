@@ -7,7 +7,14 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!**/src/routeTree.gen.ts", "!**/pnpm-lock.yaml", "!**/.claude", "!**/storybook-static"]
+		"includes": [
+			"**",
+			"!**/src/routeTree.gen.ts",
+			"!**/pnpm-lock.yaml",
+			"!**/.claude",
+			"!**/storybook-static",
+			"!**/tests/fixtures/tmdb"
+		]
 	},
 	"formatter": {
 		"enabled": true,

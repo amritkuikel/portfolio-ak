@@ -1,5 +1,5 @@
 /**
- * pnpm strip-demo [--keep-portfolio] [--keep-apps] [--keep-taskline] [--no-build]
+ * pnpm strip-demo [--keep-portfolio] [--keep-apps] [--keep-taskline] [--keep-parda] [--no-build]
  *
  * Turns the template into a clean starting point (docs/guides/new-project.md) by
  * removing layers, each whole: its files, its marked code in shared files, its
@@ -12,6 +12,7 @@
  *   landing page takes its place (scripts/templates/landing).
  * - `apps`: the showcase apps under /apps (filled by Task 41).
  * - `taskline`: Taskline, the project management app at /app/taskline (Part 5, from Task 46).
+ * - `parda`: Parda, the movie and series product at /app/parda (Part 6, from Task 59).
  *
  * Markers: scripts/lib/strip-markers.ts. Paths per layer are data below, so a
  * task that adds to a layer appends to its lists. Then it removes dependencies
@@ -51,7 +52,10 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"public/himal",
 			"PRODUCT.md",
 			"DESIGN.md",
-			".impeccable",
+			".impeccable/design.json",
+			".impeccable/hook.cache.json",
+			".impeccable/review",
+			".impeccable/surfaces/src-routes-site-tsx.md",
 			// The portfolio admin, its media library and its contact inbox (Task 39, decision 0176).
 			"src/routes/_admin/admin/portfolio",
 			"src/routes/_admin/admin/media.tsx",
@@ -132,7 +136,6 @@ const SPECS: Record<Layer, LayerSpec> = {
 		sentinel: "src/server/taskline",
 		paths: [
 			"src/features/taskline",
-			"src/components/data-display/scroll-region.tsx",
 			"src/server/email/templates/taskline-emails.tsx",
 			"src/routes/_taskline",
 			"src/server/taskline",
@@ -191,11 +194,39 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/server/db/schema/taskline/workspace.ts",
 		],
 	},
+	parda: {
+		// Parda (Part 6, decision 0228). Its schema is a folder, removed with `paths`.
+		sentinel: "src/server/parda",
+		paths: [
+			"src/features/parda",
+			"src/server/parda",
+			"src/functions/parda-admin",
+			"src/routes/_admin/admin/parda",
+			"src/server/routes/cron-parda.ts",
+			"src/server/routes/parda-player.ts",
+			"src/server/db/schema/parda",
+			".storybook/mocks/functions/parda-admin",
+			"scripts/record-tmdb-fixtures.ts",
+			"tests/fixtures/tmdb",
+			"tests/unit/parda-tmdb.test.ts",
+			"tests/unit/parda-player.test.ts",
+			"tests/server/parda-catalog.test.ts",
+			"e2e/harness/tmdb.ts",
+			"e2e/flows/parda.spec.ts",
+			"docs/guides/parda.md",
+		],
+		packageScripts: ["tmdb:record"],
+		crons: ["/api/cron/parda"],
+		knipEntries: [],
+		schema: [],
+	},
 };
 
 /** Files more than one layer uses: removed only when every one of those layers goes. */
 const SHARED: ReadonlyArray<{ paths: string[]; layers: Layer[] }> = [
 	{ paths: ["src/components/forms/csv-source.tsx", "src/server/db/quota.ts"], layers: ["apps", "taskline"] },
+	{ paths: [".impeccable/config.json"], layers: ["portfolio", "parda"] },
+	{ paths: ["src/components/data-display/scroll-region.tsx"], layers: ["taskline", "parda"] },
 ];
 
 /** Written when the portfolio goes: the home page becomes a neutral landing page. */

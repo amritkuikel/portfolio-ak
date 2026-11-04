@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { DemoQuery } from "../../scripts/lib/demo-data.ts";
+import { serveTmdb } from "./tmdb.ts"; // @parda
 
 export type CapturedEmail = { id: string; to: string; subject: string; text: string; html: string; tag?: string };
 
@@ -265,6 +266,7 @@ export async function serveHarness(port: number, query: DemoQuery) {
 			const url = new URL(request.url ?? "/", "http://harness");
 			const route = `${request.method} ${url.pathname}`;
 
+			if (serveTmdb(url, response)) return; // @parda
 			if (route === "POST /emails") {
 				const body = await readJson(request);
 				const to = Array.isArray(body.to) ? String(body.to[0]) : String(body.to);

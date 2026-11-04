@@ -37,6 +37,7 @@ const OFF = [
 	"GOOGLE_CLIENT_SECRET",
 	"RESEND_API_KEY",
 	"DATABASE_URL_UNPOOLED",
+	"TMDB_READ_TOKEN", // @parda
 ];
 
 console.log(`[offline] database: in-memory PGlite on port ${served.port}`);

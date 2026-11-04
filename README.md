@@ -53,6 +53,8 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | no | Upload source maps to Sentry during `pnpm build` (all three or none). |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | no | Image uploads (all three or none; server-only). Without them items have no images. See [docs/guides/attachments.md](docs/guides/attachments.md). |
 | `CLOUDINARY_FOLDER` | no | public_id prefix for uploads (default `portfolio`). |
+| `TMDB_READ_TOKEN` | no | TMDB's API read token: Parda's catalogue. Non-commercial use only. <!-- @parda --> |
+| `PARDA_PLAYER_BASE` | no | Where Parda's relative source templates live, when this app doesn't serve the player. <!-- @parda --> |
 | `CRON_SECRET` | no | Bearer token for `/api/cron/*` (Vercel Cron, `vercel.json`); unset, the routes answer 404. |
 
 ## Architecture

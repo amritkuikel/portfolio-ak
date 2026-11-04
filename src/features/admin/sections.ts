@@ -3,6 +3,7 @@ import {
 	BriefcaseIcon, // @portfolio
 	ChartColumnIcon, // @taskline
 	DatabaseIcon,
+	FlaskConicalIcon, // @parda
 	FolderKanbanIcon, // @portfolio
 	GaugeIcon, // @taskline
 	HistoryIcon, // @taskline
@@ -30,6 +31,7 @@ import {
 	WrenchIcon, // @portfolio
 	ZapIcon, // @taskline
 } from "lucide-react";
+import { PARDA_NAME } from "@/features/parda/brand"; // @parda
 import type { Permission } from "@/features/rbac/permissions";
 import { TASKLINE_NAME } from "@/features/taskline/brand"; // @taskline
 import { m } from "@/paraglide/messages";
@@ -44,6 +46,7 @@ export const ADMIN_GROUPS = [
 	"portfolio",
 	"apps",
 	"taskline", // @taskline
+	"parda", // @parda
 	"access",
 	"system",
 ] as const;
@@ -54,6 +57,7 @@ export const ADMIN_GROUP_LABELS: Record<AdminGroup, () => string> = {
 	portfolio: m.admin_group_portfolio,
 	apps: m.admin_group_apps,
 	taskline: () => TASKLINE_NAME, // @taskline
+	parda: () => PARDA_NAME, // @parda
 	access: m.admin_group_access,
 	system: m.admin_group_system,
 };
@@ -292,6 +296,17 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		keywords: m.admin_keywords_taskline_settings,
 	},
 	// taskline:end
+	// parda:start
+	{
+		...linkOptions({ to: "/admin/parda/player-lab" }),
+		label: m.admin_nav_parda_player_lab,
+		description: m.pd_lab_description,
+		icon: FlaskConicalIcon,
+		permission: "parda:configure",
+		group: "parda",
+		keywords: m.admin_keywords_parda_player_lab,
+	},
+	// parda:end
 	{
 		...linkOptions({ to: "/admin/users" }),
 		label: m.admin_nav_users,

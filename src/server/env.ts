@@ -106,6 +106,15 @@ export const serverEnvSchema = {
 	CLOUDINARY_DELIVERY_BASE: z.url().default("https://res.cloudinary.com"),
 	/** Bearer token for scheduled jobs (/api/cron/*); Vercel Cron sends it. Unset: the routes answer 404. */
 	CRON_SECRET: z.string().trim().min(16).optional(),
+	// parda:start
+	// TMDB's API read token: Parda's catalogue. Without it the catalogue is "not configured".
+	TMDB_READ_TOKEN: z.string().trim().min(20, "Use the API read access token from your TMDB settings.").optional(),
+	/** API and image hosts; override only for a proxy or a local stand-in. */
+	TMDB_API_BASE: z.url().default("https://api.themoviedb.org/3"),
+	TMDB_IMAGE_BASE: z.url().default("https://image.tmdb.org/t/p"),
+	/** Where Parda's relative source templates live, when the player isn't served by this app. */
+	PARDA_PLAYER_BASE: z.url({ protocol: /^https?$/ }).optional(),
+	// parda:end
 };
 
 export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) =>

@@ -26,6 +26,8 @@ export type CspOptions = {
 	imgOrigins?: ReadonlyArray<string>;
 	/** Origins that may be framed and serve scripts our code loads (Cloudflare Turnstile). */
 	frameOrigins?: ReadonlyArray<string>;
+	/** Origins that may only be framed: frame-src, never script-src or connect-src (a section's embedded players). */
+	embedOrigins?: ReadonlyArray<string>;
 	/** Adds upgrade-insecure-requests (production only; it would break http://localhost). */
 	upgradeInsecureRequests?: boolean;
 	/**
@@ -49,9 +51,11 @@ export function buildCsp({
 	connectOrigins = [],
 	imgOrigins = [],
 	frameOrigins = [],
+	embedOrigins = [],
 	upgradeInsecureRequests = false,
 	reportUrl,
 }: CspOptions): string {
+	const framed = [...new Set([...frameOrigins, ...embedOrigins])];
 	const directives: Record<string, ReadonlyArray<string>> = {
 		"default-src": ["'self'"],
 		// Host sources only matter to browsers without 'strict-dynamic' (which ignore them otherwise).
@@ -60,7 +64,7 @@ export function buildCsp({
 		"img-src": ["'self'", "data:", "blob:", ...imgOrigins],
 		"font-src": ["'self'"],
 		"connect-src": ["'self'", ...connectOrigins],
-		...(frameOrigins.length > 0 ? { "frame-src": frameOrigins } : {}),
+		...(framed.length > 0 ? { "frame-src": framed } : {}),
 		"object-src": ["'none'"],
 		"base-uri": ["'self'"],
 		"form-action": ["'self'"],

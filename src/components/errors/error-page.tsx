@@ -16,6 +16,7 @@ const messages: Record<AppErrorCode, () => string> = {
 	CONFLICT: m.error_conflict,
 	RATE_LIMITED: m.error_rate_limited,
 	INTERNAL: m.error_internal,
+	UPSTREAM_UNAVAILABLE: m.error_upstream_unavailable,
 };
 
 /** Localized user-facing text for any error. Never shows raw error messages. */

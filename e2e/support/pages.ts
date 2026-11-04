@@ -326,6 +326,9 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/timesheets", as: "admin" },
 	{ route: "/admin/taskline/timesheets/utilization", as: "admin" },
 	// taskline:end
+	// parda:start
+	{ route: "/admin/parda/player-lab", as: "admin" },
+	// parda:end
 	// @new-feature:reviewed-pages
 	// Errors
 	{ route: "(not found)", path: "/no-such-page", status: 404 },
@@ -341,6 +344,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
 	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
 	"/app/taskline/$ws": "a redirect to the workspace's projects (checked by e2e/flows/taskline.spec.ts)", // @taskline
+	"/admin/parda": "a layout, a 404 until its overview page arrives in Task 69", // @parda
 	"/app/taskline/$ws/p/$key/settings": "a redirect to the settings' first section", // @taskline
 	"/apps/kanban": "Kanban's old address, a redirect to Taskline (checked by e2e/flows/taskline.spec.ts)", // @taskline
 	"/apps/kanban/$boardId": "an old board's address, a redirect to its project (checked by e2e/flows/taskline.spec.ts)", // @taskline

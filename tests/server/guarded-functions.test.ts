@@ -185,6 +185,12 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["exportTasklineTimeEntries", "taskline:time"],
 	],
 	// taskline:end
+	// parda:start
+	"parda-admin/player-lab.ts": [
+		["listPardaLabSources", "parda:configure"],
+		["openPardaLabPlayer", "parda:configure"],
+	],
+	// parda:end
 	// @new-feature:guarded-functions
 };
 

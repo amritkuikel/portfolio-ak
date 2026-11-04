@@ -18,6 +18,7 @@ export const APP_ERROR_CODES = [
 	"CONFLICT",
 	"RATE_LIMITED",
 	"INTERNAL",
+	"UPSTREAM_UNAVAILABLE",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];
@@ -30,6 +31,7 @@ export const HTTP_STATUS: Readonly<Record<AppErrorCode, number>> = {
 	CONFLICT: 409,
 	RATE_LIMITED: 429,
 	INTERNAL: 500,
+	UPSTREAM_UNAVAILABLE: 503,
 };
 
 /**

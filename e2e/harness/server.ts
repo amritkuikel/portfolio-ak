@@ -26,7 +26,7 @@ rmSync("e2e/.auth", { recursive: true, force: true });
 
 /** App settings a developer's shell may export; the server under test gets only the harness's values. */
 const APP_ENV =
-	/^(VITE_|DATABASE_|EMAIL_|RESEND_|BETTER_AUTH_|AUTH_|TURNSTILE_|GOOGLE_|ADMIN_|DEMO_|SENTRY_|CLOUDINARY_|CRON_)/;
+	/^(VITE_|DATABASE_|EMAIL_|RESEND_|BETTER_AUTH_|AUTH_|TURNSTILE_|GOOGLE_|ADMIN_|DEMO_|SENTRY_|CLOUDINARY_|CRON_|TMDB_|PARDA_)/;
 const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !APP_ENV.test(key)));
 
 const publicEnv = {
@@ -110,6 +110,12 @@ const app = spawn(process.execPath, [".output/server/index.mjs"], {
 		EMAIL_FROM: `${E2E.appTitle} <e2e@example.com>`,
 		// No calls to Have I Been Pwned from the suite (tests/server/auth-hardening.test.ts covers it).
 		AUTH_BREACHED_PASSWORD_CHECK: "false",
+		// parda:start
+		// The suite never calls TMDB: the harness serves recorded responses and placeholder images.
+		TMDB_READ_TOKEN: "e2e-token-not-for-production",
+		TMDB_API_BASE: `${E2E.harnessURL}/tmdb/3`,
+		TMDB_IMAGE_BASE: `${E2E.harnessURL}/tmdb/img`,
+		// parda:end
 	},
 });
 log(`server: ${E2E.baseURL}`);

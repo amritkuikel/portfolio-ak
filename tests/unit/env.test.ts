@@ -54,6 +54,20 @@ describe("server env", () => {
 		expect((error as Error).message).toMatch(/EMAIL_FROM:/);
 	});
 
+	// parda:start
+	it("Parda: TMDB's token is optional, its hosts have defaults, and a player base must be http(s)", () => {
+		expect(createServerEnv({ ...validServer })).toMatchObject({
+			TMDB_API_BASE: "https://api.themoviedb.org/3",
+			TMDB_IMAGE_BASE: "https://image.tmdb.org/t/p",
+		});
+		expect(createServerEnv({ ...validServer }).TMDB_READ_TOKEN).toBeUndefined();
+		expect((serverError({ ...validServer, TMDB_READ_TOKEN: "short" }) as Error).message).toMatch(/TMDB_READ_TOKEN/);
+		expect((serverError({ ...validServer, PARDA_PLAYER_BASE: "ftp://x.example.com" }) as Error).message).toMatch(
+			/PARDA_PLAYER_BASE/,
+		);
+	});
+	// parda:end
+
 	it("Cloudinary: all three or none; a numeric key; defaults for folder and hosts", () => {
 		const cloudinary = {
 			CLOUDINARY_CLOUD_NAME: "my-cloud",

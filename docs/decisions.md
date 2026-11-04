@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (212 entries)</summary>
+<summary>Index (216 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -232,6 +232,10 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0225](#0225-tasklines-reports-computed-from-live-tasks-and-the-activity-log-updates-set-the-health): Taskline's reports: computed from live tasks and the activity log; updates set the health
 - [0226](#0226-part-5-reviewed-what-changed-and-what-stayed): Part 5 reviewed: what changed and what stayed
 - [0227](#0227-part-5-measured-task-58): Part 5 measured (Task 58)
+- [0228](#0228-parda-is-a-layer-its-playback-starts-as-a-placeholder): Parda is a layer; its playback starts as a placeholder
+- [0229](#0229-tmdb-behind-one-client-one-cache-and-one-service): TMDB behind one client, one cache and one service
+- [0230](#0230-sources-as-data-adapters-as-code-a-frame-only-csp): Sources as data, adapters as code, a frame-only CSP
+- [0231](#0231-no-sandbox-decision-is-taken-yet): No sandbox decision is taken yet
 </details>
 
 ---
@@ -2821,3 +2825,41 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 - **The template matrix:** all four rows of CI's job (all layers, `--keep-taskline`, `--keep-apps`, `--keep-portfolio`) in a scratch clone with both `new:feature` runs: typecheck, check, knip, test, the migration check, all green after the fixes in 0226. Each takes 3–7 minutes.
 - **Gates:** `pnpm test` 133 files, 1,231 tests, 119 s; `pnpm test:storybook` 104 files, 498 tests, 123 s, twice; `pnpm build` 47 s; `pnpm build-storybook` 499 s; `pnpm test:e2e` 1,945 checks, all passed, none flaky, 24.9 min (Part 4: 1,194 in 14.8 min).
 - **Guests:** the sandbox checked in a browser in both languages, on 15 pages: every module has something to show, no console errors, no untranslated text but the project key, shortcuts' key names and "CSV".
+
+## 0228: Parda is a layer; its playback starts as a placeholder
+
+**What:** Parda is a removable layer like Taskline (`"parda"` in `LAYERS`, `SPECS.parda`, `// @parda` markers, a row in CI's strip matrix) at `/app/parda`, run from `/admin/parda`. Task 59 ships no third-party player. The sources are Servers 1 to 4, which the owner named: `/parda/api/{1-4}/movie/:id` and `/parda/api/{1-4}/tv/:id/:season/:episode`, served by a placeholder that plays no video. The owner will connect a real provider later.
+
+**Why:** PLAN 12.4 measured embed players (Vidy, Viduki, XPass, VidRock and others) whose streams are, in the plan's own words, "aggregated, not licensed". The AI session building this declined to wire them in, even temporarily, because the result is a public site streaming unlicensed films. The owner then chose placeholder routes, with a paid provider to follow. Everything around a player can be built against the placeholder, so nothing is lost by waiting. The seed, the adapters and the lab carry none of those hosts, and 12.4 and 12.5 say so.
+
+**Controls kept from 12.2:** the kill switch and the takedown list (`pd_settings.playback_enabled`, `pd_blocked_title`) exist from this task. TMDB stays non-commercial only, with its attribution due in Task 61. Scoped guests (12.5) are built in Task 64, when a viewer first needs one.
+
+**Alternatives considered:** an empty sources table (nothing to test the player against); seeding the measured hosts disabled (the code and data would still be an integration with them).
+
+## 0229: TMDB behind one client, one cache and one service
+
+**What:** `createTmdb` (timeout, one retry on 5xx, one `Retry-After` wait on 429), an in-process LRU with a TTL per class and stale-while-revalidate, lean Zod DTOs, and `catalog/service.ts` as the only way in. Cache keys carry `{path, params, locale, region, cap, epoch}`. Takedowns, settings and sources come from Postgres at most every 30 s per process (`controls.ts`).
+
+**Why:** the dehydrated state is in every page's HTML, so DTOs stay lean. Rails can serve stale answers through a TMDB outage. One service means a takedown can't be skipped by a new page. Takedowns filter after the cache, so one takes effect within 30 s without purging; bumping the epoch purges without touching the map.
+
+**Fixtures:** recorded by `pnpm tmdb:record` from the real API. Tests read their ids from the popular lists, so a new recording changes no test. They're excluded from Biome: they're generated, and 512 KB of formatting would be noise.
+
+**Alternatives considered:** a shared cache such as Redis (another service for data that is cheap to refetch); CDN page caching (0147).
+
+## 0230: Sources as data, adapters as code, a frame-only CSP
+
+**What:** `pd_source` holds URL templates and origins, so a source changes without a deploy. An adapter is the only code per provider, and it turns messages into one event stream. A message counts only from the source's own frame and origin, through the adapter's parser. `buildCsp` gains `embedOrigins`, which reach `frame-src` only. `security-headers.ts` adds them only on Parda's pages (the enabled sources, or all rows on the lab), so every other page keeps the strict policy. A failed read of the sources frames only trailers rather than failing the page.
+
+**The `parda` protocol** is our own (`parda.player` messages, `parda.command` commands). The placeholder speaks it, and a real player may too. Relative templates count as this app (`'self'`), or as `PARDA_PLAYER_BASE` when set.
+
+**The placeholder** is a Nitro route, not a page: a whole document with its own nonce and CSP (`frame-ancestors 'self'`) and a route rule that turns the global `x-frame-options: DENY` into `SAMEORIGIN`. It doubles as e2e's fake player, so the harness only stands in for TMDB. `?cue=` rehearses a failure, a stall and silence.
+
+**Deviations from 12.5:** the adapter list is `parda` and `none`. `PARDA_PROBE_SECRET` and `PARDA_REALTIME_KEY` arrive with Tasks 65a and 69a, which use them.
+
+**Alternatives considered:** `frameOrigins` (it also goes into `script-src`, for Turnstile); one adapter per server (they all speak the same protocol).
+
+## 0231: No sandbox decision is taken yet
+
+**What:** PLAN 12.2 and its Task 59 decision record iframes without a `sandbox`, because the measured players refuse one. With none of those players here, the question doesn't arise. `pd_source.sandbox` still defaults to `none`.
+
+**Why:** the choice depends on the provider. Decide it in the player lab when one is connected, and prefer a sandbox if it plays under one.

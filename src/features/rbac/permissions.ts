@@ -38,6 +38,13 @@ export const PERMISSION_CATALOG = {
 	 */
 	taskline: ["read", "manage", "configure", "time"],
 	// taskline:end
+	// parda:start
+	/**
+	 * Parda (/app/parda, decision 0228): read sees /admin/parda; curate the home page and collections;
+	 * moderate takedowns and reports; configure the sources, settings and the player lab.
+	 */
+	parda: ["read", "curate", "moderate", "configure"],
+	// parda:end
 	// @new-feature:permissions
 } as const;
 

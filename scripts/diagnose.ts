@@ -80,6 +80,7 @@ const services: Array<[string, string[]]> = [
 	["Cloudinary (uploads)", ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]],
 	["Turnstile (captcha)", ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"]],
 	["Google sign-in", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]],
+	["TMDB (Parda's catalogue)", ["TMDB_READ_TOKEN"]], // @parda
 ];
 const on = services.filter(([, keys]) => configured(keys)).map(([name]) => name);
 const off = services.filter(([, keys]) => !configured(keys)).map(([name]) => name);

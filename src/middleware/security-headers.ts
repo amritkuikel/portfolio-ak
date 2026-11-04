@@ -38,6 +38,12 @@ const loadTurnstileOrigins = () => {
 	return turnstileOrigins;
 };
 
+// parda:start
+/** Parda's pages may frame its enabled sources; the player lab also its disabled ones (decision 0230). */
+const PARDA_PAGE = /^(?:\/ne)?\/(?:app|admin)\/parda(?:\/|$)/;
+const PARDA_LAB = /^(?:\/ne)?\/admin\/parda\/player-lab(?:\/|$)/;
+// parda:end
+
 const createNonce = () => {
 	const bytes = new Uint8Array(16);
 	crypto.getRandomValues(bytes);
@@ -60,14 +66,24 @@ export const securityHeadersMiddleware = createMiddleware().server(async ({ next
 	if (import.meta.env.PROD && result.response.headers.get("content-type")?.includes("text/html")) {
 		const [cloudinary, frameOrigins] = await Promise.all([loadCloudinaryOrigins(), loadTurnstileOrigins()]);
 		const reportUrl = new URL(CSP_REPORT_PATH, request.url).href;
+		// What one section's pages add: other pages keep the strict policy.
+		const section = { embed: [] as string[], img: [] as string[] };
+		// parda:start
+		const { pathname } = new URL(request.url);
+		if (PARDA_PAGE.test(pathname)) {
+			const { pardaCspOrigins } = await import("@/server/parda/player/csp");
+			Object.assign(section, await pardaCspOrigins({ includeDisabled: PARDA_LAB.test(pathname) }));
+		}
+		// parda:end
 		result.response.headers.set("reporting-endpoints", reportingEndpoints(reportUrl));
 		result.response.headers.set(
 			"content-security-policy",
 			buildCsp({
 				nonce,
 				connectOrigins: [...new Set([...clientConnectOrigins, ...cloudinary.connect])],
-				imgOrigins: cloudinary.img,
+				imgOrigins: [...cloudinary.img, ...section.img],
 				frameOrigins,
+				embedOrigins: section.embed,
 				upgradeInsecureRequests: true,
 				reportUrl,
 			}),

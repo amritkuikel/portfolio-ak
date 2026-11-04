@@ -1,0 +1,56 @@
+import "@tanstack/react-start/server-only";
+import { fillTemplate, isRelativeTemplate, type TemplateValues } from "@/features/parda/player/templates";
+import { originOf } from "@/lib/http/csp";
+import type { PardaMedia } from "@/server/db/schema";
+import type { PardaSourceRow } from "../controls";
+
+/** Trailers play in YouTube's privacy-enhanced embed, on every Parda page. */
+export const TRAILER_ORIGIN = "https://www.youtube-nocookie.com";
+
+export type PlayerTarget = {
+	media: PardaMedia;
+	id: number;
+	imdb?: string | null;
+	season?: number;
+	episode?: number;
+};
+
+type SourceTemplates = Pick<PardaSourceRow, "movieTemplate" | "tvTemplate">;
+
+/** The player URL for one title; null when the source can't play it (a token has no value). */
+export function playerUrl(
+	source: SourceTemplates,
+	target: PlayerTarget,
+	options: { lang: string; color?: string; start?: number; base?: string | undefined },
+): string | null {
+	const template = target.media === "movie" ? source.movieTemplate : source.tvTemplate;
+	const values: TemplateValues = {
+		id: target.id,
+		lang: options.lang,
+		// An empty start is 0: a resume is optional, unlike the title itself.
+		start: Math.max(0, Math.floor(options.start ?? 0)),
+		...(target.imdb ? { imdb: target.imdb } : {}),
+		...(target.season === undefined ? {} : { season: target.season }),
+		...(target.episode === undefined ? {} : { episode: target.episode }),
+		...(options.color ? { color: options.color } : {}),
+	};
+	const filled = fillTemplate(template, values);
+	if (filled === null) return null;
+	return options.base && isRelativeTemplate(filled) ? `${options.base.replace(/\/$/, "")}${filled}` : filled;
+}
+
+/** What frame-src needs: each usable row's origins, and this app (or the base) for relative templates. */
+export function embedOrigins(
+	sources: ReadonlyArray<Pick<PardaSourceRow, "enabled" | "origins" | "movieTemplate" | "tvTemplate">>,
+	options: { includeDisabled: boolean; base?: string | undefined },
+): string[] {
+	const origins = new Set<string>([TRAILER_ORIGIN]);
+	for (const source of sources) {
+		if (!source.enabled && !options.includeDisabled) continue;
+		for (const origin of source.origins) origins.add(origin);
+		if (isRelativeTemplate(source.movieTemplate) || isRelativeTemplate(source.tvTemplate)) {
+			origins.add(originOf(options.base) ?? "'self'");
+		}
+	}
+	return [...origins];
+}
