@@ -241,6 +241,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0234](#0234-pardas-home-and-hubs-the-catalogue-gate-and-a-title-page-stub): Parda's home and hubs, the catalogue gate, and a title page stub
 - [0235](#0235-pardas-title-credits-person-and-collection-pages): Parda's title, credits, person and collection pages
 - [0236](#0236-pardas-player-progress-and-continue-watching): Parda's player, progress and Continue watching
+- [0237](#0237-pardas-admin-i-sources-takedowns-reports-and-settings): Parda's admin I: sources, takedowns, reports and settings
 </details>
 
 ---
@@ -2971,3 +2972,28 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 - **The click shield, the redirect guard and resume are checked against the placeholder only** (0228): a real player's behaviour waits for the provider.
 
 **Alternatives considered:** starting a guest on the first progress save (a user row for every visitor who watches a minute); a Nitro route with `sendBeacon` for `pagehide` (a second write path beside the server function); deleting rows on *Rewatch* (History would lose them); the controls row appearing on `ready` (the bar grew and shifted the page).
+
+## 0237: Parda's admin I: sources, takedowns, reports and settings
+
+**What:** Task 65's control pages under `/admin/parda`, each route checking its permission, each server function `requirePermission` → `withServices`, every write audited (`parda.*` actions on `parda-source`, `parda-title`, `parda-report`, `parda-settings`).
+- **Sources** (`/sources`, `/sources/new`, `/sources/$id`): every field of `pd_source`. The list is the whole table (a short list read whole), in the order the watch page starts from, with each row's open reports and how many are about ads (linking to the reports filtered by that source). Enable, disable, pin and unpin are row actions; "Reorder" is the shared dnd-kit dialog and saves the whole order at once (every source once, or BAD_REQUEST). A new source starts disabled, so it's tried in the player lab first ("Test in the player lab" opens the lab on that row, `?source=`). A sandbox shows a warning, because most players refuse one (0231).
+- **Templates are checked on the server** with `sourceFieldProblems` (beside `sourceProblems` in `player/templates.ts`), and each problem comes back on its own field: `movieTemplate`, `tvTemplate`, `origins`. Because a template is checked against the origins, changing the origins clears the templates' server errors.
+- **Versions:** forms save from the row's integer `version` (sent as `updatedAt`, as every admin form), through Parda's own `saveVersioned` (`server/parda/admin/context.ts`; Taskline's is in its layer, 0215). Single-field changes (enable, pin, the kill switch, the purge) are last-write-wins and leave the version alone, so they never make an open form stale.
+- **The controls' cache is cleared on every write** (`controls.invalidate()`, given to the services as `PardaAdminServices`): the server that took the write sees it on its next read; others within the 30 s TTL (0229). Without it the e2e flows (and an admin checking their change) would wait 30 s.
+- **Takedowns** (`/titles`, `/titles/new`): media, TMDB id and a reason, named from the `pd_title` snapshot where Parda has it. A unique index (`pd_blocked_title_unique`, migration `0030_parda_admin`) makes a title blocked once; the insert is `on conflict do nothing`, and no row back is the field error on the id. Unblocking deletes the row ("Delete" in the shared list).
+- **Reports** (`/reports`): open ones by default, filtered by status, kind, source and a search over the note, the title and the id; resolve, dismiss or reopen one, or resolve and dismiss the selected ones (`CrudListPage` gained `bulkActions`, beside "Delete selected", and `notice`, a block between the header and the table). A report already in the asked status records nothing.
+- **Settings** (`/settings`): region (two letters), the kids' cap (TMDB's US ladder: G, PG, PG-13, R), the players' languages, the banner, the kill switch (asks before turning off) and the purge (bumps `cache_epoch`, showing how many times it has run). The kill switch is also above the sources.
+- **The settings now do something:** the banner (empty English hides it) renders under Parda's top mask on every page, read by the layout's loader (`getPardaBanner`, a catalogue function that needs no TMDB); `languages` decides `{lang}`: the page's language when listed, else the first listed (`playerLanguage`).
+- **Permissions:** reading any of these pages is `parda:read`; sources and settings are changed with `parda:configure`, takedowns and reports with `parda:moderate`.
+
+**Why:** PLAN Task 65 and 12.5 ("Admin"), the CRUD standard (0173) and the legal controls of 12.2.
+
+**Deviations from PLAN Task 65:**
+- **No seeded disabled rows:** the seed is Servers 1 to 4, enabled (0228); the measured players were never seeded.
+- **"Its old `pd_play` rows remain with a null source"** is a PGlite test, not an e2e step: the flow's source is an https origin that doesn't exist (so its frame-src entry can be checked), and nothing plays from it.
+- **Takedowns leave rails, title pages and the sitemap** today; search and discover arrive with Task 66, through the same `catalog/service.ts`.
+- **`source_order` (auto or manual) is Task 65a's,** with the measurement columns.
+
+**Found on the way:** a unique violation inside a transaction crashed the e2e harness's PGlite socket server ("Received unexpected commandComplete message from backend"); the takedown insert avoids the failed statement altogether.
+
+**Alternatives considered:** clearing the cache only by waiting for the TTL (an admin's change would look ignored for 30 s); a dialog for blocking a title (a page is the CRUD standard, and the palette's "Block a title" can open it); a separate kill-switch page (it belongs with the sources it stops, and the settings).

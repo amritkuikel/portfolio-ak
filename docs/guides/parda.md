@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 64)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 65)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -183,12 +183,27 @@ Then try it in the player lab.
 
 **Findings so far:** Servers 1 to 4 report `ready`, `position`, `play`, `pause`, `seeked` and `failed`, and obey commands, under the production CSP. The questions in PLAN Task 59 about third-party players are for the real provider, once it exists.
 
-## Controls
+## Controls and the admin
 
-- **`pd_settings`** (one row): region, languages, kids' cap, banner, `playback_enabled` (the kill switch), `cache_epoch` (bumping it purges the catalogue cache), `source_order`.
-- **`pd_blocked_title`:** a takedown. The title leaves lists and its details are a 404, from every entry point, within 30 s. Admin screens for both arrive in Task 65.
+`/admin/parda` (decision 0237). Reading any page is `parda:read`; sources and settings change with `parda:configure`, takedowns and reports with `parda:moderate`. Every write is audited (`parda.*`) and clears the controls' 30 s cache in that process (`controls.invalidate()`), so the admin sees it at once and other servers within 30 s.
+
+| Page | Holds | Code |
+| --- | --- | --- |
+| `/admin/parda/sources` (`/new`, `/$id`) | Every `pd_source` row in order with its open and ads reports; enable, disable, pin, reorder (dnd-kit), delete; the kill switch above them | `features/parda/admin/sources/`, `server/parda/admin/sources.ts` |
+| `/admin/parda/titles` (`/new`) | Takedowns (`pd_blocked_title`): block by type, TMDB id and reason; "Delete" unblocks | `admin/titles/`, `server/parda/admin/takedowns.ts` |
+| `/admin/parda/reports` | Viewers' reports, open first; filter by status, kind, source and text; resolve, dismiss, reopen, in bulk too | `admin/reports/`, `server/parda/admin/reports.ts` |
+| `/admin/parda/settings` | The kill switch, region, kids' cap, players' languages, banner and the cache purge | `admin/settings/`, `server/parda/admin/settings.ts` |
+| `/admin/parda/player-lab` | Any row, enabled or not (`?source=` picks one) | `admin/player-lab/` |
+
+- **`pd_settings`** (one row): `region` (TMDB has no NP data), `languages` (the `{lang}` players get: the page's when listed, else the first, `playerLanguage`), `kids_cap`, `banner` (under the top mask on every page, read by the `_parda` layout's loader; empty English hides it), `playback_enabled` (the kill switch: no player loads anywhere), `cache_epoch` (bumping it purges the catalogue cache), `source_order` (Task 65a).
+- **A source's templates** are checked on save (`sourceFieldProblems`) and refused on their own field. A new source starts disabled: try it in the lab, then enable it. A sandbox warns that most players refuse one.
+- **Versions:** the forms save from the row's integer `version` (`saveVersioned` in `server/parda/admin/context.ts`); enable, pin, the kill switch and the purge leave it alone.
+- **`pd_blocked_title`:** one per title (`pd_blocked_title_unique`). The title is a 404 and leaves every list from every entry point (`catalog/service.ts`) and the sitemap. Deleting a source keeps its plays and reports, with no source.
 
 ## Pitfalls already solved
+
+- **A unique violation inside a transaction crashed the e2e harness's PGlite socket server** ("Received unexpected commandComplete message from backend"). Parda's writes avoid the failed statement: a takedown inserts `on conflict do nothing` and treats no row back as the field error.
+- **A template's server error outlived the fix:** it's checked against the origins, so adding the origin didn't clear it and the form wouldn't submit; the origins field clears the templates' server errors when it changes.
 
 - **The player bar grew on mount** (Parda's controls appear once the player is ready, a picked server's name is longer than Auto), shifting the page: the controls row renders from the server, disabled until ready, and the server menu is last in the bar.
 - **Two `<main>` landmarks:** a player's own document can have one, and axe counts it; the watch page's `<main>` is named.

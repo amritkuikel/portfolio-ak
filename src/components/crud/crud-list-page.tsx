@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-import { DataTable, type DataTableColumn, DataTableSkeleton, type RowAction } from "@/components/data-table";
+import {
+	type BulkSelection,
+	DataTable,
+	type DataTableColumn,
+	DataTableSkeleton,
+	type RowAction,
+} from "@/components/data-table";
 import { useConfirm } from "@/components/dialogs/confirm";
 import { ActiveFilters, ClearFiltersButton, type FilterChip } from "@/components/filters/active-filters";
 import { FilterBar } from "@/components/filters/filter-bar";
@@ -39,6 +45,8 @@ type Props<Row extends { id: string }> = {
 	/** Header buttons: "New …" (render them only for users who may use them). */
 	actions?: ReactNode;
 	tabs?: ReactNode;
+	/** Between the header and the table: a control the whole list depends on (Parda's kill switch). */
+	notice?: ReactNode;
 	/** The table's preferences key (hidden columns, page size, saved views). */
 	tableId: string;
 	list: CrudList<Row>;
@@ -51,6 +59,8 @@ type Props<Row extends { id: string }> = {
 	/** Each row's actions; Delete is added after them when `remove` is given. */
 	rowActions?: (row: Row) => RowAction[];
 	remove?: CrudRemove<Row>;
+	/** More buttons for the selected rows, beside "Delete selected" (resolve reports). */
+	bulkActions?: { permission: Permission; render: (selection: BulkSelection) => ReactNode };
 	/** Nothing to show: `description` when nothing exists (with `action`), `filtered` when filters hide every row. */
 	empty?: { description: string; filtered?: string; action?: ReactNode };
 	/** Adds "Export CSV" (columns with `csv`). */
@@ -72,6 +82,7 @@ export function CrudListPage<Row extends { id: string }>({
 	description,
 	actions,
 	tabs,
+	notice,
 	tableId,
 	list,
 	columns,
@@ -80,6 +91,7 @@ export function CrudListPage<Row extends { id: string }>({
 	filters,
 	rowActions,
 	remove,
+	bulkActions,
 	empty,
 	exportName,
 	savedViews,
@@ -88,6 +100,9 @@ export function CrudListPage<Row extends { id: string }>({
 }: Props<Row>) {
 	const confirm = useConfirm();
 	const canDelete = useCan(...(remove ? [remove.permission] : []));
+	const canBulk = useCan(...(bulkActions ? [bulkActions.permission] : []));
+	const deletes = Boolean(remove && canDelete && remove.bulk !== false);
+	const more = Boolean(bulkActions && canBulk);
 	const rows = "rows" in list ? list.rows : list.page?.items;
 	const pagination = "rows" in list ? null : list.pagination;
 
@@ -132,6 +147,7 @@ export function CrudListPage<Row extends { id: string }>({
 	return (
 		<Page width="admin">
 			<PageHeader title={title} description={description} actions={actions} tabs={tabs} />
+			{notice}
 			{rows ? (
 				<>
 					<DataTable
@@ -154,20 +170,25 @@ export function CrudListPage<Row extends { id: string }>({
 						exportName={exportName}
 						savedViews={savedViews}
 						bulkActions={
-							remove && canDelete && remove.bulk !== false
-								? ({ ids, clear }) => (
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() =>
-												void askDelete(
-													rows.filter((row) => ids.includes(row.id)),
-													clear,
-												)
-											}
-										>
-											{m.crud_delete_selected()}
-										</Button>
+							deletes || more
+								? (selection) => (
+										<>
+											{more ? bulkActions?.render(selection) : null}
+											{deletes ? (
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() =>
+														void askDelete(
+															rows.filter((row) => selection.ids.includes(row.id)),
+															selection.clear,
+														)
+													}
+												>
+													{m.crud_delete_selected()}
+												</Button>
+											) : null}
+										</>
 									)
 								: undefined
 						}

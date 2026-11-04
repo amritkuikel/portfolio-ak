@@ -13,7 +13,7 @@ import { firstSeason } from "../catalog/title-page";
 import type { PardaSourceRow } from "../controls";
 import * as library from "../library/repository";
 import type { TitleDetails } from "../tmdb/mappers";
-import { playerUrl } from "./sources";
+import { playerLanguage, playerUrl } from "./sources";
 
 /**
  * The watch page (PLAN 12.5, decision 0236): the title, the episode, its neighbours, and
@@ -150,7 +150,11 @@ export async function watchPage(
 				const url = playerUrl(
 					source,
 					{ media: details.media, id: details.id, imdb: details.imdbId, ...(at ?? {}) },
-					{ lang: locale, base, keepStart: true },
+					{
+						lang: playerLanguage(locale, "languages" in settings ? settings.languages : undefined),
+						base,
+						keepStart: true,
+					},
 				);
 				if (url === null) return [];
 				return [

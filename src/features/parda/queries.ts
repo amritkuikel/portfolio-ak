@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
+	getPardaBanner,
 	getPardaCollection,
 	getPardaCredits,
 	getPardaHub,
@@ -76,3 +77,7 @@ export const pardaCollectionQueryOptions = (locale: Locale, id: number) =>
 		queryFn: () => getPardaCollection({ data: { id, locale } }),
 		staleTime: CATALOG_STALE,
 	});
+
+/** The admin's banner (decision 0237): the same in every language, so one entry; a change shows within minutes. */
+export const pardaBannerQueryOptions = () =>
+	queryOptions({ queryKey: pardaKeys.banner(), queryFn: () => getPardaBanner(), staleTime: 5 * 60_000 });

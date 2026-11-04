@@ -86,6 +86,10 @@ import { Route as DevTestCrudIndexRouteImport } from './routes/dev/test-crud/ind
 import { Route as DevTestCrudSlugRouteImport } from './routes/dev/test-crud/$slug'
 import { Route as AdminAdminAuditIndexRouteImport } from './routes/_admin/admin/audit/index'
 import { Route as AdminAdminPardaPlayerLabRouteImport } from './routes/_admin/admin/parda/player-lab'
+import { Route as AdminAdminPardaReportsRouteImport } from './routes/_admin/admin/parda/reports'
+import { Route as AdminAdminPardaSettingsRouteImport } from './routes/_admin/admin/parda/settings'
+import { Route as AdminAdminPardaSourcesRouteRouteImport } from './routes/_admin/admin/parda/sources/route'
+import { Route as AdminAdminPardaTitlesRouteRouteImport } from './routes/_admin/admin/parda/titles/route'
 import { Route as AdminAdminPortfolioExperienceRouteImport } from './routes/_admin/admin/portfolio/experience'
 import { Route as AdminAdminPortfolioJournalRouteRouteImport } from './routes/_admin/admin/portfolio/journal/route'
 import { Route as AdminAdminPortfolioMessagesRouteImport } from './routes/_admin/admin/portfolio/messages'
@@ -138,6 +142,11 @@ import { Route as TasklineAppsKanbanIndexRouteImport } from './routes/_taskline/
 import { Route as TasklineAppsKanbanBoardIdRouteImport } from './routes/_taskline/apps/kanban/$boardId'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
+import { Route as AdminAdminPardaSourcesIndexRouteImport } from './routes/_admin/admin/parda/sources/index'
+import { Route as AdminAdminPardaSourcesIdRouteImport } from './routes/_admin/admin/parda/sources/$id'
+import { Route as AdminAdminPardaSourcesNewRouteImport } from './routes/_admin/admin/parda/sources/new'
+import { Route as AdminAdminPardaTitlesIndexRouteImport } from './routes/_admin/admin/parda/titles/index'
+import { Route as AdminAdminPardaTitlesNewRouteImport } from './routes/_admin/admin/parda/titles/new'
 import { Route as AdminAdminPortfolioJournalIndexRouteImport } from './routes/_admin/admin/portfolio/journal/index'
 import { Route as AdminAdminPortfolioJournalIdRouteImport } from './routes/_admin/admin/portfolio/journal/$id'
 import { Route as AdminAdminPortfolioJournalNewRouteImport } from './routes/_admin/admin/portfolio/journal/new'
@@ -571,6 +580,28 @@ const AdminAdminPardaPlayerLabRoute =
     path: '/player-lab',
     getParentRoute: () => AdminAdminPardaRouteRoute,
   } as any)
+const AdminAdminPardaReportsRoute = AdminAdminPardaReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminAdminPardaRouteRoute,
+} as any)
+const AdminAdminPardaSettingsRoute = AdminAdminPardaSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminAdminPardaRouteRoute,
+} as any)
+const AdminAdminPardaSourcesRouteRoute =
+  AdminAdminPardaSourcesRouteRouteImport.update({
+    id: '/sources',
+    path: '/sources',
+    getParentRoute: () => AdminAdminPardaRouteRoute,
+  } as any)
+const AdminAdminPardaTitlesRouteRoute =
+  AdminAdminPardaTitlesRouteRouteImport.update({
+    id: '/titles',
+    path: '/titles',
+    getParentRoute: () => AdminAdminPardaRouteRoute,
+  } as any)
 const AdminAdminPortfolioExperienceRoute =
   AdminAdminPortfolioExperienceRouteImport.update({
     id: '/portfolio/experience',
@@ -858,6 +889,36 @@ const DevExamplesMaskingIdRoute = DevExamplesMaskingIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => DevExamplesMaskingRouteRoute,
 } as any)
+const AdminAdminPardaSourcesIndexRoute =
+  AdminAdminPardaSourcesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPardaSourcesRouteRoute,
+  } as any)
+const AdminAdminPardaSourcesIdRoute =
+  AdminAdminPardaSourcesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminPardaSourcesRouteRoute,
+  } as any)
+const AdminAdminPardaSourcesNewRoute =
+  AdminAdminPardaSourcesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPardaSourcesRouteRoute,
+  } as any)
+const AdminAdminPardaTitlesIndexRoute =
+  AdminAdminPardaTitlesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPardaTitlesRouteRoute,
+  } as any)
+const AdminAdminPardaTitlesNewRoute =
+  AdminAdminPardaTitlesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPardaTitlesRouteRoute,
+  } as any)
 const AdminAdminPortfolioJournalIndexRoute =
   AdminAdminPortfolioJournalIndexRouteImport.update({
     id: '/',
@@ -1243,12 +1304,16 @@ export interface FileRoutesByFullPath {
   '/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/admin/parda/sources': typeof AdminAdminPardaSourcesRouteRouteWithChildren
+  '/admin/parda/titles': typeof AdminAdminPardaTitlesRouteRouteWithChildren
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/app/taskline': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
+  '/admin/parda/reports': typeof AdminAdminPardaReportsRoute
+  '/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -1299,6 +1364,9 @@ export interface FileRoutesByFullPath {
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
+  '/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
+  '/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
+  '/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
@@ -1313,6 +1381,8 @@ export interface FileRoutesByFullPath {
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/admin/parda/sources/': typeof AdminAdminPardaSourcesIndexRoute
+  '/admin/parda/titles/': typeof AdminAdminPardaTitlesIndexRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1411,6 +1481,8 @@ export interface FileRoutesByTo {
   '/dev/test-crud': typeof DevTestCrudIndexRoute
   '/app/taskline': typeof TasklineAppTasklineIndexRoute
   '/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
+  '/admin/parda/reports': typeof AdminAdminPardaReportsRoute
+  '/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
   '/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -1458,6 +1530,9 @@ export interface FileRoutesByTo {
   '/app/parda': typeof PardaAppPardaIndexRoute
   '/apps/kanban': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
+  '/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
+  '/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
+  '/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
   '/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
@@ -1472,6 +1547,8 @@ export interface FileRoutesByTo {
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/admin/parda/sources': typeof AdminAdminPardaSourcesIndexRoute
+  '/admin/parda/titles': typeof AdminAdminPardaTitlesIndexRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
   '/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsIndexRoute
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1585,12 +1662,16 @@ export interface FileRoutesById {
   '/_site/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/_admin/admin/parda/sources': typeof AdminAdminPardaSourcesRouteRouteWithChildren
+  '/_admin/admin/parda/titles': typeof AdminAdminPardaTitlesRouteRouteWithChildren
   '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
   '/_admin/admin/portfolio/projects': typeof AdminAdminPortfolioProjectsRouteRouteWithChildren
   '/_admin/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/_admin/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/_taskline/app/taskline/_shell': typeof TasklineAppTasklineShellRouteRouteWithChildren
   '/_admin/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
+  '/_admin/admin/parda/reports': typeof AdminAdminPardaReportsRoute
+  '/_admin/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
   '/_admin/admin/portfolio/experience': typeof AdminAdminPortfolioExperienceRoute
   '/_admin/admin/portfolio/messages': typeof AdminAdminPortfolioMessagesRoute
   '/_admin/admin/portfolio/process': typeof AdminAdminPortfolioProcessRoute
@@ -1641,6 +1722,9 @@ export interface FileRoutesById {
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/_admin/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
+  '/_admin/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
+  '/_admin/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
+  '/_admin/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
   '/_admin/admin/portfolio/journal/$id': typeof AdminAdminPortfolioJournalIdRoute
   '/_admin/admin/portfolio/journal/new': typeof AdminAdminPortfolioJournalNewRoute
   '/_admin/admin/portfolio/projects/$id': typeof AdminAdminPortfolioProjectsIdRoute
@@ -1655,6 +1739,8 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
   '/_taskline/app/taskline/_shell/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/_taskline/app/taskline/_shell/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/_admin/admin/parda/sources/': typeof AdminAdminPardaSourcesIndexRoute
+  '/_admin/admin/parda/titles/': typeof AdminAdminPardaTitlesIndexRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
   '/_admin/admin/portfolio/projects/': typeof AdminAdminPortfolioProjectsIndexRoute
   '/_admin/admin/taskline/projects/': typeof AdminAdminTasklineProjectsIndexRoute
@@ -1763,12 +1849,16 @@ export interface FileRouteTypes {
     | '/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/admin/parda/sources'
+    | '/admin/parda/titles'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/admin/taskline/projects'
     | '/admin/taskline/timesheets'
     | '/app/taskline'
     | '/admin/parda/player-lab'
+    | '/admin/parda/reports'
+    | '/admin/parda/settings'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
     | '/admin/portfolio/process'
@@ -1819,6 +1909,9 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/'
     | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
+    | '/admin/parda/sources/$id'
+    | '/admin/parda/sources/new'
+    | '/admin/parda/titles/new'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
@@ -1833,6 +1926,8 @@ export interface FileRouteTypes {
     | '/app/taskline/home'
     | '/app/taskline/inbox'
     | '/app/taskline/settings'
+    | '/admin/parda/sources/'
+    | '/admin/parda/titles/'
     | '/admin/portfolio/journal/'
     | '/admin/portfolio/projects/'
     | '/admin/taskline/projects/'
@@ -1931,6 +2026,8 @@ export interface FileRouteTypes {
     | '/dev/test-crud'
     | '/app/taskline'
     | '/admin/parda/player-lab'
+    | '/admin/parda/reports'
+    | '/admin/parda/settings'
     | '/admin/portfolio/experience'
     | '/admin/portfolio/messages'
     | '/admin/portfolio/process'
@@ -1978,6 +2075,9 @@ export interface FileRouteTypes {
     | '/app/parda'
     | '/apps/kanban'
     | '/dev/examples/masking'
+    | '/admin/parda/sources/$id'
+    | '/admin/parda/sources/new'
+    | '/admin/parda/titles/new'
     | '/admin/portfolio/journal/$id'
     | '/admin/portfolio/journal/new'
     | '/admin/portfolio/projects/$id'
@@ -1992,6 +2092,8 @@ export interface FileRouteTypes {
     | '/app/taskline/home'
     | '/app/taskline/inbox'
     | '/app/taskline/settings'
+    | '/admin/parda/sources'
+    | '/admin/parda/titles'
     | '/admin/portfolio/journal'
     | '/admin/portfolio/projects'
     | '/admin/taskline/projects'
@@ -2104,12 +2206,16 @@ export interface FileRouteTypes {
     | '/_site/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/_admin/admin/parda/sources'
+    | '/_admin/admin/parda/titles'
     | '/_admin/admin/portfolio/journal'
     | '/_admin/admin/portfolio/projects'
     | '/_admin/admin/taskline/projects'
     | '/_admin/admin/taskline/timesheets'
     | '/_taskline/app/taskline/_shell'
     | '/_admin/admin/parda/player-lab'
+    | '/_admin/admin/parda/reports'
+    | '/_admin/admin/parda/settings'
     | '/_admin/admin/portfolio/experience'
     | '/_admin/admin/portfolio/messages'
     | '/_admin/admin/portfolio/process'
@@ -2160,6 +2266,9 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/'
     | '/_admin/admin/taskline/projects/$id'
     | '/_taskline/app/taskline/_shell/$ws'
+    | '/_admin/admin/parda/sources/$id'
+    | '/_admin/admin/parda/sources/new'
+    | '/_admin/admin/parda/titles/new'
     | '/_admin/admin/portfolio/journal/$id'
     | '/_admin/admin/portfolio/journal/new'
     | '/_admin/admin/portfolio/projects/$id'
@@ -2174,6 +2283,8 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/home'
     | '/_taskline/app/taskline/_shell/inbox'
     | '/_taskline/app/taskline/_shell/settings'
+    | '/_admin/admin/parda/sources/'
+    | '/_admin/admin/parda/titles/'
     | '/_admin/admin/portfolio/journal/'
     | '/_admin/admin/portfolio/projects/'
     | '/_admin/admin/taskline/projects/'
@@ -2774,6 +2885,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminPardaPlayerLabRouteImport
       parentRoute: typeof AdminAdminPardaRouteRoute
     }
+    '/_admin/admin/parda/reports': {
+      id: '/_admin/admin/parda/reports'
+      path: '/reports'
+      fullPath: '/admin/parda/reports'
+      preLoaderRoute: typeof AdminAdminPardaReportsRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/settings': {
+      id: '/_admin/admin/parda/settings'
+      path: '/settings'
+      fullPath: '/admin/parda/settings'
+      preLoaderRoute: typeof AdminAdminPardaSettingsRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/sources': {
+      id: '/_admin/admin/parda/sources'
+      path: '/sources'
+      fullPath: '/admin/parda/sources'
+      preLoaderRoute: typeof AdminAdminPardaSourcesRouteRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/titles': {
+      id: '/_admin/admin/parda/titles'
+      path: '/titles'
+      fullPath: '/admin/parda/titles'
+      preLoaderRoute: typeof AdminAdminPardaTitlesRouteRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
     '/_admin/admin/portfolio/experience': {
       id: '/_admin/admin/portfolio/experience'
       path: '/portfolio/experience'
@@ -3137,6 +3276,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/examples/masking/$id'
       preLoaderRoute: typeof DevExamplesMaskingIdRouteImport
       parentRoute: typeof DevExamplesMaskingRouteRoute
+    }
+    '/_admin/admin/parda/sources/': {
+      id: '/_admin/admin/parda/sources/'
+      path: '/'
+      fullPath: '/admin/parda/sources/'
+      preLoaderRoute: typeof AdminAdminPardaSourcesIndexRouteImport
+      parentRoute: typeof AdminAdminPardaSourcesRouteRoute
+    }
+    '/_admin/admin/parda/sources/$id': {
+      id: '/_admin/admin/parda/sources/$id'
+      path: '/$id'
+      fullPath: '/admin/parda/sources/$id'
+      preLoaderRoute: typeof AdminAdminPardaSourcesIdRouteImport
+      parentRoute: typeof AdminAdminPardaSourcesRouteRoute
+    }
+    '/_admin/admin/parda/sources/new': {
+      id: '/_admin/admin/parda/sources/new'
+      path: '/new'
+      fullPath: '/admin/parda/sources/new'
+      preLoaderRoute: typeof AdminAdminPardaSourcesNewRouteImport
+      parentRoute: typeof AdminAdminPardaSourcesRouteRoute
+    }
+    '/_admin/admin/parda/titles/': {
+      id: '/_admin/admin/parda/titles/'
+      path: '/'
+      fullPath: '/admin/parda/titles/'
+      preLoaderRoute: typeof AdminAdminPardaTitlesIndexRouteImport
+      parentRoute: typeof AdminAdminPardaTitlesRouteRoute
+    }
+    '/_admin/admin/parda/titles/new': {
+      id: '/_admin/admin/parda/titles/new'
+      path: '/new'
+      fullPath: '/admin/parda/titles/new'
+      preLoaderRoute: typeof AdminAdminPardaTitlesNewRouteImport
+      parentRoute: typeof AdminAdminPardaTitlesRouteRoute
     }
     '/_admin/admin/portfolio/journal/': {
       id: '/_admin/admin/portfolio/journal/'
@@ -3815,12 +3989,55 @@ const AdminAdminAuditRouteRouteChildren: AdminAdminAuditRouteRouteChildren = {
 const AdminAdminAuditRouteRouteWithChildren =
   AdminAdminAuditRouteRoute._addFileChildren(AdminAdminAuditRouteRouteChildren)
 
+interface AdminAdminPardaSourcesRouteRouteChildren {
+  AdminAdminPardaSourcesIdRoute: typeof AdminAdminPardaSourcesIdRoute
+  AdminAdminPardaSourcesNewRoute: typeof AdminAdminPardaSourcesNewRoute
+  AdminAdminPardaSourcesIndexRoute: typeof AdminAdminPardaSourcesIndexRoute
+}
+
+const AdminAdminPardaSourcesRouteRouteChildren: AdminAdminPardaSourcesRouteRouteChildren =
+  {
+    AdminAdminPardaSourcesIdRoute: AdminAdminPardaSourcesIdRoute,
+    AdminAdminPardaSourcesNewRoute: AdminAdminPardaSourcesNewRoute,
+    AdminAdminPardaSourcesIndexRoute: AdminAdminPardaSourcesIndexRoute,
+  }
+
+const AdminAdminPardaSourcesRouteRouteWithChildren =
+  AdminAdminPardaSourcesRouteRoute._addFileChildren(
+    AdminAdminPardaSourcesRouteRouteChildren,
+  )
+
+interface AdminAdminPardaTitlesRouteRouteChildren {
+  AdminAdminPardaTitlesNewRoute: typeof AdminAdminPardaTitlesNewRoute
+  AdminAdminPardaTitlesIndexRoute: typeof AdminAdminPardaTitlesIndexRoute
+}
+
+const AdminAdminPardaTitlesRouteRouteChildren: AdminAdminPardaTitlesRouteRouteChildren =
+  {
+    AdminAdminPardaTitlesNewRoute: AdminAdminPardaTitlesNewRoute,
+    AdminAdminPardaTitlesIndexRoute: AdminAdminPardaTitlesIndexRoute,
+  }
+
+const AdminAdminPardaTitlesRouteRouteWithChildren =
+  AdminAdminPardaTitlesRouteRoute._addFileChildren(
+    AdminAdminPardaTitlesRouteRouteChildren,
+  )
+
 interface AdminAdminPardaRouteRouteChildren {
+  AdminAdminPardaSourcesRouteRoute: typeof AdminAdminPardaSourcesRouteRouteWithChildren
+  AdminAdminPardaTitlesRouteRoute: typeof AdminAdminPardaTitlesRouteRouteWithChildren
   AdminAdminPardaPlayerLabRoute: typeof AdminAdminPardaPlayerLabRoute
+  AdminAdminPardaReportsRoute: typeof AdminAdminPardaReportsRoute
+  AdminAdminPardaSettingsRoute: typeof AdminAdminPardaSettingsRoute
 }
 
 const AdminAdminPardaRouteRouteChildren: AdminAdminPardaRouteRouteChildren = {
+  AdminAdminPardaSourcesRouteRoute:
+    AdminAdminPardaSourcesRouteRouteWithChildren,
+  AdminAdminPardaTitlesRouteRoute: AdminAdminPardaTitlesRouteRouteWithChildren,
   AdminAdminPardaPlayerLabRoute: AdminAdminPardaPlayerLabRoute,
+  AdminAdminPardaReportsRoute: AdminAdminPardaReportsRoute,
+  AdminAdminPardaSettingsRoute: AdminAdminPardaSettingsRoute,
 }
 
 const AdminAdminPardaRouteRouteWithChildren =

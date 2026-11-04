@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { pardaCommands } from "@/features/parda/admin/commands"; // @parda
 import { portfolioCommands } from "@/features/portfolio/admin/commands"; // @portfolio
 import type { Permission } from "@/features/rbac/permissions";
 import { tasklineCommands } from "@/features/taskline/admin/commands"; // @taskline
@@ -26,6 +27,7 @@ export const ADMIN_COMMANDS: ReadonlyArray<AdminCommand> = [
 	...testCrudCommands,
 	...portfolioCommands, // @portfolio
 	...tasklineCommands, // @taskline
+	...pardaCommands, // @parda
 	// @new-feature:commands
 ];
 

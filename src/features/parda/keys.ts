@@ -5,6 +5,7 @@ import type { PardaPage, PardaType } from "./search";
 export const pardaKeys = {
 	all: ["parda"] as const,
 	catalog: (locale: Locale) => [...pardaKeys.all, "catalog", locale] as const,
+	banner: () => [...pardaKeys.all, "banner"] as const,
 	page: (locale: Locale, page: PardaPage) => [...pardaKeys.catalog(locale), "page", page] as const,
 	rail: (locale: Locale, page: PardaPage, rail: string) => [...pardaKeys.page(locale, page), "rail", rail] as const,
 	title: (locale: Locale, type: PardaType, id: number) => [...pardaKeys.catalog(locale), "title", type, id] as const,

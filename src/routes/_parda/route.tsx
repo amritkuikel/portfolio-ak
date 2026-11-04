@@ -13,14 +13,19 @@ import { getLocale } from "@/paraglide/runtime";
  */
 export const Route = createFileRoute("/_parda")({
 	staticData: { brand: PARDA_BRAND },
-	// A guest's banner names the day their progress is deleted (decision 0236): read here, so it renders whole.
+	// The admin's banner (decision 0237) and a guest's, which names the day their progress is
+	// deleted (decision 0236): read here, so both render whole. Neither can fail the page.
 	loader: async ({ context }) => {
-		if (!context.session?.isAnonymous) return;
-		const [{ pardaViewerQueryOptions }, { ensureQuery }] = await Promise.all([
-			import("@/features/parda/library/queries"),
+		const [{ pardaBannerQueryOptions }, { ensureQuery }] = await Promise.all([
+			import("@/features/parda/queries"),
 			import("@/lib/query"),
 		]);
-		await ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined);
+		const guest = async () => {
+			if (!context.session?.isAnonymous) return;
+			const { pardaViewerQueryOptions } = await import("@/features/parda/library/queries");
+			await ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined);
+		};
+		await Promise.all([ensureQuery(context.queryClient, pardaBannerQueryOptions()).catch(() => undefined), guest()]);
 	},
 	head: () => ({ meta: [{ title: pardaTitle() }, NOINDEX], links: pardaFontPreloads(getLocale()) }),
 	notFoundComponent: PardaNotFound,

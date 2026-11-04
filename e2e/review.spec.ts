@@ -81,6 +81,7 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "form-slug") return page.route.replace("$slug", (await harness.reviewForm("member")).slug);
 	// apps:end
 	if (page.params.from === "parda") return pardaFixturePath(page.params.page); // @parda
+	if (page.params.from === "parda-source-id") return page.route.replace("$id", await harness.pardaSourceId("Server 1")); // @parda
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

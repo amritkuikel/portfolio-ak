@@ -120,6 +120,17 @@ export class Harness {
 	}
 	// portfolio:end
 
+	// parda:start
+	/** A Parda source's id, by its English name (the seeded Servers 1 to 4, or one a flow added). */
+	async pardaSourceId(name: string): Promise<string> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/parda-source?name=${encodeURIComponent(name)}`);
+		const row = (await response.json()) as { id?: string };
+		if (!row.id) throw new Error(`no Parda source "${name}"`);
+		return row.id;
+	}
+
+	// parda:end
+
 	// taskline:start
 	/** A team project's id, by key (the old Kanban board URLs redirect by id, decision 0210). */
 	async tasklineProjectId(key: string): Promise<string> {

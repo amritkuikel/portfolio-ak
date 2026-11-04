@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS = { region: "US", cacheEpoch: 0, playbackEnabled: true } 
 
 const cached = <T>(load: () => Promise<T>, now: () => number) => {
 	let entry: { value: Promise<T>; until: number } | undefined;
-	return () => {
+	const read = () => {
 		if (!entry || now() >= entry.until) {
 			const value = load();
 			const current = { value, until: now() + TTL_MS };
@@ -28,21 +28,38 @@ const cached = <T>(load: () => Promise<T>, now: () => number) => {
 		}
 		return entry.value;
 	};
+	return Object.assign(read, {
+		clear: () => {
+			entry = undefined;
+		},
+	});
 };
 
 export const titleKey = (media: string, id: number) => `${media}:${id}`;
 
 export function createPardaControls(db: Db, now: () => number = Date.now) {
+	const blocked = cached(async () => {
+		const rows = await db.select({ media: pdBlockedTitle.media, id: pdBlockedTitle.tmdbId }).from(pdBlockedTitle);
+		return new Set(rows.map((row) => titleKey(row.media, row.id)));
+	}, now);
+	const settings = cached(async () => {
+		const [row] = await db.select().from(pdSettings).limit(1);
+		return row ?? DEFAULT_SETTINGS;
+	}, now);
+	const sources = cached(() => db.select().from(pdSource).orderBy(asc(pdSource.position)), now);
 	return {
-		blocked: cached(async () => {
-			const rows = await db.select({ media: pdBlockedTitle.media, id: pdBlockedTitle.tmdbId }).from(pdBlockedTitle);
-			return new Set(rows.map((row) => titleKey(row.media, row.id)));
-		}, now),
-		settings: cached(async () => {
-			const [row] = await db.select().from(pdSettings).limit(1);
-			return row ?? DEFAULT_SETTINGS;
-		}, now),
-		sources: cached(() => db.select().from(pdSource).orderBy(asc(pdSource.position)), now),
+		blocked,
+		settings,
+		sources,
+		/**
+		 * After an admin's write (decision 0237): this process reads the rows again at once,
+		 * so the admin sees the change on the next page; other servers within 30 s.
+		 */
+		invalidate: () => {
+			blocked.clear();
+			settings.clear();
+			sources.clear();
+		},
 	};
 }
 

@@ -1,4 +1,5 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { ScrollRegion } from "@/components/data-display/scroll-region";
 import { errorMessage } from "@/components/errors/error-page";
@@ -18,6 +19,8 @@ import { PlayerFrame } from "../../player/player-frame";
 import { createStallDetector, type StallSummary } from "../../player/stall";
 import { openLabPlayerMutationOptions, pardaLabSourcesQueryOptions } from "../queries";
 import { type LabPlayer, type LabPlayerInput, PLACEHOLDER_CUES, type PlaceholderCue } from "../schema";
+
+const route = getRouteApi("/_admin/admin/parda/player-lab");
 
 /** A sample id: the placeholder player doesn't look it up. */
 const SAMPLE_ID = 550;
@@ -148,6 +151,8 @@ function LabPlayerPane({ player }: { player: LabPlayer }) {
 /** /admin/parda/player-lab: loads any source, enabled or not, and shows what it reports. */
 export function PlayerLabPage() {
 	const { data: sources } = useSuspenseQuery(pardaLabSourcesQueryOptions());
+	// "Test in the lab" on the sources page names the row to start from.
+	const { source: picked } = route.useSearch();
 	const open = useMutation(openLabPlayerMutationOptions());
 	const [load, setLoad] = useState(0);
 	const sourceId = useId();
@@ -176,7 +181,12 @@ export function PlayerLabPage() {
 			<form method="post" onSubmit={submit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<div className="grid gap-1.5 sm:col-span-2">
 					<Label htmlFor={sourceId}>{m.pd_lab_source()}</Label>
-					<NativeSelect id={sourceId} name="source" required>
+					<NativeSelect
+						id={sourceId}
+						name="source"
+						required
+						defaultValue={sources.some((source) => source.id === picked) ? picked : undefined}
+					>
 						{sources.map((source) => (
 							<option key={source.id} value={source.id}>
 								{source.enabled

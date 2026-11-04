@@ -1,8 +1,10 @@
 import { type ActiveOptions, linkOptions } from "@tanstack/react-router";
 import {
+	BanIcon, // @parda
 	BriefcaseIcon, // @portfolio
 	ChartColumnIcon, // @taskline
 	DatabaseIcon,
+	FlagIcon, // @parda
 	FlaskConicalIcon, // @parda
 	FolderKanbanIcon, // @portfolio
 	GaugeIcon, // @taskline
@@ -19,8 +21,10 @@ import {
 	PaletteIcon,
 	QuoteIcon, // @portfolio
 	ScrollTextIcon,
+	ServerIcon, // @parda
 	SettingsIcon, // @taskline
 	ShieldCheckIcon,
+	SlidersHorizontalIcon, // @parda
 	SquareKanbanIcon, // @taskline
 	TablePropertiesIcon, // @taskline
 	TimerIcon, // @taskline
@@ -297,6 +301,42 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 	},
 	// taskline:end
 	// parda:start
+	{
+		...linkOptions({ to: "/admin/parda/sources" }),
+		label: m.admin_nav_parda_sources,
+		description: m.pd_admin_sources_description,
+		icon: ServerIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_sources,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/titles" }),
+		label: m.admin_nav_parda_titles,
+		description: m.pd_admin_takedowns_description,
+		icon: BanIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_titles,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/reports" }),
+		label: m.admin_nav_parda_reports,
+		description: m.pd_admin_reports_description,
+		icon: FlagIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_reports,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/settings" }),
+		label: m.admin_nav_parda_settings,
+		description: m.pd_admin_settings_description,
+		icon: SlidersHorizontalIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_settings,
+	},
 	{
 		...linkOptions({ to: "/admin/parda/player-lab" }),
 		label: m.admin_nav_parda_player_lab,

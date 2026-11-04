@@ -83,6 +83,19 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"taskline.template.update": m.audit_action_taskline_template_update,
 	"taskline.template.delete": m.audit_action_taskline_template_delete,
 	// taskline:end
+	// parda:start
+	"parda.source.create": m.audit_action_parda_source_create,
+	"parda.source.update": m.audit_action_parda_source_update,
+	"parda.source.state": m.audit_action_parda_source_state,
+	"parda.source.reorder": m.audit_action_parda_source_reorder,
+	"parda.source.delete": m.audit_action_parda_source_delete,
+	"parda.title.block": m.audit_action_parda_title_block,
+	"parda.title.unblock": m.audit_action_parda_title_unblock,
+	"parda.report.status": m.audit_action_parda_report_status,
+	"parda.settings.update": m.audit_action_parda_settings_update,
+	"parda.playback": m.audit_action_parda_playback,
+	"parda.cache.purge": m.audit_action_parda_cache_purge,
+	// parda:end
 	// @new-feature:audit-action-labels
 };
 
@@ -113,6 +126,12 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	"taskline-automation": m.audit_target_taskline_automation,
 	"taskline-template": m.audit_target_taskline_template,
 	// taskline:end
+	// parda:start
+	"parda-source": m.audit_target_parda_source,
+	"parda-title": m.audit_target_parda_title,
+	"parda-report": m.audit_target_parda_report,
+	"parda-settings": m.audit_target_parda_settings,
+	// parda:end
 	// @new-feature:audit-target-labels
 };
 

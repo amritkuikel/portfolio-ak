@@ -190,6 +190,30 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["listPardaLabSources", "parda:configure"],
 		["openPardaLabPlayer", "parda:configure"],
 	],
+	"parda-admin/reports.ts": [
+		["listPardaReports", "parda:read"],
+		["setPardaReportStatus", "parda:moderate"],
+	],
+	"parda-admin/settings.ts": [
+		["getPardaSettings", "parda:read"],
+		["updatePardaSettings", "parda:configure"],
+		["setPardaPlayback", "parda:configure"],
+		["purgePardaCache", "parda:configure"],
+	],
+	"parda-admin/sources.ts": [
+		["listPardaSources", "parda:read"],
+		["getPardaSource", "parda:read"],
+		["createPardaSource", "parda:configure"],
+		["updatePardaSource", "parda:configure"],
+		["setPardaSourceState", "parda:configure"],
+		["reorderPardaSources", "parda:configure"],
+		["deletePardaSources", "parda:configure"],
+	],
+	"parda-admin/titles.ts": [
+		["listPardaTakedowns", "parda:read"],
+		["blockPardaTitle", "parda:moderate"],
+		["unblockPardaTitles", "parda:moderate"],
+	],
 	// parda:end
 	// @new-feature:guarded-functions
 };
@@ -383,6 +407,7 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getPardaPerson",
 		"getPardaCollection",
 		"getPardaSurprise",
+		"getPardaBanner",
 	],
 	"parda/watch.ts": ["getPardaWatch", "recordPardaPlay", "reportPardaProblem"],
 };

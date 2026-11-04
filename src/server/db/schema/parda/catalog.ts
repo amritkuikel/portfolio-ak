@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { user } from "../auth";
 import { localizedText } from "../columns";
 
@@ -42,5 +42,9 @@ export const pdBlockedTitle = pgTable(
 		blockedBy: text().references(() => user.id, { onDelete: "set null" }),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 	},
-	(table) => [check("pd_blocked_title_media_valid", sql`${table.media} in ('movie', 'tv')`)],
+	(table) => [
+		check("pd_blocked_title_media_valid", sql`${table.media} in ('movie', 'tv')`),
+		/** One takedown per title: blocking it again is a field error (decision 0237). */
+		uniqueIndex("pd_blocked_title_unique").on(table.media, table.tmdbId),
+	],
 );

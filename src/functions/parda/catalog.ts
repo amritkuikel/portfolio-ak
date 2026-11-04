@@ -11,9 +11,10 @@ import type {
 	TitlePageData,
 } from "@/features/parda/title/types";
 import { zodInput } from "@/functions/_lib/validator";
+import type { Localized } from "@/lib/i18n/localized";
 import { withPardaCatalog } from "@/middleware/parda";
 import { locales } from "@/paraglide/runtime";
-import { catalogScope } from "@/server/parda/catalog/context";
+import { catalogScope, pardaBanner } from "@/server/parda/catalog/context";
 import { hubPage, hubRail } from "@/server/parda/catalog/hubs";
 import { collectionPage, personPage, surprise } from "@/server/parda/catalog/people";
 import { creditsPage, seasonPage, titlePage } from "@/server/parda/catalog/title-page";
@@ -133,3 +134,11 @@ export const getPardaSurprise = createServerFn({ method: "GET" })
 				? surprise(context.catalog.services, catalogScope(context.catalog, data.locale), data.from)
 				: Promise.resolve(null),
 	);
+
+/**
+ * The admin's notice under Parda's top mask (decision 0237), null when there's none. From
+ * the settings the controls cache, so it needs no catalogue: it shows without TMDB too.
+ */
+export const getPardaBanner = createServerFn({ method: "GET" })
+	.middleware([withPardaCatalog])
+	.handler((): Promise<Localized | null> => pardaBanner());

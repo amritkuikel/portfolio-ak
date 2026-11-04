@@ -6,7 +6,7 @@
 
 import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
-import { fixtureTitlePath, pardaFixturePath } from "../harness/tmdb.ts";
+import { fixtureTitlePath, pardaFixturePath, popularFixture } from "../harness/tmdb.ts";
 import { expect, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
 
 test.describe("Parda's placeholder player", () => {
@@ -437,5 +437,140 @@ test.describe("Parda's marks for a visitor", () => {
 		await expect(play).toHaveText(/Next: |Rewatch/);
 		await expect(page.getByTestId("parda-guest-banner")).toContainText(/deleted on/);
 		await expect(page.getByTestId("season-watched")).toBeVisible();
+	});
+});
+
+// Task 65: the admin's controls (decision 0237). Each flow uses its own source or title, so
+// the flows above, which play Servers 1 to 4 and the first popular titles, run beside it.
+const rowAction = async (page: Page, label: string, action: string) => {
+	await page.getByRole("button", { name: `Actions for ${label}` }).click();
+	await page.getByRole("menuitem", { name: action, exact: true }).click();
+};
+const frameSrc = async (page: Page, path: string) =>
+	(await page.request.get(path)).headers()["content-security-policy"]?.match(/frame-src ([^;]*)/)?.[1] ?? "";
+
+test.describe("Parda's admin", () => {
+	test.use(signedIn("admin"));
+
+	test("a source added frames, disabling it takes it out of the switcher and the CSP, deleting it removes it", async ({
+		page,
+		guard,
+	}) => {
+		// The refused save answers 400.
+		guard.allow(RESOURCE_STATUS(400));
+		const name = `E2E Server ${Date.now()}`;
+		const origin = "https://e2e-player.invalid";
+		const watch = pardaFixturePath("watch-movie");
+
+		await page.goto("/admin/parda/sources/new", { waitUntil: "networkidle" });
+		await page.getByLabel("Name (English)").fill(name);
+		await page.getByLabel("Movie address").fill(`${origin}/movie/{id}`);
+		await page.getByLabel("Episode address").fill(`${origin}/tv/{id}/{season}/{episode}`);
+		await page.getByRole("switch", { name: "Enabled" }).click();
+		await page.getByRole("button", { name: "Create" }).click();
+		// The server checks the templates against the origins, and answers on the field.
+		await expect(page.getByText("Add this address's origin to the origins below.").first()).toBeVisible();
+		await page.getByLabel("Origins").fill(origin);
+		await page.getByLabel("Origins").press("Enter");
+		await page.getByRole("button", { name: "Create" }).click();
+		await expect(page).toHaveURL(/\/admin\/parda\/sources$/);
+		await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
+
+		expect(await frameSrc(page, watch)).toContain(origin);
+		await page.goto(watch, { waitUntil: "networkidle" });
+		await page.getByTestId("server-menu").click();
+		await expect(page.getByTestId("server-option").filter({ hasText: name })).toBeVisible();
+		await page.keyboard.press("Escape");
+
+		await page.goto("/admin/parda/sources", { waitUntil: "networkidle" });
+		await rowAction(page, name, "Disable");
+		await expect(page.getByText(`“${name}” is disabled.`)).toBeVisible();
+		expect(await frameSrc(page, watch)).not.toContain(origin);
+		await page.goto(watch, { waitUntil: "networkidle" });
+		await page.getByTestId("server-menu").click();
+		await expect(page.getByTestId("server-option").filter({ hasText: "Server 2" })).toBeVisible();
+		await expect(page.getByTestId("server-option").filter({ hasText: name })).toHaveCount(0);
+		await page.keyboard.press("Escape");
+
+		await page.goto("/admin/parda/sources", { waitUntil: "networkidle" });
+		await rowAction(page, name, "Delete");
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await expect(page.getByRole("link", { name, exact: true })).toHaveCount(0);
+	});
+
+	test("a blocked title is Parda's 404 and leaves the rails; unblocking brings it back", async ({ page, guard }) => {
+		const title = popularFixture("movie", 1);
+		const linked = (html: string) => html.includes(`/app/parda/movie/${title.id}`);
+		expect(linked(await (await page.request.get("/app/parda")).text())).toBe(true);
+
+		await page.goto("/admin/parda/titles/new", { waitUntil: "networkidle" });
+		await page.getByLabel("TMDB id").fill(String(title.id));
+		await page.getByLabel("Reason").fill("An e2e takedown");
+		await page.getByRole("button", { name: "Block", exact: true }).click();
+		await expect(page).toHaveURL(/\/admin\/parda\/titles$/);
+		await expect(page.getByText("An e2e takedown")).toBeVisible();
+
+		// Blocking it again is refused on the id.
+		await page.goto("/admin/parda/titles/new", { waitUntil: "networkidle" });
+		await page.getByLabel("TMDB id").fill(String(title.id));
+		await page.getByLabel("Reason").fill("Twice");
+		await page.getByRole("button", { name: "Block", exact: true }).click();
+		await expect(page.getByText("This title is already blocked.").first()).toBeVisible();
+
+		// The second block answers 409; the blocked page 404.
+		guard.allow(RESOURCE_STATUS(409));
+		guard.allow(RESOURCE_STATUS(404));
+		const blocked = await page.goto(title.path);
+		expect(blocked?.status()).toBe(404);
+		await expect(page.getByTestId("parda-frame")).toBeVisible();
+		expect(linked(await (await page.request.get("/app/parda")).text())).toBe(false);
+
+		await page.goto("/admin/parda/titles", { waitUntil: "networkidle" });
+		const row = page.getByRole("row").filter({ hasText: "An e2e takedown" });
+		await row.getByRole("button", { name: /^Actions for / }).click();
+		await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await expect(page.getByText("An e2e takedown")).toHaveCount(0);
+		expect(linked(await (await page.request.get("/app/parda")).text())).toBe(true);
+	});
+
+	test("reports are resolved in bulk and leave the open queue", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		const note = `E2E report ${Date.now()}`;
+		await page.goto(pardaFixturePath("watch-movie"), { waitUntil: "networkidle" });
+		await page.getByRole("button", { name: "Report a problem" }).click();
+		await page.getByLabel("Details (optional)").fill(note);
+		await page.getByRole("button", { name: "Send report" }).click();
+		await expect(page.getByText("Thanks: your report was sent.")).toBeVisible();
+
+		await page.goto(`/admin/parda/reports?q=${encodeURIComponent(note)}`, { waitUntil: "networkidle" });
+		const row = page.getByRole("row").filter({ hasText: note });
+		await expect(row).toBeVisible();
+		await row.getByRole("checkbox").check();
+		await page.getByTestId("parda-reports-resolve").click();
+		await expect(page.getByText("Reports updated: 1.")).toBeVisible();
+		await page.reload();
+		await expect(page.getByRole("row").filter({ hasText: note })).toHaveCount(0);
+		await page.goto(`/admin/parda/reports?q=${encodeURIComponent(note)}&status=resolved`, { waitUntil: "networkidle" });
+		await expect(page.getByRole("row").filter({ hasText: note })).toContainText("Resolved");
+	});
+
+	test("the banner shows under Parda's header for visitors, and clearing it hides it", async ({ page, browser }) => {
+		const text = `E2E notice ${Date.now()}`;
+		const setBanner = async (value: string) => {
+			await page.goto("/admin/parda/settings", { waitUntil: "networkidle" });
+			await page.getByLabel("Banner (English)").fill(value);
+			const saved = page.waitForResponse((response) => response.request().method() === "POST" && response.ok());
+			await page.getByRole("button", { name: "Save" }).click();
+			await saved;
+		};
+		await setBanner(text);
+		const visitor = await browser.newPage({ baseURL: E2E.baseURL });
+		await visitor.goto("/app/parda/about", { waitUntil: "networkidle" });
+		await expect(visitor.getByTestId("parda-notice-banner")).toHaveText(text);
+		await setBanner("");
+		await visitor.reload();
+		await expect(visitor.getByTestId("parda-notice-banner")).toHaveCount(0);
+		await visitor.close();
 	});
 });

@@ -31,7 +31,8 @@ export type ReviewedPage = {
 		| { from: "form-data" } // @apps
 		| { from: "form-id" } // @apps
 		| { from: "form-slug" } // @apps
-		| { from: "parda"; page: PardaFixturePage }; // @parda
+		| { from: "parda"; page: PardaFixturePage } // @parda
+		| { from: "parda-source-id" }; // @parda
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -346,6 +347,14 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/parda/sign-up" },
 	{ route: "/app/parda/$", path: "/app/parda/no/such/page", status: 404, label: "unknown page" },
 	{ route: "/admin/parda/player-lab", as: "admin" },
+	// The admin's Parda, part one (Task 65): sources, takedowns, reports, settings.
+	{ route: "/admin/parda/sources", as: "admin" },
+	{ route: "/admin/parda/sources/new", as: "admin" },
+	{ route: "/admin/parda/sources/$id", as: "admin", params: { from: "parda-source-id" } },
+	{ route: "/admin/parda/titles", as: "admin" },
+	{ route: "/admin/parda/titles/new", as: "admin" },
+	{ route: "/admin/parda/reports", as: "admin" },
+	{ route: "/admin/parda/settings", as: "admin" },
 	// parda:end
 	// @new-feature:reviewed-pages
 	// Errors

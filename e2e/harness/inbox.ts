@@ -329,6 +329,14 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
 			// taskline:end
+			// parda:start
+			if (route === "GET /e2e/parda-source") {
+				const { rows } = await query(`select "id" from "pd_source" where "name"->>'en' = $1 limit 1`, [
+					url.searchParams.get("name"),
+				]);
+				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
+			}
+			// parda:end
 			// apps:start
 			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));
 			if (route === "GET /e2e/link") return send(response, 200, await reviewLink(query, url.searchParams.get("email")));

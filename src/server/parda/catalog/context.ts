@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { getCookie, getRequest } from "@tanstack/react-start/server";
+import type { Localized } from "@/lib/i18n/localized";
 import type { Session } from "@/lib/session";
 import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
 import { db } from "@/server/db/client";
@@ -50,3 +51,10 @@ export const catalogScope = (catalog: PardaCatalog, locale: CatalogScope["locale
 	region: catalog.region,
 	cap: catalog.cap,
 });
+
+/** The admin's banner (decision 0237), null when its English is empty. Read from the controls' 30 s cache. */
+export async function pardaBanner(): Promise<Localized | null> {
+	const settings = await pardaControls.settings();
+	const banner = "banner" in settings ? settings.banner : null;
+	return banner?.en.trim() ? banner : null;
+}

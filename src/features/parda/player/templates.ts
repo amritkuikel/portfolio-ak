@@ -51,6 +51,23 @@ const httpsOriginOf = (template: string): string | null => {
 
 export type TemplateProblem = "not-https" | "origin-not-listed" | "unknown-token" | "invalid-origin";
 
+/** The first problem of each field, for the admin's form (server field errors, decision 0237). */
+export function sourceFieldProblems(row: {
+	movieTemplate: string;
+	tvTemplate: string;
+	origins: ReadonlyArray<string>;
+}): Partial<Record<"movieTemplate" | "tvTemplate" | "origins", TemplateProblem>> {
+	const problems: Partial<Record<"movieTemplate" | "tvTemplate" | "origins", TemplateProblem>> = {};
+	if (row.origins.some((origin) => httpsOriginOf(origin) !== origin)) problems.origins = "invalid-origin";
+	for (const field of ["movieTemplate", "tvTemplate"] as const) {
+		const [first] = sourceProblems({ movieTemplate: row[field], tvTemplate: row[field], origins: row.origins }).filter(
+			(problem) => problem !== "invalid-origin",
+		);
+		if (first) problems[field] = first;
+	}
+	return problems;
+}
+
 /** What's wrong with a source's templates and origins; empty when it can be saved. */
 export function sourceProblems(row: {
 	movieTemplate: string;

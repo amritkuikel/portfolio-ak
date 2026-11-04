@@ -26,3 +26,6 @@ export const getPardaCollection = fn(async (): Promise<CollectionPageData> => ({
 	"getPardaCollection",
 );
 export const getPardaSurprise = fn(async (): Promise<SurpriseTarget> => null).mockName("getPardaSurprise");
+export const getPardaBanner = fn(async (): Promise<{ en: string; ne: string } | null> => null).mockName(
+	"getPardaBanner",
+);

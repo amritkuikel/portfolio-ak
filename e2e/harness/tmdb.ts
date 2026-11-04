@@ -93,6 +93,13 @@ const popularFirst = (media: "movie" | "tv") => {
 	return first;
 };
 
+/** The popular list's title at `index` (0 is the one the review opens): its id and its page. */
+export function popularFixture(media: "movie" | "tv", index: number): { id: number; path: string } {
+	const item = readJson<{ results?: FixtureItem[] }>(fixtureName(`${media}/popular`, [], "en-US")).results?.[index];
+	if (!item) throw new Error(`tests/fixtures/tmdb: ${media}/popular has no title ${index}; run pnpm tmdb:record`);
+	return { id: item.id, path: titlePath(media, item) };
+}
+
 export function pardaFixturePath(page: PardaFixturePage): string {
 	if (page === "movie") return titlePath("movie", popularFirst("movie"));
 	if (page === "series") return titlePath("tv", popularFirst("tv"));

@@ -90,6 +90,19 @@ export const AUDIT_ACTIONS = [
 	"taskline.template.update",
 	"taskline.template.delete",
 	// taskline:end
+	// parda:start
+	"parda.source.create",
+	"parda.source.update",
+	"parda.source.state",
+	"parda.source.reorder",
+	"parda.source.delete",
+	"parda.title.block",
+	"parda.title.unblock",
+	"parda.report.status",
+	"parda.settings.update",
+	"parda.playback",
+	"parda.cache.purge",
+	// parda:end
 	// @new-feature:audit-actions
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -121,6 +134,12 @@ export const AUDIT_TARGETS = [
 	"taskline-automation",
 	"taskline-template",
 	// taskline:end
+	// parda:start
+	"parda-source",
+	"parda-title",
+	"parda-report",
+	"parda-settings",
+	// parda:end
 	// @new-feature:audit-targets
 ] as const;
 export type AuditTarget = (typeof AUDIT_TARGETS)[number];

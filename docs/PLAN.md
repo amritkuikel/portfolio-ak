@@ -2173,7 +2173,7 @@ As 11.1, with these differences:
 | 62 | Home and hubs | high | Done (decision 0234) |
 | 63 | Title, credits, person and collection pages | xhigh | Done (decision 0235) |
 | 64 | The player, progress and Continue watching, guests | xhigh | Done (decision 0236) |
-| 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
+| 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Done (decision 0237) |
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Planned |
 | 66 | Search and discover | high | Planned |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
@@ -2597,15 +2597,28 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0029_parda_player`).
 
-### Task 65: Admin I, control (planned)
+### Task 65: Admin I, control (done)
 
-- **Sources:** add, edit, delete, enable, pin and reorder (the CRUD standard, dnd-kit order, server field errors for templates and origins), every field in 12.5, the seeded disabled rows, "test a title" (the lab), and the kill switch.
-  - A row with `sandbox` set warns that most players refuse one.
-  - e2e: add a source → it frames → disable it → it's gone from the switcher and the CSP. Delete it → it's gone, and its old `pd_play` rows remain with a null source.
-- **Titles:** the takedown list (CRUD standard). A blocked title 404s and leaves rails, search, discover and the sitemap.
-- **Reports queue:** filter, resolve, bulk resolve.
-- **Settings:** region, languages, kids' cap, banner, purge (epoch).
-- **Permissions, sections, commands;** every write audited.
+**Done** (decision 0237; the guide's "Controls and the admin").
+
+**What changed:**
+- **Sources** `/admin/parda/sources` (`/new`, `/$id`): every field of 12.5 in the CRUD standard, server field errors for templates and origins (`sourceFieldProblems`), enable, disable, pin and delete as row actions, the dnd-kit reorder dialog, open and ads reports per row, "Test in the player lab" (`?source=`), a sandbox warning, and the kill switch above the list. A new source starts disabled.
+- **Takedowns** `/admin/parda/titles` (`/new`): block by type, TMDB id and reason (named from `pd_title`), search, unblock. One per title: `pd_blocked_title_unique` (migration `0030_parda_admin`).
+- **Reports** `/admin/parda/reports`: open first, filters for status, kind, source and text, resolve, dismiss and reopen, resolve and dismiss in bulk (`CrudListPage` gained `bulkActions` and `notice`).
+- **Settings** `/admin/parda/settings`: the kill switch (confirmed), region, kids' cap, players' languages, banner, purge. The banner now shows under Parda's top mask (`getPardaBanner`), and `languages` decides `{lang}` (`playerLanguage`).
+- **Every write** is audited (`parda.*`), uses the row's integer version where a form saves, and clears the controls' 30 s cache in that process (`controls.invalidate()`).
+- **Permissions, sections, commands:** four admin sections, "New Parda source" and "Block a title" in the palette; read with `parda:read`, change with `parda:configure` (sources, settings) or `parda:moderate` (takedowns, reports).
+- **Tests:** `tests/server/parda-admin.test.ts` (13: field errors, versions, state, order, delete keeps plays and reports, takedowns, reports, settings, the kill switch and purge), the guard test's four files and `getPardaBanner`, the "Parda/Admin" stories, seven admin pages in the review, and four e2e flows (a source frames, then leaves the switcher and the CSP when disabled, then is deleted; a takedown is a 404 and leaves the home's rails, then comes back; a report resolved in bulk leaves the open queue; the banner shows and hides).
+
+**Deviations (0237):**
+- **No seeded disabled rows:** the seed is Servers 1 to 4, enabled (0228).
+- **"Old `pd_play` rows remain with a null source"** is checked on PGlite: the e2e source is an https origin that doesn't exist, so nothing plays from it.
+- **Takedowns leave rails, pages and the sitemap;** search and discover come with Task 66, through the same service.
+- **The source order setting** (`auto` or `manual`) stays with Task 65a.
+
+**Numbers:** entry 278.7 of 280 kB (276.6 before): nine routes. Tasks 65a onward need room; consider trimming route options or raising the budget, with a decision. `pnpm test` 144 files, 1,394 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, `pnpm test:storybook` (536 of 536), build-storybook, `e2e/flows/parda.spec.ts` with the review of every `/app/parda` and `/admin/parda` page (313 of 313). The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0030_parda_admin`; it fails if a title is already blocked twice, which no screen could do before).
 
 ### Task 65a: Source ranking (planned)
 
