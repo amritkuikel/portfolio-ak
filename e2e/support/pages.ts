@@ -327,6 +327,12 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/timesheets/utilization", as: "admin" },
 	// taskline:end
 	// parda:start
+	// Parda (decision 0228): its pages for visitors, in its own frame (Task 61).
+	{ route: "/app/parda" },
+	{ route: "/app/parda/about" },
+	{ route: "/app/parda/sign-in" },
+	{ route: "/app/parda/sign-up" },
+	{ route: "/app/parda/$", path: "/app/parda/no-such-page", status: 404, label: "unknown page" },
 	{ route: "/admin/parda/player-lab", as: "admin" },
 	// parda:end
 	// @new-feature:reviewed-pages

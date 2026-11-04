@@ -63,3 +63,61 @@ test.describe("Parda's player lab as the admin", () => {
 		await expect(log).toContainText('"kind":"failed"');
 	});
 });
+
+// Task 61: the frame, the brand and the pages for visitors.
+test.describe("Parda's frame for a visitor", () => {
+	test("is dark by default, branded, and keeps the visitor inside Parda", async ({ page }) => {
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		const html = page.locator("html");
+		await expect(html).toHaveAttribute("data-section", "parda");
+		await expect(html).toHaveClass(/\bdark\b/);
+		await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/app/parda/manifest.webmanifest");
+		await expect(page.locator('meta[name="theme-color"]').first()).toHaveAttribute("content", "#08080a");
+		await expect(page.getByTestId("parda-footer").getByRole("img", { name: "TMDB" })).toBeVisible();
+		await page.getByTestId("parda-nav-about").click();
+		await expect(page).toHaveURL(/\/app\/parda\/about$/);
+		await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+		await page.getByTestId("parda-sign-in-link").click();
+		await expect(page).toHaveURL(/\/app\/parda\/sign-in\?redirect=/);
+		await expect(page.getByTestId("parda-frame")).toBeVisible();
+	});
+
+	test("an explicit light choice wins over the dark default", async ({ page }) => {
+		await page.context().addCookies([{ name: "theme", value: "light", url: E2E.baseURL }]);
+		await page.goto("/app/parda/about", { waitUntil: "networkidle" });
+		await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+	});
+
+	test("an unknown address is Parda's 404, in its frame", async ({ page, guard }) => {
+		guard.allow(RESOURCE_STATUS(404));
+		const response = await page.goto("/ne/app/parda/no-such-page", { waitUntil: "networkidle" });
+		expect(response?.status()).toBe(404);
+		await expect(page.getByTestId("parda-frame")).toBeVisible();
+		await expect(page.getByTestId("not-found-page")).toBeVisible();
+	});
+
+	test("serves its manifest in each language", async ({ request }) => {
+		for (const [path, lang, start] of [
+			["/app/parda/manifest.webmanifest", "en", "/app/parda"],
+			["/ne/app/parda/manifest.webmanifest", "ne", "/ne/app/parda"],
+		] as const) {
+			const response = await request.get(path);
+			expect(response.ok()).toBe(true);
+			const manifest = await response.json();
+			expect(manifest).toMatchObject({ name: "Parda", lang, start_url: start, theme_color: "#08080a" });
+		}
+	});
+});
+
+test.describe("Parda's frame on a phone", () => {
+	test.use({ viewport: { width: 390, height: 844 } });
+
+	test("puts the sections in the tab bar", async ({ page }) => {
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		const tabs = page.getByTestId("parda-tab-bar");
+		await expect(tabs).toBeVisible();
+		await tabs.getByRole("link", { name: /About|बारेमा/ }).click();
+		await expect(page).toHaveURL(/\/app\/parda\/about$/);
+		await expect(page.getByTestId("parda-header").getByTestId("parda-nav-about")).toBeHidden();
+	});
+});

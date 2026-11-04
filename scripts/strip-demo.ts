@@ -208,8 +208,12 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/routes/_admin/admin/parda",
 			"src/server/routes/cron-parda.ts",
 			"src/server/routes/parda-player.ts",
+			"src/server/routes/parda-manifest.ts",
+			"src/routes/_parda",
+			"public/parda",
 			"src/server/db/schema/parda",
 			".storybook/mocks/functions/parda-admin",
+			".storybook/mocks/parda.tsx",
 			"scripts/record-tmdb-fixtures.ts",
 			"tests/fixtures/tmdb",
 			"tests/unit/parda-tmdb.test.ts",
@@ -231,6 +235,8 @@ const SHARED: ReadonlyArray<{ paths: string[]; layers: Layer[] }> = [
 	{ paths: ["src/components/forms/csv-source.tsx", "src/server/db/quota.ts"], layers: ["apps", "taskline"] },
 	{ paths: [".impeccable/config.json"], layers: ["portfolio", "parda"] },
 	{ paths: ["src/components/data-display/scroll-region.tsx"], layers: ["taskline", "parda"] },
+	// The horizontal rail (Task 61) is core, but only Parda uses it so far.
+	{ paths: ["src/components/data-display/rail.tsx"], layers: ["parda"] },
 ];
 
 /** Written when the portfolio goes: the home page becomes a neutral landing page. */

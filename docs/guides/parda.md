@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 and 60) it is a foundation and a design system:** no public page exists yet, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 61) it is a foundation, a design system, a frame and a media kit:** the pages are a placeholder home, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -26,6 +26,43 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 **Motion:** one ease (`--pd-ease`), transform and opacity only, inside the `no-preference` block at the end of the file: `pd-move` and `pd-press`. A test enforces it.
 
 **How the theme resolves:** a route's `staticData.brand` with `defaultScheme: "dark"` makes `sectionTheme()` turn "system" into "dark" in the root, on the server, so there's no flash. An explicit Light or Dark wins. `<html data-section>` scopes the stylesheet, so portalled menus and toasts match.
+
+## Shell and brand
+
+| File | Holds |
+| --- | --- |
+| `src/routes/_parda/route.tsx` | The layout: `PARDA_BRAND` in `staticData`, the `· Parda` title, `noindex` unless a page uses `seo()`, `pardaFontPreloads`, the 404 |
+| `src/features/parda/brand.ts` | `PARDA_NAME`, `pardaTitle`, `pardaHead` (a private page's head), `PARDA_BRAND` (`id: "parda"`, `defaultScheme: "dark"`, `themeColors` from the masks, icons, manifest) |
+| `src/features/parda/links.ts` | `pardaLinks` and `PARDA_PATHS`: every link into Parda. A link arrives with its route |
+| `src/features/parda/shell/` | `PardaFrame` (top mask, footer, tab bar), `PardaSection` and `PardaNotFound`, the wordmark, the account menu |
+| `src/server/parda/manifest.ts`, `src/server/routes/parda-manifest.ts` | The manifest in each language, a Nitro route (`vite.config.ts`) |
+| `public/parda/` | The icons, rendered from `icon.svg`, and TMDB's logo (`tmdb.svg`, TMDB's own file) |
+
+- **One frame on every page** (decision 0233): the layout renders it, and the page renders its `<main>`. The top mask is always solid, so nothing in it sits on a picture.
+- **Sections:** the top mask's links from `md` up, the tab bar below. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists. The frame keeps the tab bar's height clear on phones.
+- **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame.
+- **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's `/app/parda/about`; the home becomes indexable in Task 62.
+- **The notice page** (`/app/parda/about`) holds TMDB's logo and notice, JustWatch's attribution, playback, players' ads, the uBlock Origin Lite stores (`BLOCKER_STORES`, the section `#ad-blocker` Task 64's button falls back to) and takedowns.
+- **Sign-in and sign-up** are copies of Taskline's (layers don't import each other).
+
+## The media kit
+
+`src/features/parda/kit/`, every piece in the "Parda/Kit" stories (drawn stand-in pictures from `.storybook/mocks/parda.tsx`, never TMDB's):
+
+| Piece | Notes |
+| --- | --- |
+| `TmdbImage` | A server-built `PardaImage` (`{ src, srcSet, width, height }`) in a fixed box: `poster` 2:3, `backdrop` 16:9, `scope` 2.39:1. Lazy unless `priority`. No picture: the title (`label`) on a piece of mask |
+| `PosterCard` | Poster and caption. A preview (backdrop, year, genres, score, overview) opens on a resting mouse; touch never opens it |
+| `BackdropCard`, `EpisodeCard`, `PersonCard` | Wide cards with a detail line; an episode row; a portrait with the part or the job |
+| `Rail`, `RailItem`, `RailSkeleton` | Core, in `src/components/data-display/rail.tsx`: scroll-snap, a named region, buttons for fine pointers. Give each item a width |
+| `Top10Rail` | The rank in the mask under each poster |
+| `RatingBadge`, `CertBadge`, `ProgressBar` | A score of 0 renders nothing; the bar is yellow on its dark track in both themes |
+| `Billboard` | See below |
+| Skeletons | One per piece, the same size, for streamed rails (CLS 0) |
+
+Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit under pictures, never on them; pass `alt=""` where the caption names the title.
+
+**The billboard:** a poster between the masks on phones, a 2.39:1 backdrop from `md`, the tagline as a subtitle over the scrim (none when TMDB has none), and the title, facts and `actions` in the lower mask. It moves every 8 s and stops for its visible pause button, a resting mouse, focus inside it and a hidden tab; under reduced motion it never moves and the button is hidden by CSS. Only the current, previous and next pictures are mounted. The title box has one height (two lines on phones, one from `md`, a long title at half size in two lines), so moving on shifts nothing. Preload the first picture from the page's head (Task 62).
 
 ## Catalogue
 
@@ -88,6 +125,10 @@ Then try it in the player lab.
 - **`pd_blocked_title`:** a takedown. The title leaves lists and its details are a 404, from every entry point, within 30 s. Admin screens for both arrive in Task 65.
 
 ## Pitfalls already solved
+
+- **Nothing under `/app/parda` matched an unknown address,** so the site's 404 answered outside Parda's frame. The splat route `/app/parda/$` fixes it.
+- **sr-only text inside a scrolling list widens the page:** it's absolutely positioned, so the list must be `relative` (`Rail` is, as `ScrollRegion`).
+- **A billboard title box of two lines everywhere left a void under short titles on laptops;** one line from `md`, with long titles at half size, keeps one height without it.
 
 - **Parda's tokens must outrank the visitor's presets:** `html[data-radius]` comes later in `app.css` with the same specificity, and `.dark[data-accent]` outranks the light rule, so `--radius` has its own `:root` rule and the dark rule repeats `--primary`. The "Parda/Tokens" stories check this with a rose accent and a round radius.
 - **Anek's Devanagari is too big as a variable font** (258 and 726 kB), so Devanagari uses the static 700 cut, mapped to every weight and width. Only Latin takes the width axis.

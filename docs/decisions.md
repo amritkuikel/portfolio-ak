@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (216 entries)</summary>
+<summary>Index (232 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -236,6 +236,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0229](#0229-tmdb-behind-one-client-one-cache-and-one-service): TMDB behind one client, one cache and one service
 - [0230](#0230-sources-as-data-adapters-as-code-a-frame-only-csp): Sources as data, adapters as code, a frame-only CSP
 - [0231](#0231-no-sandbox-decision-is-taken-yet): No sandbox decision is taken yet
+- [0232](#0232-pardas-look-is-masking-dark-by-default-and-a-section-can-resolve-its-own-theme): Parda's look is "Masking", dark by default, and a section can resolve its own theme
+- [0233](#0233-pardas-frame-and-media-kit): Parda's frame and media kit
 </details>
 
 ---
@@ -2880,3 +2882,21 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Changed in the plan:** Task 61's header is a solid top mask, not transparent over the billboard.
 
 **Rejected:** The Listings (bars as long as a title's runtime, starting from now), which the design roll assigned, and Cyclorama (a stage wall lit from below), both the owner's call after seeing the comps. A `.dark` class set by a script for the section, which would flash.
+
+## 0233: Parda's frame and media kit
+
+**What:** Task 61's shell, brand and kit.
+- **One frame on every page.** The `_parda` layout renders `PardaFrame` (the solid 60 px top mask, the footer, the phone's tab bar) around every page, sign-in and sign-up included. Taskline gives its auth pages a frame of their own; Parda's pages are a frame plus one `<main>`, so they don't need one.
+- **Parda's own 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in Parda's frame. Without it nothing under `/app/parda` matches and the site's 404 answers.
+- **The home is a private placeholder until Task 62:** a header link needs a route, but its billboard and rails come with their data. It's `noindex` until then. The notice page `/app/parda/about` is indexable and in the sitemap.
+- **The brand:** the mark is a lit screen at 2.4:1 between two masks (`public/parda/icon.svg`); the PNGs are rendered from it with Playwright. The accent (`amber`) is never seen, because `parda.css` redefines `--primary`. The manifest takes the dark ground and mask.
+- **TMDB's logo is TMDB's own file** (`public/parda/tmdb.svg`, its "blue short" logo from themoviedb.org), smaller than Parda's mark, as its terms ask. Its notice is a message: English word for word, translated in Nepali.
+- **The kit takes server-built images** (`PardaImage`, the type `tmdb/images.ts` now returns, with `still` and `profile` sizes added) and links typed `LinkOptions`, so a rail of cards needs no generics. A missing picture is a piece of mask holding the title in display type.
+- **The billboard** keeps only the current, previous and next pictures in the page (a slow connection loads three, not all). The lower mask has one height whatever the title: two lines on phones, one from `md`, where a title over 22 characters is set at half size in two lines. It moves every 8 s and stops for the pause button, a resting mouse, focus inside it and a hidden tab. Under reduced motion it never moves: the JavaScript checks the media query and CSS hides the button, so nothing shifts on hydration.
+- **The Top 10** puts the rank in the mask under each poster, beside the title, not over or beside the picture: big numerals next to posters are a known service's signature (PLAN 12.6).
+- **`Rail`** is core (`src/components/data-display/rail.tsx`), but only Parda uses it so far, so strip-demo removes it with Parda (`SHARED`). Its buttons show for fine pointers and measure the list only once the rail is touched. The list is `relative`, or sr-only text inside it widens the page.
+- **The poster preview** is Radix's `HoverCard`, which ignores touch, so a tap always follows the link.
+
+**Why:** PLAN Task 61 and the direction contract (decision 0232).
+
+**Alternatives considered:** a full home in this task (it would need the catalogue functions and middleware Task 62 builds); an auth frame with a picture panel like Taskline's (Masking keeps the picture for titles); rendering every billboard slide (bandwidth on slow connections); a fixed 2-line title box on every width (a void under short titles on laptops).

@@ -120,6 +120,10 @@ export default defineConfig(async ({ command, mode }) => {
 						method: "GET",
 					},
 					// taskline:end
+					// parda:start
+					"/app/parda/manifest.webmanifest": { handler: "./src/server/routes/parda-manifest.ts", method: "GET" },
+					"/ne/app/parda/manifest.webmanifest": { handler: "./src/server/routes/parda-manifest.ts", method: "GET" },
+					// parda:end
 				},
 				// Security headers on every response (pages, assets, API). The CSP is per
 				// request (nonce) and is added by src/middleware/security-headers.ts.

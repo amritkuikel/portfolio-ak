@@ -94,6 +94,7 @@ const INDEXABLE: ReadonlyArray<{
 	{ to: "/apps/forms", label: "forms", context: {}, path: "/apps/forms" },
 	// apps:end
 	{ to: "/app/taskline", label: "taskline", context: {}, path: "/app/taskline", siteName: "Taskline" }, // @taskline
+	{ to: "/app/parda/about", label: "parda about", context: {}, path: "/app/parda/about", siteName: "Parda" }, // @parda
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 	// @new-feature:indexable
 ];

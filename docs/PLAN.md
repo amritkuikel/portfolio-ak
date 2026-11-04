@@ -2169,7 +2169,7 @@ As 11.1, with these differences:
 | --- | --- | --- | --- |
 | 59 | Foundation: the `parda` layer, TMDB client and cache, sources and adapters, CSP, the legal controls, the player lab | xhigh | Done (decisions 0228–0231) |
 | 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Done (decision 0232) |
-| 61 | Shell, brand, auth pages and the media kit | high | Planned |
+| 61 | Shell, brand, auth pages and the media kit | high | Done (decision 0233) |
 | 62 | Home and hubs | high | Planned |
 | 63 | Title, credits, person and collection pages | xhigh | Planned |
 | 64 | The player, progress and Continue watching, guests | xhigh | Planned |
@@ -2426,11 +2426,11 @@ Across the players:
   - `/$type/$id` (movie or series, with a slug; a wrong slug gets a 301) and `/$type/$id/credits`;
   - `/person/$id`, `/collection/$id`, `/c/$slug`.
 - **Watching and the library:** `/watch/$type/$id` (`?s=&e=`), `/party/$code`, `/library/$tab`, `/schedule`.
-- **Accounts and the rest:** `/profiles`, `/sign-in`, `/sign-up`, `/about`.
+- **Accounts and the rest:** `/profiles`, `/sign-in`, `/sign-up`, `/about`, and `/$`, which answers Parda's 404 in its frame (0233).
 - **Admin:** `/admin/parda` plus sources, titles, reports, settings, curation and layout, and the player lab.
 
 **SEO:**
-- **Indexable:** home, hubs, discover, title, credits, person, collection and curated pages. They use `seo({ siteName: "Parda" })` and JSON-LD, and are listed in `INDEXABLE`. Pages titled from TMDB also go in `CONTENT_TITLED`.
+- **Indexable:** home, hubs, discover, title, credits, person, collection and curated pages, and the notice page `/about` (0233). They use `seo({ siteName: "Parda" })` and JSON-LD, and are listed in `INDEXABLE`. Pages titled from TMDB also go in `CONTENT_TITLED`.
 - **`noindex`:** watch, party, library, profiles, schedule, sign-in and sign-up.
 - **Sitemap** through `SITEMAP_SOURCES`, from `pd_title`: the top 500 popular titles, the billboard and collection titles, minus takedowns.
 
@@ -2505,19 +2505,27 @@ Across the players:
 
 **Left for the owner:** nothing.
 
-### Task 61: Shell, brand, auth pages and the media kit (planned)
+### Task 61: Shell, brand, auth pages and the media kit (done)
 
-- **Layout and brand:** the `_parda` layout, `PARDA_BRAND` (`id: "parda"`, `defaultScheme: "dark"`, `themeColors` from the mask tokens: `#d9d6ce` and `#08080a`), `pardaLinks`, the manifest route, `public/parda`, the `· Parda` suffix. The layout's head uses `pardaFontPreloads`.
-- **Header:** the top mask, always solid (0232 replaced "transparent over the billboard": in Masking, text never sits on the picture except the subtitle), with the user menu, language and theme. Nav links arrive with their routes; this task adds Home and About.
-- **Phone tab bar.** **Footer** with the TMDB logo and notice. **The notice page** `/about`. **The 404.**
-- **Sign-in and sign-up,** copied from Taskline's.
-- **Kit:**
-  - images and cards: `TmdbImage`, `PosterCard` (hover preview on `pointer: fine`), `BackdropCard`, `EpisodeCard`, `PersonCard`;
-  - `Rail` (shared) and `Top10Rail`;
-  - badges: `RatingBadge`, `CertBadge`, `ProgressBar`;
-  - the `Billboard`, with a visible pause button (WCAG 2.2.2) that pauses on hover and focus and never auto-advances under reduced motion;
-  - skeletons for each.
-  - Every piece has a story.
+**Done** (decision 0233; the guide's "Shell and brand" and "The media kit").
+
+**What changed:**
+- **Layout and brand:** `src/routes/_parda/route.tsx` with `PARDA_BRAND` (`id: "parda"`, dark by default, `themeColors` `#d9d6ce` and `#08080a`), `pardaLinks`, `pardaTitle` and `pardaHead`, `pardaFontPreloads`, the manifest route in both languages, and `public/parda` (icons rendered from `icon.svg`, and TMDB's own logo).
+- **Frame on every page:** the solid top mask (wordmark, Home and About, language, theme, Sign in or the account menu), the footer (TMDB's logo and notice, the notice page, the analytics choice) and the phone's tab bar.
+- **Pages:** a private placeholder home, the notice page `/app/parda/about` (indexable, in the sitemap: TMDB and JustWatch, playback, players' ads, the four uBlock Origin Lite stores and `#ad-blocker`, takedowns), sign-in and sign-up copied from Taskline's, and Parda's 404 through `/app/parda/$`.
+- **Kit:** `TmdbImage`, `PosterCard` (preview on a resting mouse), `BackdropCard`, `EpisodeCard`, `PersonCard`, `Rail` (core) and `Top10Rail`, `RatingBadge`, `CertBadge`, `ProgressBar`, the `Billboard` (visible pause, held on hover and focus, still under reduced motion, three pictures mounted), and a skeleton for each. `tmdb/images.ts` returns the kit's `PardaImage` and gains still and profile sizes.
+- **Stories:** "Parda/Kit" (7) and "Parda/Shell" (4), on drawn stand-in pictures (`.storybook/mocks/parda.tsx`, now also the tokens stories' decorator).
+- **Tests:** five new flows in `e2e/flows/parda.spec.ts` (the brand and dark default, an explicit light choice, the 404 in the frame, the manifests, the tab bar); the new pages in `e2e/support/pages.ts`; About in `INDEXABLE`.
+
+**Deviations (0233):**
+- **The home is a private placeholder.** The header's Home link needs a route, and its billboard and rails come with Task 62's data. Task 62 makes it indexable and adds it to the sitemap.
+- **One frame for sign-in and sign-up too,** not an auth frame with a picture panel like Taskline's.
+- **The Top 10's rank sits under each poster,** because big numerals beside posters imitate a known service (12.6).
+- **`/app/parda/$`** is a route the plan didn't list: without it the site's 404 answered.
+
+**Numbers:** entry 272.5 of 275 kB (271.4 before). Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, build-storybook, the route-SEO, e2e-pages, strip-marker, sitemap, message-usage, layout, TMDB, token and section-brand tests, the Parda stories in en/light and ne/dark (30 of 30), and `e2e/flows/parda.spec.ts` with the review of every `/app/parda` and `/admin/parda` page (85 of 85). The full suites wait for Task 70.
+
+**Left for the owner:** nothing.
 
 ### Task 62: Home and hubs (planned)
 

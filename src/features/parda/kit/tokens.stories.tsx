@@ -1,38 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ReactNode, useLayoutEffect } from "react";
 import { expect } from "storybook/test";
 import { Button } from "@/components/ui/button";
+import { withParda } from "../../../../.storybook/mocks/parda";
 
 /** Parda's design system, "Masking" (src/styles/parda.css, decision 0232): the tokens in the theme and locale of the run. */
-function PardaSection({ children }: { children: ReactNode }) {
-	// On the app's pages the root sets this from the section's brand.
-	useLayoutEffect(() => {
-		const { dataset } = document.documentElement;
-		const { accent, radius } = dataset;
-		dataset.section = "parda";
-		// The picks most likely to show through: the section must outrank them.
-		dataset.accent = "rose";
-		dataset.radius = "round";
-		return () => {
-			delete dataset.section;
-			if (accent) dataset.accent = accent;
-			else delete dataset.accent;
-			if (radius) dataset.radius = radius;
-			else delete dataset.radius;
-		};
-	}, []);
-	return children;
-}
-
 const meta = {
 	title: "Parda/Tokens",
-	decorators: [
-		(Story) => (
-			<PardaSection>
-				<Story />
-			</PardaSection>
-		),
-	],
+	decorators: [withParda],
 	parameters: { layout: "fullscreen" },
 } satisfies Meta;
 export default meta;
