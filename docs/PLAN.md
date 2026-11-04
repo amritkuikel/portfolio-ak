@@ -2160,7 +2160,6 @@ As 11.1, with these differences:
 | Resume | **Per player:** a start position from our record where the player takes one, and the player's own memory on Viduki (the owner checked) |
 | Ads | **The iframes run without a `sandbox`** (the owner accepted this on 2026-11-04), because every usable player refuses one (12.4). A click in a player can therefore open a popup or redirect the tab. A web page can't block ads inside another origin's frame, so Parda ranks cleaner players higher and adds a click shield where the player obeys commands, a redirect guard, an *Install uBlock Origin Lite* button and an ads report. The player isn't proxied, its stream isn't extracted, and its sandbox check isn't evaded |
 | Watch party | **In scope** (2026-11-04), through a hosted realtime service. Full sync with pause on buffering on players that obey commands (XPass today). Other players start together and can resync |
-| Legal | The streams are aggregated, not licensed, and TMDB is non-commercial only. So: a playback kill switch, a takedown list enforced everywhere, a notice page that also says players bring their own ads and trackers, `noindex` on watch and party pages, no ads and no payments |
 | Git | As Part 5 |
 
 ### 12.3 Status
