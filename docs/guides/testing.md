@@ -117,3 +117,6 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 
 - **Radix menus in tests:** they open on pointer events. Use real clicks (Testing Library `userEvent`, puppeteer `page.click`), not `element.click()`.
 - **A developer's .env changed test results:** Vitest loads `.env`, and a PostHog key there failed the "without a key" tests locally (CI has no `.env`). `tests/setup/env.ts` sets the required values and removes the optional services' keys (PostHog, Sentry); a test that needs one uses `vi.stubEnv`.
+- **Server functions run only inside the Start runtime.** Keep them as thin wrappers and test the plain functions in `src/server/**` they call.
+- **Browser scripts against dev:** a devtools SSE stream stays open (wait for `load`, not network idle), clicks must wait for hydration, and layout-shift numbers aren't meaningful (no font preloads in dev). Measure CLS on a production build.
+- **Component tests that load a route whose queries call server functions** (the portfolio's `_site` layout) `vi.mock` that functions module: function files import server code statically, which only Start's compiler strips from browser code (`tests/components/layout/section-headers.test.tsx`).

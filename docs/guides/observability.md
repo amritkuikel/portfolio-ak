@@ -40,3 +40,7 @@ All optional except the logs. Without their variables, Sentry and PostHog are of
 
 - **`GET /api/health`** (and `HEAD`) is for uptime monitors (0124): `200` with `{ status, checks: { database: { status, latencyMs } }, checkedAt }`, or `503` when the database doesn't answer within 3 s. Never cached, no failure details (they're in the log line).
 - **`/health`** shows the same check as a page for people (noindex).
+
+## Pitfalls already solved
+
+- **Expected errors aren't logged:** `src/client.tsx`'s `onCaughtError` skips AppErrors below 500 (a 403 page is the intended result). Don't add `console.error` for them elsewhere.

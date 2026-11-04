@@ -227,6 +227,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0220](#0220-tasklines-custom-fields-definitions-per-scope-values-in-jsonb-checked-against-them-options-by-id-required-means-before-its-completed): Taskline's custom fields: definitions per scope, values in jsonb checked against them, options by id, required means "before it's completed"
 - [0221](#0221-tasklines-automations-in-the-changes-transaction-a-savepoint-per-rule-no-chaining-recurring-tasks-move-their-rule-from-task-to-task): Taskline's automations: in the change's transaction, a savepoint per rule, no chaining; recurring tasks move their rule from task to task
 - [0222](#0222-the-typecheck-runs-tsc-with-a-4-gb-heap): The typecheck runs tsc with a 4 GB heap
+- [0223](#0223-claudemd-holds-only-what-most-tasks-need): CLAUDE.md holds only what most tasks need
 - [0224](#0224-tasklines-templates-one-definition-with-local-ids-built-ins-in-code-edited-as-json): Taskline's templates: one definition with local ids, built-ins in code, edited as JSON
 - [0225](#0225-tasklines-reports-computed-from-live-tasks-and-the-activity-log-updates-set-the-health): Taskline's reports: computed from live tasks and the activity log; updates set the health
 - [0226](#0226-part-5-reviewed-what-changed-and-what-stayed): Part 5 reviewed: what changed and what stayed
@@ -2724,6 +2725,16 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 
 - `pnpm typecheck` runs `node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit` instead of `tsc --noEmit`. On a 12 GB Windows machine Node's default heap is about 2 GB, and `tsc` over this repository needs about that: Task 56's two routes (each route widens TanStack Router's path unions, which `seo.ts`, `links.ts` and every typed link check) took it from just under the limit to "JavaScript heap out of memory" on every run, while its own new files cost under 90 ms of checking each. CI's runners have a larger default; the flag makes the gate the same everywhere.
 - **Alternatives considered:** `NODE_OPTIONS` in the script (not portable to Windows' shell); fewer route definitions (the routes are the product's pages); project references to split the program (a larger change than the problem).
+
+## 0223: CLAUDE.md holds only what most tasks need
+
+*Extends 0143.*
+
+- `CLAUDE.md` went from 186 lines and 30.7 KB to about 100 lines and 14 KB. It keeps the golden rules, the commands, the definition of done, a short guide table and the pitfalls most tasks can hit. The stack's versions moved to `architecture.md`, the file map to `conventions.md`, the seed commands to `deployment.md`, and the other pitfalls to their area's guide. A new pitfall goes in its area's guide; it goes in `CLAUDE.md` only if most tasks would hit it. `docs/PLAN.md` is never read whole: search it, or read only the lines you need.
+- **Why:** `CLAUDE.md` loads in every session, whatever the task, so every byte there costs every reader. A guide costs only the sessions that open it.
+- **Kept despite being per-area:** the Taskline bullet, while Part 5 is in progress and its tasks keep adding to those services.
+- **Later plan tasks** still say to update `CLAUDE.md`'s layout and pitfalls. The plan is a record and isn't edited for this; this decision and golden rule 10 take priority.
+- **Alternatives considered:** `@` imports of the guides (they load at startup, which saves nothing); leaving every pitfall in `CLAUDE.md` (the cost grows with every task).
 
 ## 0224: Taskline's templates: one definition with local ids, built-ins in code, edited as JSON
 

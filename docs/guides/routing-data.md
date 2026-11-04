@@ -112,7 +112,7 @@ The server function takes the key in its input (`key: z.uuid()`), the scope is `
 
 `src/server/**` and `*.server.*` never reach the client: TanStack Start's import protection fails the build, and `tests/server/env-boundary.test.ts` scans imports. Allowed importers are `src/server`, `src/functions`, `src/middleware` (dynamic import inside `.server()` only), and server routes (`.ts` route files with only `server.handlers`, like `/sitemap.xml`).
 
-Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/start/http-status.ts`) are for routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story.
+Modules that use Start runtime helpers (`createIsomorphicFn`, e.g. `src/lib/start/http-status.ts`) are for routes and server code only. Storybook has no Start plugin, so a component importing them breaks every story that renders it. Example: `assertRoutePermission` lives in `rbac/route-guard.ts`, not `rbac/can.tsx`.
 
 ## Pitfalls already solved
 
@@ -120,3 +120,6 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 
 - **The root `beforeLoad` and `matches`:** reading `matches` there makes the route tree's types circular (`match.routeId` turns `unknown` everywhere). Its return type is written out (`Promise<{ session: Session | null }>`) to break the cycle (0161).
 - **Nitro routes** (`vite.config.ts` → `nitro.routes`) are for endpoints outside Start, e.g. the cron job and the web manifest. Nitro's dev server hands requests whose `Sec-Fetch-Dest` isn't a document (`image`, `manifest`…) to Vite unless a Nitro route matches, so a Start server route fetched that way is a 404 in dev only (0067, 0103).
+- **Server-function errors are HTTP 200:** Start sends them as a serialized payload (`x-tss-serialized`). When checking a refusal over HTTP, look for the code (`FORBIDDEN`) in the body.
+- **Dev-only pages** live under `src/routes/dev/`: the layout 404s unless `DEV_ROUTES` (`src/lib/dev-routes.ts`: `vite dev`, or a build with `VITE_DEV_ROUTES=true`, which the e2e harness uses and production refuses; 0162). Their server functions use `devOnlyMiddleware`. Gate dev-only code on `DEV_ROUTES`, not `import.meta.env.DEV`, or the e2e build breaks it.
+- **Server-only imports in middleware go inside `.server()`** (`await import("@/server/…")`). A dynamic import in an exported helper is still in the client graph, and import protection warns in dev.

@@ -12,6 +12,14 @@
 3. **Migrate and seed:** from CI or locally against production, run `pnpm db:migrate` (it uses `DATABASE_URL_UNPOOLED`), then `pnpm db:seed-admin --email … --password … --name …`.
 4. **Deploy.** Then open `/health` (database status; point your uptime monitor at `/api/health`, which answers 503 when the database is down), `/robots.txt`, `/sitemap.xml` (absolute URLs on your domain) and sign in at `/login`.
 
+## Seeds
+
+```bash
+pnpm db:seed-admin | db:seed-demo   # seed-demo: roles, users with them, 30 Test CRUD items (0117)
+pnpm db:seed-portfolio   # the portfolio's demo content, only when there is no profile yet (0176) <!-- @portfolio -->
+pnpm db:seed-taskline --password "…"   # Taskline's demo team: 5 accounts, 3 projects, 60 tasks (dev:local seeds it fresh) <!-- @taskline -->
+```
+
 ## Scheduled jobs
 
 `vercel.json` runs two jobs daily (Hobby plans allow daily crons only). Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; without `CRON_SECRET` the routes answer 404.
@@ -50,3 +58,4 @@ Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don'
 
 - **Running production locally** needs `EMAIL_PROVIDER=resend` and a `RESEND_API_KEY` (any `re_…` placeholder works when emails aren't sent). Production refuses the console email provider.
 - **Raw SQL inserts into Better Auth tables** (seeds, scripts) must set `updated_at` on `account` and `session`: those columns have no database default.
+- **Slow `pnpm dev`?** Run `pnpm diagnose`: a remote database costs a few hundred ms per query from far away; `pnpm dev:local` uses a local one (0155).

@@ -2124,12 +2124,13 @@ The sandbox checked and finished, the review with its fixes, the template matrix
 
 ---
 
-## 12. Part 6: Parda, a movie, series and anime streaming product (Tasks 59–70, planned)
+## 12. Part 6: Parda, a movie, series and anime streaming product (Tasks 59–70 with 65a and 69a, planned)
 
 Part 6 adds **Parda** (पर्दा, "the screen"), a streaming product with its own URL, shell and brand, built as a layer the way Taskline was (0208).
 - **Catalogue:** TMDB.
-- **Playback:** third-party embed players, Viduki first, held as admin-managed sources.
-- **Visitors** browse and watch without an account. Saving starts a guest session. The admin runs curation, sources, takedowns and reports from `/admin/parda`.
+- **Playback:** third-party embed players, held as admin-managed sources and ordered automatically by measured speed, buffering and quality. Vidy plays first today, and viewers can choose another server.
+- **Watch parties:** a shared link plays one title together, and one viewer's buffering pauses the others where the player allows it.
+- **Visitors** browse and watch without an account. Saving or joining a party starts a guest session. The admin runs curation, sources, takedowns and reports from `/admin/parda`.
 
 Like sections 10 and 11, **each task can be done in a fresh session that has read nothing else** but CLAUDE.md, section 10.1 and this section. Where a task says "check", check the code or the docs, because versions and third-party players move.
 
@@ -2144,7 +2145,7 @@ As 11.1, with these differences:
 - **"Done" summary:** mark the task in 12.3 and replace its section with a summary (what changed, numbers, deviations, for the owner).
 - **Decisions:** numbered from the next free one when the task is written, nothing reserved. The first Part 6 decision records Parda as a layer at `/app/parda`, scoped guests (12.5) and the legal posture (12.2).
 
-### 12.2 Owner's choices (2026-11-03)
+### 12.2 Owner's choices (2026-11-03; playback, ads and parties revised 2026-11-04)
 
 | Topic | Choice |
 | --- | --- |
@@ -2153,10 +2154,13 @@ As 11.1, with these differences:
 | Name | **Parda** |
 | Look | **Dark by default, light allowed:** "system" resolves to dark in Parda, and an explicit Light choice wins. Its own tokens on Graphite, chosen from comps in Task 60 |
 | Catalogue | TMDB (read token in the local `.env` as `TMDB_READ_TOKEN`, never committed; the v3 API key isn't needed) |
-| Playback | **Viduki** (`https://viduki.net`), not VidCore (the owner found it slow). Sources are rows the admin adds, edits, removes and reorders, with no deploy |
-| Resume | **Viduki resumes by itself** (the owner checked). Parda only records and shows progress |
-| Ads | Popups and redirects are blocked by the iframe's `sandbox`. Ads drawn inside the player can't be removed from our page, and the player isn't proxied |
-| Legal | The streams are aggregated, not licensed, and TMDB is non-commercial only. So: a playback kill switch, a takedown list enforced everywhere, a notice page, `noindex` on watch pages, no ads and no payments |
+| Playback | **Several embed providers, Vidy first** (measured 2026-11-04, see 12.4). Viduki stays as a fallback, and VidCore stays out (the owner found it slow). Viewers can choose a server. Sources are rows the admin adds, edits, removes and reorders, with no deploy |
+| Order | **Automatic:** real viewers and a daily probe score the sources, the order changes once a day, and each play starts on the best source for that viewer and title. The admin can pin a source or switch to a manual order |
+| Quality | **Highest by default,** by choosing the source. No player lets our page set its quality, so slow connections start on an adaptive source |
+| Resume | **Per player:** a start position from our record where the player takes one, and the player's own memory on Viduki (the owner checked) |
+| Ads | **The iframes run without a `sandbox`** (the owner accepted this on 2026-11-04), because every usable player refuses one (12.4). A click in a player can therefore open a popup or redirect the tab. A web page can't block ads inside another origin's frame, so Parda ranks cleaner players higher and adds a click shield where the player obeys commands, a redirect guard, an *Install uBlock Origin Lite* button and an ads report. The player isn't proxied, its stream isn't extracted, and its sandbox check isn't evaded |
+| Watch party | **In scope** (2026-11-04), through a hosted realtime service. Full sync with pause on buffering on players that obey commands (XPass today). Other players start together and can resync |
+| Legal | The streams are aggregated, not licensed, and TMDB is non-commercial only. So: a playback kill switch, a takedown list enforced everywhere, a notice page that also says players bring their own ads and trackers, `noindex` on watch and party pages, no ads and no payments |
 | Git | As Part 5 |
 
 ### 12.3 Status
@@ -2170,13 +2174,16 @@ As 11.1, with these differences:
 | 63 | Title, credits, person and collection pages | xhigh | Planned |
 | 64 | The player, progress and Continue watching, guests | xhigh | Planned |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
+| 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Planned |
 | 66 | Search and discover | high | Planned |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
 | 68 | Schedule and new-episode alerts | high | Planned |
 | 69 | Admin II: overview, curation, home layout | high | Planned |
+| 69a | Watch party | xhigh | Planned |
 | 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
 
 - **Order is fixed.** The legal controls exist from 59 and get their admin UI in 65, right after public playback.
+- **Lettered tasks** keep the numbers of later parts unchanged.
 - **Nav links and rails arrive with their routes and data,** never before.
 
 ### 12.4 What exists today (facts the tasks rely on)
@@ -2195,13 +2202,25 @@ Checked 2026-11-03; check again, because these services change.
   - overviews fall back to English.
 - **Regions:** NP is missing from both the certification and the watch-provider regions (US and IN are present). The region falls back to the admin default.
 
-**Viduki:**
-- Servers `1` Multi Server, `2` Multi Language, `3` Multi Embeds, `4` Premium Embeds: `https://viduki.net/{n}/movie/{tmdb_or_imdb}?color={hex}` and `/{n}/tv/{id}/{season}/{episode}?color={hex}`. `color` is the only documented parameter.
-- postMessage events:
-  - `MEDIA_DATA`: `event.data.data` keyed by TMDB id. For a movie, `progress: { watched, duration }` in seconds; for TV, `show_progress["s1e1"].progress`.
-  - `viduki:all-servers-failed` (from server 1): `stage` is `initial`, `manual-switch` or `playback-error`, plus `status` and `media`.
-- Their docs check `event.origin === "https://www.viduki.net"` while the URLs are on `viduki.net`, so both are allowed until the lab shows which.
-- "Minimal ads". Their site loads `disable-devtool` and a devtools detector.
+**Players** (measured 2026-11-04 from Kathmandu, in automated Chrome with autoplay forced on: one run each on *Fight Club* (`550`), *Breaking Bad* (`1396`) S1E1 and *Attack on Titan* (`1429`) S1E1, plus one movie run at 5 Mbps. Task 59's lab rechecks all of this in normal Chrome):
+
+| Source | Embed URLs | Messages to the parent | Start position | Measured |
+| --- | --- | --- | --- | --- |
+| **Vidy** | `https://www.vidy.st/movie/{id}`, `/tv/{id}/{s}/{e}`. Params `color`, `progress`, `autoplay`. The TV route plays anime, so no AniList mapping is needed | JSON strings: `PLAYER_EVENT` with `data: { event, currentTime, duration, id, mediaType, season, episode }` (`play` has `timestamp` instead of `currentTime`, and their docs show a flat shape), `MEDIA_DATA` with `data` as a JSON string keyed `movie-550` | `progress` | Started in 3.8, 5.9 and 5.8 s with no click. 1080p on all three, 2160p in its own menu, **not adaptive**. No stalls, but at 5 Mbps 4 s of stalls in 30 s and an 8.5 s seek. 0–1 popups per 3 clicks. Video from `ultramoss.top` and `moon.goldenkite.top`. Ignores commands |
+| **Viduki 1, 2** | `https://www.viduki.net/{n}/movie/{id}?color={hex}`, `/{n}/tv/{id}/{s}/{e}?color={hex}` | Objects: `MEDIA_DATA` only, about 50 a second, keyed by TMDB id (movie `progress: { watched, duration }`, TV `show_progress["s1e1"].progress`). Server 1 documents `viduki:all-servers-failed` (`stage` is `initial`, `manual-switch` or `playback-error`, plus `status` and `media`) | Its own memory (the owner checked) | Started 2–4 s after a click, sometimes only after several clicks. Mostly 720p, adaptive. No stalls in any run, 5 Mbps included. **No popups in any run.** Video from `p16-sg.tiktokcdn.com` (1) and `husvu445bey.com` (2). Ignores commands. Their site loads `disable-devtool` and a devtools detector |
+| **XPass** | `https://play.xpass.top/e/movie/{id}?autostart=true`, `/e/tv/{id}/{s}/{e}?autostart=true` | Objects: `{ type: "player.event", id, event: { name, position, duration } }`, with names `ready`, `position`, `play`, `pause`, `seek`, `end`, `volume`, `error`. It also forwards Yandex Metrica strings (`__yminfo`) | `seek` command | **Obeys commands:** `{ type: "player.action", action, ... }` with `play`, `pause`, `seek` + `position`, `playAt`, `setVolume`, `mute`, `unmute`, `setMute` (pause and seek tested). Started in 6–15 s, sometimes after a click. Up to 1080p, adaptive, up to 15 s to ramp up. TV stalled 3.8 s, no stalls at 5 Mbps. 1 popup per 3 clicks. Most trackers: `mc.yandex.ru`, `tags.crwdcntrl.net`, `match.adsrvr.org`, `cm.g.doubleclick.net`, `ib.adnxs.com` |
+| **VidRock** | `https://vidrock.to/movie/{id}`, `/tv/{id}/{s}/{e}`. Params `autoplay`, `autonext`, `theme`, `download` (on by default), `nextbutton`, `episodeselector`, `lang` | Objects: `PLAYER_EVENT` with `data: { event, currentTime, duration, tmdbId, mediaType, season, episode }`, `MEDIA_DATA` with an array | None documented | Started 2–4 s after a click. Movie 1080p, TV 360p with a 5.5 s stall, anime "Content unavailable" with no message to us. No stalls at 5 Mbps. 1–2 popups per 3 clicks. Video from `lightspeed.colocolocolo.workers.dev`, and several of XPass's trackers. Ignores commands |
+| **VidZee** (disabled) | `https://player.vidzee.wtf/embed/movie/{id}`, `/embed/tv/{id}/{s}/{e}`. The documented `/v2/embed/...` returned 404 | As VidRock, with `MEDIA_DATA` keyed by id | None documented | Plays under any sandbox, but in every run its frame navigated away to ad domains or an error about 12 s in, which automation may have triggered. 480p–1080p. Same video CDN as VidRock |
+| **VidFast** (disabled) | `https://vidfast.vc/movie/{id}`, `/tv/{id}/{s}/{e}`, TMDB or IMDb. Params `autoPlay`, `startAt`, `theme`, `server`, `hideServer`, `sub`, `nextButton`, `autoNext` and more. Nine mirror origins | Documented: `PLAYER_EVENT` with `data`, `MEDIA_DATA` keyed `m533535`, `t63174` | `startAt` | Documents commands (`{ command: "play" }`, `pause`, `seek` + `time`, `volume`, `mute`, `getStatus`). Never left "FETCHING, ONE MOMENT..." in 3 runs, which automation may have caused, and opened a popup on 5 of 5 clicks |
+| **VidLink** (disabled) | `https://vidlink.pro` | Docs not read | Unknown | The site and its embeds returned a Cloudflare 502 throughout |
+| **Viduki 3, 4** (disabled) | `https://www.viduki.net/{3,4}/...` | None seen, so no progress | Unknown | Pickers wrapping other providers. 3 defaults to VidFast and never started (a popup on 5 of 5 clicks). 4 plays XPass, with the same results |
+
+Across the players:
+- **Sandbox:** a `sandbox` attribute, with or without `allow-popups`, stops every usable player. Viduki says "EMBED BLOCKED", Vidy "Iframe Sandbox Detected", VidRock "Sandbox Not Allowed", VidFast "Please Disable Sandbox", XPass "Sandbox Detected". Only VidZee plays.
+- **Missing everywhere:** a buffering event, and a documented way to set quality. Buffering has to be inferred; position updates arrive 4–7 times a second on Vidy, VidRock and XPass.
+- **Timecodes differ between sources:** the same episode ran 3480–3502 s and the same anime episode 1541–1550 s. *Fight Club* was 8348 s everywhere.
+- **Hosts:** bare `vidy.st` and `viduki.net` redirect (301) to `www`, and `allow="autoplay"` fails after a cross-origin redirect (Vidy's docs), so templates use the final host. Viduki's messages come from `https://www.viduki.net`.
+- **Clicks:** popups followed clicks only. No run redirected the top page, though the sample is small.
 
 **Reused from the repo** (copied as patterns when they belong to another layer, because `--keep-parda` must build alone, 0215):
 - `SectionBrand` and `useSectionAccent` (`src/lib/section-brand.ts`);
@@ -2236,16 +2255,16 @@ Checked 2026-11-03; check again, because these services change.
 | Part | Path |
 | --- | --- |
 | Routes | `src/routes/_parda/route.tsx` (pathless layout: `staticData: { brand: PARDA_BRAND }`, `pardaHead`, its own 404) and `src/routes/_parda/app/parda/**`; admin at `src/routes/_admin/admin/parda/**` |
-| Feature | `src/features/parda/`: `brand.ts`, `links.ts` (`pardaLinks`), `search.ts`, `keys.ts`, `queries.ts`, `lib/fonts.ts`, `shell/`, `kit/`, `home/`, `title/`, `player/` (UI and isomorphic `adapters/`), `search/`, `discover/`, `library/`, `profiles/`, `schedule/`, `admin/` |
-| Server | `src/server/parda/`: `tmdb/` (client, cache, mappers, `store.ts` singleton), `catalog/`, `library/` (`progress.ts`), `profiles/`, `player/sources.ts`, `notify/`, `admin/`, `guest-data.ts`, `cron.ts`, `manifest.ts`; each module a `repository.ts` + `service.ts`; `ownedByProfile` |
+| Feature | `src/features/parda/`: `brand.ts`, `links.ts` (`pardaLinks`), `search.ts`, `keys.ts`, `queries.ts`, `lib/fonts.ts`, `shell/`, `kit/`, `home/`, `title/`, `player/` (UI, `stall.ts` and isomorphic `adapters/`), `party/`, `search/`, `discover/`, `library/`, `profiles/`, `schedule/`, `admin/` |
+| Server | `src/server/parda/`: `tmdb/` (client, cache, mappers, `store.ts` singleton), `catalog/`, `library/` (`progress.ts`), `profiles/`, `player/` (`sources.ts`, `ranking.ts`), `party/`, `notify/`, `admin/`, `guest-data.ts`, `cron.ts`, `manifest.ts`; each module a `repository.ts` + `service.ts`; `ownedByProfile` |
 | Functions | `src/functions/parda/*.ts` (catalogue: `withPardaCatalog`; library: `requirePardaViewer` → `withPardaServices`), `src/functions/parda-admin/*.ts` (`requirePermission` → `withServices`, TMDB from the singleton) |
 | Middleware | `src/middleware/parda.ts`. `withPardaCatalog`: optional session, active profile from a `pd_profile` cookie, region and cap, a per-IP limit without a session. `requirePardaViewer`: session (guests allowed), creating the default profile `on conflict do nothing` |
 | Schema | `src/server/db/schema/parda/*.ts`, tables `pd_*`, exported with `// @parda` |
-| Nitro | `src/server/routes/{parda-manifest,cron-parda}.ts` (cron copied from `cron-attachments.ts`), `vercel.json`, `vite.config.ts` with `// @parda` |
+| Nitro | `src/server/routes/{parda-manifest,cron-parda,parda-probe}.ts` (cron copied from `cron-attachments.ts`), `vercel.json`, `vite.config.ts` with `// @parda` |
 | Styles | `src/styles/parda.css` scoped to `html[data-section=parda]`, imported in `app.css` inside `/* parda:start */ … /* parda:end */` |
 | Design | `.impeccable/surfaces/parda.md` (direction contract), `docs/design/parda.md` (DESIGN record); the portfolio's `.impeccable`/`DESIGN.md` paths in strip-demo narrowed to its own files, `.impeccable/config.json` in `SHARED` |
 | Storybook | `.storybook/mocks/functions/parda*.ts`, one per functions file |
-| Layer | `"parda"` in `LAYERS`; a full `SPECS.parda` (sentinel, paths, knipEntries, schema, `crons: ["/api/cron/parda"]`, `packageScripts: ["tmdb:record"]`); the CI strip matrix |
+| Layer | `"parda"` in `LAYERS`; a full `SPECS.parda` (sentinel, paths, knipEntries, schema, `crons: ["/api/cron/parda"]`, `packageScripts: ["tmdb:record", "parda:probe"]`, with `scripts/probe-sources.ts` and `.github/workflows/parda-probe.yml` in its paths); the CI strip matrix |
 
 **Shared changes (core, unmarked):**
 - **Theme:** `SectionBrand` gains `id` (rendered as `data-section` on `<html>`) and `defaultScheme?: "dark"`.
@@ -2258,7 +2277,7 @@ Checked 2026-11-03; check again, because these services change.
 - **Error code:** `UPSTREAM_UNAVAILABLE` (503) in `src/lib/errors.ts`, plus its messages.
 
 **Catalogue:**
-- **Env** (the `CLOUDINARY_*` pattern in `src/server/env.ts`): `TMDB_READ_TOKEN`, `TMDB_API_BASE`, `TMDB_IMAGE_BASE`, `PARDA_VIDUKI_BASE`.
+- **Env** (the `CLOUDINARY_*` pattern in `src/server/env.ts`): `TMDB_READ_TOKEN`, `TMDB_API_BASE`, `TMDB_IMAGE_BASE`, `PARDA_PLAYER_BASE`, `PARDA_PROBE_SECRET`, `PARDA_REALTIME_KEY`.
   - They also go in `.env.example`, the README, `scripts/diagnose.ts`, the `OFF` lists of `scripts/dev-offline.ts` and `tests/setup/env.ts`, the harness `APP_ENV` regex, and `tests/unit/env.test.ts`.
   - Without a token, Parda shows "catalogue not configured".
 - **Client:** `createTmdb(config, fetcher = fetch)`. 8 s timeout, one retry on 5xx, one `Retry-After` wait on 429, `include_adult=false`, `log()`.
@@ -2274,24 +2293,102 @@ Checked 2026-11-03; check again, because these services change.
 - **Fixtures:**
   - `scripts/record-tmdb-fixtures.ts` (`pnpm tmdb:record`) writes `tests/fixtures/tmdb/`.
   - Tests inject the fixtures as the fetcher.
-  - `e2e/harness/tmdb.ts` serves them, placeholder images, and a **fake Viduki player** (a complete document that passes axe, posting `MEDIA_DATA` and `all-servers-failed` on cue).
-  - CI never calls TMDB or Viduki.
+  - `e2e/harness/tmdb.ts` serves them, placeholder images, and a **fake player** (a complete document that passes axe). It speaks each adapter's messages on cue (`?shape=vidy`, `viduki`, `xpass`, `player-event`), including failures and stalls, and it obeys the `xpass` commands.
+  - CI never calls TMDB, a real player or the realtime service. The daily probe is a separate scheduled workflow, not part of CI.
 
 **Playback:**
-- **Sources** (`pd_source`): name (en/ne), movie and TV URL templates (`{id}`, `{imdb}`, `{season}`, `{episode}`, `{color}`, `{lang}`), origins, adapter, sandbox (strict or relaxed), auto-fallback, enabled, position.
-  - Seeded with Viduki 1–4 from `PARDA_VIDUKI_BASE` (the fake player in e2e).
+- **Sources** (`pd_source`): name (en/ne), movie and TV URL templates (`{id}`, `{imdb}`, `{season}`, `{episode}`, `{color}`, `{lang}`, `{start}`), origins, adapter, sandbox (`none`, `popups` or `strict`, default `none`), adaptive, needs click, CDN group, auto-fallback, enabled, pinned, position.
+  - **Seeded enabled, in this order:** Vidy, Viduki 1, XPass, Viduki 2, VidRock, with the hosts in 12.4. Vidy's query is `autoplay=true&progress={start}&color={color}`, and VidRock's is `autoplay=true&download=false&nextbutton=false&episodeselector=false&theme={color}`.
+  - **Seeded disabled:** VidFast, VidLink, VidZee, Viduki 3 and Viduki 4, so the admin can try them in the lab and enable them without typing templates.
+  - **CDN groups** mark rows that fail together: VidRock and VidZee share one, and Viduki 4 shares XPass's.
+  - `PARDA_PLAYER_BASE`, when set, points every seeded template at that host (the fake player in e2e).
   - Validated when saved: https only, and every template host must be in the row's origins.
   - `player/sources.ts` fills templates server-side.
-- **Adapters** (`features/parda/player/adapters/`) are the only code per provider:
-  - `viduki` turns `MEDIA_DATA` into progress and `all-servers-failed` into a failure;
-  - `none` ignores messages.
-  - A message counts only when `event.origin` is in the source's origins and `event.source` is its iframe.
-- **CSP:** `embedOrigins` is built from the enabled sources plus `https://www.youtube-nocookie.com`, read in `.server()` in `security-headers.ts` and cached 30 s. `img-src` gains the TMDB image origin and `https://i.ytimg.com`.
-- **The iframe:** `allow="autoplay; encrypted-media; fullscreen; picture-in-picture"` (no `allowfullscreen`), `referrerpolicy="origin"`, and `sandbox` without `allow-popups` or `allow-top-navigation`. `allow-same-origin` stays, for Viduki's own resume storage. A poster facade on title pages; the iframe loads at once on the watch page.
+- **Adapters** (`features/parda/player/adapters/`) are the only code per provider. Each turns messages into one event stream (`ready`, `position`, `play`, `pause`, `seeked`, `ended`, `failed`) and declares what the player can do:
+
+  | Adapter | Used by | Commands | Start position |
+  | --- | --- | --- | --- |
+  | `vidy` | Vidy | No | `param` |
+  | `viduki` | Viduki 1, 2 | No | `self` |
+  | `xpass` | XPass | Yes | `command` (`seek` after `ready`) |
+  | `vidfast` | VidFast | Yes, if the lab shows it plays | `param` |
+  | `player-event` | VidRock, VidZee | No | `none` |
+  | `none` | Viduki 3, 4, VidLink until checked, custom rows | No | `none` |
+
+  - A message counts only when `event.origin` is in the source's origins, `event.source` is its iframe and the payload passes the adapter's Zod schema. Anything else is ignored, including the Yandex Metrica strings XPass forwards.
+  - Adapters return early on messages they don't use, because Viduki sends about 50 a second.
+  - `player/stall.ts` infers buffering: the position hasn't moved for 1.5 s while the player says it's playing, ignoring the 3 s after a seek or a command. Ranking and parties share it.
+- **Server choice:** the switcher lists **Auto** first, then the enabled sources in ranked order with their measured quality ("Vidy · 1080p"). Auto is the default. A pick is stored per browser (`pd_server`, try/catch) and Auto clears it. A picked source that fails falls back to Auto with a toast.
+  - Switching keeps the viewer's place where the new player takes a start position, 30 s earlier because timecodes differ between sources.
+- **Starting and failing:**
+  - The watch loader returns two filled, ordered lists (`ok` and `slow`). The client picks one on mount and only then sets the iframe's `src`, so a slow connection never loads the wrong player. SSR renders the poster in the same box, so nothing shifts.
+  - A source has failed on the adapter's `failed` (`all-servers-failed`, XPass's `error`), or when the position hasn't moved by its deadline: its p90 start time plus 5 s, between 12 and 30 s (15 s before there's data).
+  - On a needs-click source the deadline starts at the viewer's first click in the player (a window `blur` while the iframe has focus), with a hint to press play. No click at all isn't a failure.
+  - A failure moves to the next source in a different CDN group, then to the rest: "Trying Viduki 1…", then "Not available right now" with the trailer and *Report*.
+  - A `none` source can't report anything, so it never auto-falls back and isn't scored.
+  - **Stuttering:** 2 stalls or 6 s stalled within the first 2 minutes offers a toast, "Playback is stuttering. Try a smoother server?". Parda never switches on its own once a title is playing.
+- **CSP:** `embedOrigins` is built from the enabled sources plus `https://www.youtube-nocookie.com`, read in `.server()` in `security-headers.ts` and cached 30 s. The player lab's route also allows disabled rows. Player origins never enter `script-src` or `connect-src`. `img-src` gains the TMDB image origin and `https://i.ytimg.com`.
+- **The iframe:** `allow="autoplay; encrypted-media; fullscreen; picture-in-picture"` (no `allowfullscreen`) and `referrerpolicy="origin"`. It has a `sandbox` attribute only when its row asks for one, always without `allow-top-navigation`. A poster facade on title pages; the iframe loads at once on the watch page.
+  - **What this means:** without a sandbox, a click in a player can open a popup or redirect the tab, and the ad behind it may be malicious. The same-origin policy still stops a player reading our page, cookies or storage.
+- **Ad protection.** A page can't block what happens inside another origin's frame, so this limits the damage:
+  - **Ranking:** popups per click lower a source's score (below).
+  - **Click shield** (sources with commands, XPass today): after `ready`, a transparent layer takes all clicks, and Parda's own controls send commands: play, pause, a seek bar, volume, shortcuts, and fullscreen on our wrapper. The iframe never gets a click, so click-triggered popups and redirects can't fire. A *Player menu* button lifts the layer for subtitles and quality, and warns that clicks may open ads. If the lab shows XPass won't start from a parent click, the first click passes through.
+  - **Redirect guard:** a window `blur` while the iframe has focus means a click inside the player. For the next 5 s `beforeunload` is armed, so a redirect from that click asks before leaving. At any other time, closing the tab doesn't prompt.
+  - **Install uBlock Origin Lite button** (the owner's request, 2026-11-04), on the watch page's player bar and the notice page, with a short line saying players can show ads and this extension can block them.
+    - **What it does:** a page can't install an extension, so the button is a link styled as a button. It opens the official store page in a new tab (`target="_blank" rel="noopener"`), and the viewer confirms there.
+    - **Which store,** from the browser on mount (`blockerStore(userAgent)`):
+      - Chrome and other Chromium browsers: `https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh`
+      - Edge: `https://microsoftedge.microsoft.com/addons/detail/ublock-origin-lite/cimighlppcgcoapaliogpjjdehbnofhn`
+      - Firefox: `https://addons.mozilla.org/firefox/addon/ublock-origin-lite/`
+      - Safari: `https://apps.apple.com/app/ublock-origin-lite/id6745342698`
+    - **Without JavaScript or extension support:** SSR renders the same button linking to the notice page's section, which lists all four stores, so nothing shifts on mount. Where extensions aren't supported, such as Chrome on Android, the button stays on that link, and the section also names Brave and AdGuard DNS.
+    - **Hiding it:** a page can't tell whether the extension is installed, so the viewer hides the button with *Don't show again* (`pd_blocker_hint`, per browser, try/catch). The notice page always keeps the links.
+    - **The wording promises nothing:** a player may still show ads, or refuse to play with a blocker, until the lab has checked it.
+  - **Reports:** `pd_report` gets the kind `ads`, shown per source in the admin.
 - **Progress:**
-  - Real `watched` and `duration` from the adapter, saved at most every 15 s and on `pagehide` (`fetch keepalive`), throttled inside the upsert.
-  - **Resume is Viduki's job:** no start time and no prompt. Its storage is per browser, so on another device a toast says "You were at 34:10" when the first report is more than 60 s behind ours.
-- **`pd_play`:** one row per playback (`playback_id`), `viewer_kind`, the source, failed (an `all-servers-failed`, or no `MEDIA_DATA` within 45 s). `set null` foreign keys, no IP or user agent.
+  - Real `watched` and `duration` from the adapter, saved at most every 15 s and on `pagehide` (`fetch keepalive`), throttled inside the upsert, with the source that played.
+  - **Resume depends on the adapter:** `param` fills `{start}` from our record, and `command` seeks after `ready`, so both work across devices, 30 s earlier when the recorded source was a different one. `self` is the player's job. Its storage is per browser, so with `self` or `none` on another device a toast says "You were at 34:10" when the first report is more than 60 s behind ours.
+- **`pd_play`:** one row per playback (`playback_id`), `viewer_kind`, the source, failed, `start_ms` (iframe set to first moving position), `stall_count`, `stall_ms`, `watched_s`, `switched_away`, the band (`slow`, `ok` or `unknown`) and `in_party`. `set null` foreign keys, no IP or user agent.
+
+**Source ranking** (Task 65a):
+- **Real viewers are the main signal:** `pd_play` carries start time, stalls, failures and switching away, on each viewer's real connection. The parent can't read resolution or bitrate inside a cross-origin player, so viewers say nothing about quality. Party plays don't count, because the source is forced and pauses are shared.
+- **The daily probe supplies quality and ads:** `scripts/probe-sources.ts` (`pnpm parda:probe`) and `.github/workflows/parda-probe.yml` (daily, plus manual dispatch) run Playwright with real Chrome on each source and three sample titles.
+  - **It reports:** alive, top height and ladder (adaptive or not), popups per click, top-page redirects and video hosts, to `POST /api/parda/probe` (`Authorization: Bearer <PARDA_PROBE_SECRET>`, strict Zod, 404 without the secret). `GET` on that route returns the rows and the titles (the most popular movie, series and anime).
+  - **How it runs:** one throwaway browser context per source, one iframe on a routed HTTPS page. Each second it reads the longest `<video>` in every frame, falling back to the player's position messages, and takes the ladder from `RESOLUTION=` lines in `#EXTM3U` responses. It clicks the centre at intervals if nothing plays, closes popups at once and saves nothing from responses.
+  - **It stays honest:** it's an ordinary automated browser and never hides that. A site may refuse it (VidFast may be such a case), so a probe failure alone never demotes a source with viewer data.
+  - **Its limits:** runners aren't in Nepal, so its speed isn't scored. Expect about 30 minutes a day, roughly 900 Actions minutes a month; check that against the repo's allowance.
+- **Score** (`player/ranking.ts`, pure and unit-tested), over the last 7 days:
+
+  `score = availability × (0.4 × quality + 0.4 × smoothness + 0.2 × speed) − ads`
+  - availability: 1 − failure rate;
+  - quality: 1080p or more is 1, 720p 0.67, 480p 0.44, unknown 0.5;
+  - smoothness: 1 − stall seconds per watched minute ÷ 6, floor 0;
+  - speed: 1 − median start ÷ 20 s, floor 0;
+  - ads: 0.1 × popups per click.
+
+  The task may tune the weights, with the reasons in a decision. A test checks that the measured table in 12.4 ranks Vidy first.
+- **Data needed:** under 20 plays in the window, a source uses probe numbers for what they cover and neutral values for the rest. With neither, it keeps its seed position. In auto mode, 5% of plays start on an eligible source with under 20 plays, so new sources get data.
+- **Two orders:** `cron-parda.ts` recomputes them once a day, so the order can't flap. `ok` sorts by score. `slow` puts adaptive sources first, then sorts by score, because Vidy's fixed bitrate stalled at 5 Mbps.
+- **At click, per viewer:** `player/sources.ts` reads the cached orders (30 s, with the sources) and this title's failures, which takes milliseconds and calls no player. Two failed playbacks of a title within 24 h skip that source for that title for 24 h (`pd_source_title_fail`). The client treats `navigator.connection.downlink` under 10 (Chrome caps it at 10) or `saveData` as `slow`. Browsers without the API use `ok`.
+- **Rejected:** racing hidden iframes multiplies ads, trackers and data use. A speed test from the browser reaches the embed host, not the video CDN that does the work.
+- **Admin:** `pd_settings.source_order` is `auto` or `manual`. Pinned rows stay on top in either mode. The sources page shows each row's score, plays, failure rate, median start, stalls, quality, popups, `ads` reports and last probe.
+
+**Watch party** (Task 69a):
+- **The link:** a viewer with a session (guests allowed) creates a party on the watch page and shares `/app/parda/party/$code`. The code is random and unguessable. Joining starts a guest session if needed. At most 10 people. A party ends after 12 h idle. Party pages are `noindex` and never listed anywhere.
+- **One source:** everyone plays the same source, because timecodes differ between sources. A party starts on the highest-ranked source with commands, and otherwise on the top source. Only the host changes it; everyone reloads, 30 s earlier.
+- **A lobby first:** everyone taps *Ready*, which is the gesture autoplay needs. The host starts when ready, or it starts once all are.
+- **Two modes, from the source's adapter:**
+  - **Full sync** (commands: XPass today, VidFast if the lab shows it plays): play, pause and seek reach everyone, and the click shield is on. Drift over 2 s gets a hard seek, because no player documents speed control, so expect 1–2 s of drift and visible jumps.
+  - **Start together** (every other source): a shared countdown, then each player runs on its own, with no shared pause and no pause on buffering. A chip shows how far behind you are. *Resync* reloads at the group's position where the player takes a start position. The UI says this source can't pause together and offers to switch to one that can.
+- **Buffering, in full sync:** when `stall.ts` fires for someone, the others pause and see "Waiting for Sam". When that viewer's position moves for 1 s, everyone seeks to it and plays. After 30 s the host can *Continue without Sam*, so one bad connection can't hold the room.
+- **Who controls:** anyone can play, pause and seek. The host changes the source and ends the party. If the host leaves, the longest-present member takes over.
+- **Realtime:** Vercel functions can't host WebSockets, so a hosted service carries the messages. Ably by default, Pusher as the alternative; the task checks both free tiers. `features/parda/party/channel.ts` is a thin `PartyChannel` interface and holds the only provider code.
+  - A server function mints a short-lived token limited to this party's channel. The API key stays on the server.
+  - Without `PARDA_REALTIME_KEY`, the party UI is hidden.
+  - The SDK is imported only on the party page, and `connect-src` gains its hosts only when the key is set.
+- **Clocks:** each client estimates its offset from server time, and shared state is `{ playing, position, at }`.
+- **State:** `pd_party` holds the fields below for late joiners and reloads, saved at most every 15 s and on pause. The channel is the live truth.
+- **Controls:** the kill switch and a takedown end a party. Each member's own progress is recorded as usual.
 
 **Continue watching rules** (`library/progress.ts`, unit-tested case by case):
 - **Started** after 60 s or 2%. **Finished** at ≥ 92%, or ≤ 5 min left on a movie, ≤ 2 min on an episode.
@@ -2308,32 +2405,34 @@ Checked 2026-11-03; check again, because these services change.
 
 | Table | Holds | Task |
 | --- | --- | --- |
-| `pd_settings` (one row, `version`) | region, languages, kids' cap, banner, `playback_enabled`, `cache_epoch` | 59 |
+| `pd_settings` (one row, `version`) | region, languages, kids' cap, banner, `playback_enabled`, `cache_epoch`, `source_order` | 59 |
 | `pd_source` (`version`) | the sources above | 59 |
 | `pd_title` | snapshot by media type + TMDB id: titles en/ne, poster, backdrop, year, genres, runtime, certification, popularity rank, `refreshed_at` | 59 |
 | `pd_blocked_title` | takedowns: reason, who, when | 59 |
 | `pd_profile` | owner (cascade), name, avatar, kids, cap, PIN hash, region, audio language, autoplay | 64 |
-| `pd_progress` | profile, title, season, episode, watched, duration, finished, marked, `updated_at`; unique per episode | 64 |
+| `pd_progress` | profile, title, season, episode, watched, duration, source, finished, marked, `updated_at`; unique per episode | 64 |
 | `pd_continue_state` | per profile and title: hidden until played, rewatch reset | 64 |
-| `pd_play`, `pd_report` | playbacks; viewer reports (kind, note, status, resolved by) | 64 |
+| `pd_play`, `pd_report` | playbacks; viewer reports (kind, including `ads`; source, note, status, resolved by) | 64 |
+| `pd_source_stat`, `pd_source_probe`, `pd_source_title_fail` | daily viewer rollups per source and band, with the scores and orders; probe results; recent failures per source and title | 65a |
 | `pd_search_stat` | day, normalized query, count, zero results (search page only, no user) | 66 |
 | `pd_list_item` | profile, kind (`watchlist` or `favourite`), title, added | 67 |
 | `pd_favourite_person`, `pd_rating` | favourite people; like or not for me | 67 |
 | `pd_follow_state`, `pd_notification` | last episode seen per followed series; alerts | 68 |
 | `pd_billboard`, `pd_collection` (+ `_item`), `pd_rail`, `pd_daily_stat` | curation, layouts, rollups | 69 |
+| `pd_party` | code, host, title, season, episode, source, state, position, `state_at`, `expires_at` | 69a |
 
 **Routes** (few, for the bundle):
 - **Pages:**
   - `/app/parda`, `/$hub` (movies, series, anime), `/discover`, `/search`;
   - `/$type/$id` (movie or series, with a slug; a wrong slug gets a 301) and `/$type/$id/credits`;
   - `/person/$id`, `/collection/$id`, `/c/$slug`.
-- **Watching and the library:** `/watch/$type/$id` (`?s=&e=`), `/library/$tab`, `/schedule`.
+- **Watching and the library:** `/watch/$type/$id` (`?s=&e=`), `/party/$code`, `/library/$tab`, `/schedule`.
 - **Accounts and the rest:** `/profiles`, `/sign-in`, `/sign-up`, `/about`.
 - **Admin:** `/admin/parda` plus sources, titles, reports, settings, curation and layout, and the player lab.
 
 **SEO:**
 - **Indexable:** home, hubs, discover, title, credits, person, collection and curated pages. They use `seo({ siteName: "Parda" })` and JSON-LD, and are listed in `INDEXABLE`. Pages titled from TMDB also go in `CONTENT_TITLED`.
-- **`noindex`:** watch, library, profiles, schedule, sign-in and sign-up.
+- **`noindex`:** watch, party, library, profiles, schedule, sign-in and sign-up.
 - **Sitemap** through `SITEMAP_SOURCES`, from `pd_title`: the top 500 popular titles, the billboard and collection titles, minus takedowns.
 
 **Admin:**
@@ -2344,7 +2443,7 @@ Checked 2026-11-03; check again, because these services change.
 - `PARDA_PUBLIC_FUNCTIONS`, a regex check that catalogue functions start with `withPardaCatalog`;
 - `PARDA_FUNCTIONS` for the library functions;
 - admin functions in `GUARDED_FUNCTIONS`;
-- `tests/server/parda-access.test.ts`: own profile, another's, a guest, a kids cap, a blocked title, playback off.
+- `tests/server/parda-access.test.ts`: own profile, another's, a guest, a kids cap, a blocked title, playback off, a wrong party code, a full party, a token for another party's channel.
 
 ### 12.6 Rules for every Part 6 task
 
@@ -2366,21 +2465,24 @@ Checked 2026-11-03; check again, because these services change.
 
 - **Layer:** `LAYERS`, a full `SPECS.parda` (narrowing the portfolio's `.impeccable` paths), markers, and the CI strip matrix.
 - **Catalogue:** the env variables, the TMDB client, cache and singleton, the mappers, the locale fill-in, the genre messages, and `UPSTREAM_UNAVAILABLE`.
-- **Fixtures:** the recorder and fixtures; the e2e stand-in with the fake Viduki player.
-- **Playback:** `pd_source` seeded with Viduki 1–4, template filling and validation, the `viduki` and `none` adapters, and the CSP's `embedOrigins` (30 s cache).
+- **Fixtures:** the recorder and fixtures; the e2e stand-in with the fake player.
+- **Playback:** `pd_source` with the seed in 12.5, template filling and validation, all the adapters in 12.5, `stall.ts`, and the CSP's `embedOrigins` (30 s cache).
 - **Controls:** `pd_settings` (`playback_enabled`, `cache_epoch`), `pd_title` and `pd_blocked_title`, with the takedown filter in `catalog/service.ts`; `cron-parda.ts` with the `pd_title` refresh (top 500 popular).
-- **Player lab** `/admin/parda/player-lab` (`parda:configure`; the fake player in e2e): it embeds each source and logs every message. It settles:
-  - the real origin and payload shapes, and how often `MEDIA_DATA` arrives;
-  - that Viduki's self-resume works inside our sandbox;
-  - each server under the strict sandbox, and any console warnings;
-  - the ads per server (the cleanest one is seeded first);
+- **Player lab** `/admin/parda/player-lab` (`parda:configure`; the fake player in e2e): it embeds each source, enabled or not, and logs every message. Run by hand in normal Chrome, because the measurements in 12.4 came from an automated browser. It settles:
+  - the table in 12.4: start without a click, quality, stalls, popups per click, and whether the seed order still holds;
+  - whether VidFast, VidZee and VidLink work for a real viewer (a working VidFast is a second party source);
+  - each source's sandbox behaviour, in case a player has relaxed it, and any console warnings;
+  - `{start}` on Vidy and `seek` after `ready` on XPass, and Viduki's self-resume;
+  - whether XPass starts from `play` after a parent click (the click shield depends on it);
+  - whether the redirect guard catches a real redirect;
+  - with uBlock Origin Lite installed, on each enabled source: whether it still plays, and which popups and in-player ads are gone. Also whether the Firefox and Safari listings work on phones;
   - mobile behaviour;
   - which TV discover certification filters work.
 
-  The findings go in the guide.
+  The findings go in the guide, and the seed and 12.4 change if they differ.
 - **Housekeeping:** temporary knip entries, removed by Task 64. Measure the bundle headroom.
-- **Tests:** client (timeout, 429, 5xx, mapping, fill-in), cache (TTL, coalescing, LRU, epoch), templates, adapters, the dynamic CSP, env, markers, the takedown filter.
-- **Decisions:** Parda as a layer, scoped guests and the legal posture; the TMDB client and cache; sources as data with code adapters and a dynamic CSP.
+- **Tests:** client (timeout, 429, 5xx, mapping, fill-in), cache (TTL, coalescing, LRU, epoch), templates, adapters (each shape in 12.4, foreign messages, wrong origin), `stall.ts`, the dynamic CSP, env, markers, the takedown filter.
+- **Decisions:** Parda as a layer, scoped guests and the legal posture; the TMDB client and cache; sources as data with code adapters and a dynamic CSP; iframes without a sandbox, with the measurements behind it.
 
 ### Task 60: Design direction and the theme plumbing (planned)
 
@@ -2443,12 +2545,15 @@ Checked 2026-11-03; check again, because these services change.
 ### Task 64: The player, progress and Continue watching (planned)
 
 - **Watch route:**
-  - the source switcher ("Server 2 · Multi Language") and auto-fallback ("Trying server 2…", then "Not available right now" with the trailer and *Report*);
-  - the sandbox, and progress from the adapter (recording only);
+  - the server choice (Auto first, then "Vidy · 1080p"), the `ok` and `slow` lists, deadlines, and fallback across CDN groups, as in 12.5, in the seed order until Task 65a ranks them;
+  - the stuttering toast;
+  - the click shield, the redirect guard and the *Install uBlock Origin Lite* button;
+  - progress and resume from the adapter, and the `pd_play` measurements;
   - the "You were at…" toast;
   - Up next: a 10 s countdown near the end, Cancel, honouring the profile;
   - the episodes `Sheet`, shortcuts outside the iframe (`N`, `P`, `E`, `T`, `Esc`), theater mode;
-  - *Report a problem*, rate limited.
+  - *Report a problem*, rate limited, with the `ads` kind.
+- **Notice page:** players bring their own ads and trackers, with the uBlock Origin Lite section and all four store links.
 - **Continue watching,** fully, as in 12.5: the rail, the CTAs (*Resume · 23 min left*, *Next: S2 E6*, *Rewatch*), episode and season bars, marks, *Remove*.
 - **Storage:** localStorage progress without a session. Tables `pd_profile`, `pd_progress`, `pd_continue_state`, `pd_play`, `pd_report`.
 - **Middleware:** `requirePardaViewer` and `withPardaCatalog`.
@@ -2457,21 +2562,45 @@ Checked 2026-11-03; check again, because these services change.
   - a guest starts on the first save, and local progress is imported;
   - the banner with the deletion date.
 - **Tests:**
+  - Unit: `blockerStore` for each browser, including unsupported ones.
   - PGlite: the upsert throttle, started and finished, next unwatched across seasons, specials, unaired, marks, rewatch, claim merge, scoped seeding.
   - e2e with the fake player:
     - progress → reload → the CTA, the bars and the rail show it;
-    - a failure → server 2;
+    - a failure → the next source in another CDN group;
+    - a source with no moving position → its deadline → the next source;
+    - a needs-click source with no click → no fallback;
+    - picking a server → it's remembered → Auto clears it;
+    - switching source → the new player gets `{start}` 30 s earlier;
+    - stalls → the toast;
+    - the click shield: clicks don't reach the iframe, and the controls send commands;
+    - the uBlock Origin Lite button: the right store link on Chromium, opens in a new tab, *Don't show again* persists, and the notice page keeps all four links;
     - the end → Up next → the next episode;
     - marking a season watched moves the CTA.
 
 ### Task 65: Admin I, control (planned)
 
-- **Sources:** add, edit, delete, enable and reorder (the CRUD standard, dnd-kit order, server field errors for templates and origins), "test a title" (the lab), and the kill switch.
-  - e2e: add a source → it frames → disable it → it's gone from the switcher and the CSP.
+- **Sources:** add, edit, delete, enable, pin and reorder (the CRUD standard, dnd-kit order, server field errors for templates and origins), every field in 12.5, the seeded disabled rows, "test a title" (the lab), and the kill switch.
+  - A row with `sandbox` set warns that most players refuse one.
+  - e2e: add a source → it frames → disable it → it's gone from the switcher and the CSP. Delete it → it's gone, and its old `pd_play` rows remain with a null source.
 - **Titles:** the takedown list (CRUD standard). A blocked title 404s and leaves rails, search, discover and the sitemap.
 - **Reports queue:** filter, resolve, bulk resolve.
 - **Settings:** region, languages, kids' cap, banner, purge (epoch).
 - **Permissions, sections, commands;** every write audited.
+
+### Task 65a: Source ranking (planned)
+
+- **Rollup:** `cron-parda.ts` builds `pd_source_stat` from `pd_play` per source and band, then computes the score and the `ok` and `slow` orders, as in 12.5.
+- **Per-title failures:** `pd_source_title_fail`, written when a failed playback is reported and rate limited, so one client can't hide a source.
+- **At click:** `player/sources.ts` serves the cached orders and skips sources failing on this title, including the 5% for sources short of data. Parties are left out of that.
+- **Probe:** `scripts/probe-sources.ts`, `pnpm parda:probe`, `.github/workflows/parda-probe.yml`, and the route `src/server/routes/parda-probe.ts`, with its knip entry and `pd_source_probe`. The rows' adaptive flag and quality come from the probe unless the admin set them.
+  - The first runs check the Actions minutes against the repo's allowance. If they don't fit, run every other day or on fewer titles.
+  - The secret goes in the repo's Actions secrets and the Vercel env. Note this in `deployment.md` and the guide.
+- **Admin:** the order setting, pinning, and the measurement columns on the sources page.
+- **Tests:**
+  - unit: the score (each factor, floors, neutral values, the table in 12.4 ranks Vidy first), the `slow` order, under 20 plays, the seed fallback;
+  - PGlite: the rollup, the title skip and its 24 h expiry, pinned rows, manual order, the probe route (wrong secret, bad payload, 404 without the secret);
+  - e2e with the fake player: a source failing for a title is skipped on the next play; a slow connection (`navigator.connection` stubbed) starts on the adaptive source; switching to manual order uses the admin's order.
+- **Decisions:** ranking from viewers and a probe rather than a live test at each play; the weights.
 
 ### Task 66: Search and discover (planned)
 
@@ -2512,6 +2641,19 @@ Checked 2026-11-03; check again, because these services change.
   - collections: en/ne, slug, ordered titles, published; shown as rails and at `/c/$slug`.
 - **Home layout:** `pd_rail` per hub, reordered with dnd-kit and seeded from Task 62's config.
 
+### Task 69a: Watch party (planned)
+
+- **Check first:** the free tier, limits and SDK size of Ably and Pusher, and pick one. The owner creates the account and the key goes in `PARDA_REALTIME_KEY`. Without a key the task still builds and tests, because the UI hides and e2e uses the stand-in.
+- **Server:** `pd_party`, create, join and end in `src/functions/parda/party.ts` (`requirePardaViewer` → `withPardaServices`), each with its access-matrix row, and the channel token. Creating is rate limited. A cron step ends idle parties.
+- **Client:** `party/channel.ts`, the clock offset, shared state, presence, the lobby, and both modes as in 12.5, reusing `stall.ts` and the click shield.
+- **Page:** `/party/$code` with `privateHead()`, its entry in `e2e/support/pages.ts` and `route-seo.test.ts`, the *Watch together* button on the watch page, and copying the link.
+- **Stand-in:** a small WebSocket relay in `e2e/harness/` behind `PartyChannel`. CI never calls the real service.
+- **Tests:**
+  - unit: the sync reducer (drift, stall, resume, host change, *Continue without*), the clock offset;
+  - PGlite: create, join, full, expired, the wrong code, a blocked title, playback off;
+  - e2e with two browser contexts and the fake player: pause on one pauses the other; a stall on one pauses the other and shows the name; resuming seeks both to the same position; a reload rejoins at the group's position; a source without commands shows *Start together*, and *Resync* reloads with `{start}`; a non-host can't change the source.
+- **Decisions:** the realtime service; sync through commands only, with no pause on buffering for other players.
+
 ### Task 70: Wrap-up (planned)
 
 - **Full e2e:** `pnpm test:e2e`, plus Lighthouse (mobile ≥ 95 on home and a title), the bundle per page, and `EXPLAIN` of the library queries.
@@ -2525,9 +2667,10 @@ Checked 2026-11-03; check again, because these services change.
 
 **Out of scope for Part 6:**
 - viewer comments and reviews (TMDB's are shown);
-- downloads and watch parties;
+- downloads;
+- chat or voice in watch parties;
 - title requests;
-- proxying or rewriting a player to strip its ads;
+- proxying or rewriting a player to strip its ads, extracting its stream into our own player, or evading its sandbox check;
 - payments and ads of our own;
 - native apps.
 

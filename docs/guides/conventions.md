@@ -8,6 +8,11 @@ How code is organised and which shared pieces a page is built from. When a patte
 src/
   routes/                 File routes (TanStack Router). Thin: loader, head, staticData, and a page that composes components.
     _public/ _auth/ _authed/ _admin/   Layouts by audience. A folder's route.tsx is a section layout (names its breadcrumb).
+                          _public: health, verify email, reset password; _auth: sign-in, /upgrade; _authed: account; _admin: admin area
+    dev/                  Demo and references, dev builds only
+    _site/                The portfolio at / <!-- @portfolio -->
+    _apps/ f/ l/          The showcase apps at /apps; a published form; a short link <!-- @apps -->
+    _taskline/            Taskline at /app/taskline <!-- @taskline -->
   components/             Generic UI, no feature knowledge.
     crud/                 CrudListPage, useCrudMutation, useCrudForm + CrudForm, NewButton, RecordLink (crud.md)
     ui/                   shadcn primitives (Button, Table, Dialog…). Generated; adjust sparingly.
@@ -44,7 +49,7 @@ src/
     services.ts           Services: what a handler hands to its service (db, actor, imageStore)
     <name>/               repository.ts (Drizzle over an injected Db) and service.ts (rules, audit, I/O)
   middleware/             Start middleware (security headers, CSRF, auth, logging, errors)
-  hooks/                  React hooks: useListPage, useListQuery
+  hooks/                  React hooks: useListPage, useListQuery, useHotkeys, useDebouncedValue, useMediaQuery, useMinuteClock
   lib/                    Isomorphic helpers, grouped by area (0158):
     list/                 params.ts (URL params), paging.ts (Paged, page maths), url.ts (search serialization)
     env/ i18n/ http/      client env schema; intl, Nepali digits, calendar days; CSP, cache-control, redirects
@@ -52,6 +57,18 @@ src/
     start/                Needs the Start runtime: routes and server code only, never components (Biome enforces it)
     crud/                 keys, schema (listSchema, idSchema, isoDateTime), filters (defineFilters), route (routes only)
     *.ts                  query (loadList, ensureQuery), seo, breadcrumbs, validation, phone, errors, tanstack-db, zod, utils
+```
+
+Outside `src/`:
+
+```
+messages/              en.json, ne.json        drizzle/   SQL migrations        public/   icons, og-default.png
+tests/                 unit/, server/, components/, i18n/, email/, setup/ (env, dom, PGlite snapshot), utils/ (test-db, fake-cloudinary)
+e2e/                   Playwright: review.spec.ts, flows/, harness/ (build + PGlite + fake Resend + server), support/
+scripts/               setup-local, diagnose, dev-local, dev-offline, check-bundle, seeds, new-feature, strip-demo (TypeScript run by Node)
+docs/                  PLAN.md, decisions.md, guides/, history/ (past reviews, screenshots)
+PRODUCT.md, DESIGN.md  the portfolio's product record and design system for the design tools (impeccable); .impeccable/ holds the direction contract <!-- @portfolio -->
+.github/               CI workflow, Dependabot        lefthook.yml   git hooks        knip.json   dead-code config
 ```
 
 **Naming:** files are kebab-case and components PascalCase. Server-only modules live under `src/server/` or are named `*.server.ts`. Stories sit next to their component as `*.stories.tsx`. Tests live in `tests/`:
@@ -139,7 +156,7 @@ Biome fails `pnpm check` on imports that would break at runtime (0158):
 - `zod/v4` or `zod/mini` anywhere: import `"zod"`, which resolves to `src/lib/zod.ts` (0086).
 - `@/server/**` or `@/lib/start/**` from `src/components/**`, `src/features/**/components/**` or `src/hooks/**`: components run in the browser and in Storybook. Call a server function, or move the Start-runtime code into a route.
 
-When moving files, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file.
+When moving files, update imports with your editor's "move file" refactor (TypeScript follows the `@/` alias), keep `src/lib/zod.ts` where it is (the Zod alias in `vite/zod-alias.ts` points at it) and update `knip.json` entries that name a moved file and path mentions in the docs.
 
 ## The command palette and view transitions
 
@@ -157,4 +174,4 @@ The admin shell's palette (`components/admin-shell/command-menu.tsx`, decision 0
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
 - **shadcn's `from "cn"` import:** the CLI writes it; fix it to `@/lib/utils`. Never install the `cn` package (an unrelated library) to silence typecheck (0118).
-- **One header per section:** the root renders no header; each layout renders its own frame (`AdminShell`, `AuthShell`, `AppHeader`, `<SiteHeader links={…} />` for `/dev`, or the portfolio's), so a new layout must too (0161, which replaced 0105's `chrome: "bare"` opt-out; 0164). Don't hide headers with CSS or path checks.
+- **One header per section:** the root renders no header; each layout renders its own frame (`AdminShell`, `AuthShell`, `AppHeader`, `<SiteHeader links={…} />` for `/dev`, or the portfolio's), so a new layout must too (0161, which replaced 0105's `chrome: "bare"` opt-out; 0164). Don't hide headers with CSS or path checks. A section that never reads the session sets `staticData: { session: "skip" }` (`src/lib/session-scope.ts`); root-mounted session readers pass `enabled: !useSessionSkipped()`.

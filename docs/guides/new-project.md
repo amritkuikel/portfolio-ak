@@ -21,6 +21,8 @@ From a fresh clone to your own app with its first feature, every gate green. Dec
 
 How it works: each layer's files, package scripts, crons, knip entries and tables are lists at the top of `scripts/strip-demo.ts`. Its code in shared files sits between `portfolio:start` / `portfolio:end` (or `apps:…`) comment lines, or on lines ending in `// @portfolio` (an HTML comment in Markdown); `scripts/lib/strip-markers.ts` has the rules and `tests/unit/strip-markers.test.ts` checks they balance. Messages nothing uses any more are dropped by the same rule as `tests/i18n/message-usage.test.ts`. A layer's piece you add to a shared file needs a marker, or strip-demo leaves it behind.
 
+**Shared helpers stay out of a layer's markers:** code two layers use (Taskline and the apps both use `todayInZone`, `addDays`, the CSV picker) is core, unmarked, or `strip-demo --keep-<layer>` removes what the kept layer imports (0215).
+
 ## 3. Make it yours
 
 - [ ] **Name:** `name` in `package.json`, the README title and intro, `VITE_APP_TITLE`, `site_description` and the landing page's `landing_*` messages in `messages/en.json` and `messages/ne.json`, and the landing page itself.

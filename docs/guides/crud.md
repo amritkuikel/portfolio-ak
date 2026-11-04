@@ -148,7 +148,7 @@ return <CrudForm form={form} crud={crud}>…fields, StickyFormBar…</CrudForm>;
 
 ## Permissions
 
-`useCan` and `<Can>` are the only checks in UI code; rules that compare two people's permissions use `canGrant(actor, permissions)` on both sides (`features/rbac/types.ts`). Every new permission goes in the catalog with its label; the matrix groups resources under the sidebar's groups.
+`useCan` and `<Can>` are the only checks in UI code; rules that compare two people's permissions use `canGrant(actor, permissions)` on both sides (`features/rbac/types.ts`). Every new permission goes in the catalog with its label; the matrix groups resources under the sidebar's groups. The section itself is an `ADMIN_SECTIONS` entry (sidebar, palette), and its actions go in `features/<name>/commands.ts`.
 
 ## Tests and the gates
 
@@ -162,3 +162,4 @@ A PGlite service test per feature (create, list, a stale edit, delete, the audit
 - **A route `loader` is a function of the route context** (`(route) => listLoader(route, …)`): passing the helper's result directly loses the loader deps' inferred type.
 - **Uniqueness is the constraint's job:** a unique index (`role_name_lower_unique`, a slug's `…_slug_unique`) and `uniqueViolation`; the typing-time check is a courtesy.
 - **Better Auth's `timestamp` columns have no time zone:** `sameVersion` compares them in UTC, which is how Drizzle writes and reads them.
+- **Admin writes are Query mutations** (`useCrudMutation`, 0174): optimistic updates patch every cached list page (`keys.lists()`). TanStack DB is for client-first apps; don't add collections to admin lists.

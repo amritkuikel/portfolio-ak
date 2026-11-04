@@ -149,3 +149,4 @@ params: { parse: (raw) => parseParams(z.object({ id: z.uuid() }), raw) },
 Moved here from CLAUDE.md, which keeps only the ones that apply everywhere. Don't reintroduce them.
 
 - **Masked routes need `unmaskOnReload: true`.** Without it a reload keeps the mask from history state, so the client renders something the server didn't (a hydration error).
+- **A numeric `?q=` is a number to the router:** TanStack Router JSON-parses search values, so `?q=123` reaches a `z.string()` search schema as `123` and falls back to its default. Links and forms the app builds quote it; hand-written URLs (e2e) should use text.
