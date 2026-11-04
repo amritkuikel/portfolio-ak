@@ -21,6 +21,7 @@ export function PlayerFrame({
 	title,
 	frameRef,
 	onEvent,
+	className = "aspect-video w-[min(100%,calc((100dvh-10rem)*16/9))] rounded-md border bg-black",
 }: {
 	url: string;
 	origins: ReadonlyArray<string>;
@@ -29,6 +30,8 @@ export function PlayerFrame({
 	title: string;
 	frameRef: RefObject<HTMLIFrameElement | null>;
 	onEvent: (event: PlayerEvent) => void;
+	/** The lab's framed box by default; a title page fills its screen. */
+	className?: string;
 }) {
 	useEffect(() => {
 		const allowed = url.startsWith("/") ? [...origins, window.location.origin] : origins;
@@ -52,7 +55,7 @@ export function PlayerFrame({
 			allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
 			referrerPolicy="origin"
 			{...(sandbox === "none" ? {} : { sandbox: SANDBOX[sandbox] })}
-			className="aspect-video w-[min(100%,calc((100dvh-10rem)*16/9))] rounded-md border bg-black"
+			className={className}
 		/>
 	);
 }

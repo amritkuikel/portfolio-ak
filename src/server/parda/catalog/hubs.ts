@@ -19,15 +19,17 @@ const RAIL_SIZE = 20;
 /** The poster preview shows four lines of overview, so the page carries no more than that. */
 const OVERVIEW_MAX = 280;
 
-const cut = (text: string) => {
-	if (text.length <= OVERVIEW_MAX) return text;
-	const space = text.lastIndexOf(" ", OVERVIEW_MAX);
-	return `${text.slice(0, space > OVERVIEW_MAX / 2 ? space : OVERVIEW_MAX).trimEnd()}…`;
+/** Text cut at a word before `max` characters, with an ellipsis. */
+export const cut = (text: string, max = OVERVIEW_MAX) => {
+	if (text.length <= max) return text;
+	const space = text.lastIndexOf(" ", max);
+	return `${text.slice(0, space > max / 2 ? space : max).trimEnd()}…`;
 };
 
-const toHubTitle = (title: TitleSummary): HubTitle => ({
+export const toHubTitle = (title: TitleSummary): HubTitle => ({
 	media: title.media,
 	id: title.id,
+	slug: title.slug,
 	title: title.title,
 	year: title.year,
 	poster: title.poster,

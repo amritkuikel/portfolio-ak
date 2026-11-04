@@ -8,4 +8,9 @@ export const pardaKeys = {
 	page: (locale: Locale, page: PardaPage) => [...pardaKeys.catalog(locale), "page", page] as const,
 	rail: (locale: Locale, page: PardaPage, rail: string) => [...pardaKeys.page(locale, page), "rail", rail] as const,
 	title: (locale: Locale, type: PardaType, id: number) => [...pardaKeys.catalog(locale), "title", type, id] as const,
+	season: (locale: Locale, id: number, season: number | undefined, page: number | undefined) =>
+		[...pardaKeys.title(locale, "series", id), "season", season ?? "first", page ?? 1] as const,
+	credits: (locale: Locale, type: PardaType, id: number) => [...pardaKeys.title(locale, type, id), "credits"] as const,
+	person: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "person", id] as const,
+	collection: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "collection", id] as const,
 };

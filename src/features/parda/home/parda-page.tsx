@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
+import { ShuffleIcon } from "lucide-react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
@@ -39,12 +40,21 @@ function PageContent({ data }: { data: Extract<HubPageData, { configured: true }
 						const slide = slides.get(item.key);
 						if (!slide) return null;
 						return (
-							<Button asChild size="lg">
-								<Link {...pardaLinks.title(slide.media, slide.id)} data-testid="billboard-details">
-									{m.pd_billboard_details()}
-									<span className="sr-only">: {slide.title}</span>
-								</Link>
-							</Button>
+							<>
+								<Button asChild size="lg">
+									<Link {...pardaLinks.title(slide.media, slide.id, slide.slug)} data-testid="billboard-details">
+										{m.pd_billboard_details()}
+										<span className="sr-only">: {slide.title}</span>
+									</Link>
+								</Button>
+								{/* A redirect to a random title: never preloaded, or hovering would pick one. */}
+								<Button asChild size="lg" variant="ghost">
+									<Link {...pardaLinks.surprise(data.page)} preload={false} data-testid="surprise-me">
+										<ShuffleIcon aria-hidden />
+										{m.pd_surprise_me()}
+									</Link>
+								</Button>
+							</>
 						);
 					}}
 				/>

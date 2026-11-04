@@ -10,6 +10,8 @@ import type { PardaPage } from "../search";
 export type HubTitle = {
 	media: "movie" | "tv";
 	id: number;
+	/** The address's slug, from the English title (decision 0235). */
+	slug: string;
 	title: string;
 	year: number | null;
 	poster: string | null;

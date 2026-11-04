@@ -1,89 +1,93 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
-import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { GENRE_LABELS } from "../genres";
 import { CatalogUnconfigured } from "../home/catalog-unconfigured";
-import { CertBadge, RatingBadge } from "../kit/badges";
-import { formatYear } from "../kit/cards";
-import { tmdbImage } from "../kit/image";
-import { TmdbImage } from "../kit/tmdb-image";
+import { pardaLinks } from "../links";
 import { pardaTitleQueryOptions } from "../queries";
-import { titleParamsSchema } from "../search";
+import { titleRouteParams } from "../search";
+import { Episodes, NewEpisodeBanner } from "./episodes";
+import { Gallery } from "./gallery";
+import { TitleHero } from "./title-hero";
+import {
+	CastRail,
+	ExternalLinks,
+	FranchiseBanner,
+	INSET,
+	KeyCrew,
+	PosterRail,
+	Reviews,
+	TitleDetails,
+	Videos,
+	WhereToWatch,
+} from "./title-sections";
 import type { TitlePageData } from "./types";
 
-const route = getRouteApi("/_parda/app/parda/$type/$id");
+const route = getRouteApi("/_parda/app/parda/$type/$id/");
 
 function TitleContent({ data }: { data: Extract<TitlePageData, { configured: true }> }) {
 	const { title, imageBase } = data;
-	const length = title.runtime
-		? m.pd_runtime_minutes({ minutes: formatNumber(title.runtime) })
-		: title.seasons
-			? title.seasons === 1
-				? m.pd_season_one()
-				: m.pd_seasons({ count: formatNumber(title.seasons) })
-			: null;
-	const genres = title.genres.flatMap((genre) => {
-		const label = GENRE_LABELS[genre];
-		return label ? [label()] : [];
-	});
 	return (
 		<>
-			{/* The screen fits its picture (16:9) and the masks take the rest, so the title stays on a laptop's first screen. */}
-			<div className="bg-pd-mask">
-				<div className="relative mx-auto w-full max-w-[max(24rem,calc((100dvh-16rem)*16/9))]">
-					<TmdbImage
-						image={tmdbImage(imageBase, title.backdrop, "backdrop")}
-						alt=""
-						label={title.title}
-						aspect="backdrop"
-						sizes="100vw"
-						priority
-					/>
-					{title.tagline ? (
-						<p
-							aria-hidden
-							className="pd-scrim absolute inset-x-0 bottom-0 flex h-28 items-end justify-center px-6 pb-4 text-center"
-						>
-							<span className="line-clamp-2 max-w-3xl text-pd-sub text-pd-subtitle">{title.tagline}</span>
+			<TitleHero title={title} imageBase={imageBase} player={data.player} videos={data.videos} />
+			<div className="flex flex-col gap-12 pt-8 pb-12">
+				<section aria-label={m.pd_overview_heading()} className={INSET}>
+					{title.overview ? (
+						<p className="max-w-prose text-base leading-relaxed" data-testid="title-overview">
+							{title.overview}
 						</p>
-					) : null}
-				</div>
-			</div>
-			<div className="flex flex-col gap-2 bg-pd-mask px-4 pt-4 pb-6 sm:px-6 lg:px-8">
-				<h1 className="pd-display line-clamp-2 text-balance text-pd-title leading-none [&:lang(ne)]:leading-[1.2]">
-					{title.title}
-				</h1>
-				{title.tagline ? <p className="sr-only">{title.tagline}</p> : null}
-				<p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-pd-muted text-sm">
-					{title.year ? <span>{formatYear(title.year)}</span> : null}
-					{length ? <span>{length}</span> : null}
-					<CertBadge certification={title.certification} />
-					<RatingBadge rating={title.rating} className="text-pd-ink" />
-					{genres.length ? <span>{genres.join(" · ")}</span> : null}
-				</p>
-			</div>
-			<div className="px-4 py-8 sm:px-6 lg:px-8">
-				{title.overview ? (
-					<p className="max-w-prose text-base leading-relaxed">{title.overview}</p>
-				) : (
-					<p className="text-pd-muted">{m.pd_title_no_overview()}</p>
-				)}
+					) : (
+						<p className="text-pd-muted">{m.pd_title_no_overview()}</p>
+					)}
+				</section>
+				{title.media === "tv" && data.seasons.length ? (
+					<div className="flex flex-col gap-4">
+						<NewEpisodeBanner latest={title.latest} today={data.today} />
+						<Episodes id={title.id} seasons={data.seasons} imageBase={imageBase} />
+					</div>
+				) : null}
+				<CastRail
+					cast={data.cast}
+					imageBase={imageBase}
+					credits={pardaLinks.credits(title.media, title.id, title.slug)}
+				/>
+				<KeyCrew crew={data.crew} />
+				<TitleDetails title={title} />
+				<WhereToWatch providers={data.providers} imageBase={imageBase} />
+				<Videos videos={data.videos} title={title.title} />
+				<Gallery
+					backdrops={data.gallery.backdrops}
+					posters={data.gallery.posters}
+					imageBase={imageBase}
+					title={title.title}
+					heading={m.pd_gallery_heading()}
+				/>
+				<FranchiseBanner collection={title.collection} imageBase={imageBase} />
+				<PosterRail
+					title={m.pd_more_like_this()}
+					titles={data.recommendations}
+					imageBase={imageBase}
+					testId="title-recommendations"
+				/>
+				<PosterRail title={m.pd_similar()} titles={data.similar} imageBase={imageBase} testId="title-similar" />
+				<Reviews reviews={data.reviews} />
+				<ExternalLinks links={title.links} tmdb={`https://www.themoviedb.org/${title.media}/${title.id}`} />
 			</div>
 		</>
 	);
 }
 
 /**
- * A title's page until Task 63 builds the rest (decision 0234): the backdrop between
- * the masks, its tagline as a subtitle, the title and its facts in the lower mask,
- * and the overview.
+ * A title's page (PLAN Task 63, decision 0235), in the plan's order: the hero and its
+ * actions, the overview, a series' episodes, the cast and key crew, the details, where
+ * to watch legally, videos and the gallery, the franchise, more like this and similar,
+ * reviews and links. My List, ♥, Like and Mark watched arrive with their tables (Tasks 64 and 67).
  */
 export function PardaTitlePage() {
-	const params = titleParamsSchema.parse(route.useParams());
-	const { data } = useSuspenseQuery(pardaTitleQueryOptions(getLocale(), params.type, params.id));
+	// The loader has already turned anything else into a 404.
+	const params = titleRouteParams(route.useParams());
+	const { data } = useSuspenseQuery(pardaTitleQueryOptions(getLocale(), params?.type ?? "movie", params?.id ?? 0));
 	return (
 		<main {...MAIN_CONTENT} className="flex flex-1 flex-col outline-none" data-testid="parda-title">
 			{data.configured ? (

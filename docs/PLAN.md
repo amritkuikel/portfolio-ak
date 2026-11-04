@@ -2171,7 +2171,7 @@ As 11.1, with these differences:
 | 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Done (decision 0232) |
 | 61 | Shell, brand, auth pages and the media kit | high | Done (decision 0233) |
 | 62 | Home and hubs | high | Done (decision 0234) |
-| 63 | Title, credits, person and collection pages | xhigh | Planned |
+| 63 | Title, credits, person and collection pages | xhigh | Done (decision 0235) |
 | 64 | The player, progress and Continue watching, guests | xhigh | Planned |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Planned |
@@ -2248,7 +2248,7 @@ Across the players:
 - Guests are deleted 7 days after creation (`GUEST_LIFETIME_DAYS`).
 - `refresh()` calls `router.invalidate()`.
 
-**Bundle:** the entry was 267.5 of 275 KB after Task 53, and every route definition adds about 0.3 KB (0217).
+**Bundle:** the entry was 267.5 of 275 KB after Task 53, and every route definition adds about 0.3 KB (0217). Task 63 raised the budget to 280 KB at 275.9 (0235).
 
 ### 12.5 Architecture (every task follows it)
 
@@ -2432,7 +2432,7 @@ Across the players:
 **SEO:**
 - **Indexable:** home, hubs, discover, title, credits, person, collection and curated pages, and the notice page `/about` (0233). They use `seo({ siteName: "Parda" })` and JSON-LD, and are listed in `INDEXABLE`. Pages titled from TMDB also go in `CONTENT_TITLED`.
 - **`noindex`:** watch, party, library, profiles, schedule, sign-in and sign-up.
-- **Sitemap** through `SITEMAP_SOURCES`, from `pd_title`: the top 500 popular titles, the billboard and collection titles, minus takedowns.
+- **Sitemap** through `SITEMAP_SOURCES`, from `pd_title`: the top 250 of each media type (500 in all), minus takedowns, at their slugged address (0235); curated collections join with Task 69.
 
 **Admin:**
 - Permissions `parda:read`, `parda:curate`, `parda:moderate` and `parda:configure`, with labels, audit actions and targets, `ADMIN_SECTIONS` and commands.
@@ -2551,29 +2551,28 @@ Across the players:
 
 **Left for the owner:** nothing (no migration).
 
-### Task 63: Title, credits, person and collection pages (planned)
+### Task 63: Title, credits, person and collection pages (done)
 
-- **Starts from Task 62's stub** at `/app/parda/$type/$id` (`src/features/parda/title/`, `catalog/title-page.ts`): replace it, add the slug in `pardaLinks.title`, and make it indexable.
-- **Title page** `/$type/$id`, in this order:
-  1. **Hero:** backdrop, logo or title, poster, tagline. Meta: year · certification · runtime or seasons · ★ (votes) · genres; status and the next episode for series.
-  2. **Actions:** one primary action (a plain *Play* until Task 64), then Trailer, My List and ♥ (live in Task 67), Like, Mark watched, Share.
-  3. **Overview.**
-  4. **Episodes:**
-     - seasons as `?season` through `SearchLink`, each with poster, year, count and your progress;
-     - episodes with still, number, title, runtime, air date, rating and a watched bar;
-     - Upcoming marks, specials last, a "New episode" banner;
-     - an episode detail sheet (guest stars, director, writers).
-  5. **Cast** rail, and the full **credits** page by department.
-  6. **Key crew.**
-  7. **Details:** dates, original title and language, spoken languages, networks, companies, countries, budget and revenue, content ratings by country, alternative titles, keywords linking to Discover.
-  8. **Where to watch legally,** with the JustWatch attribution.
-  9. **Videos** and a **gallery** (keyboard browsing).
-  10. **Franchise** banner, More like this, Similar.
-  11. **Reviews** (collapsed) and **external links.**
-  12. **JSON-LD.**
-- **Other pages:** person (bio, known for, filmography by year and department, links) and collection (in order).
-- **"Surprise me".**
-- **SEO:** `CONTENT_TITLED`, slug redirects, the sitemap source, og = backdrop.
+**Done** (decision 0235; the guide's "A title's pages").
+
+**What changed:**
+- **Pages:** `/app/parda/{movie|series}/{id}-{slug}` (the stub replaced, now `$type/$id/index.tsx`), `…/credits`, `/app/parda/person/$id` and `/app/parda/collection/$id`, all indexable, in `INDEXABLE` and `CONTENT_TITLED`, with JSON-LD (`Movie`/`TVSeries`, `WebPage`, `Person`, `CollectionPage`), the 1280 backdrop as og image and the hero preloaded. A missing or wrong slug is a 301; the slug comes from the English title (`features/parda/slug.ts`) and every card links with it.
+- **Title page, in the plan's order:** hero (backdrop, tagline, poster, logo in dark or title, year · certificate · runtime or seasons · ★ (votes) · genres, status and next episode), actions (Play loads the first enabled source in the hero's box, Trailer in a YouTube-nocookie dialog, Share), overview, episodes (`?season` through `SearchLink`, specials last; 30 episodes a page with `?page`; Upcoming marks; a "New episode" banner; a sheet per episode from `?episode` with guest stars, directors and writers), cast rail and the credits page by department, key crew, details (dates, original title and language, spoken languages, networks, companies, countries, budget and box office, certificates by country, alternative titles, keywords), where to watch legally with JustWatch's credit, videos, a gallery the arrow keys browse, the franchise banner, More like this, Similar, collapsed reviews and links out.
+- **Person:** biography, known for (most voted, no talk shows), filmography by department and year, links. **Collection:** its films in release order.
+- **"Surprise me":** `/app/parda/surprise?from=`, a redirect to a random title from the page's popular and top rated lists, linked beside the billboard's *Details* (never preloaded).
+- **Server:** `catalog/requests.ts` (shared with the recorder), richer `mapDetails` with `fillInDetails`, `tmdb/pages.ts` (season, credits, person, collection), `catalog/title-page.ts`, `catalog/people.ts`, `catalog/sitemap.ts` (top 250 of each media type from `pd_title`, minus takedowns, in `SITEMAP_SOURCES`), and five more functions in `src/functions/parda/catalog.ts` (guard list and Storybook mock updated). Takedowns apply to recommendations, similar, filmographies and collections; a blocked title's season and credits are 404s.
+- **Fixtures:** re-recorded with the new appends, each recorded title's full credits and first season, three actors and the collection: 160 files, 3.4 MB. `pardaFixturePath` gives the review a page of each kind.
+- **Tests:** `tests/server/parda-title.test.ts` (sections, the player and the kill switch, Nepali names and fill-in, takedowns everywhere, season paging and failure, credits, person, collection, Surprise me, the sitemap), `tests/unit/parda-slug.test.ts`, seven new flows in `e2e/flows/parda.spec.ts`, and the review of a movie, a series, credits, a person and a collection.
+
+**Deviations (0235):**
+- **My List, ♥, Like, Mark watched, season progress and watched bars aren't shown** until their tables exist (Tasks 64 and 67).
+- **Keywords aren't links** until Discover (Task 66).
+- **Play is a facade in the hero,** not a link: the watch page is Task 64.
+- **The entry budget is 280 kB** (was 275).
+
+**Numbers:** entry 275.9 of 280 kB (274.3 before). Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test` (140 files, 1,324 tests), the Parda and rail stories in en/light and ne/dark (56 of 56), build-storybook, `e2e/flows/parda.spec.ts` (23 of 23) and the review of every `/app/parda` and `/admin/parda` page (168 of 168). The full suites wait for Task 70.
+
+**Left for the owner:** nothing (no migration).
 
 ### Task 64: The player, progress and Continue watching (planned)
 

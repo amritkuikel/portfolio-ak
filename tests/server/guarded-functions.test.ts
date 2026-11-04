@@ -374,7 +374,16 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
  * GUARDED_FUNCTIONS.
  */
 const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
-	"parda/catalog.ts": ["getPardaHub", "getPardaRail", "getPardaTitle"],
+	"parda/catalog.ts": [
+		"getPardaHub",
+		"getPardaRail",
+		"getPardaTitle",
+		"getPardaSeason",
+		"getPardaCredits",
+		"getPardaPerson",
+		"getPardaCollection",
+		"getPardaSurprise",
+	],
 };
 // parda:end
 

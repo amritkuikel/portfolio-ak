@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * pnpm tmdb:record: writes tests/fixtures/tmdb/ from TMDB's real answers (decisions 0229
- * and 0234), with TMDB_READ_TOKEN from .env. Tests and the e2e stand-in read these
+ * pnpm tmdb:record: writes tests/fixtures/tmdb/ from TMDB's real answers (decisions 0229,
+ * 0234 and 0235), with TMDB_READ_TOKEN from .env. Tests and the e2e stand-in read these
  * files, and neither ever calls TMDB. It records:
  * - every rail of the home and the hubs (src/server/parda/catalog/rails.ts, the same
  *   requests the pages make), and the details of each billboard's titles;
- * - the popular lists and the first title of each, which the catalogue tests use.
+ * - for each of those titles, its full credits and, for a series, its first season;
+ * - the popular lists and the first title of each, which the catalogue tests use;
+ * - the first actor of the review's title and of each popular first, and the collection
+ *   of every recorded movie that belongs to one (person and collection pages).
  *
  * Files are named by `fixtureName` (e2e/harness/tmdb.ts). Tests pick their ids from the
  * recorded lists, so recording again changes no test.
@@ -14,6 +17,13 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fixtureName } from "../e2e/harness/tmdb.ts";
 import { BILLBOARD_SIZE, PAGE_LAYOUTS, railContext } from "../src/server/parda/catalog/rails.ts";
+import {
+	creditsPath,
+	DETAILS_PARAMS,
+	KEY_JOBS,
+	PERSON_PARAMS,
+	seasonPath,
+} from "../src/server/parda/catalog/requests.ts";
 
 process.loadEnvFile?.(".env");
 const token = process.env.TMDB_READ_TOKEN;
@@ -25,7 +35,6 @@ if (!token) {
 const API = process.env.TMDB_API_BASE ?? "https://api.themoviedb.org/3";
 const OUT = path.resolve(import.meta.dirname, "../tests/fixtures/tmdb");
 const LANGUAGES = ["en-US", "ne-NP"];
-const APPEND = "credits,videos,images,recommendations,similar,content_ratings,release_dates,keywords,external_ids";
 
 type Item = {
 	id: number;
@@ -34,7 +43,7 @@ type Item = {
 	adult?: boolean;
 	softcore?: boolean;
 };
-type Answer = { results?: Item[] };
+type Answer = Record<string, unknown> & { results?: Item[] };
 type Params = Record<string, string | number>;
 
 const get = async (pathname: string, params: Params) => {
@@ -46,48 +55,144 @@ const get = async (pathname: string, params: Params) => {
 	return (await response.json()) as Answer;
 };
 
-/** How many entries of a details answer's long lists are kept: pages read the first few, and the repo stays small. */
-const KEEP = { cast: 12, crew: 12, images: 4, videos: 6, titles: 8 } as const;
-/** The certificate regions kept: the admin's default (US), and neighbours a region may fall back to. */
+/** How many entries of the long lists are kept: pages read the first few, and the repo stays small. */
+const KEEP = {
+	cast: 20,
+	crew: 12,
+	images: 6,
+	videos: 6,
+	titles: 8,
+	reviews: 3,
+	alternative: 8,
+	keywords: 12,
+	/** The credits page and a person's filmography. */
+	fullCast: 40,
+	fullCrew: 40,
+	/** Per episode in a season. */
+	guests: 6,
+	/** Per season: two of the page's pages. */
+	episodes: 60,
+} as const;
+/** The certificate and provider regions kept: the admin's default (US), and neighbours a region may fall back to. */
 const REGIONS = new Set(["US", "IN", "GB"]);
+const KEY_JOB_SET = new Set<string>(KEY_JOBS);
 
+type Person = { job?: string; jobs?: Array<{ job?: string }> };
+type List = { results?: unknown[] };
 type Details = Record<string, unknown> & {
-	credits?: { cast?: unknown[]; crew?: unknown[] };
+	credits?: { cast?: unknown[]; crew?: Person[] };
+	aggregate_credits?: { cast?: unknown[]; crew?: Person[] };
 	images?: Record<string, unknown[] | undefined>;
-	videos?: { results?: unknown[] };
-	recommendations?: { results?: unknown[] };
-	similar?: { results?: unknown[] };
+	videos?: List;
+	recommendations?: List;
+	similar?: List;
+	reviews?: { results?: Array<{ content?: string }> };
+	keywords?: { keywords?: unknown[]; results?: unknown[] };
+	alternative_titles?: { titles?: unknown[]; results?: unknown[] };
 	release_dates?: { results?: Array<{ iso_3166_1: string }> };
 	content_ratings?: { results?: Array<{ iso_3166_1: string }> };
+	"watch/providers"?: { results?: Record<string, unknown> };
 };
 
+const isTrailer = (video: unknown) => /^(Trailer|Teaser)$/.test((video as { type?: string }).type ?? "");
+
+const isKeyCrew = (person: Person) =>
+	KEY_JOB_SET.has(person.job ?? "") || (person.jobs ?? []).some((job) => KEY_JOB_SET.has(job.job ?? ""));
+
+/** Key crew first, so a cut list still names the director. */
+const crewOf = (crew: Person[] | undefined, keep: number) =>
+	crew && [...crew.filter(isKeyCrew), ...crew.filter((person) => !isKeyCrew(person))].slice(0, keep);
+
+const credits = (list: { cast?: unknown[]; crew?: Person[] } | undefined, cast: number, crew: number) =>
+	list && { ...list, cast: list.cast?.slice(0, cast), crew: crewOf(list.crew, crew) };
+
+const cutList = <T extends List>(list: T | undefined, keep: number) =>
+	list && { ...list, results: list.results?.slice(0, keep) };
+
+const inRegions = <T extends { results?: Array<{ iso_3166_1: string }> }>(list: T | undefined) =>
+	list && { results: list.results?.filter((row) => REGIONS.has(row.iso_3166_1)) };
+
 /** A details answer with its long lists cut (decision 0234); every field a mapper reads is kept. */
-const trim = (details: Details): Details => ({
+const trimDetails = (details: Details): Details => ({
 	...details,
-	...(details.credits && {
-		credits: {
-			...details.credits,
-			cast: details.credits.cast?.slice(0, KEEP.cast),
-			crew: details.credits.crew?.slice(0, KEEP.crew),
-		},
-	}),
+	credits: credits(details.credits, KEEP.cast, KEEP.crew),
+	aggregate_credits: credits(details.aggregate_credits, KEEP.cast, KEEP.crew),
 	...(details.images && {
 		images: Object.fromEntries(
 			Object.entries(details.images).map(([kind, list]) => [kind, list?.slice(0, KEEP.images)]),
 		),
 	}),
-	...(details.videos && { videos: { results: details.videos.results?.slice(0, KEEP.videos) } }),
-	...(details.recommendations && {
-		recommendations: { ...details.recommendations, results: details.recommendations.results?.slice(0, KEEP.titles) },
-	}),
-	...(details.similar && { similar: { ...details.similar, results: details.similar.results?.slice(0, KEEP.titles) } }),
-	...(details.release_dates && {
-		release_dates: { results: details.release_dates.results?.filter((row) => REGIONS.has(row.iso_3166_1)) },
-	}),
-	...(details.content_ratings && {
-		content_ratings: { results: details.content_ratings.results?.filter((row) => REGIONS.has(row.iso_3166_1)) },
+	// Trailers and teasers first, so a cut list still has what the Trailer button opens.
+	videos: details.videos && {
+		results: [...(details.videos.results ?? [])]
+			.sort((a, b) => Number(isTrailer(b)) - Number(isTrailer(a)))
+			.slice(0, KEEP.videos),
+	},
+	recommendations: cutList(details.recommendations, KEEP.titles),
+	similar: cutList(details.similar, KEEP.titles),
+	reviews: details.reviews && {
+		...details.reviews,
+		results: details.reviews.results
+			?.slice(0, KEEP.reviews)
+			.map((review) => ({ ...review, content: review.content?.slice(0, 1600) })),
+	},
+	keywords: details.keywords && {
+		...(details.keywords.keywords && { keywords: details.keywords.keywords.slice(0, KEEP.keywords) }),
+		...(details.keywords.results && { results: details.keywords.results.slice(0, KEEP.keywords) }),
+	},
+	alternative_titles: details.alternative_titles && {
+		...(details.alternative_titles.titles && { titles: details.alternative_titles.titles.slice(0, KEEP.alternative) }),
+		...(details.alternative_titles.results && {
+			results: details.alternative_titles.results.slice(0, KEEP.alternative),
+		}),
+	},
+	release_dates: inRegions(details.release_dates),
+	content_ratings: inRegions(details.content_ratings),
+	...(details["watch/providers"] && {
+		"watch/providers": {
+			results: Object.fromEntries(
+				Object.entries(details["watch/providers"].results ?? {}).filter(([region]) => REGIONS.has(region)),
+			),
+		},
 	}),
 });
+
+type Season = { episodes?: Array<Record<string, unknown> & { crew?: Person[]; guest_stars?: unknown[] }> };
+const trimSeason = (season: Season): Season => ({
+	...season,
+	// Long-running series hold over a thousand episodes in one season: the page shows them a page at a time.
+	episodes: season.episodes?.slice(0, KEEP.episodes).map((episode) => ({
+		...episode,
+		crew: episode.crew?.filter((person) => person.job === "Director" || person.job === "Writer"),
+		guest_stars: episode.guest_stars?.slice(0, KEEP.guests),
+	})),
+});
+
+type PersonAnswer = Record<string, unknown> & { combined_credits?: { cast?: unknown[]; crew?: unknown[] } };
+const byVotes = (list: unknown[] | undefined) =>
+	list &&
+	[...list].sort(
+		(a, b) => ((b as { vote_count?: number }).vote_count ?? 0) - ((a as { vote_count?: number }).vote_count ?? 0),
+	);
+const trimPerson = (person: PersonAnswer): PersonAnswer => ({
+	...person,
+	...(person.combined_credits && {
+		combined_credits: {
+			cast: byVotes(person.combined_credits.cast)?.slice(0, KEEP.fullCast),
+			crew: byVotes(person.combined_credits.crew)?.slice(0, KEEP.fullCrew),
+		},
+	}),
+});
+
+const TRIMS: ReadonlyArray<[RegExp, (answer: Answer) => Answer]> = [
+	[/^(movie|tv)\/\d+$/, (answer) => trimDetails(answer as Details)],
+	[
+		/\/(credits|aggregate_credits)$/,
+		(answer) => credits(answer as Details["credits"], KEEP.fullCast, KEEP.fullCrew) as Answer,
+	],
+	[/\/season\/\d+$/, (answer) => trimSeason(answer as Season) as Answer],
+	[/^person\/\d+$/, (answer) => trimPerson(answer as PersonAnswer)],
+];
 
 const recorded = new Map<string, Answer>();
 const record = async (pathname: string, params: Params = {}): Promise<Answer> => {
@@ -95,16 +200,36 @@ const record = async (pathname: string, params: Params = {}): Promise<Answer> =>
 	const known = recorded.get(fixtureName(pathname, entries, "any"));
 	if (known) return known;
 	const answers = await Promise.all(LANGUAGES.map((language) => get(pathname, { ...params, language })));
-	const isDetails = "append_to_response" in params;
+	const trim = TRIMS.find(([pattern]) => pattern.test(pathname))?.[1] ?? ((answer: Answer) => answer);
 	for (const [index, answer] of answers.entries()) {
 		const language = LANGUAGES[index] ?? "en-US";
 		// One line per file: these are read by code, and indentation was a third of their size.
-		const body = JSON.stringify(isDetails ? trim(answer as Details) : answer);
-		writeFileSync(path.join(OUT, fixtureName(pathname, entries, language)), `${body}\n`);
+		writeFileSync(path.join(OUT, fixtureName(pathname, entries, language)), `${JSON.stringify(trim(answer))}\n`);
 	}
 	const english = answers[0] ?? {};
 	recorded.set(fixtureName(pathname, entries, "any"), english);
 	return english;
+};
+
+type RecordedDetails = {
+	belongs_to_collection?: { id: number } | null;
+	seasons?: Array<{ season_number: number }>;
+	credits?: { cast?: Array<{ id: number }> };
+	aggregate_credits?: { cast?: Array<{ id: number }> };
+};
+
+/** A title's page: its details, full credits and (a series) the season it opens on, the first that isn't specials. */
+const recordTitle = async (media: string, id: number) => {
+	const details = (await record(`${media}/${id}`, DETAILS_PARAMS)) as RecordedDetails;
+	await record(creditsPath(media === "movie" ? "movie" : "tv", id));
+	const first = details.seasons?.map((season) => season.season_number).find((number) => number > 0);
+	if (media === "tv" && first !== undefined) await record(seasonPath(id, first));
+	return details;
+};
+
+const recordFirstActor = async (details: RecordedDetails) => {
+	const actor = (details.credits?.cast ?? details.aggregate_credits?.cast)?.[0];
+	if (actor) await record(`person/${actor.id}`, PERSON_PARAMS);
 };
 
 /** A list's titles as the mapper keeps them (catalog/mappers.ts): movies and series, nothing adult. */
@@ -118,8 +243,14 @@ const titlesOf = (answer: Answer, media: string) =>
 mkdirSync(OUT, { recursive: true });
 for (const file of readdirSync(OUT)) rmSync(path.join(OUT, file));
 
+const collections = new Set<number>();
+const remember = (details: RecordedDetails) => {
+	if (details.belongs_to_collection) collections.add(details.belongs_to_collection.id);
+	return details;
+};
+
 const context = railContext("US");
-for (const layout of Object.values(PAGE_LAYOUTS)) {
+for (const [page, layout] of Object.entries(PAGE_LAYOUTS)) {
 	for (const spec of layout.rails) {
 		const request = spec.request(context);
 		const answer = await record(request.path, { page: 1, ...request.params });
@@ -127,7 +258,11 @@ for (const layout of Object.values(PAGE_LAYOUTS)) {
 		const picks = titlesOf(answer, request.media)
 			.filter((item) => item.backdrop_path)
 			.slice(0, BILLBOARD_SIZE);
-		for (const pick of picks) await record(`${pick.media}/${pick.id}`, { append_to_response: APPEND });
+		for (const [index, pick] of picks.entries()) {
+			const details = remember(await recordTitle(pick.media, pick.id));
+			// The e2e review opens the home billboard's first title, and its first actor's page.
+			if (page === "home" && index === 0) await recordFirstActor(details);
+		}
 	}
 }
 
@@ -135,6 +270,7 @@ for (const media of ["movie", "tv"]) {
 	const popular = await record(`${media}/popular`, { page: 1 });
 	const first = popular.results?.[0];
 	if (!first) throw new Error(`${media}/popular returned nothing`);
-	await record(`${media}/${first.id}`, { append_to_response: APPEND });
+	await recordFirstActor(remember(await recordTitle(media, first.id)));
 }
+for (const id of collections) await record(`collection/${id}`);
 console.log(`record-tmdb-fixtures: wrote ${readdirSync(OUT).length} files to tests/fixtures/tmdb`);

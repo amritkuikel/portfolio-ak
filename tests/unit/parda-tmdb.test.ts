@@ -160,7 +160,7 @@ describe("the mappers", () => {
 	it("keeps only what pages use", () => {
 		const [item] = mapList("movie", fixture("movie_popular.en-US")).results;
 		expect(Object.keys(item ?? {}).sort()).toEqual(
-			["backdrop", "genres", "id", "media", "overview", "poster", "rating", "title", "year"].sort(),
+			["backdrop", "genres", "id", "media", "overview", "poster", "rating", "slug", "title", "year"].sort(),
 		);
 	});
 
@@ -222,7 +222,16 @@ describe("the mappers", () => {
 			const source = english.results.find((row) => row.id === item.id);
 			if (source?.overview) expect(item.overview).toBe(source.overview);
 		}
-		const base = { media: "movie" as const, id: 1, year: null, poster: null, backdrop: null, genres: [], rating: 0 };
+		const base = {
+			media: "movie" as const,
+			id: 1,
+			slug: "title",
+			year: null,
+			poster: null,
+			backdrop: null,
+			genres: [],
+			rating: 0,
+		};
 		expect(
 			fillIn({ ...base, title: "शीर्षक", overview: "  " }, { ...base, title: "Title", overview: "Text" }),
 		).toMatchObject({

@@ -15,10 +15,10 @@ import { railLabel } from "./rail-labels";
 import type { HubRailHead, HubRailTitles, HubTitle } from "./types";
 
 /** A poster rail's item, and the widths its pictures are chosen for. */
-const POSTER_ITEM = "w-36 sm:w-40 lg:w-44";
-const POSTER_SIZES = "(min-width: 1024px) 11rem, (min-width: 640px) 10rem, 9rem";
+export const POSTER_ITEM = "w-36 sm:w-40 lg:w-44";
+export const POSTER_SIZES = "(min-width: 1024px) 11rem, (min-width: 640px) 10rem, 9rem";
 /** Rail headings in display type; the Top 10 sets its own the same way. */
-const HEADING = "pd-display text-pd-head font-bold";
+export const HEADING = "pd-display text-pd-head font-bold";
 
 /** A title as the kit's poster shows it: pictures from TMDB's paths, genre names from our messages. */
 export function toPosterItem(title: HubTitle, imageBase: string): PosterCardItem {
@@ -76,7 +76,7 @@ export function TitleRail({
 				items={titles.slice(0, 10).map((each) => ({
 					key: titleKey(each),
 					item: toPosterItem(each, imageBase),
-					link: pardaLinks.title(each.media, each.id),
+					link: pardaLinks.title(each.media, each.id, each.slug),
 				}))}
 			/>
 		);
@@ -87,7 +87,7 @@ export function TitleRail({
 				<RailItem key={titleKey(each)} className={POSTER_ITEM}>
 					<PosterCard
 						item={toPosterItem(each, imageBase)}
-						link={pardaLinks.title(each.media, each.id)}
+						link={pardaLinks.title(each.media, each.id, each.slug)}
 						sizes={POSTER_SIZES}
 					/>
 				</RailItem>

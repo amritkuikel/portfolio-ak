@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 62)** it has a home and three hubs (movies, series, anime) of rails from TMDB, a title page stub, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 63)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -42,7 +42,7 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 - **One frame on every page** (decision 0233): the layout renders it, and the page renders its `<main>`. The top mask is always solid, so nothing in it sits on a picture.
 - **Sections:** Home, Movies, Series, Anime and About: the top mask's links from `md` up, the tab bar below. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists. The frame keeps the tab bar's height clear on phones.
 - **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame. One segment (`/app/parda/whatever`) reaches `$hub`, whose loader does the same for anything but a hub.
-- **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's the home, the hubs and `/app/parda/about` (`PARDA_SITEMAP`); title pages join with Task 63.
+- **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's the home, the hubs and `/app/parda/about` (`PARDA_SITEMAP`), and the title pages (`catalog/sitemap.ts`, from `pd_title`). A page titled by TMDB also goes in `CONTENT_TITLED`.
 - **The notice page** (`/app/parda/about`) holds TMDB's logo and notice, JustWatch's attribution, playback, players' ads, the uBlock Origin Lite stores (`BLOCKER_STORES`, the section `#ad-blocker` Task 64's button falls back to) and takedowns.
 - **Sign-in and sign-up** are copies of Taskline's (layers don't import each other).
 
@@ -82,7 +82,25 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **Lean answers:** pictures are TMDB paths plus one `imageBase`, overviews are cut to 280 characters, genres are ids, rail labels are structured and named on the client.
 - **Adding a rail:** add it to the page's list in `rails.ts` (and its label to `RailLabelKey` and `rail-labels.ts` if it's new), then `pnpm tmdb:record`. `tests/server/parda-catalog.test.ts` fails for a rail without a recording.
 
-**The title page** (`/app/parda/$type/$id`, `movie` or `series`) is a stub until Task 63: the backdrop between the masks (16:9, as wide as the height allows, side masks for the rest), the tagline, the title and facts, the overview. Private. A blocked or unknown title is Parda's 404; TMDB failing a 503.
+## A title's pages
+
+`/app/parda/{movie|series}/{id}-{slug}`, `…/credits`, `/app/parda/person/{id}` and `/app/parda/collection/{id}`, decision 0235. All indexable.
+
+| File | Holds |
+| --- | --- |
+| `src/features/parda/slug.ts` | `titleSlug` (from the English title), `titleParam`, `parseTitleParam` |
+| `src/server/parda/catalog/title-page.ts` | `titlePage` (every section, names of countries and languages in the page's language, the player for Play), `seasonPage` (30 episodes a page), `creditsPage` |
+| `src/server/parda/catalog/people.ts` | `personPage`, `collectionPage`, `surprise` |
+| `src/features/parda/title/load.ts` | The loaders: data, the 301 to the canonical slug, the head (`ContentHead`: title, description, path, preview image, JSON-LD, preload). Imported lazily |
+| `src/features/parda/title/head.ts` | `pardaContentHead`: renders the loader's head (route options, so small) |
+| `src/features/parda/title/` | `title-hero.tsx`, `episodes.tsx`, `title-sections.tsx`, `gallery.tsx`, `video-dialog.tsx`, the four pages, `labels.ts` (TMDB's English statuses, departments, jobs and video kinds named) |
+
+- **The title page, in order:** the hero (backdrop, tagline, poster, logo or title, facts, status and next episode; Play, Trailer, Share), the overview, a series' "New episode" banner and episodes, the cast rail and key crew, details, where to watch legally (with JustWatch's credit), videos, the gallery, the franchise banner, More like this, Similar, reviews and links.
+- **The URL holds the episodes' state:** `?season`, `?page` (30 a page; some seasons have over a thousand) and `?episode` (its sheet). Season and page links don't scroll.
+- **Play** loads the first enabled source in the hero's box (Task 64 moves it to the watch page); none when the kill switch is off. Trailers play in YouTube's privacy-enhanced embed inside a dialog, created only when it opens.
+- **A blocked or unknown title, person or collection** is Parda's 404, TMDB failing a 503; a season TMDB can't answer says so inside its block.
+- **"Surprise me"** (`/app/parda/surprise?from=`) redirects to a random title from the page's popular and top rated lists. Its link is never preloaded.
+- **Not yet:** My List, ♥, Like, Mark watched and progress (Tasks 64 and 67), keywords as links (Task 66).
 
 ## Catalogue
 
@@ -96,11 +114,13 @@ TMDB, read through `src/server/parda/catalog/service.ts` only: that module appli
 | `tmdb/store.ts` | The singletons: `pardaTmdb` (null without `TMDB_READ_TOKEN`), `pardaControls` and `pardaCache` |
 | `catalog/context.ts`, `src/middleware/parda.ts` | `withPardaCatalog`: the services, the region and the cap (null until profiles, Task 64), null when not configured; anonymous calls over HTTP limited to 300 per 5 minutes per IP (SSR isn't counted) |
 | `controls.ts` | Takedowns, settings and sources from Postgres, at most every 30 s per process |
+| `catalog/requests.ts` | The title pages' TMDB requests (the details `append_to_response`, credits, season and person paths, the key jobs), shared with the recorder; no runtime imports |
+| `tmdb/pages.ts` | A season, the full credits, a person and a collection, each with its Nepali fill-in |
 | `catalog/refresh.ts`, `cron.ts` | The daily `pd_title` refresh, the top 500 of each media type |
 
 Genre names are our own messages (`src/features/parda/genres.ts`), because TMDB's Nepali genre names are null.
 
-**Fixtures:** `pnpm tmdb:record` writes `tests/fixtures/tmdb/` from the real API (`TMDB_READ_TOKEN` in `.env`): every rail of every page, each billboard's details and the popular lists. Tests inject them as the fetcher, and `e2e/harness/tmdb.ts` serves them. CI never calls TMDB. A file's name (`fixtureName`) is the path plus the parameters that pick the answer, without date values. Details are trimmed (long lists cut) and every file is one line. Tests take their ids from the recorded lists, so recording again changes no test.
+**Fixtures:** `pnpm tmdb:record` writes `tests/fixtures/tmdb/` from the real API (`TMDB_READ_TOKEN` in `.env`): every rail of every page, each billboard's details with its full credits and first season, the popular lists, a few actors and every recorded movie's collection. `pardaFixturePath` (`e2e/harness/tmdb.ts`) gives the review a page of each kind from them. Tests inject them as the fetcher, and `e2e/harness/tmdb.ts` serves them. CI never calls TMDB. A file's name (`fixtureName`) is the path plus the parameters that pick the answer, without date values. Details are trimmed (long lists cut) and every file is one line. Tests take their ids from the recorded lists, so recording again changes no test.
 
 ## Sources and the player
 
@@ -160,3 +180,7 @@ Then try it in the player lab.
 - **Trending mixes people in, and ignores `include_adult`:** the mapper keeps movies and series and drops `adult` and `softcore` items.
 - **Hydration in Nepali:** the kit used `Intl.NumberFormat(getLocale())`, which prints Latin digits in Chrome and Devanagari in Node; it uses `formatNumber` now.
 - **A rail heading without its buttons** (coarse pointers) was shorter than the skeleton's; the heading row is `min-h-8` everywhere.
+- **A cut fixture lost what the page needs:** trimming lists to their first entries dropped the director and every trailer; the recorder keeps key crew and trailers first.
+- **TanStack's `Link` sets `aria-current="page"`** on the active season link, overriding ours; the season picker uses `"page"` too.
+- **Country names from the browser's `Intl`** would differ from the server's in Nepali (0234); the page builder names them on the server.
+- **An index route beside a child:** `$type/$id.tsx` would make the credits page its child; the title page is `$type/$id/index.tsx` (route id `/_parda/app/parda/$type/$id/`).

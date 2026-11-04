@@ -3,6 +3,7 @@ import { APPS, appPath } from "@/features/apps/registry"; // @apps
 import { PARDA_SITEMAP } from "@/features/parda/links"; // @parda
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, locales } from "@/paraglide/runtime";
+import { pardaSitemapEntries } from "@/server/parda/catalog/sitemap"; // @parda
 import { listSitemap } from "@/server/portfolio/public"; // @portfolio
 import type { Services } from "@/server/services";
 
@@ -11,6 +12,7 @@ export type SitemapEntry = { path: string; lastmod?: Date | undefined };
 
 /** Features with public pages: each lists its own (`pnpm new:feature --public` adds one here). */
 const SITEMAP_SOURCES: ReadonlyArray<(services: Pick<Services, "db">) => Promise<SitemapEntry[]>> = [
+	pardaSitemapEntries, // @parda
 	// @new-feature:sitemap
 ];
 

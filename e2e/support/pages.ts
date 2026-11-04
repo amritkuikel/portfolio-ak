@@ -6,6 +6,7 @@
  * Plain data without Playwright imports, so the unit test can read it.
  */
 import type { E2EUser } from "../harness/config.ts";
+import type { PardaFixturePage } from "../harness/tmdb.ts"; // @parda
 
 export type ReviewedPage = {
 	/** The route's path as in FileRoutesByTo (`$param` segments included). */
@@ -30,7 +31,7 @@ export type ReviewedPage = {
 		| { from: "form-data" } // @apps
 		| { from: "form-id" } // @apps
 		| { from: "form-slug" } // @apps
-		| { from: "parda-title" }; // @parda
+		| { from: "parda"; page: PardaFixturePage }; // @parda
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -333,7 +334,11 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/parda/$hub", path: "/app/parda/movies", label: "movies" },
 	{ route: "/app/parda/$hub", path: "/app/parda/series", label: "series" },
 	{ route: "/app/parda/$hub", path: "/app/parda/anime", label: "anime" },
-	{ route: "/app/parda/$type/$id", params: { from: "parda-title" } },
+	{ route: "/app/parda/$type/$id", params: { from: "parda", page: "movie" }, label: "movie" },
+	{ route: "/app/parda/$type/$id", params: { from: "parda", page: "series" }, label: "series" },
+	{ route: "/app/parda/$type/$id/credits", params: { from: "parda", page: "credits" } },
+	{ route: "/app/parda/person/$id", params: { from: "parda", page: "person" } },
+	{ route: "/app/parda/collection/$id", params: { from: "parda", page: "collection" } },
 	{ route: "/app/parda/about" },
 	{ route: "/app/parda/sign-in" },
 	{ route: "/app/parda/sign-up" },
@@ -356,6 +361,7 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
 	"/app/taskline/$ws": "a redirect to the workspace's projects (checked by e2e/flows/taskline.spec.ts)", // @taskline
 	"/admin/parda": "a layout, a 404 until its overview page arrives in Task 69", // @parda
+	"/app/parda/surprise": "a redirect to a random title (checked by e2e/flows/parda.spec.ts)", // @parda
 	"/app/taskline/$ws/p/$key/settings": "a redirect to the settings' first section", // @taskline
 	"/apps/kanban": "Kanban's old address, a redirect to Taskline (checked by e2e/flows/taskline.spec.ts)", // @taskline
 	"/apps/kanban/$boardId": "an old board's address, a redirect to its project (checked by e2e/flows/taskline.spec.ts)", // @taskline

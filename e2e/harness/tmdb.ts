@@ -2,16 +2,17 @@
  * Stands in for TMDB in e2e (decision 0229): `/tmdb/3/<path>` answers from
  * tests/fixtures/tmdb, and `/tmdb/img/...` with a small placeholder image.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import path from "node:path";
+import { titleSlug } from "../../src/features/parda/slug.ts";
 
 const FIXTURES = path.resolve(import.meta.dirname, "../../tests/fixtures/tmdb");
 const PLACEHOLDER =
 	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 3"><rect width="2" height="3" fill="#444"/></svg>';
 
 /** Parameters that don't change which answer a request gets (the language is the file's suffix). */
-const IGNORED = new Set(["language", "include_adult", "page", "append_to_response"]);
+const IGNORED = new Set(["language", "include_adult", "page", "append_to_response", "include_image_language"]);
 
 /**
  * A recorded answer's file name, shared by `pnpm tmdb:record`, this stand-in and the
@@ -40,26 +41,65 @@ export function readFixture(name: string): string | undefined {
 	return existsSync(file) ? readFileSync(file, "utf8") : undefined;
 }
 
+type FixtureItem = {
+	id: number;
+	title?: string;
+	name?: string;
+	media_type?: string;
+	backdrop_path?: string | null;
+	adult?: boolean;
+	softcore?: boolean;
+};
+
+const readJson = <T>(name: string): T => {
+	const body = readFixture(name);
+	if (body === undefined) throw new Error(`tests/fixtures/tmdb/${name}: missing; run pnpm tmdb:record`);
+	return JSON.parse(body) as T;
+};
+
+const titlePath = (media: string, item: FixtureItem) => {
+	const name = (media === "movie" ? item.title : item.name) ?? "";
+	const slug = titleSlug(name);
+	return `/app/parda/${media === "movie" ? "movie" : "series"}/${slug ? `${item.id}-${slug}` : item.id}`;
+};
+
 /**
- * The first title of the home's billboard (trending this week, with a backdrop): the
- * recording always holds its details, so the review opens its page.
+ * The first title of the home's billboard (trending this week, with a backdrop), at its
+ * canonical address: the recording always holds its details, so a flow opens its page.
  */
 export function fixtureTitlePath(): string {
-	const list = JSON.parse(readFixture(fixtureName("trending/all/week", [], "en-US")) ?? "{}") as {
-		results?: Array<{
-			id: number;
-			media_type?: string;
-			backdrop_path?: string | null;
-			adult?: boolean;
-			softcore?: boolean;
-		}>;
-	};
+	const list = readJson<{ results?: FixtureItem[] }>(fixtureName("trending/all/week", [], "en-US"));
 	const first = list.results?.find(
 		(item) =>
 			(item.media_type === "movie" || item.media_type === "tv") && item.backdrop_path && !item.adult && !item.softcore,
 	);
 	if (!first) throw new Error("tests/fixtures/tmdb: no trending title to review; run pnpm tmdb:record");
-	return `/app/parda/${first.media_type === "movie" ? "movie" : "series"}/${first.id}`;
+	return titlePath(first.media_type ?? "movie", first);
+}
+
+/** A page of each kind the review opens (PLAN Task 63), from what `pnpm tmdb:record` always records. */
+export type PardaFixturePage = "movie" | "series" | "credits" | "person" | "collection";
+
+const popularFirst = (media: "movie" | "tv") => {
+	const first = readJson<{ results?: FixtureItem[] }>(fixtureName(`${media}/popular`, [], "en-US")).results?.[0];
+	if (!first) throw new Error(`tests/fixtures/tmdb: ${media}/popular is empty; run pnpm tmdb:record`);
+	return first;
+};
+
+export function pardaFixturePath(page: PardaFixturePage): string {
+	if (page === "movie") return titlePath("movie", popularFirst("movie"));
+	if (page === "series") return titlePath("tv", popularFirst("tv"));
+	if (page === "credits") return `${titlePath("tv", popularFirst("tv"))}/credits`;
+	if (page === "person") {
+		const id = popularFirst("movie").id;
+		const details = readJson<{ credits?: { cast?: Array<{ id: number }> } }>(fixtureName(`movie/${id}`, [], "en-US"));
+		const actor = details.credits?.cast?.[0];
+		if (!actor) throw new Error(`tests/fixtures/tmdb: movie ${id} has no cast; run pnpm tmdb:record`);
+		return `/app/parda/person/${actor.id}`;
+	}
+	const collection = readdirSync(FIXTURES).find((file) => /^collection_\d+\.en-US\.json$/.test(file));
+	if (!collection) throw new Error("tests/fixtures/tmdb: no collection recorded; run pnpm tmdb:record");
+	return `/app/parda/collection/${collection.replace(/\D+/g, "")}`;
 }
 
 /** Answers a stand-in request; false when the URL isn't one. */

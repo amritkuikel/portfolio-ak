@@ -1,5 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getPardaHub, getPardaRail, getPardaTitle } from "@/functions/parda/catalog";
+import {
+	getPardaCollection,
+	getPardaCredits,
+	getPardaHub,
+	getPardaPerson,
+	getPardaRail,
+	getPardaSeason,
+	getPardaTitle,
+} from "@/functions/parda/catalog";
 import type { Locale } from "@/paraglide/runtime";
 import { pardaKeys } from "./keys";
 import type { PardaPage, PardaType } from "./search";
@@ -30,5 +38,41 @@ export const pardaTitleQueryOptions = (locale: Locale, type: PardaType, id: numb
 	queryOptions({
 		queryKey: pardaKeys.title(locale, type, id),
 		queryFn: () => getPardaTitle({ data: { type, id, locale } }),
+		staleTime: CATALOG_STALE,
+	});
+
+export const pardaSeasonQueryOptions = (
+	locale: Locale,
+	id: number,
+	season: number | undefined,
+	page: number | undefined,
+) =>
+	queryOptions({
+		queryKey: pardaKeys.season(locale, id, season, page),
+		queryFn: () =>
+			getPardaSeason({
+				data: { id, locale, ...(season === undefined ? {} : { season }), ...(page === undefined ? {} : { page }) },
+			}),
+		staleTime: CATALOG_STALE,
+	});
+
+export const pardaCreditsQueryOptions = (locale: Locale, type: PardaType, id: number) =>
+	queryOptions({
+		queryKey: pardaKeys.credits(locale, type, id),
+		queryFn: () => getPardaCredits({ data: { type, id, locale } }),
+		staleTime: CATALOG_STALE,
+	});
+
+export const pardaPersonQueryOptions = (locale: Locale, id: number) =>
+	queryOptions({
+		queryKey: pardaKeys.person(locale, id),
+		queryFn: () => getPardaPerson({ data: { id, locale } }),
+		staleTime: CATALOG_STALE,
+	});
+
+export const pardaCollectionQueryOptions = (locale: Locale, id: number) =>
+	queryOptions({
+		queryKey: pardaKeys.collection(locale, id),
+		queryFn: () => getPardaCollection({ data: { id, locale } }),
 		staleTime: CATALOG_STALE,
 	});

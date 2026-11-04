@@ -5,14 +5,29 @@ import { type PardaControls, titleKey } from "../controls";
 import type { TmdbCache, TmdbCacheClass } from "../tmdb/cache";
 import type { Tmdb, TmdbParams } from "../tmdb/client";
 import {
-	fillIn,
+	fillInDetails,
 	fillInList,
 	type ListMedia,
 	mapDetails,
 	mapList,
 	type TitleDetails,
 	type TitleList,
+	type TitleSummary,
 } from "../tmdb/mappers";
+import {
+	type CollectionDetails,
+	fillInCollection,
+	fillInPerson,
+	fillInSeason,
+	mapCollection,
+	mapCredits,
+	mapPerson,
+	mapSeason,
+	type PersonDetails,
+	type SeasonDetails,
+	type TitleCredits,
+} from "../tmdb/pages";
+import { creditsPath, DETAILS_PARAMS, PERSON_PARAMS, seasonPath } from "./requests";
 
 /**
  * Every catalogue read goes through here (PLAN 12.6): the one place that applies
@@ -24,7 +39,6 @@ export type CatalogServices = { tmdb: Tmdb; cache: TmdbCache; controls: PardaCon
 export type CatalogScope = { locale: "en" | "ne"; region: string; cap: string | null };
 
 const TMDB_LOCALE = { en: "en-US", ne: "ne-NP" } as const;
-const APPEND = "credits,videos,images,recommendations,similar,content_ratings,release_dates,keywords,external_ids";
 
 async function read<T>(
 	services: CatalogServices,
@@ -45,9 +59,24 @@ async function read<T>(
 	return fill(nepali, english);
 }
 
-const withoutBlocked = async (services: CatalogServices, list: TitleList): Promise<TitleList> => {
+/** Titles minus takedowns: every list a page shows passes through here. */
+const unblocked = async <T extends Pick<TitleSummary, "media" | "id">>(
+	services: CatalogServices,
+	titles: ReadonlyArray<T>,
+): Promise<T[]> => {
 	const blocked = await services.controls.blocked();
-	return { ...list, results: list.results.filter((item) => !blocked.has(titleKey(item.media, item.id))) };
+	return titles.filter((item) => !blocked.has(titleKey(item.media, item.id)));
+};
+
+const withoutBlocked = async (services: CatalogServices, list: TitleList): Promise<TitleList> => ({
+	...list,
+	results: await unblocked(services, list.results),
+});
+
+/** A blocked title is a 404, the same as one that doesn't exist, and TMDB is never asked. */
+const refuseBlocked = async (services: CatalogServices, media: PardaMedia, id: number) => {
+	const blocked = await services.controls.blocked();
+	if (blocked.has(titleKey(media, id))) throw new AppError("NOT_FOUND", `Blocked title ${media}/${id}`);
 };
 
 export async function popularTitles(
@@ -86,22 +115,69 @@ export async function listTitles(
 	return withoutBlocked(services, list);
 }
 
-/** A blocked title is a 404, the same as one that doesn't exist. */
+/** A title's details, with its recommendations and similar titles minus takedowns. */
 export async function titleDetails(
 	services: CatalogServices,
 	scope: CatalogScope,
 	media: PardaMedia,
 	id: number,
 ): Promise<TitleDetails> {
-	const blocked = await services.controls.blocked();
-	if (blocked.has(titleKey(media, id))) throw new AppError("NOT_FOUND", `Blocked title ${media}/${id}`);
-	return read(
+	await refuseBlocked(services, media, id);
+	const details = await read(
 		services,
 		scope,
 		"details",
 		`${media}/${id}`,
-		{ append_to_response: APPEND },
+		DETAILS_PARAMS,
 		(raw) => mapDetails(media, raw, scope.region),
-		fillIn,
+		fillInDetails,
 	);
+	return {
+		...details,
+		recommendations: await unblocked(services, details.recommendations),
+		similar: await unblocked(services, details.similar),
+	};
+}
+
+/** One season of a series, every episode (the page shows them a page at a time). */
+export async function titleSeason(
+	services: CatalogServices,
+	scope: CatalogScope,
+	id: number,
+	season: number,
+): Promise<SeasonDetails> {
+	await refuseBlocked(services, "tv", id);
+	return read(services, scope, "details", seasonPath(id, season), {}, mapSeason, fillInSeason);
+}
+
+/** The full cast and crew. */
+export async function titleCredits(
+	services: CatalogServices,
+	scope: CatalogScope,
+	media: PardaMedia,
+	id: number,
+): Promise<TitleCredits> {
+	await refuseBlocked(services, media, id);
+	// Names and jobs don't change with the language: one answer serves both.
+	return read(services, { ...scope, locale: "en" }, "details", creditsPath(media, id), {}, mapCredits, (ne) => ne);
+}
+
+/** A person, with their filmography minus takedowns. */
+export async function personDetails(
+	services: CatalogServices,
+	scope: CatalogScope,
+	id: number,
+): Promise<PersonDetails> {
+	const person = await read(services, scope, "details", `person/${id}`, PERSON_PARAMS, mapPerson, fillInPerson);
+	return { ...person, credits: await unblocked(services, person.credits) };
+}
+
+/** A collection, its parts in release order minus takedowns. */
+export async function collectionDetails(
+	services: CatalogServices,
+	scope: CatalogScope,
+	id: number,
+): Promise<CollectionDetails> {
+	const collection = await read(services, scope, "details", `collection/${id}`, {}, mapCollection, fillInCollection);
+	return { ...collection, parts: await unblocked(services, collection.parts) };
 }

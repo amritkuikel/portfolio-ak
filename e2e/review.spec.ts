@@ -3,7 +3,7 @@
  * A route missing from the list fails tests/unit/e2e-pages.test.ts.
  */
 import { E2E } from "./harness/config.ts";
-import { fixtureTitlePath } from "./harness/tmdb.ts"; // @parda
+import { pardaFixturePath } from "./harness/tmdb.ts"; // @parda
 import { type Harness, RESOURCE_STATUS, signedIn, test } from "./support/fixtures.ts";
 import {
 	localizedPath,
@@ -80,7 +80,7 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "form-id") return page.route.replace("$formId", (await harness.reviewForm("member")).id);
 	if (page.params.from === "form-slug") return page.route.replace("$slug", (await harness.reviewForm("member")).slug);
 	// apps:end
-	if (page.params.from === "parda-title") return fixtureTitlePath(); // @parda
+	if (page.params.from === "parda") return pardaFixturePath(page.params.page); // @parda
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

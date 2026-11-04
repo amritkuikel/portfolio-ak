@@ -54,6 +54,75 @@ const samplePost = {
 };
 // portfolio:end
 
+// parda:start
+/** The heads of Parda's pages titled by TMDB (src/features/parda/title/load.ts builds them). */
+const pardaHead = (title: string, path: string, jsonLd: Meta) => ({
+	title,
+	description: `${title}: a sample description long enough for the rules.`,
+	path,
+	image: { url: "https://image.tmdb.org/t/p/w1280/backdrop.jpg", width: 1280, height: 720, alt: title },
+	jsonLd,
+	preload: null,
+});
+const pardaContentPages: ReadonlyArray<{
+	to: string;
+	label: string;
+	context: Partial<HeadContext>;
+	path: string;
+	siteName: string;
+}> = [
+	{
+		to: "/app/parda/$type/$id",
+		label: "parda title",
+		context: {
+			params: { type: "movie", id: "550-fight-club" },
+			loaderData: pardaHead("Fight Club (1999)", "/app/parda/movie/550-fight-club", {
+				"@type": "Movie",
+				name: "Fight Club",
+			}),
+		},
+		path: "/app/parda/movie/550-fight-club",
+		siteName: "Parda",
+	},
+	{
+		to: "/app/parda/$type/$id/credits",
+		label: "parda credits",
+		context: {
+			params: { type: "series", id: "1396-breaking-bad" },
+			loaderData: pardaHead("Breaking Bad: cast and crew", "/app/parda/series/1396-breaking-bad/credits", {
+				"@type": "WebPage",
+				name: "Breaking Bad: cast and crew",
+			}),
+		},
+		path: "/app/parda/series/1396-breaking-bad/credits",
+		siteName: "Parda",
+	},
+	{
+		to: "/app/parda/person/$id",
+		label: "parda person",
+		context: {
+			params: { id: "287" },
+			loaderData: pardaHead("Brad Pitt", "/app/parda/person/287", { "@type": "Person", name: "Brad Pitt" }),
+		},
+		path: "/app/parda/person/287",
+		siteName: "Parda",
+	},
+	{
+		to: "/app/parda/collection/$id",
+		label: "parda collection",
+		context: {
+			params: { id: "263" },
+			loaderData: pardaHead("The Dark Knight Collection", "/app/parda/collection/263", {
+				"@type": "CollectionPage",
+				name: "The Dark Knight Collection",
+			}),
+		},
+		path: "/app/parda/collection/263",
+		siteName: "Parda",
+	},
+];
+// parda:end
+
 /**
  * Every indexable page: its path (as in FileRoutesByTo, so the home is "/" whichever
  * layout serves it), the context its head() gets, and its expected canonical path.
@@ -104,6 +173,7 @@ const INDEXABLE: ReadonlyArray<{
 		siteName: "Parda",
 	})),
 	{ to: "/app/parda/about", label: "parda about", context: {}, path: "/app/parda/about", siteName: "Parda" },
+	...pardaContentPages,
 	// parda:end
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 	// @new-feature:indexable
@@ -114,6 +184,12 @@ const CONTENT_TITLED = new Set([
 	"home",
 	"case study",
 	"article",
+	// parda:start
+	"parda title",
+	"parda credits",
+	"parda person",
+	"parda collection",
+	// parda:end
 	// @new-feature:content-titled
 ]);
 

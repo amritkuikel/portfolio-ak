@@ -4,6 +4,7 @@
  * reports, in a production build under the real CSP (the guard fails on any violation).
  */
 import { E2E } from "../harness/config.ts";
+import { fixtureTitlePath, pardaFixturePath } from "../harness/tmdb.ts";
 import { expect, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
 
 test.describe("Parda's placeholder player", () => {
@@ -136,7 +137,7 @@ test.describe("Parda's home and hubs", () => {
 		await expect(page.locator('link[rel="preload"][as="image"][media]')).toHaveCount(2);
 		const title = await page.getByTestId("billboard").getByRole("heading", { level: 2 }).textContent();
 		await page.getByTestId("billboard-details").click();
-		await expect(page).toHaveURL(/\/app\/parda\/(movie|series)\/\d+$/);
+		await expect(page).toHaveURL(/\/app\/parda\/(movie|series)\/\d+-[a-z0-9-]+$/);
 		await expect(page.getByRole("heading", { level: 1 })).toHaveText(title ?? "");
 	});
 
@@ -158,5 +159,115 @@ test.describe("Parda's home and hubs", () => {
 			expect(response?.status(), path).toBe(404);
 			await expect(page.getByTestId("parda-frame")).toBeVisible();
 		}
+	});
+});
+
+// Task 63: a title's pages, a person and a collection, on the recorded catalogue.
+test.describe("Parda's title pages", () => {
+	test.beforeEach(async ({ page }) => {
+		// Trailers are YouTube's: never reached from CI.
+		await page.route("https://www.youtube-nocookie.com/**", (route) =>
+			route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Trailer</title>" }),
+		);
+	});
+
+	test("answers a missing or wrong slug with a 301 to the canonical address", async ({ request }) => {
+		const canonical = pardaFixturePath("movie");
+		const id = /\/(\d+)-/.exec(canonical)?.[1] ?? "";
+		for (const path of [`/app/parda/movie/${id}`, `/app/parda/movie/${id}-wrong-name`, `/ne/app/parda/movie/${id}`]) {
+			const response = await request.get(path, { maxRedirects: 0 });
+			expect(response.status(), path).toBe(301);
+			expect(response.headers().location, path).toMatch(new RegExp(`${canonical.replace(/\//g, "/")}$`));
+		}
+		expect(
+			(await request.get(`${canonical}/credits`.replace(/-[a-z0-9-]+\//, "/"), { maxRedirects: 0 })).status(),
+		).toBe(301);
+	});
+
+	test("a movie plays on its first source, opens its trailer and browses its gallery", async ({ page }) => {
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		await expect(page.getByTestId("title-heading")).toBeVisible();
+		await expect(page.getByTestId("title-cast").getByTestId("person-card").first()).toBeVisible();
+		await expect(page.getByTestId("title-crew")).toContainText(/Director/);
+		await page.getByTestId("title-play").click();
+		await expect(page.locator('iframe[src^="/parda/api/1/movie/"]')).toBeVisible();
+
+		await page.getByTestId("title-trailer").click();
+		await expect(page.getByTestId("video-frame")).toHaveAttribute(
+			"src",
+			/^https:\/\/www\.youtube-nocookie\.com\/embed\//,
+		);
+		await page.keyboard.press("Escape");
+		await expect(page.getByTestId("video-dialog")).toBeHidden();
+
+		await page.getByTestId("gallery-item").first().click();
+		const position = page.getByTestId("gallery-position");
+		await expect(position).toHaveText(/^Picture 1 of \d+$/);
+		await page.keyboard.press("ArrowRight");
+		await expect(position).toHaveText(/^Picture 2 of \d+$/);
+		await page.keyboard.press("ArrowLeft");
+		await expect(position).toHaveText(/^Picture 1 of \d+$/);
+	});
+
+	test("the cast leads to the full credits and to a person", async ({ page }) => {
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		await page.getByTestId("title-credits-link").click();
+		await expect(page).toHaveURL(/\/credits$/);
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cast and crew");
+		await expect(page.getByTestId("credits-department").first()).toBeVisible();
+		await page.getByTestId("credits-back").click();
+		await page.getByTestId("title-cast").getByTestId("person-card").first().click();
+		await expect(page).toHaveURL(/\/app\/parda\/person\/\d+$/);
+		await expect(page.getByTestId("person-filmography")).toBeVisible();
+	});
+
+	test("a series switches seasons and opens an episode's sheet from the URL", async ({ page }) => {
+		await page.goto(pardaFixturePath("series"), { waitUntil: "networkidle" });
+		const episodes = page.getByTestId("title-episodes");
+		await expect(episodes.getByTestId("episode-card").first()).toBeVisible();
+		await episodes.getByTestId("episode-card").first().click();
+		await expect(page).toHaveURL(/[?&]episode=\d+/);
+		await expect(page.getByTestId("episode-sheet")).toBeVisible();
+		await page.keyboard.press("Escape");
+		await expect(page.getByTestId("episode-sheet")).toBeHidden();
+		await expect(page).not.toHaveURL(/episode=/);
+		const seasons = episodes.getByTestId("season-link");
+		if ((await seasons.count()) > 1) {
+			await seasons.nth(1).click();
+			await expect(page).toHaveURL(/[?&]season=\d+/);
+			await expect(seasons.nth(1)).toHaveAttribute("aria-current", "page");
+			await expect(seasons.first()).not.toHaveAttribute("aria-current", "page");
+		}
+	});
+
+	test("a franchise banner leads to its collection, in release order", async ({ page }) => {
+		await page.goto(pardaFixturePath("collection"), { waitUntil: "networkidle" });
+		await expect(page.getByTestId("collection-parts").getByTestId("poster-card").nth(1)).toBeVisible();
+		await page.goto("/app/parda/movie/155", { waitUntil: "networkidle" });
+		await expect(page).toHaveURL(/\/app\/parda\/movie\/155-[a-z-]+$/);
+		await page.getByTestId("title-franchise").getByRole("link").click();
+		await expect(page).toHaveURL(/\/app\/parda\/collection\/\d+$/);
+		await expect(page.getByTestId("parda-collection")).toBeVisible();
+	});
+
+	test("Surprise me redirects to a title from the page's lists", async ({ request, page }) => {
+		for (const from of ["home", "movies", "series", "anime"]) {
+			const response = await request.get(`/app/parda/surprise?from=${from}`, { maxRedirects: 0 });
+			expect(response.status(), from).toBeGreaterThanOrEqual(300);
+			expect(response.status(), from).toBeLessThan(400);
+			expect(response.headers().location, from).toMatch(/\/app\/parda\/(movie|series)\/\d+(-[a-z0-9-]+)?$/);
+		}
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		await expect(page.getByTestId("surprise-me").first()).toHaveAttribute("href", /\/app\/parda\/surprise\?from=home$/);
+	});
+
+	test("an unknown person or collection is Parda's 404", async ({ page, guard }) => {
+		guard.allow(RESOURCE_STATUS(404));
+		for (const path of ["/app/parda/person/1", "/app/parda/collection/1", "/app/parda/person/abc"]) {
+			const response = await page.goto(path, { waitUntil: "networkidle" });
+			expect(response?.status(), path).toBe(404);
+			await expect(page.getByTestId("parda-frame")).toBeVisible();
+		}
+		expect(fixtureTitlePath()).toMatch(/^\/app\/parda\/(movie|series)\/\d+/);
 	});
 });
