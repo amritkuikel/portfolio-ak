@@ -87,6 +87,8 @@ export type DataTableProps<Row> = {
 	 * question, plain text cells). Long tables get this anyway.
 	 */
 	scrollRegion?: boolean;
+	/** The region's name, when a page has more than one: landmarks need names of their own. */
+	scrollRegionLabel?: string;
 	/**
 	 * Groups consecutive rows under a heading row (each group its own <tbody>): the
 	 * server sorts by the group first, so a page's rows of one group are together.
@@ -133,6 +135,7 @@ export function DataTable<Row extends RowData>({
 	empty,
 	busy = false,
 	scrollRegion = false,
+	scrollRegionLabel,
 	groupOf,
 	"data-testid": testId,
 }: DataTableProps<Row>) {
@@ -287,7 +290,9 @@ export function DataTable<Row extends RowData>({
 								"focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
 							sticky && "max-h-[min(70dvh,48rem)] overflow-y-auto",
 						)}
-						{...(sticky || scrollRegion ? { tabIndex: 0, role: "region", "aria-label": m.table_scroll_region() } : {})}
+						{...(sticky || scrollRegion
+							? { tabIndex: 0, role: "region", "aria-label": scrollRegionLabel ?? m.table_scroll_region() }
+							: {})}
 					>
 						{/* A bare <table>: ui/table's own scroll wrapper would make the sticky header stick to it instead. */}
 						<table data-slot="table" data-testid={testId} className="w-full caption-bottom text-body">

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { listSchema } from "@/lib/crud/schema";
 import { arrayParam, enumParam, pageParam, searchParam } from "@/lib/list/params";
-import { TASK_TYPES } from "./types";
+import { REPORT_RANGES, TASK_TYPES } from "./types";
 
 /**
  * Taskline's URL contracts (route files import these, never the form schemas, 0194).
@@ -164,6 +164,11 @@ export const timesheetSearch = z.object({ week: dayParam });
 /** A project's time: estimate against actual by task or by member, and the open task. */
 export const PROJECT_TIME_VIEWS = ["task", "member"] as const;
 export const projectTimeSearch = z.object({ by: enumParam(PROJECT_TIME_VIEWS, "task"), task: taskParam });
+
+// ---- Task 57: reports -----------------------------------------------------------------------------
+
+/** How many weeks a project's reports cover. */
+export const projectReportsSearch = z.object({ range: enumParam(REPORT_RANGES, "12w") });
 
 // ---- Task 54: the timeline ----------------------------------------------------------------------
 

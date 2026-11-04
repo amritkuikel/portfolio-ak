@@ -40,7 +40,7 @@ const escapeHtml = (text: string) =>
 	);
 
 /** Plain text → a paragraph per line, through the same sanitizer as the editor's descriptions. */
-const description = (text: string) =>
+export const plainDescription = (text: string) =>
 	richText(
 		text
 			.split(/\r?\n/)
@@ -152,7 +152,7 @@ export async function importTasks(
 		// Task 52: the imported tasks go to the end of the backlog, in the file's order.
 		const ranks = await repo.endRanks(tx, access.project.id, planned.length);
 		const tasks = planned.map(({ row, status, assigneeId }, index) => {
-			const text = description(row.description);
+			const text = plainDescription(row.description);
 			return {
 				id: crypto.randomUUID(),
 				workspaceId: access.workspace.id,

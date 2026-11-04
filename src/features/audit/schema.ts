@@ -86,6 +86,9 @@ export const AUDIT_ACTIONS = [
 	"taskline.automation.create",
 	"taskline.automation.update",
 	"taskline.automation.delete",
+	"taskline.template.create",
+	"taskline.template.update",
+	"taskline.template.delete",
 	// taskline:end
 	// @new-feature:audit-actions
 ] as const;
@@ -116,6 +119,7 @@ export const AUDIT_TARGETS = [
 	"taskline-time-entry",
 	"taskline-field",
 	"taskline-automation",
+	"taskline-template",
 	// taskline:end
 	// @new-feature:audit-targets
 ] as const;

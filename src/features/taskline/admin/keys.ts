@@ -18,6 +18,10 @@ export const tasklineAdminKeys = {
 	/** Task 56: the workspace's automations and the team's runs, and the builder's preview. */
 	automations: () => [...ROOT, "automations"] as const,
 	automationPreview: () => [...ROOT, "automation-preview"] as const,
+	/** Task 57: the team's templates, what its "New project" offers, and the reports. */
+	templates: () => [...ROOT, "templates"] as const,
+	templateChoices: () => [...ROOT, "template-choices"] as const,
+	reports: (range: string) => [...ROOT, "reports", { range }] as const,
 	activityOptions: () => [...ROOT, "activity-options"] as const,
 	accounts: () => [...ROOT, "accounts"] as const,
 	/** Task 53: the timesheets' choices and lock, and utilization over some days. */

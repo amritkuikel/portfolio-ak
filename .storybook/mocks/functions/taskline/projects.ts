@@ -4,8 +4,9 @@ import type {
 	ProjectLocation,
 	ProjectMemberView,
 	ProjectSummary,
+	ProjectUpdate,
 } from "../../../../src/features/taskline/types";
-import { sampleProjectTasks } from "../../taskline";
+import { sampleProjectTasks, sampleProjectUpdates } from "../../taskline";
 
 // Stand-ins for src/functions/taskline/projects.ts.
 const detail = (): ProjectDetail => sampleProjectTasks.project;
@@ -37,6 +38,15 @@ const people = (): ProjectMemberView[] =>
 		role: "member",
 		placeholder: member.placeholder,
 	}));
+export const listTasklineProjectUpdates = fn(async (): Promise<ProjectUpdate[]> => sampleProjectUpdates).mockName(
+	"listTasklineProjectUpdates",
+);
+export const postTasklineProjectUpdate = fn(
+	async (): Promise<ProjectUpdate> => sampleProjectUpdates[0] as ProjectUpdate,
+).mockName("postTasklineProjectUpdate");
+export const deleteTasklineProjectUpdate = fn(async (): Promise<void> => undefined).mockName(
+	"deleteTasklineProjectUpdate",
+);
 export const listTasklineProjectMembers = fn(async (): Promise<ProjectMemberView[]> => people()).mockName(
 	"listTasklineProjectMembers",
 );

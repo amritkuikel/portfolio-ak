@@ -34,9 +34,12 @@ import {
 } from "@/functions/taskline/inbox";
 import {
 	createTasklineProject,
+	deleteTasklineProjectUpdate,
 	joinTasklineProject,
 	listTasklineProjectMembers,
 	listTasklineProjects,
+	listTasklineProjectUpdates,
+	postTasklineProjectUpdate,
 	removeTasklineProjectMember,
 	setTasklineProjectArchived,
 	setTasklineProjectMember,
@@ -44,6 +47,7 @@ import {
 	setTasklineProjectState,
 	updateTasklineProject,
 } from "@/functions/taskline/projects";
+import { getTasklineProjectReports } from "@/functions/taskline/reports";
 import {
 	completeTasklineSprint,
 	createTasklineSprint,
@@ -69,6 +73,7 @@ import {
 	trashTasklineTask,
 	updateTasklineTask,
 } from "@/functions/taskline/tasks";
+import { listTasklineTemplates } from "@/functions/taskline/templates";
 import {
 	copyTasklineTimesheetWeek,
 	deleteTasklineTimeEntry,
@@ -108,6 +113,7 @@ import type {
 	CreateSprintInput,
 	CreateStatusInput,
 	CreateTaskInput,
+	DeleteProjectUpdateInput,
 	DependencyInput,
 	ImportTasksInput,
 	InboxInput,
@@ -115,6 +121,7 @@ import type {
 	MarkReadInput,
 	NotifySettingsInput,
 	PatchTaskInput,
+	PostProjectUpdateInput,
 	SaveViewInput,
 	SetProjectStateInput,
 	TaskListInput,
@@ -131,7 +138,7 @@ import type {
 	UpdateTaskInput,
 	UpdateTimeEntryInput,
 } from "./schema";
-import type { AutomationCondition, ChecklistItem, ProjectRole, SavedViewKind } from "./types";
+import type { AutomationCondition, ChecklistItem, ProjectRole, ReportRange, SavedViewKind } from "./types";
 
 /**
  * Taskline's reads and writes (Query; the board's TanStack DB collection reads the
@@ -178,6 +185,11 @@ export const tasklineKeys = {
 		[...tasklineKeys.project(userId, ws, key), "automations"] as const,
 	automationPreview: (userId: string, ws: string, key: string) =>
 		[...tasklineKeys.project(userId, ws, key), "automation-preview"] as const,
+	/** Task 57: what "New project" offers in a workspace, a project's reports and its updates. */
+	templates: (userId: string, ws: string) => [...tasklineKeys.workspace(userId, ws), "templates"] as const,
+	reports: (userId: string, ws: string, key: string, range: string) =>
+		[...tasklineKeys.project(userId, ws, key), "reports", { range }] as const,
+	updates: (userId: string, ws: string, key: string) => [...tasklineKeys.project(userId, ws, key), "updates"] as const,
 };
 
 /** A project's automations (its lead's settings page). */
@@ -206,6 +218,27 @@ export const projectTimeQueryOptions = (userId: string, ws: string, key: string)
 	queryOptions({
 		queryKey: tasklineKeys.projectTime(userId, ws, key),
 		queryFn: () => getTasklineProjectTime({ data: { ws, key } }),
+	});
+
+/** What "New project" offers: the built-ins and the team's own (loaded when the dialog opens). */
+export const templatesQueryOptions = (userId: string, ws: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.templates(userId, ws),
+		queryFn: () => listTasklineTemplates({ data: { ws } }),
+	});
+
+/** A project's reports over some weeks. */
+export const projectReportsQueryOptions = (userId: string, ws: string, key: string, range: ReportRange) =>
+	queryOptions({
+		queryKey: tasklineKeys.reports(userId, ws, key, range),
+		queryFn: () => getTasklineProjectReports({ data: { ws, key, range } }),
+	});
+
+/** A project's updates, newest first (the overview). */
+export const projectUpdatesQueryOptions = (userId: string, ws: string, key: string) =>
+	queryOptions({
+		queryKey: tasklineKeys.updates(userId, ws, key),
+		queryFn: () => listTasklineProjectUpdates({ data: { ws, key } }),
 	});
 
 /** A sprint's report: its days, today's totals and the velocity. */
@@ -386,6 +419,10 @@ export const tasklineMutations = {
 		write(queryClient, userId, (input: UpdateProjectInput) => updateTasklineProject({ data: input })),
 	setProjectState: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: SetProjectStateInput) => setTasklineProjectState({ data: input })),
+	postProjectUpdate: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: PostProjectUpdateInput) => postTasklineProjectUpdate({ data: input })),
+	deleteProjectUpdate: (queryClient: QueryClient, userId: string) =>
+		write(queryClient, userId, (input: DeleteProjectUpdateInput) => deleteTasklineProjectUpdate({ data: input })),
 	joinProject: (queryClient: QueryClient, userId: string) =>
 		write(queryClient, userId, (input: { ws: string; key: string }) => joinTasklineProject({ data: input })),
 	setArchived: (queryClient: QueryClient, userId: string) =>

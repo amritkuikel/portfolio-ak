@@ -148,6 +148,15 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["updateTasklineWorkspaceLabel", "taskline:configure"],
 		["deleteTasklineWorkspaceLabel", "taskline:configure"],
 	],
+	"taskline-admin/templates.ts": [
+		["listTasklineAdminTemplates", "taskline:configure"],
+		["createTasklineAdminTemplate", "taskline:configure"],
+		["updateTasklineAdminTemplate", "taskline:configure"],
+		["deleteTasklineAdminTemplate", "taskline:configure"],
+		["saveTasklineProjectAsTemplate", "taskline:configure"],
+		["listTasklineAdminTemplateChoices", "taskline:manage"],
+	],
+	"taskline-admin/reports.ts": [["getTasklineAdminReports", "taskline:read"]],
 	"taskline-admin/automations.ts": [
 		["listTasklineWorkspaceAutomations", "taskline:configure"],
 		["createTasklineWorkspaceAutomation", "taskline:configure"],
@@ -295,6 +304,8 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"removeTasklineDependency",
 	],
 	"taskline/fields.ts": ["createTasklineField", "updateTasklineField", "deleteTasklineField"],
+	"taskline/templates.ts": ["listTasklineTemplates"],
+	"taskline/reports.ts": ["getTasklineProjectReports"],
 	"taskline/automations.ts": [
 		"listTasklineAutomations",
 		"createTasklineAutomation",
@@ -315,6 +326,9 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"listTasklineProjectMembers",
 		"setTasklineProjectMember",
 		"removeTasklineProjectMember",
+		"listTasklineProjectUpdates",
+		"postTasklineProjectUpdate",
+		"deleteTasklineProjectUpdate",
 		"locateTasklineProject",
 	],
 	"taskline/workflow.ts": [

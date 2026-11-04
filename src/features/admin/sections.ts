@@ -1,6 +1,7 @@
 import { type ActiveOptions, linkOptions } from "@tanstack/react-router";
 import {
 	BriefcaseIcon, // @portfolio
+	ChartColumnIcon, // @taskline
 	DatabaseIcon,
 	FolderKanbanIcon, // @portfolio
 	GaugeIcon, // @taskline
@@ -9,6 +10,7 @@ import {
 	InboxIcon, // @portfolio
 	KeyRoundIcon,
 	LayoutGridIcon, // @apps
+	LayoutTemplateIcon, // @taskline
 	Link2Icon, // @apps
 	ListChecksIcon, // @taskline
 	type LucideIcon,
@@ -244,6 +246,24 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		permission: "taskline:configure",
 		group: "taskline",
 		keywords: m.admin_keywords_taskline_automations,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/templates" }),
+		label: m.admin_nav_taskline_templates,
+		description: m.taskline_admin_templates_description,
+		icon: LayoutTemplateIcon,
+		permission: "taskline:configure",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_templates,
+	},
+	{
+		...linkOptions({ to: "/admin/taskline/reports" }),
+		label: m.admin_nav_taskline_reports,
+		description: m.taskline_admin_reports_description,
+		icon: ChartColumnIcon,
+		permission: "taskline:read",
+		group: "taskline",
+		keywords: m.admin_keywords_taskline_reports,
 	},
 	{
 		...linkOptions({ to: "/admin/taskline/activity" }),

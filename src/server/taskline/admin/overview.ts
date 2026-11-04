@@ -7,6 +7,7 @@ import { tlInvitation, tlMember, tlProject, tlTask, tlTimeEntry, tlWorkspace, us
 import type { Db } from "@/server/db/types";
 import type { Services } from "@/server/services";
 import { activeSprints } from "../home/service";
+import { latestUpdates } from "../projects/updates";
 import { team } from "./team";
 
 /**
@@ -145,6 +146,7 @@ export async function getOverview({ db }: Pick<Services, "db">): Promise<AdminOv
 		.select({ total: sql<number>`coalesce(sum(${tlTimeEntry.minutes}), 0)`.mapWith(Number) })
 		.from(tlTimeEntry)
 		.where(and(eq(tlTimeEntry.workspaceId, workspace.id), gte(tlTimeEntry.onDay, thisWeek)));
+	const updates = await latestUpdates(db, ids);
 	return {
 		stats: {
 			activeProjects: active.length,
@@ -165,6 +167,7 @@ export async function getOverview({ db }: Pick<Services, "db">): Promise<AdminOv
 			overdue: counts.get(project.id)?.overdue ?? 0,
 			done: counts.get(project.id)?.done ?? 0,
 			targetOn: project.targetOn,
+			updatedOn: updates.get(project.id)?.at ?? null,
 		})),
 		sandboxes: {
 			total: sandboxTotal,

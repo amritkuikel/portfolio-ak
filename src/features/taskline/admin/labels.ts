@@ -1,6 +1,6 @@
 import { defineStatuses } from "@/components/data-display/status-badge";
 import { m } from "@/paraglide/messages";
-import type { ActivityKind, ProjectHealth, ProjectStatus, ProjectVisibility, TeamRole } from "../types";
+import type { ActivityKind, ProjectStatus, ProjectVisibility, TeamRole } from "../types";
 
 /** /admin/taskline's enum labels and badges (the app's own are in ../labels.ts). */
 
@@ -11,11 +11,7 @@ export const PROJECT_STATUS = defineStatuses<ProjectStatus>({
 	archived: { tone: "neutral", label: m.taskline_admin_status_archived },
 });
 
-export const PROJECT_HEALTH = defineStatuses<ProjectHealth>({
-	on_track: { tone: "success", label: m.taskline_health_on_track },
-	at_risk: { tone: "warning", label: m.taskline_health_at_risk },
-	off_track: { tone: "danger", label: m.taskline_health_off_track },
-});
+export { PROJECT_HEALTH } from "../labels";
 
 export const VISIBILITY_LABELS: Record<ProjectVisibility, () => string> = {
 	team: m.taskline_visibility_team,
@@ -40,6 +36,8 @@ export const ACTIVITY_KIND_LABELS: Record<ActivityKind, () => string> = {
 	"project.restored": m.taskline_admin_kind_project_restored,
 	"project.member_added": m.taskline_admin_kind_member_added,
 	"project.member_removed": m.taskline_admin_kind_member_removed,
+	"project.update_posted": m.taskline_admin_kind_update_posted,
+	"project.update_deleted": m.taskline_admin_kind_update_deleted,
 	"status.created": m.taskline_admin_kind_status_created,
 	"status.updated": m.taskline_admin_kind_status_updated,
 	"status.deleted": m.taskline_admin_kind_status_deleted,

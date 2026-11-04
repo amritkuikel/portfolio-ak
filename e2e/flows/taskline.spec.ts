@@ -787,6 +787,91 @@ test.describe("Taskline timeline and dependencies", () => {
 	});
 });
 
+test.describe("Taskline templates, reports and updates", () => {
+	test.use(signedIn("admin"));
+
+	test("a project from a template has its statuses, fields and automation; its reports read; the lead posts an update", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const stamp = Date.now().toString(36).slice(-4).toUpperCase();
+		const key = `T${stamp}`.slice(0, 6);
+		const name = `Launch ${stamp}`;
+
+		await open(page, "/app/taskline/team/projects?create=1");
+		const dialog = page.getByTestId("create-project-dialog");
+		await dialog.getByLabel("Name").fill(name);
+		await dialog.getByLabel("Key").fill(key);
+		await dialog.getByRole("combobox", { name: "Template" }).click();
+		await page.getByRole("option", { name: "Scrum software" }).click();
+		await expect(dialog.getByTestId("template-summary")).toContainText("6 statuses and 4 sample tasks");
+		await dialog.getByRole("button", { name: "Create project" }).click();
+		await expect(page.getByTestId("project-overview")).toBeVisible();
+		await expect(page).toHaveURL(new RegExp(`/app/taskline/team/p/${key}`));
+
+		// Its statuses and sample tasks are on the board; sprints are on, as the template says.
+		await expect(page.getByTestId("view-backlog")).toBeVisible();
+		await page.getByTestId("view-board").click();
+		await expect(page.getByText("In review").first()).toBeVisible();
+		await expect(page.getByText("Write the product goal")).toBeVisible();
+
+		await open(page, `/app/taskline/team/p/${key}/settings/fields`);
+		await expect(page.getByTestId("project-fields").getByText("Severity", { exact: true })).toBeVisible();
+		await open(page, `/app/taskline/team/p/${key}/settings/automations`);
+		await expect(
+			page.getByTestId("project-automations").getByText("New bugs get the Bug label", { exact: true }),
+		).toBeVisible();
+
+		// The reports read, and a report saves as a file.
+		await open(page, `/app/taskline/team/p/${key}/reports`);
+		await expect(page.getByTestId("report-status")).toBeVisible();
+		const download = page.waitForEvent("download");
+		await page.getByTestId("report-csv-status").click();
+		expect((await download).suggestedFilename()).toContain(`${key.toLowerCase()}-status-`);
+		await page.getByTestId("report-range-4w").click();
+		await expect(page).toHaveURL(/range=4w/);
+
+		// The lead posts an update, which sets the health.
+		await open(page, `/app/taskline/team/p/${key}`);
+		await page.getByTestId("project-update-new").click();
+		const post = page.getByTestId("project-update-dialog");
+		await post.getByRole("combobox", { name: "Health" }).click();
+		await page.getByRole("option", { name: "At risk" }).click();
+		await post.locator(".ProseMirror").fill("Two bugs to clear first.");
+		await post.getByRole("button", { name: "Post", exact: true }).click();
+		await expect(page.getByTestId("project-update").first()).toContainText("Two bugs to clear first.");
+		await expect(page.getByTestId("project-update").first()).toContainText("At risk");
+	});
+
+	test("the admin saves a project as a template, and it can be used and deleted", async ({ page }) => {
+		const stamp = Date.now().toString(36).slice(-5);
+		const name = `From WEB ${stamp}`;
+		await open(page, "/admin/taskline/projects");
+		await page.getByRole("link", { name: "Website relaunch" }).click();
+		await page.getByTestId("project-save-template").click();
+		const dialog = page.getByTestId("save-template-dialog");
+		await dialog.getByLabel("Name").fill(name);
+		await dialog.getByRole("button", { name: "Save changes" }).click();
+		await expect(page.getByText("Saved as the template").first()).toBeVisible();
+
+		await open(page, "/admin/taskline/templates");
+		const team = page.getByTestId("team-templates");
+		await expect(team.getByText(name)).toBeVisible();
+		await expect(page.getByTestId("builtin-templates").getByTestId("template-row")).toHaveCount(5);
+
+		// The admin's "New project" offers it.
+		await open(page, "/admin/taskline/projects/new");
+		await page.getByRole("combobox", { name: "Template" }).click();
+		await expect(page.getByRole("option", { name })).toBeVisible();
+
+		await open(page, "/admin/taskline/templates");
+		await page.getByRole("button", { name: `Delete ${name}` }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await expect(team.getByText(name)).toHaveCount(0);
+	});
+});
+
 test.describe("Taskline automations", () => {
 	test.use(signedIn("admin"));
 

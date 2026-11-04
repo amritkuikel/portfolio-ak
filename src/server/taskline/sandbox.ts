@@ -24,6 +24,7 @@ import {
 	tlNotification,
 	tlProject,
 	tlProjectMember,
+	tlProjectUpdate,
 	tlSavedView,
 	tlStar,
 	tlTask,
@@ -334,6 +335,16 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	// Task 51: a view Asha shared with the project (the list, due this week, soonest first).
 	const asha = teammates[0];
 	if (asha) {
+		// Task 57: her update on how WEB is doing, which sets its health.
+		const update = m.taskline_seed_update({}, t);
+		await tx.insert(tlProjectUpdate).values({
+			projectId: project.id,
+			authorId: asha.id,
+			health: "on_track",
+			bodyHtml: `<p>${escapeHtml(update)}</p>`,
+			bodyText: update,
+		});
+		await tx.update(tlProject).set({ health: "on_track" }).where(eq(tlProject.id, project.id));
 		await tx.insert(tlSavedView).values({
 			workspaceId: workspace.id,
 			projectId: project.id,
@@ -791,6 +802,8 @@ async function remapMember(tx: Tx, from: string, to: string): Promise<void> {
 	await tx.update(tlTimeEntry).set({ memberId: to }).where(eq(tlTimeEntry.memberId, from));
 	// Automations (Task 56): who made a rule, and the members its conditions and actions name.
 	await tx.update(tlAutomation).set({ createdById: to }).where(eq(tlAutomation.createdById, from));
+	// Project updates (Task 57): who posted them.
+	await tx.update(tlProjectUpdate).set({ authorId: to }).where(eq(tlProjectUpdate.authorId, from));
 	await replaceInAutomations(tx, from, to);
 	// Custom fields (Task 55): a person field's value is a member id.
 	await tx.execute(

@@ -263,6 +263,51 @@ type SeededTask = { id: string; done: boolean; canceled: boolean };
  * active sprint, two more the planned one, the rest the backlog. The days of the
  * completed and the active sprint burn down evenly to what's done.
  */
+/** Task 57's demo template: what `templateDefinition` reads (tests/server/taskline-seed.test.ts checks it). */
+const WEBSITE_STATUS = {
+	todo: "00000000-0000-4000-8000-000000000001",
+	doing: "00000000-0000-4000-8000-000000000002",
+	review: "00000000-0000-4000-8000-000000000003",
+	done: "00000000-0000-4000-8000-000000000004",
+	canceled: "00000000-0000-4000-8000-000000000005",
+};
+const WEBSITE_LAUNCH = "00000000-0000-4000-8000-000000000006";
+const WEBSITE_TEMPLATE = {
+	statuses: [
+		{ id: WEBSITE_STATUS.todo, name: "To do", category: "unstarted", color: "blue" },
+		{ id: WEBSITE_STATUS.doing, name: "In progress", category: "started", color: "amber", wipLimit: 4 },
+		{ id: WEBSITE_STATUS.review, name: "In review", category: "started", color: "violet" },
+		{ id: WEBSITE_STATUS.done, name: "Done", category: "completed", color: "green" },
+		{ id: WEBSITE_STATUS.canceled, name: "Canceled", category: "canceled", color: "red" },
+	],
+	fields: [{ id: "00000000-0000-4000-8000-000000000007", name: "Page URL", type: "url" }],
+	automations: [
+		{
+			name: "Tell the lead when something is ready for review",
+			enabled: true,
+			trigger: { type: "status_changed", statusId: WEBSITE_STATUS.review },
+			conditions: [],
+			actions: [{ type: "notify", to: "lead", message: "Ready for review" }],
+		},
+	],
+	settings: { sprints: false, time: true },
+	milestones: [{ id: WEBSITE_LAUNCH, name: "Launch", dueOffset: 42 }],
+	tasks: [
+		{ title: "Agree on the sitemap", status: WEBSITE_STATUS.todo, dueOffset: 5, priority: 3 },
+		{ title: "Design the home page", status: WEBSITE_STATUS.todo, dueOffset: 14 },
+		{ title: "Launch the site", status: WEBSITE_STATUS.todo, dueOffset: 42, milestone: WEBSITE_LAUNCH },
+	],
+};
+
+/** Task 57: two updates on WEB by its lead; the last one sets its health. */
+async function seedUpdates(query: DemoQuery, projectId: string, leadId: string | null) {
+	await query(
+		`insert into "tl_project_update" ("project_id", "author_id", "health", "body_html", "body_text", "created_at") values ($1, $2, 'on_track', '<p>The beta is out and the first feedback is good.</p>', 'The beta is out and the first feedback is good.', now() - interval '9 days'), ($1, $2, 'at_risk', '<p>Two bugs are holding the launch back. A week should clear them.</p>', 'Two bugs are holding the launch back. A week should clear them.', now() - interval '2 days')`,
+		[projectId, leadId],
+	);
+	await query(`update "tl_project" set "health" = 'at_risk' where "id" = $1`, [projectId]);
+}
+
 async function seedSprints(query: DemoQuery, projectId: string, tasks: ReadonlyArray<SeededTask>) {
 	const POINTS = [1, 2, 3, 5, 8];
 	await query(`update "tl_project" set "settings" = $2 where "id" = $1`, [
@@ -388,6 +433,11 @@ export async function seedTaskline(
 		[workspaceId, JSON.stringify(SEVERITY)],
 	);
 	const severityId = firstId(severity.rows, "field Severity");
+	// Task 57: a saved template (its local ids are its own; a project made from it gets new ones).
+	await query(
+		`insert into "tl_template" ("workspace_id", "name", "description", "definition") values ($1, $2, $3, $4)`,
+		[workspaceId, "Website launch", "Design, build and launch a site in six weeks.", JSON.stringify(WEBSITE_TEMPLATE)],
+	);
 	// Task 56: a workspace rule: an urgent bug tells the project's lead.
 	await query(
 		`insert into "tl_automation" ("workspace_id", "name", "trigger", "conditions", "actions") values ($1, 'Urgent bugs tell the lead', $2, $3, $4)`,
@@ -522,6 +572,7 @@ export async function seedTaskline(
 			await seedTimeline(query, projectId, made);
 			await seedFields(query, { workspaceId, projectId, reviewers: assignees, tasks: made });
 			await seedAutomations(query, workspaceId, projectId, made);
+			await seedUpdates(query, projectId, leadId);
 		}
 		// Task 56: OPS's first open task repeats every week on Monday.
 		const repeating = made.find((task) => !task.done && !task.canceled);

@@ -284,6 +284,14 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 		label: "none of its own",
 	},
 	{ route: "/app/taskline/$ws/p/$key/settings/trash", as: "admin", path: "/app/taskline/team/p/WEB/settings/trash" },
+	// Reports (Task 57): the demo team's WEB has work of every kind; OPS is small and private.
+	{ route: "/app/taskline/$ws/p/$key/reports", as: "admin", path: "/app/taskline/team/p/WEB/reports" },
+	{
+		route: "/app/taskline/$ws/p/$key/reports",
+		as: "admin",
+		path: "/app/taskline/team/p/OPS/reports?range=4w",
+		label: "small, four weeks",
+	},
 	{
 		route: "/app/taskline/$ws/t/$ref",
 		as: "admin",
@@ -311,6 +319,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/workflows", as: "admin" },
 	{ route: "/admin/taskline/fields", as: "admin" },
 	{ route: "/admin/taskline/automations", as: "admin" },
+	{ route: "/admin/taskline/templates", as: "admin" },
+	{ route: "/admin/taskline/reports", as: "admin" },
 	{ route: "/admin/taskline/settings", as: "admin" },
 	{ route: "/admin/taskline/activity", as: "admin" },
 	{ route: "/admin/taskline/timesheets", as: "admin" },

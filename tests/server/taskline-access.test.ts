@@ -11,6 +11,8 @@ import * as collab from "@/server/taskline/collab/service";
 import * as fields from "@/server/taskline/fields/service";
 import * as home from "@/server/taskline/home/service";
 import * as projects from "@/server/taskline/projects/service";
+import * as updates from "@/server/taskline/projects/updates";
+import * as reports from "@/server/taskline/reports/service";
 import { seedSandbox } from "@/server/taskline/sandbox";
 import * as sprints from "@/server/taskline/sprints/service";
 import * as imports from "@/server/taskline/tasks/import";
@@ -732,6 +734,31 @@ const OPERATIONS: ReadonlyArray<Operation> = [
 		name: "previewAutomation",
 		need: "manage",
 		run: ({ ws, key }, caller) => automations.previewAutomation(caller, { ws, key, conditions: [] }),
+	},
+	// Task 57: anyone who sees a project reads its reports and updates; whoever may run it posts and deletes.
+	{
+		name: "projectReports",
+		need: "read",
+		run: ({ ws, key }, caller) => reports.getProjectReports(caller, { ws, key, range: "4w" }),
+	},
+	{
+		name: "listProjectUpdates",
+		need: "read",
+		run: ({ ws, key }, caller) => updates.listProjectUpdates(caller, { ws, key }),
+	},
+	{
+		name: "postProjectUpdate",
+		need: "manage",
+		run: ({ ws, key }, caller) =>
+			updates.postProjectUpdate(caller, { ws, key, health: "on_track", body: "<p>Going well</p>" }),
+	},
+	{
+		name: "deleteProjectUpdate",
+		need: "manage",
+		run: async ({ ws, key, owner }, caller) => {
+			const update = await updates.postProjectUpdate(as(owner), { ws, key, health: "at_risk", body: "<p>A risk</p>" });
+			return updates.deleteProjectUpdate(caller, { ws, key, id: update.id });
+		},
 	},
 ];
 

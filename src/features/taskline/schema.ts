@@ -8,6 +8,7 @@ import { recurrenceRule } from "./recurrence";
 import { taskList } from "./search";
 import { projectSettings } from "./settings";
 import {
+	BUILTIN_TEMPLATES,
 	DAY_MINUTES,
 	DEPENDENCY_RELATIONS,
 	ESTIMATE_MAX_MINUTES,
@@ -18,6 +19,7 @@ import {
 	PROJECT_ROLES,
 	PROJECT_STATUSES,
 	PROJECT_VISIBILITIES,
+	REPORT_RANGES,
 	SAVED_VIEW_KINDS,
 	SPRINT_CARRY,
 	STATUS_CATEGORIES,
@@ -99,7 +101,15 @@ const projectFields = {
 	targetOn: isoDate().nullable().optional(),
 };
 
-export const createProjectInput = z.strictObject({ ws: ws(), key: projectKey(), ...projectFields });
+/** A built-in template's id or a saved one's (Task 57). */
+export const templateRef = z.union([z.enum(BUILTIN_TEMPLATES), id]);
+
+export const createProjectInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	...projectFields,
+	template: templateRef.optional(),
+});
 
 /** The project form: everything it shows, saved with the version it started from. */
 export const updateProjectInput = z.strictObject({
@@ -328,6 +338,19 @@ export const notifySettingsInput = z.strictObject({
 	modes: z.partialRecord(z.enum(NOTIFY_KINDS), z.enum(NOTIFY_MODES)),
 	locale: z.enum(["en", "ne"]).nullable(),
 });
+
+// ---- Task 57: project updates and reports ----------------------------------------------------------
+
+export const postProjectUpdateInput = z.strictObject({
+	ws: ws(),
+	key: projectKey(),
+	health: z.enum(PROJECT_HEALTHS),
+	body: optionalText({ max: COMMENT_MAX }),
+});
+export const deleteProjectUpdateInput = z.strictObject({ ws: ws(), key: projectKey(), id });
+export const projectReportsInput = z.strictObject({ ws: ws(), key: projectKey(), range: z.enum(REPORT_RANGES) });
+export type PostProjectUpdateInput = z.infer<typeof postProjectUpdateInput>;
+export type DeleteProjectUpdateInput = z.infer<typeof deleteProjectUpdateInput>;
 
 export type AddCommentInput = z.infer<typeof addCommentInput>;
 export type UpdateCommentInput = z.infer<typeof updateCommentInput>;

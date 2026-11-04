@@ -227,6 +227,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0220](#0220-tasklines-custom-fields-definitions-per-scope-values-in-jsonb-checked-against-them-options-by-id-required-means-before-its-completed): Taskline's custom fields: definitions per scope, values in jsonb checked against them, options by id, required means "before it's completed"
 - [0221](#0221-tasklines-automations-in-the-changes-transaction-a-savepoint-per-rule-no-chaining-recurring-tasks-move-their-rule-from-task-to-task): Taskline's automations: in the change's transaction, a savepoint per rule, no chaining; recurring tasks move their rule from task to task
 - [0222](#0222-the-typecheck-runs-tsc-with-a-4-gb-heap): The typecheck runs tsc with a 4 GB heap
+- [0224](#0224-tasklines-templates-one-definition-with-local-ids-built-ins-in-code-edited-as-json): Taskline's templates: one definition with local ids, built-ins in code, edited as JSON
+- [0225](#0225-tasklines-reports-computed-from-live-tasks-and-the-activity-log-updates-set-the-health): Taskline's reports: computed from live tasks and the activity log; updates set the health
 </details>
 
 ---
@@ -2721,3 +2723,29 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 - `pnpm typecheck` runs `node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit` instead of `tsc --noEmit`. On a 12 GB Windows machine Node's default heap is about 2 GB, and `tsc` over this repository needs about that: Task 56's two routes (each route widens TanStack Router's path unions, which `seo.ts`, `links.ts` and every typed link check) took it from just under the limit to "JavaScript heap out of memory" on every run, while its own new files cost under 90 ms of checking each. CI's runners have a larger default; the flag makes the gate the same everywhere.
 - **Alternatives considered:** `NODE_OPTIONS` in the script (not portable to Windows' shell); fewer route definitions (the routes are the product's pages); project references to split the program (a larger change than the problem).
 
+## 0224: Taskline's templates: one definition with local ids, built-ins in code, edited as JSON
+
+*Task 57.*
+
+- **One definition** (`features/taskline/template-definition.ts`, Zod): statuses, labels, fields, automations, settings, milestones and sample tasks with days relative to the start. The built-ins, `tl_template` and a template's file all hold it, and it's checked on the way in and read through the schema on the way out (`templates/repository.ts`), so one holding only part of itself still has every list and default.
+- **Local ids:** statuses, labels, fields and milestones carry a uuid of the template's own; the rest of the definition refers to those, and creating a project gives each a new id. Automations are the same `automationDefinition` a project stores, so the builder's rules, the engine and `checkDefinition` need no second shape: `ruleWithIds` replaces the uuids in the rule's text. A select's option ids are kept, since they only mean something within their field.
+- **What a rule can't name:** a member or a sprint (neither exists yet). The definition refuses them. "Save project as template" leaves such a rule out, with one naming a workspace label or field, and says how many it left.
+- **Built-ins are code, their words messages,** so a project starts in its creator's language and they need no rows, seed or migration. They read only; "Copy" opens the form with one's JSON.
+- **The admin edits JSON** in a form, checked as it's typed with the server's schema; "Import" reads a file into the same form, so it can be read before it's saved.
+- **Applying is the import's rules:** inside the project's transaction, through repositories, so nobody is notified and no automation fires; each sample task gets `task.created` with `imported: true`. Sample tasks have no assignee. A label named like a workspace label uses that one rather than a second. Quotas are checked first and refuse the whole project.
+- **Sandboxes have only the built-ins:** saved templates are the team's, and an id from elsewhere is a field error.
+- **Alternatives considered:** names as references (more readable by hand, but rules would need a second schema and a translation in both directions); a visual builder for every part of a definition (most of the existing editors would be needed again, for an admin task done rarely); copying a project directly instead of keeping templates (it wouldn't survive the project, or travel as a file).
+
+## 0225: Taskline's reports: computed from live tasks and the activity log; updates set the health
+
+*Task 57.*
+
+- **Where the numbers come from:** the service reads the project's live tasks (the columns it needs, the same rows the board reads) and computes in `features/taskline/reports/metrics.ts`, pure and unit tested, rather than in SQL, so the calendar rules are in one place. Only the admin's cross-project reports aggregate in SQL.
+- **Lead time** runs from created to completed; **cycle time** from the first move into a `started` status (from `task.moved` in `tl_activity`), or from creation if its first move was out of one, to completed. Reopening restarts neither clock. A task never started has no cycle time. Canceled tasks aren't "completed" anywhere; progress leaves them out of the total. At most the newest 1,000 completed tasks are read in the range.
+- **Overdue over time** uses today's due dates, since tasks don't keep earlier ones; the report says so. Keeping a history of due dates for one chart wasn't worth a table.
+- **`taskline:read` sees time totals** on `/admin/taskline/reports`, by project and member, as PLAN 11.5 sets; the entries behind them stay `taskline:time`'s. The app's time page already shows members the same totals.
+- **Workload against capacity:** the estimates of open tasks due within a week or overdue, against the member's weekly capacity. Unestimated tasks count as nothing, and the page says so.
+- **A milestone is at risk** when it's past its day, or due within a week with tasks open.
+- **CSV:** each report saves what it shows, from the data the page already has.
+- **Project updates** are written once by whoever may run the project; posting sets the project's health, and deleting leaves it. They notify nobody: the plan's notification kinds don't include them, and the overview and the feed carry them.
+- **Alternatives considered:** daily snapshots of each project (as sprints have; a job and a table for numbers the tasks already give, except the overdue trend); charts only, without CSV per report (the plan asks for each).

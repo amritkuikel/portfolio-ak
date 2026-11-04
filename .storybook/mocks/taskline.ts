@@ -6,8 +6,10 @@ import type {
 	NavWorkspace,
 	NotifySettingsView,
 	ProjectAutomations,
+	ProjectReports,
 	ProjectTasks,
 	ProjectTime,
+	ProjectUpdate,
 	SprintReport,
 	SprintSummary,
 	TaskDetail,
@@ -17,6 +19,7 @@ import type {
 	TasklineNav,
 	TasklineStatus,
 	TaskSummary,
+	TemplateChoice,
 	Timesheet,
 } from "../../src/features/taskline/types";
 import type { Session } from "../../src/lib/session";
@@ -795,4 +798,98 @@ export const sampleProjectAutomations: ProjectAutomations = {
 	automations: sampleAutomations,
 	workspace: [sampleWorkspaceAutomation],
 	runs: sampleAutomationRuns,
+};
+
+// ---- Task 57: templates, reports and updates ------------------------------------------------------
+
+export const sampleProjectUpdates: ProjectUpdate[] = [
+	{
+		id: "71000000-0000-4000-8000-000000000001",
+		health: "at_risk",
+		body: "<p>Two bugs are holding the launch back.</p>",
+		author: "Asha Gurung",
+		at: "2026-10-29T10:00:00.000Z",
+	},
+	{
+		id: "71000000-0000-4000-8000-000000000002",
+		health: "on_track",
+		body: "<p>The beta is out.</p>",
+		author: null,
+		at: "2026-10-20T10:00:00.000Z",
+	},
+];
+
+export const sampleTemplateChoices: TemplateChoice[] = [
+	{
+		id: "scrum",
+		name: "Scrum software",
+		description: "Sprints and a backlog.",
+		builtin: true,
+		counts: { statuses: 6, labels: 3, fields: 1, automations: 2, milestones: 1, tasks: 4 },
+	},
+	{
+		id: "72000000-0000-4000-8000-000000000001",
+		name: "Website launch",
+		description: "Design, build and launch.",
+		builtin: false,
+		counts: { statuses: 5, labels: 0, fields: 1, automations: 1, milestones: 1, tasks: 3 },
+	},
+];
+
+const reportWeek = (week: string, created: number, completed: number, overdue: number) => ({
+	week,
+	created,
+	completed,
+	overdue,
+});
+
+export const sampleProjectReports: ProjectReports = {
+	today: "2026-10-31",
+	statuses: [
+		{ statusId: "s1", name: "To do", color: "blue", category: "unstarted", count: 4 },
+		{ statusId: "s2", name: "In progress", color: "amber", category: "started", count: 2 },
+		{ statusId: "s3", name: "Done", color: "green", category: "completed", count: 6 },
+	],
+	priorities: [
+		{ priority: 0, count: 1 },
+		{ priority: 1, count: 0 },
+		{ priority: 2, count: 3 },
+		{ priority: 3, count: 2 },
+		{ priority: 4, count: 0 },
+	],
+	weeks: [
+		reportWeek("2026-10-04", 3, 1, 0),
+		reportWeek("2026-10-11", 4, 2, 1),
+		reportWeek("2026-10-18", 2, 2, 2),
+		reportWeek("2026-10-25", 3, 1, 1),
+	],
+	cycle: {
+		medianLeadDays: 6.5,
+		medianCycleDays: 3,
+		p85CycleDays: 5.25,
+		tasks: [
+			{ ref: "WEB-3", title: "Fix the header", completedOn: "2026-10-28", leadDays: 9.5, cycleDays: 5.25 },
+			{ ref: "WEB-1", title: "Write the copy", completedOn: "2026-10-20", leadDays: 3, cycleDays: null },
+		],
+	},
+	workload: [
+		{ memberId: "m1", name: "Asha Gurung", open: 3, overdue: 1, estimateMinutes: 240, points: 5 },
+		{ memberId: null, name: null, open: 3, overdue: 0, estimateMinutes: 0, points: 2 },
+	],
+	time: {
+		totals: { estimateMinutes: 480, loggedMinutes: 300, billableMinutes: 60 },
+		members: [{ memberId: "m1", name: "Asha Gurung", estimateMinutes: 480, loggedMinutes: 300, billableMinutes: 60 }],
+		tasks: [
+			{
+				taskId: "t1",
+				ref: "WEB-3",
+				title: "Fix the header",
+				assigneeId: "m1",
+				estimateMinutes: 480,
+				loggedMinutes: 300,
+				billableMinutes: 60,
+				closed: false,
+			},
+		],
+	},
 };

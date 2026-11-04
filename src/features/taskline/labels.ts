@@ -10,8 +10,9 @@ import {
 	MinusIcon,
 	ZapIcon,
 } from "lucide-react";
+import { defineStatuses } from "@/components/data-display/status-badge";
 import { m } from "@/paraglide/messages";
-import type { FieldType, ProjectRole, StatusCategory, TaskPriority, TaskType } from "./types";
+import type { FieldType, ProjectHealth, ProjectRole, StatusCategory, TaskPriority, TaskType } from "./types";
 
 /** Taskline's names for its enums, and the icons that go with them (read at render time, never at module level). */
 
@@ -79,3 +80,10 @@ export const FIELD_TYPE_LABELS: Record<FieldType, () => string> = {
 	checkbox: m.taskline_field_type_checkbox,
 	url: m.taskline_field_type_url,
 };
+
+/** A project's health as a badge (Task 57: its updates; the admin's tables use the same). */
+export const PROJECT_HEALTH = defineStatuses<ProjectHealth>({
+	on_track: { tone: "success", label: m.taskline_health_on_track },
+	at_risk: { tone: "warning", label: m.taskline_health_at_risk },
+	off_track: { tone: "danger", label: m.taskline_health_off_track },
+});

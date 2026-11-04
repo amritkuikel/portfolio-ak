@@ -1,9 +1,12 @@
 import { hashPassword } from "better-auth/crypto";
 import { afterAll, describe, expect, it } from "vitest";
+import { templateDefinition } from "@/features/taskline/template-definition";
 import type { TasklineServices } from "@/server/taskline/access";
 import * as automations from "@/server/taskline/automations/service";
 import * as projects from "@/server/taskline/projects/service";
+import { listProjectUpdates } from "@/server/taskline/projects/updates";
 import * as tasks from "@/server/taskline/tasks/service";
+import { listTemplates } from "@/server/taskline/templates/service";
 import { seedTaskline, TASKLINE_TEAM } from "../../scripts/lib/taskline-seed.ts";
 import { createTestDb } from "../utils/test-db";
 
@@ -64,6 +67,19 @@ describe("Taskline demo seed", async () => {
 		]);
 		// Task 56: WEB's own rule with its runs, the team's rule beside it, and a repeating task in OPS.
 		const sita = TASKLINE_TEAM.find((each) => each.email.startsWith("sita@"));
+		// Task 57: the saved template reads as a definition, and WEB has its lead's updates.
+		const saved = await query(`select "name", "definition" from "tl_template"`);
+		expect(saved.rows.map((row) => row.name)).toEqual(["Website launch"]);
+		expect(templateDefinition.safeParse(saved.rows[0]?.definition).success).toBe(true);
+		// Read back as "New project" reads it: the seed's SQL stores only part of a definition.
+		const offered = await listTemplates(await as(asha?.email ?? ""), { ws: "team" });
+		expect(offered.find((choice) => choice.name === "Website launch")?.counts).toMatchObject({
+			statuses: 5,
+			labels: 0,
+			tasks: 3,
+		});
+		const updates = await listProjectUpdates(await as(sita?.email ?? ""), { ws: "team", key: "WEB" });
+		expect(updates.map((update) => update.health)).toEqual(["at_risk", "on_track"]);
 		const rules = await automations.listAutomations(await as(sita?.email ?? ""), "team", "WEB");
 		expect(rules.automations.map((rule) => rule.name)).toEqual(["Close a parent when its subtasks are done"]);
 		expect(rules.workspace.map((rule) => rule.name)).toEqual(["Urgent bugs tell the lead"]);

@@ -15,7 +15,7 @@ import { StatCard } from "@/components/data-display/stat-card";
 import { StatusOf } from "@/components/data-display/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Page, PageHeader } from "@/components/page/page";
-import { formatDayMonth, formatNumber } from "@/lib/i18n/intl";
+import { formatDateTime, formatDayMonth, formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { TASKLINE_NAME } from "../../brand";
 import { tasklineColor } from "../../colors";
@@ -58,6 +58,16 @@ const columns: ReadonlyArray<DataTableColumn<AdminProjectHealthRow>> = [
 				<StatusOf status={row.health} map={PROJECT_HEALTH} />
 			) : (
 				<span className="text-muted-foreground">{m.taskline_health_none()}</span>
+			),
+	},
+	{
+		id: "update",
+		header: m.taskline_report_col_update,
+		cell: (row) =>
+			row.updatedOn ? (
+				formatDateTime(row.updatedOn)
+			) : (
+				<span className="text-muted-foreground">{m.taskline_report_no_update()}</span>
 			),
 	},
 	{

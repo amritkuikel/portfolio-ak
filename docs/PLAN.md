@@ -1598,11 +1598,11 @@ The procedure is section 10.1's, with these differences:
 | 54 | Timeline, milestones and dependencies | xhigh | Done (decision 0219) |
 | 55 | Custom fields | high | Done (decision 0220) |
 | 56 | Automations and recurring tasks | xhigh | Done (decisions 0221–0222) |
-| 57 | Templates, reports and project updates | high | Planned |
+| 57 | Templates, reports and project updates | high | Done (decisions 0224–0225) |
 | 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0223 after Task 56).
+- **Decisions:** numbered from the next free one (0226 after Task 57).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1761,7 +1761,7 @@ The procedure is section 10.1's, with these differences:
 | `tl_milestone`, `tl_task_dependency` | milestone: project_id, name, description, due_on, completed_at, position. Dependency: blocker_id, blocked_id (check `≠`; no cycles, checked with a recursive CTE). `tl_task` gains milestone_id | 54 |
 | `tl_field` | workspace_id, project_id?, name, type (text / number / select / multi_select / date / member / checkbox / url), options jsonb (with ids), required, position, archived_at. `tl_task` gains `fields` jsonb (GIN) | 55 |
 | `tl_automation`, `tl_automation_run` | automation: workspace_id, project_id?, name, enabled, trigger, conditions and actions jsonb, created_by_id, version. Run: automation_id, task_id? (set null), outcome (ok / skipped / failed), detail, key (once per task and due date for the daily job), at. `tl_task` gains recurrence jsonb, `tl_comment` automation (the rule's name) | 56 |
-| `tl_template`, `tl_project_update` | template: workspace_id, name, description, definition jsonb (built-ins live in code). Update: project_id, author_id, health, body, created_at | 57 |
+| `tl_template`, `tl_project_update` | template: workspace_id, name (unique per workspace, any case), description, definition jsonb (built-ins live in code), version. Update: project_id, author_id (set null), health, body html + text, created_at | 57 |
 
 - **`workspaceSettings`** (Zod, defaults in code):
   - name and slug;
@@ -1800,7 +1800,7 @@ The procedure is section 10.1's, with these differences:
 **Routes (app, under `/app/taskline`):**
 - `/` (landing), `/sign-in`, `/sign-up`, `/account`, `/home` (my work), `/inbox`, `/settings` (my notifications)
 - `/$ws/projects`, `/$ws/search`, `/$ws/timesheet`
-- `/$ws/p/$key` (overview), `/$ws/p/$key/{board,list,calendar,timeline,backlog,sprints/$sprintId,milestones,reports,time}`
+- `/$ws/p/$key` (overview), `/$ws/p/$key/{board,list,calendar,timeline,backlog,sprints/$sprintId,milestones,reports,time}` (`reports`: `?range=`)
 - `/$ws/p/$key/settings/{general,members,workflow,labels,fields,automations,trash}` (lead)
 - `/$ws/t/$ref`: the task page (`WEB-12`). Every view opens it as a sheet through route masking (`unmaskOnReload: true`).
 
@@ -2072,16 +2072,28 @@ Automations, the workspace's and a project's, and recurring tasks (decisions 022
   - `pnpm test:storybook` (all stories) was stopped by Claude Code when the machine ran low on memory; the changed stories passed in both projects. Run it once before pushing.
   - `taskDetail` reads with `Promise.all` inside writes' transactions, which pg warns about in the e2e server's log ("client.query() when the client is already executing a query"); left as it was.
 
-### Task 57: Templates, reports and project updates (planned)
+### Task 57: Templates, reports and project updates (done)
 
-- **Templates:**
-  - built-ins in code: Scrum software, Kanban, Marketing campaign, Client project, Event;
-  - custom templates in `tl_template` (`definition`: statuses, labels, fields, automations, settings, milestones, and sample tasks with dates relative to the start);
-  - admin CRUD with JSON import and export, "Save project as template", and creating from a template in the app and the admin.
-- **Project reports:** status and priority breakdown, created vs completed, cycle and lead time (from the activity's status changes), throughput, overdue trend, workload by assignee, time vs estimate; CSV each.
-- **Admin `reports`:** health across projects (progress, overdue, milestones at risk, last activity), workload against capacity, and time by project and member.
-- **Project updates:** `tl_project_update` (health and a post by the lead), shown on the overview and the admin's project health table.
-- **Tests:** unit (cycle time from activity), PGlite (template round trip, validation), e2e (a project created from a template has its statuses, fields and automation).
+Templates, a project's reports and the admin's, and project updates (decisions 0224, 0225; [docs/guides/taskline.md](guides/taskline.md), "Templates", "Reports and project updates").
+
+- **Schema:** `0027_taskline_templates`: `tl_template` (workspace, name unique in any case, description, definition jsonb, version) and `tl_project_update` (project, author `set null`, health, body html and text). Activity kinds `project.update_posted`, `project.update_deleted`; audit actions `taskline.template.create`, `update`, `delete` on the target `taskline-template`.
+- **Definition** (`features/taskline/template-definition.ts`, pure and shared): statuses, labels, fields, automations, settings, milestones and sample tasks. Rows carry local uuids the rest refers to, so a rule is the shape a project stores; `ruleFitsTemplate` refuses a member, a sprint or anything outside the template. Stored rows are read through the schema.
+- **Server:** `templates/{builtin,repository,service}.ts` (five built-ins in messages; `chooseTemplate`, checked against the quotas; `applyTemplate`, in the project's transaction, through repositories: nobody notified, no rule fired); `reports/service.ts` with `features/taskline/reports/metrics.ts` (cycle and lead time from `task.moved`, weeks, overdue at each close, workload, milestones at risk); `projects/updates.ts`; `admin/{templates,reports}.ts`. Five app functions (`taskline/templates.ts`, `taskline/reports.ts`, three in `taskline/projects.ts`) and seven admin ones (`taskline-admin/templates.ts`, `taskline:configure`, what "New project" offers `taskline:manage`; `taskline-admin/reports.ts`, `taskline:read`), in the guard test; four operations in the access matrix. The admin's JSON export carries the updates.
+- **Pages:** `$ws/p/$key/reports` (a view tab, `?range=`, a CSV per report); the overview's Updates and their dialog; "New project" in the app and the admin with a template and "Starts on"; `/admin/taskline/templates` (the team's and the built-ins; a JSON form checked as it's typed; import, export, copy, delete); "Save as template" on the admin's project page; `/admin/taskline/reports` (health, workload against capacity, time by project and member, each with CSV); "Last update" on the admin's overview.
+- **Kit:** `DataTable`'s `scrollRegionLabel` (a page with several scroll regions needs names of their own, axe's `landmark-unique`); `downloadJson` in `src/lib/csv.ts`, which the project export now uses too.
+- **Sandbox and demo team:** Asha's update on WEB in the guest's language, setting its health; the claim makes a guest's updates the account's. The demo team has two updates on WEB, which is at risk, and a saved template, "Website launch".
+- **Tests:** PGlite `taskline-templates.test.ts` (26 with the seed's: the built-ins in both languages, what a project from a template has, a refusal over quota, a workspace label reused, nothing fired or notified, the admin's create and its audit, the round trip through "Save as template" and a file, stale saves and taken names, what a definition refuses, updates, both reports from real moves, the sandbox), the access matrix (+4 operations), the demo seed read back as "New project" reads it; unit `taskline-reports.test.ts` (13: cycle and lead time, percentiles, weeks, overdue, workload, milestones); stories `Taskline/Reports` and `Taskline/Admin` (Templates, Reports). `pnpm test`: 132 files, 1,220 tests. `pnpm test:storybook`: 104 files, 498 tests. E2E (11.1): `taskline.spec.ts` (20 flows, the new two: a project from a template with its statuses, field and automation, its reports and a CSV, a posted update; the admin saving a project as a template, offering it and deleting it), `rbac.spec.ts` and `apps.spec.ts` (24 passed), and the review of every `/app/taskline` and `/admin/taskline` page (768 checks: 752 passed at once, and the 16 on the two reports pages passed once their tables were named; the changed pages then ran again, 72 passed).
+- **Numbers:** every page's JavaScript 270.6 kB gzip (269.6 before; budget 275). 209 new messages in each language, the Nepali written by hand. Build, the bundle check, `i18n:check`, `knip` and `db:check` green.
+- **Deviations:**
+  - The admin edits a template's definition as JSON, not in a builder (0224). A built-in reads only; "Copy" starts from it.
+  - "Save as template" leaves out rules naming a member, a sprint, or a workspace label or field, and says how many; workspace labels on tasks don't travel.
+  - Scrum's template turns sprints on but plans none: a sprint is days, which a template doesn't know.
+  - Overdue over time uses today's due dates, since tasks don't keep earlier ones (0225).
+  - Project updates are written once and notify nobody; deleting one leaves the health. `tl_template` gained `version` for the form.
+  - `taskline:read` sees time totals on the admin's reports, as 11.5 sets; the entries stay `taskline:time`'s.
+- **For the owner:**
+  - Run `pnpm db:migrate` on Neon (`0027_taskline_templates`).
+  - The demo team's template and updates are written only while the team has no projects, so an existing database doesn't gain them from `pnpm db:seed-taskline`.
 
 ### Task 58: Wrap-up (planned)
 

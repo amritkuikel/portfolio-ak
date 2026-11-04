@@ -7,14 +7,21 @@ import { formValidators, useAppForm } from "@/components/forms";
 import { availabilityValidators } from "@/components/forms/async-validators";
 import { FormSection, StickyFormBar } from "@/components/page/form-layout";
 import { Page, PageHeader } from "@/components/page/page";
-import { required } from "@/lib/validation";
+import { todayInZone } from "@/lib/i18n/date-only";
+import { APP_TIME_ZONE } from "@/lib/i18n/intl";
+import { isoDate, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { TASKLINE_COLOR_LABELS } from "../../colors";
 import { PROJECT_KEY_PATTERN, PROJECT_NAME_MAX, projectKey, suggestKey } from "../../schema";
 import { PROJECT_VISIBILITIES, TASKLINE_COLORS, type TasklineColor } from "../../types";
 import { ALL_TASKLINE_ADMIN } from "../keys";
 import { VISIBILITY_LABELS } from "../labels";
-import { isProjectKeyFree, memberOptionsQueryOptions, tasklineAdminMutations } from "../queries";
+import {
+	adminTemplateChoicesQueryOptions,
+	isProjectKeyFree,
+	memberOptionsQueryOptions,
+	tasklineAdminMutations,
+} from "../queries";
 import { type AdminCreateProjectInput, type AdminProjectDetail, adminCreateProjectInput } from "../schema";
 
 const formSchema = z.object({
@@ -23,20 +30,29 @@ const formSchema = z.object({
 	leadId: z.string(),
 	visibility: z.enum(PROJECT_VISIBILITIES),
 	color: z.enum(TASKLINE_COLORS),
+	template: z.string(),
+	startOn: isoDate(),
 });
 type Values = z.input<typeof formSchema>;
 
 /**
  * /admin/taskline/projects/new: a team project with the workspace's starting statuses,
  * led by a member the admin picks (or nobody yet). The key is checked while typing: one
- * in use, or a deleted project's, is refused (keys are never reused).
+ * in use, or a deleted project's, is refused (keys are never reused). A template (Task 57)
+ * replaces the starting statuses and adds the rest of what it holds.
  */
 export function NewAdminProjectPage() {
 	const navigate = useNavigate();
 	const { data: members } = useSuspenseQuery(memberOptionsQueryOptions());
+	const { data: templates } = useSuspenseQuery(adminTemplateChoicesQueryOptions());
 	const crud = useCrudForm({
 		toInput: (values: Values): AdminCreateProjectInput =>
-			adminCreateProjectInput.parse({ ...values, leadId: values.leadId || null }),
+			adminCreateProjectInput.parse({
+				...values,
+				leadId: values.leadId || null,
+				template: values.template || undefined,
+				startOn: values.template ? values.startOn : undefined,
+			}),
 		create: tasklineAdminMutations.createProject(),
 		invalidate: ALL_TASKLINE_ADMIN,
 		// The create mutation returns the new project (useCrudForm types it with the update one, absent here).
@@ -51,6 +67,8 @@ export function NewAdminProjectPage() {
 				leadId: "",
 				visibility: "team",
 				color: "teal" as TasklineColor,
+				template: "",
+				startOn: todayInZone(APP_TIME_ZONE),
 			} as Values,
 			validators: formValidators(formSchema),
 		}),
@@ -122,6 +140,33 @@ export function NewAdminProjectPage() {
 							/>
 						)}
 					</form.AppField>
+				</FormSection>
+				<FormSection title={m.taskline_template_field()} description={m.taskline_template_section_hint()}>
+					<form.AppField name="template">
+						{(field) => (
+							<field.SelectField
+								label={m.taskline_template_field()}
+								options={[
+									{ value: "", label: m.taskline_template_blank() },
+									...templates.map((template) => ({ value: template.id, label: template.name })),
+								]}
+							/>
+						)}
+					</form.AppField>
+					<form.Subscribe selector={(state) => state.values.template}>
+						{(chosen) =>
+							chosen ? (
+								<form.AppField name="startOn">
+									{(field) => (
+										<field.DateField
+											label={m.taskline_template_start()}
+											description={m.taskline_template_start_hint()}
+										/>
+									)}
+								</form.AppField>
+							) : null
+						}
+					</form.Subscribe>
 				</FormSection>
 				<StickyFormBar submitLabel={m.taskline_project_create()} />
 			</CrudForm>

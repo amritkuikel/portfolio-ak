@@ -6,6 +6,7 @@ import {
 	DownloadIcon,
 	ExternalLinkIcon,
 	FileTextIcon,
+	LayoutTemplateIcon,
 	ListChecksIcon,
 	TagIcon,
 	Trash2Icon,
@@ -25,7 +26,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Can } from "@/features/rbac/can";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, downloadJson } from "@/lib/csv";
 import { m } from "@/paraglide/messages";
 import { tasklineLinks } from "../../links";
 import { ALL_TASKLINE_ADMIN } from "../keys";
@@ -34,17 +35,13 @@ import { adminProjectQueryOptions, tasklineAdminMutations } from "../queries";
 import type { ProjectExport } from "../schema";
 
 const DeleteProjectDialog = lazy(() => import("./delete-project-dialog"));
+const SaveTemplateDialog = lazy(() => import("../templates/save-template-dialog"));
 
 const route = getRouteApi("/_admin/admin/taskline/projects/$id");
 
 function download(file: ProjectExport) {
 	if (file.type === "text/csv") return downloadCsv(file.filename, file.content);
-	const url = URL.createObjectURL(new Blob([file.content], { type: `${file.type};charset=utf-8` }));
-	const link = Object.assign(document.createElement("a"), { href: url, download: file.filename });
-	document.body.append(link);
-	link.click();
-	link.remove();
-	URL.revokeObjectURL(url);
+	downloadJson(file.filename, file.content);
 }
 
 /**
@@ -56,6 +53,7 @@ export function AdminProjectLayout() {
 	const { id } = route.useParams();
 	const { data: project } = useSuspenseQuery(adminProjectQueryOptions(id));
 	const [deleting, setDeleting] = useState(false);
+	const [savingTemplate, setSavingTemplate] = useState(false);
 	const archive = useCrudMutation(tasklineAdminMutations.setProjectArchived(), { invalidate: ALL_TASKLINE_ADMIN });
 	const exporter = useCrudMutation(tasklineAdminMutations.exportProject(), { invalidate: [] });
 
@@ -93,6 +91,12 @@ export function AdminProjectLayout() {
 								<DropdownMenuItem onSelect={() => exportAs("csv")}>{m.taskline_admin_export_csv()}</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
+						<Can permission="taskline:configure">
+							<Button variant="outline" onClick={() => setSavingTemplate(true)} data-testid="project-save-template">
+								<LayoutTemplateIcon aria-hidden />
+								{m.taskline_template_save()}
+							</Button>
+						</Can>
 						<Can permission="taskline:manage">
 							<Button
 								variant="outline"
@@ -145,6 +149,15 @@ export function AdminProjectLayout() {
 			{deleting ? (
 				<Suspense fallback={null}>
 					<DeleteProjectDialog project={project} onClose={() => setDeleting(false)} />
+				</Suspense>
+			) : null}
+			{savingTemplate ? (
+				<Suspense fallback={null}>
+					<SaveTemplateDialog
+						projectId={project.id}
+						projectName={project.name}
+						onClose={() => setSavingTemplate(false)}
+					/>
 				</Suspense>
 			) : null}
 		</Page>

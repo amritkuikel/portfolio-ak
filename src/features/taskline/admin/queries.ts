@@ -42,6 +42,7 @@ import {
 	transferTasklineProjectLead,
 	updateTasklineAdminProject,
 } from "@/functions/taskline-admin/projects";
+import { getTasklineAdminReports } from "@/functions/taskline-admin/reports";
 import {
 	createTasklineWorkspaceLabel,
 	deleteTasklineWorkspaceLabel,
@@ -52,6 +53,14 @@ import {
 	updateTasklineWorkspaceLabel,
 } from "@/functions/taskline-admin/settings";
 import {
+	createTasklineAdminTemplate,
+	deleteTasklineAdminTemplate,
+	listTasklineAdminTemplateChoices,
+	listTasklineAdminTemplates,
+	saveTasklineProjectAsTemplate,
+	updateTasklineAdminTemplate,
+} from "@/functions/taskline-admin/templates";
+import {
 	deleteTasklineAdminTimeEntry,
 	exportTasklineTimeEntries,
 	getTasklineTimeOptions,
@@ -60,17 +69,28 @@ import {
 	setTasklineTimesheetLock,
 	updateTasklineAdminTimeEntry,
 } from "@/functions/taskline-admin/time";
-import type { AutomationCondition, ProjectHealth, ProjectRole, ProjectStatus, TasklineColor, TeamRole } from "../types";
+import type {
+	AutomationCondition,
+	ProjectHealth,
+	ProjectRole,
+	ProjectStatus,
+	ReportRange,
+	TasklineColor,
+	TeamRole,
+} from "../types";
 import { adminActivityKeys, adminMemberKeys, adminProjectKeys, adminTimeKeys, tasklineAdminKeys } from "./keys";
 import type {
 	AdminCreateAutomationInput,
 	AdminCreateFieldInput,
 	AdminCreateProjectInput,
+	AdminCreateTemplateInput,
 	AdminUpdateAutomationInput,
 	AdminUpdateFieldInput,
 	AdminUpdateProjectInput,
+	AdminUpdateTemplateInput,
 	AdminUpdateTimeEntryInput,
 	InviteMemberInput,
+	SaveProjectAsTemplateInput,
 	UpdateMemberInput,
 	UpdateWorkflowsInput,
 	UpdateWorkspaceInput,
@@ -103,6 +123,21 @@ export const adminWorkspaceQueryOptions = () =>
 /** Task 56: the workspace's automations, the team's runs, and what the builder offers. */
 export const adminAutomationsQueryOptions = () =>
 	queryOptions({ queryKey: tasklineAdminKeys.automations(), queryFn: () => listTasklineWorkspaceAutomations() });
+
+/** The team's templates and the built-ins (Task 57). */
+export const adminTemplatesQueryOptions = () =>
+	queryOptions({ queryKey: tasklineAdminKeys.templates(), queryFn: () => listTasklineAdminTemplates() });
+
+/** What the admin's "New project" offers. */
+export const adminTemplateChoicesQueryOptions = () =>
+	queryOptions({ queryKey: tasklineAdminKeys.templateChoices(), queryFn: () => listTasklineAdminTemplateChoices() });
+
+/** Health, workload and time across the team, over some weeks. */
+export const adminReportsQueryOptions = (range: ReportRange) =>
+	queryOptions({
+		queryKey: tasklineAdminKeys.reports(range),
+		queryFn: () => getTasklineAdminReports({ data: { range } }),
+	});
 
 /** How many of the team's open tasks some conditions match now (the builder's preview, keyed by the conditions). */
 export const adminAutomationPreviewSource = () => ({
@@ -294,6 +329,26 @@ export const tasklineAdminMutations = {
 		mutationOptions({
 			mutationKey: key("delete-automation"),
 			mutationFn: (input: { id: string }) => deleteTasklineWorkspaceAutomation({ data: input }),
+		}),
+	createTemplate: () =>
+		mutationOptions({
+			mutationKey: key("create-template"),
+			mutationFn: (input: AdminCreateTemplateInput) => createTasklineAdminTemplate({ data: input }),
+		}),
+	updateTemplate: () =>
+		mutationOptions({
+			mutationKey: key("update-template"),
+			mutationFn: (input: AdminUpdateTemplateInput) => updateTasklineAdminTemplate({ data: input }),
+		}),
+	deleteTemplate: () =>
+		mutationOptions({
+			mutationKey: key("delete-template"),
+			mutationFn: (input: { id: string }) => deleteTasklineAdminTemplate({ data: input }),
+		}),
+	saveProjectAsTemplate: () =>
+		mutationOptions({
+			mutationKey: key("save-project-as-template"),
+			mutationFn: (input: SaveProjectAsTemplateInput) => saveTasklineProjectAsTemplate({ data: input }),
 		}),
 	updateTimeEntry: () =>
 		mutationOptions({

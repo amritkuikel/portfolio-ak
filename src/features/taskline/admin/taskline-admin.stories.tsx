@@ -4,11 +4,14 @@ import { expect, within } from "storybook/test";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { sampleAdmin } from "../../../../.storybook/mocks/data";
+import { sampleAdminReports } from "../../../../.storybook/mocks/functions/taskline-admin/reports";
 import { TASKLINE_NAME } from "../brand";
 import { TasklineAutomationsPage } from "./automations/automations-page";
 import { TasklineFieldsPage } from "./fields/fields-page";
 import { TasklineOverviewPage } from "./overview/overview-page";
+import { AdminReportsView } from "./reports/reports-page";
 import { TasklineSettingsPage } from "./settings/settings-page";
+import { TasklineTemplatesPage } from "./templates/templates-page";
 import { TasklineWorkflowsPage } from "./workflows/workflows-page";
 
 /** /admin/taskline's pages with the mocked functions (.storybook/mocks/functions/taskline-admin/). */
@@ -81,6 +84,38 @@ export const Fields: Story = {
 		await userEvent.click(canvas.getAllByTestId("field-edit")[0] as HTMLElement);
 		const dialog = await within(document.body).findByTestId("field-dialog", {}, { timeout: 10_000 });
 		await expect(within(dialog).getByLabelText(m.taskline_field_name())).toHaveValue("Severity");
+	},
+};
+
+/** The team's templates beside the built-ins (Task 57). */
+export const Templates: Story = {
+	parameters: { app: { session: sampleAdmin, route: "/admin/taskline/templates" } },
+	render: () => (
+		<Suspense>
+			<TasklineTemplatesPage />
+		</Suspense>
+	),
+	play: async ({ canvas }) => {
+		await expect(await canvas.findByRole("heading", { name: m.taskline_admin_templates_title() })).toBeVisible();
+		await expect(canvas.getAllByTestId("template-row")).toHaveLength(2);
+		await expect(canvas.getByTestId("template-copy")).toBeVisible();
+		await expect(canvas.getByTestId("template-edit")).toBeVisible();
+	},
+};
+
+/** Health, workload and time across the team (Task 57). */
+export const Reports: Story = {
+	parameters: { app: { session: sampleAdmin, route: "/admin/taskline/reports" } },
+	render: () => (
+		<Suspense>
+			<AdminReportsView data={sampleAdminReports} range="12w" />
+		</Suspense>
+	),
+	play: async ({ canvas }) => {
+		await expect(await canvas.findByRole("heading", { name: m.taskline_admin_reports_title() })).toBeVisible();
+		await expect(canvas.getByText("WEB")).toBeVisible();
+		await expect(canvas.getByTestId("report-capacity-table")).toBeVisible();
+		await expect(canvas.getByTestId("report-time-members")).toBeVisible();
 	},
 };
 

@@ -15,6 +15,7 @@ import { tasklineLinks } from "../links";
 import { projectActivityQueryOptions, projectMembersQueryOptions, projectTasksQueryOptions } from "../queries";
 import { activityItems } from "../task/activity";
 import { STATUS_CATEGORIES } from "../types";
+import { ProjectUpdates } from "./project-updates";
 
 const route = getRouteApi("/_taskline/app/taskline/_shell/$ws/p/$key/");
 
@@ -28,8 +29,9 @@ const CATEGORY_TONE = {
 } as const;
 
 /**
- * A project's overview: what it is, how far along it is (by status category, then
- * per status), who is on it, and what happened lately (its activity feed).
+ * A project's overview: what it is, how its lead says it's doing (its updates, Task 57),
+ * how far along it is (by status category, then per status), who is on it, and what
+ * happened lately (its activity feed).
  */
 export function ProjectOverview() {
 	const { session } = route.useRouteContext();
@@ -65,6 +67,7 @@ export function ProjectOverview() {
 						<p className="text-muted-foreground">{m.taskline_project_no_description()}</p>
 					)}
 				</section>
+				<ProjectUpdates userId={userId} ws={ws} project={project} now={now} />
 				<section aria-labelledby="project-progress" className="flex flex-col gap-3">
 					<h2 id="project-progress" className="text-heading">
 						{m.taskline_project_progress()}

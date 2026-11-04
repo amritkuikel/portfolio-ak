@@ -13,6 +13,7 @@ import type { AdminProjectListInput } from "@/features/taskline/admin/search";
 import { fieldValueText } from "@/features/taskline/fields";
 import type { ProjectHealth, ProjectRole, ProjectStatus, TaskFieldValues } from "@/features/taskline/types";
 import { toCsv } from "@/lib/csv";
+import { todayInZone } from "@/lib/i18n/date-only";
 import { m } from "@/paraglide/messages";
 import { changes } from "@/server/audit/record";
 import { listPage, notFound, withAudit } from "@/server/db/crud";
@@ -24,6 +25,7 @@ import {
 	tlMember,
 	tlProject,
 	tlProjectMember,
+	tlProjectUpdate,
 	tlRetiredKey,
 	tlTask,
 	tlTaskLabel,
@@ -39,6 +41,7 @@ import * as projectRepo from "../projects/repository";
 import * as projects from "../projects/service";
 import { bumpRev } from "../rev";
 import { fieldError, quotaError, quotaScope, quotasOf } from "../rules";
+import { chooseTemplate } from "../templates/service";
 import * as timeline from "../timeline/repository";
 import * as workflowRepo from "../workflow/repository";
 import * as members from "../workspace/repository";
@@ -194,17 +197,30 @@ export async function create({ db, actor }: Services, input: AdminCreateProjectI
 			const lead = await members.memberById(tx, workspace.id, input.leadId);
 			if (!lead || lead.deactivatedAt) throw fieldError("BAD_REQUEST", "leadId", m.taskline_admin_error_member());
 		}
+		// A template's days count from the start (Task 57).
+		const template = input.template ? await chooseTemplate(tx, access, input.template) : null;
 		const created = await projects.insertProjectWithWorkflow(
 			tx,
 			access,
-			{ key: input.key, name: input.name, visibility: input.visibility, color: input.color },
+			{
+				key: input.key,
+				name: input.name,
+				visibility: input.visibility,
+				color: input.color,
+				startOn: input.startOn ?? (template ? todayInZone(access.settings.timeZone) : null),
+			},
 			undefined,
-			{ leadId: input.leadId },
+			{ leadId: input.leadId, template },
 		);
 		audit({
 			action: "taskline.project.create",
 			target: projectTarget(created.project),
-			after: { key: created.project.key, name: created.project.name, visibility: created.project.visibility },
+			after: {
+				key: created.project.key,
+				name: created.project.name,
+				visibility: created.project.visibility,
+				...(template ? { template: template.name } : {}),
+			},
 		});
 		return detail(tx, workspace.slug, created.project);
 	});
@@ -332,7 +348,7 @@ export async function exportProject(
 		const { workspace } = await team(tx);
 		const project = await teamProject(tx, workspace.id, id);
 		const view = await detail(tx, workspace.slug, project);
-		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows, fieldRows, automationRows] =
+		const [taskRows, labelRows, memberRows, milestoneRows, dependencyRows, fieldRows, automationRows, updateRows] =
 			await Promise.all([
 				tx
 					.select()
@@ -350,6 +366,11 @@ export async function exportProject(
 				timeline.projectDependencies(tx, project.id),
 				fieldRepo.listFields(tx, workspace.id, project.id),
 				automationRepo.listScope(tx, { workspaceId: workspace.id, projectId: project.id }),
+				tx
+					.select()
+					.from(tlProjectUpdate)
+					.where(eq(tlProjectUpdate.projectId, project.id))
+					.orderBy(asc(tlProjectUpdate.createdAt)),
 			]);
 		// Task 55: every field's value as words (archived fields too: their values are the project's).
 		const fieldDefs = fieldRows.map(fieldRepo.fieldDto);
@@ -449,6 +470,13 @@ export async function exportProject(
 				trigger,
 				conditions,
 				actions,
+			})),
+			// Task 57: the lead's updates, oldest first.
+			updates: updateRows.map(({ authorId, health, bodyText, createdAt }) => ({
+				author: authorId ? (memberName.get(authorId) ?? null) : null,
+				health,
+				body: bodyText,
+				at: createdAt.toISOString(),
 			})),
 			tasks: tasks.map((task) => ({ ...task, parent: task.parent ? `${project.key}-${task.parent}` : null })),
 			// Within the project; one to another project's task isn't the project's to export.

@@ -33,7 +33,16 @@ const BOM = String.fromCharCode(0xfeff);
 
 /** Saves `csv` as `filename` (UTF-8 with a BOM, so Excel reads Devanagari correctly). */
 export function downloadCsv(filename: string, csv: string) {
-	const url = URL.createObjectURL(new Blob([BOM, csv], { type: "text/csv;charset=utf-8" }));
+	saveBlob(filename, new Blob([BOM, csv], { type: "text/csv;charset=utf-8" }));
+}
+
+/** Saves JSON text as `filename`. */
+export function downloadJson(filename: string, json: string) {
+	saveBlob(filename, new Blob([json], { type: "application/json;charset=utf-8" }));
+}
+
+function saveBlob(filename: string, blob: Blob) {
+	const url = URL.createObjectURL(blob);
 	const link = Object.assign(document.createElement("a"), { href: url, download: filename });
 	document.body.append(link);
 	link.click();

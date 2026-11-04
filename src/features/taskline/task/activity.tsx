@@ -170,6 +170,10 @@ export function activitySentence(
 		case "project.updated":
 		case "project.state":
 			return m.taskline_activity_project_updated({ actor });
+		case "project.update_posted":
+			return m.taskline_activity_update_posted({ actor });
+		case "project.update_deleted":
+			return m.taskline_activity_update_deleted({ actor });
 		case "project.archived":
 			return m.taskline_activity_project_archived({ actor });
 		case "project.restored":

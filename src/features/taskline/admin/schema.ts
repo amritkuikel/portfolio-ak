@@ -4,8 +4,14 @@ import { isoDate, optionalText, required } from "@/lib/validation";
 import { m } from "@/paraglide/messages";
 import { automationCondition, automationDefinition } from "../automation-rules";
 import { fieldDefinition } from "../fields";
-import { fieldChanges, LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX } from "../schema";
+import { fieldChanges, LABEL_NAME_MAX, PROJECT_NAME_MAX, projectKey, TIME_NOTE_MAX, templateRef } from "../schema";
 import { DEFAULT_STATUS_MAX, defaultStatus, TEAM_SLUG_PATTERN, workspaceSettings } from "../settings";
+import {
+	TEMPLATE_DESCRIPTION_MAX,
+	TEMPLATE_NAME_MAX,
+	type TemplateDefinition,
+	templateDefinition,
+} from "../template-definition";
 import {
 	type ActiveSprint,
 	type Automation,
@@ -19,6 +25,7 @@ import {
 	type ProjectRole,
 	type ProjectStatus,
 	type ProjectVisibility,
+	REPORT_RANGES,
 	TASK_TYPES,
 	TASKLINE_COLORS,
 	type TaskActivity,
@@ -61,6 +68,8 @@ export type AdminProjectHealthRow = {
 	overdue: number;
 	done: number;
 	targetOn: string | null;
+	/** Task 57: when its lead last posted an update. */
+	updatedOn: string | null;
 };
 
 export type AdminOverview = {
@@ -116,6 +125,9 @@ export const adminCreateProjectInput = z.strictObject({
 	leadId: id.nullable(),
 	visibility: z.enum(PROJECT_VISIBILITIES),
 	color,
+	/** Task 57: what it starts from, and the day its days count from (omitted: today). */
+	template: templateRef.optional(),
+	startOn: isoDate().nullable().optional(),
 });
 export type AdminCreateProjectInput = z.infer<typeof adminCreateProjectInput>;
 
@@ -400,3 +412,86 @@ export const utilizationInput = z
 	);
 /** Exports at most this many entries (the filters narrow it). */
 export const TIME_EXPORT_MAX = 10_000;
+
+// ---- Templates (Task 57) ------------------------------------------------------------------------
+
+const templateName = () => required({ max: TEMPLATE_NAME_MAX });
+const templateDescription = () => optionalText({ max: TEMPLATE_DESCRIPTION_MAX });
+
+export const adminCreateTemplateInput = z.strictObject({
+	name: templateName(),
+	description: templateDescription(),
+	definition: templateDefinition,
+});
+export type AdminCreateTemplateInput = z.infer<typeof adminCreateTemplateInput>;
+export const adminUpdateTemplateInput = adminCreateTemplateInput.extend({
+	id,
+	version: z.number().int().positive(),
+});
+export type AdminUpdateTemplateInput = z.infer<typeof adminUpdateTemplateInput>;
+export const adminDeleteTemplateInput = z.strictObject({ id });
+export const saveProjectAsTemplateInput = z.strictObject({
+	projectId: id,
+	name: templateName(),
+	description: templateDescription(),
+	/** Also the project's tasks, as samples. */
+	tasks: z.boolean(),
+});
+export type SaveProjectAsTemplateInput = z.infer<typeof saveProjectAsTemplateInput>;
+
+/** A template on the admin's page. A built-in reads only: `version` 0 and no `updatedAt`. */
+export type AdminTemplate = {
+	id: string;
+	name: string;
+	description: string;
+	builtin: boolean;
+	version: number;
+	updatedAt: string | null;
+	definition: TemplateDefinition;
+};
+export type AdminTemplates = { builtins: AdminTemplate[]; templates: AdminTemplate[] };
+/** What "Save project as template" made; `leftOut`: the rules that name what a template can't hold. */
+export type SavedProjectTemplate = { id: string; name: string; leftOut: number };
+
+// ---- Reports (Task 57) --------------------------------------------------------------------------
+
+export const adminReportsInput = z.strictObject({ range: z.enum(REPORT_RANGES) });
+
+export type AdminReportHealth = {
+	id: string;
+	key: string;
+	name: string;
+	color: TasklineColor;
+	status: ProjectStatus;
+	health: ProjectHealth | null;
+	lead: string | null;
+	/** Completed tasks out of those not canceled, 0 to 1; null with no tasks. */
+	progress: number | null;
+	open: number;
+	overdue: number;
+	milestonesAtRisk: number;
+	lastActivityAt: string | null;
+	update: { health: ProjectHealth; at: string; author: string | null } | null;
+	targetOn: string | null;
+};
+export type AdminReportWorkload = {
+	memberId: string;
+	name: string;
+	capacityMinutes: number;
+	open: number;
+	overdue: number;
+	/** Estimates of all their open tasks, and of those due within a week or overdue. */
+	estimateMinutes: number;
+	dueSoonMinutes: number;
+};
+export type AdminReportTime = { id: string; label: string; minutes: number; billableMinutes: number };
+export type AdminReports = {
+	today: string;
+	readAt: string;
+	/** The first day the time covers. */
+	from: string;
+	health: AdminReportHealth[];
+	workload: AdminReportWorkload[];
+	timeByProject: AdminReportTime[];
+	timeByMember: AdminReportTime[];
+};

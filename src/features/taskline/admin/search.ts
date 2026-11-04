@@ -3,7 +3,7 @@ import { listSchema } from "@/lib/crud/schema";
 import { addDays } from "@/lib/i18n/date-only";
 import { dateParam, enumParam, searchParam } from "@/lib/list/params";
 import { endOfWeek, startOfWeek } from "../calendar/grid";
-import { ACTIVITY_KINDS, PROJECT_STATUSES, PROJECT_VISIBILITIES, TEAM_ROLES } from "../types";
+import { ACTIVITY_KINDS, PROJECT_STATUSES, PROJECT_VISIBILITIES, REPORT_RANGES, TEAM_ROLES } from "../types";
 
 /**
  * The URL contracts of /admin/taskline's lists (route files import this, not ./schema.ts).
@@ -79,6 +79,9 @@ export const adminTimeList = listSchema({
 });
 export type AdminTimeSearch = z.output<typeof adminTimeList.search>;
 export type AdminTimeListInput = z.output<typeof adminTimeList.input>;
+
+/** /admin/taskline/reports: the weeks the time covers (Task 57). */
+export const adminReportsSearch = z.object({ range: enumParam(REPORT_RANGES, "12w") });
 
 /** /admin/taskline/timesheets/utilization: the days it covers (omitted: this week, the team's). */
 export const utilizationSearch = z.object({ from: dateParam(), to: dateParam() });

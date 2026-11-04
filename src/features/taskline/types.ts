@@ -165,6 +165,9 @@ export const ACTIVITY_KINDS = [
 	"automation.deleted",
 	/** Task 56, on a repeating task's history once it's closed: `{ ref }`, the next task of its series. */
 	"task.recurred",
+	/** Task 57: `{ updateId, health }`. */
+	"project.update_posted",
+	"project.update_deleted",
 ] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -957,4 +960,89 @@ export type Recurrence = {
 	count?: number | null;
 	anchor: string;
 	n: number;
+};
+
+// ---- Templates, reports and project updates (Task 57) -------------------------------------------
+
+/** The templates in code, by id (their words are messages, in the caller's language). */
+export const BUILTIN_TEMPLATES = ["scrum", "kanban", "marketing", "client", "event"] as const;
+export type BuiltinTemplate = (typeof BUILTIN_TEMPLATES)[number];
+
+export type TemplateCounts = {
+	statuses: number;
+	labels: number;
+	fields: number;
+	automations: number;
+	milestones: number;
+	tasks: number;
+};
+
+/** A template as "New project" offers it. */
+export type TemplateChoice = {
+	id: string;
+	name: string;
+	description: string;
+	builtin: boolean;
+	counts: TemplateCounts;
+};
+
+/** How a project is doing, posted by its lead. `author` null: an admin without a member row, or someone since removed. */
+export type ProjectUpdate = {
+	id: string;
+	health: ProjectHealth;
+	/** Sanitized when saved. */
+	body: string;
+	author: string | null;
+	at: string;
+};
+
+/** How many weeks a report covers. */
+export const REPORT_RANGES = ["4w", "12w", "26w"] as const;
+export type ReportRange = (typeof REPORT_RANGES)[number];
+
+export type ReportStatusCount = {
+	statusId: string;
+	name: string;
+	color: TasklineColor;
+	category: StatusCategory;
+	count: number;
+};
+export type ReportPriorityCount = { priority: TaskPriority; count: number };
+
+/** One week of a project: tasks created and completed in it, and those overdue at its close. */
+export type ReportWeek = { week: string; created: number; completed: number; overdue: number };
+
+/** A completed task's lead time (created to completed) and cycle time (first started to completed), in days. */
+export type ReportCycleTask = {
+	ref: string;
+	title: string;
+	completedOn: string;
+	leadDays: number;
+	cycleDays: number | null;
+};
+
+export type ReportWorkloadRow = {
+	/** Null: nobody's yet. */
+	memberId: string | null;
+	name: string | null;
+	open: number;
+	overdue: number;
+	estimateMinutes: number;
+	points: number;
+};
+
+/** A project's reports (`/$ws/p/$key/reports`): everything over the weeks asked for, time when it's tracked. */
+export type ProjectReports = {
+	today: string;
+	statuses: ReportStatusCount[];
+	priorities: ReportPriorityCount[];
+	weeks: ReportWeek[];
+	cycle: {
+		medianLeadDays: number | null;
+		medianCycleDays: number | null;
+		p85CycleDays: number | null;
+		tasks: ReportCycleTask[];
+	};
+	workload: ReportWorkloadRow[];
+	time: Pick<ProjectTime, "totals" | "members" | "tasks"> | null;
 };

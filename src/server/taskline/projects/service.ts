@@ -10,6 +10,7 @@ import {
 	SANDBOX_SEGMENT,
 } from "@/features/taskline/types";
 import { ruleError } from "@/lib/errors";
+import { todayInZone } from "@/lib/i18n/date-only";
 import { m } from "@/paraglide/messages";
 import type { Locale } from "@/paraglide/runtime";
 import { notFound, uniqueViolation } from "@/server/db/crud";
@@ -30,6 +31,7 @@ import { recordActivity } from "../activity";
 import { actorOf, produce } from "../notify/produce";
 import { bumpRev, saveVersioned } from "../rev";
 import { fieldError, notMemberError, quotaError, quotaScope, quotasOf, richText } from "../rules";
+import { applyTemplate, type ChosenTemplate, chooseTemplate, templateStatuses } from "../templates/service";
 import * as members from "../workspace/repository";
 import * as repo from "./repository";
 
@@ -101,34 +103,44 @@ export const startingStatuses = (access: WorkspaceAccess, locale?: Locale) => {
  * A project and its rows, inside the caller's transaction: the workspace's starting
  * statuses (built-in ones in `locale`), its lead (the creator unless `leadId` says
  * otherwise: an admin picks one) and the "created" entry. A deleted project's key is
- * refused (never reused). For the services and for seeds (which pass the guest's language).
+ * refused (never reused). With a template (Task 57), its statuses and the rest of it
+ * instead. For the services and for seeds (which pass the guest's language).
  */
 export async function insertProjectWithWorkflow(
 	tx: Tx,
 	access: WorkspaceAccess,
 	input: Omit<repo.NewProject, "workspaceId" | "leadId">,
 	locale?: Locale,
-	{ leadId = access.member?.id ?? null }: { leadId?: string | null } = {},
+	{ leadId = access.member?.id ?? null, template }: { leadId?: string | null; template?: ChosenTemplate | null } = {},
 ): Promise<ProjectAccess> {
 	if (await repo.isKeyRetired(tx, access.workspace.id, input.key)) {
 		throw fieldError("CONFLICT", "key", m.taskline_error_key_retired());
 	}
 	let project: TlProjectRow;
 	try {
-		project = await repo.insertProject(tx, { ...input, workspaceId: access.workspace.id, leadId });
+		project = await repo.insertProject(tx, {
+			...input,
+			workspaceId: access.workspace.id,
+			leadId,
+			...(template ? { settings: template.definition.settings } : {}),
+		});
 	} catch (error) {
 		throw uniqueViolation(error, keyTaken());
 	}
-	await repo.insertStatuses(tx, project.id, startingStatuses(access, locale));
+	await repo.insertStatuses(tx, project.id, template ? templateStatuses(template) : startingStatuses(access, locale));
 	if (leadId) await repo.upsertProjectMember(tx, project.id, leadId, "lead");
 	const created = await projectAccess(tx, access, project);
-	await recordActivity(tx, created, { kind: "project.created", data: { key: project.key, name: project.name } });
+	await recordActivity(tx, created, {
+		kind: "project.created",
+		data: { key: project.key, name: project.name, ...(template ? { template: template.name } : {}) },
+	});
+	if (template) await applyTemplate(tx, created, template, project.startOn ?? todayInZone(access.settings.timeZone));
 	return created;
 }
 
 export async function createProject(
 	{ db, user }: TasklineServices,
-	{ ws, ...input }: CreateProjectInput,
+	{ ws, template, ...input }: CreateProjectInput,
 ): Promise<ProjectDetail> {
 	return db.transaction(async (tx) => {
 		const access = await resolveWorkspace(tx, user, ws);
@@ -139,17 +151,25 @@ export async function createProject(
 		const max = quotasOf(access).projects;
 		if ((await repo.countProjects(tx, access.workspace.id)) >= max) throw quotaError("projects", max);
 		const description = richText(input.description);
-		const created = await insertProjectWithWorkflow(tx, access, {
-			key: input.key,
-			name: input.name,
-			descriptionHtml: description.html,
-			descriptionText: description.text,
-			color: input.color,
-			icon: input.icon,
-			visibility: input.visibility ?? access.settings.defaultVisibility,
-			startOn: input.startOn ?? null,
-			targetOn: input.targetOn ?? null,
-		});
+		const chosen = template ? await chooseTemplate(tx, access, template) : null;
+		const created = await insertProjectWithWorkflow(
+			tx,
+			access,
+			{
+				key: input.key,
+				name: input.name,
+				descriptionHtml: description.html,
+				descriptionText: description.text,
+				color: input.color,
+				icon: input.icon,
+				visibility: input.visibility ?? access.settings.defaultVisibility,
+				// A template's days count from the start.
+				startOn: input.startOn ?? (chosen ? todayInZone(access.settings.timeZone) : null),
+				targetOn: input.targetOn ?? null,
+			},
+			undefined,
+			{ template: chosen },
+		);
 		return detailOf(tx, created);
 	});
 }

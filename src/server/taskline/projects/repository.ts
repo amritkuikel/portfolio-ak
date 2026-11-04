@@ -6,6 +6,7 @@ import type {
 	ProjectDetail,
 	ProjectMemberView,
 	ProjectRole,
+	ProjectSettings,
 	ProjectSummary,
 	StatusCategory,
 	TasklineColor,
@@ -127,6 +128,7 @@ export type NewProject = {
 	leadId?: string | null;
 	startOn?: string | null;
 	targetOn?: string | null;
+	settings?: ProjectSettings;
 };
 
 export async function insertProject(tx: Tx, values: NewProject): Promise<TlProjectRow> {
@@ -159,7 +161,13 @@ export const DEFAULT_STATUSES: ReadonlyArray<{ category: StatusCategory; color: 
 export async function insertStatuses(
 	tx: Tx,
 	projectId: string,
-	statuses: ReadonlyArray<{ name: string; category: StatusCategory; color: TasklineColor }>,
+	statuses: ReadonlyArray<{
+		id?: string;
+		name: string;
+		category: StatusCategory;
+		color: TasklineColor;
+		wipLimit?: number | null;
+	}>,
 ) {
 	const positions = generateKeysBetween(null, null, statuses.length);
 	return tx
@@ -167,9 +175,11 @@ export async function insertStatuses(
 		.values(
 			statuses.map((status, index) => ({
 				projectId,
+				...(status.id ? { id: status.id } : {}),
 				name: status.name,
 				category: status.category,
 				color: status.color,
+				wipLimit: status.wipLimit ?? null,
 				position: positions[index] ?? `a${index}`,
 			})),
 		)

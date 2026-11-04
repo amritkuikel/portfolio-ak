@@ -30,6 +30,9 @@ export const tasklineLinks = {
 	/** Task 53: my timesheet (this week unless `week` names a day of another), a project's time. */
 	timesheet: (ws: string, week?: string) =>
 		linkOptions({ to: "/app/taskline/$ws/timesheet", params: { ws }, search: week ? { week } : {} }),
+	/** Task 57: a project's reports. */
+	reports: (ws: string, key: string) =>
+		linkOptions({ to: "/app/taskline/$ws/p/$key/reports", params: { ws, key }, search: { range: "12w" as const } }),
 	time: (ws: string, key: string) =>
 		linkOptions({ to: "/app/taskline/$ws/p/$key/time", params: { ws, key }, search: { by: "task" as const } }),
 	search: (ws: string, q?: string) =>
