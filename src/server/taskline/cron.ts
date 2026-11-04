@@ -12,7 +12,7 @@ import { catchUpRecurrences } from "./automations/recurrence";
 import * as automations from "./automations/repository";
 import { systemAccess } from "./automations/scope";
 import * as collab from "./collab/repository";
-import { type DeliveryResult, sendDigests } from "./notify/deliver";
+import { type DeliveryResult, deliverInstant, sendDigests } from "./notify/deliver";
 import { produce } from "./notify/produce";
 import { bumpRev } from "./rev";
 import * as sprints from "./sprints/repository";
@@ -48,12 +48,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type CronStep = { ok: boolean; [detail: string]: unknown };
 export type CronResult = Record<
-	"timers" | "notices" | "digests" | "sprints" | "trash" | "invitations" | "automations" | "recurrences",
+	"timers" | "notices" | "instant" | "digests" | "sprints" | "trash" | "invitations" | "automations" | "recurrences",
 	CronStep
 >;
 
 /** Notices of tasks due tomorrow, or past due, to their assignees; never twice for one due date. */
-export async function dueNotices(db: Db, now = new Date()): Promise<{ due: number; overdue: number }> {
+export async function dueNotices(
+	db: Db,
+	now = new Date(),
+	instant: string[] = [],
+): Promise<{ due: number; overdue: number }> {
 	const counts = { due: 0, overdue: 0 };
 	const workspaces = await db.select().from(tlWorkspace);
 	for (const workspace of workspaces) {
@@ -99,8 +103,8 @@ export async function dueNotices(db: Db, now = new Date()): Promise<{ due: numbe
 			if (!task.dueOn) continue;
 			const kind = task.dueOn === tomorrow ? "due" : "overdue";
 			if (told.has(`${task.id}:${kind}:${task.dueOn}`)) continue;
-			await db.transaction(async (tx) => {
-				await produce(tx, { workspace, project, settings }, { memberId: null, userId: null, name: null }, [
+			const notified = await db.transaction((tx) =>
+				produce(tx, { workspace, project, settings }, { memberId: null, userId: null, name: null }, [
 					{
 						kind,
 						taskId: task.id,
@@ -112,8 +116,9 @@ export async function dueNotices(db: Db, now = new Date()): Promise<{ due: numbe
 							dueOn: task.dueOn ?? "",
 						},
 					},
-				]);
-			});
+				]),
+			);
+			instant.push(...notified);
 			counts[kind]++;
 		}
 	}
@@ -183,10 +188,14 @@ export async function sprintSnapshots(db: Db, now = new Date()): Promise<{ snaps
  * from its start; the owner is told so they can correct it. A timer stopped once isn't
  * running any more, so a second run finds nothing.
  */
-export async function stopForgottenTimers(db: Db, now = new Date()): Promise<{ stopped: number }> {
+export async function stopForgottenTimers(
+	db: Db,
+	now = new Date(),
+	instant: string[] = [],
+): Promise<{ stopped: number }> {
 	const due = await time.runningSince(db, new Date(now.getTime() - TIMER_MAX_MINUTES * 60_000));
 	for (const entry of due) {
-		await db.transaction(async (tx) => {
+		const notified = await db.transaction(async (tx) => {
 			const endedAt = new Date((entry.startedAt ?? now).getTime() + TIMER_MAX_MINUTES * 60_000);
 			const row = await time.patchEntry(tx, entry.id, { endedAt, minutes: TIMER_MAX_MINUTES });
 			await time.recordLogged(tx, row, { auto: true, actorId: null });
@@ -196,9 +205,9 @@ export async function stopForgottenTimers(db: Db, now = new Date()): Promise<{ s
 				.from(tlProject)
 				.innerJoin(tlWorkspace, eq(tlWorkspace.id, tlProject.workspaceId))
 				.where(eq(tlProject.id, row.projectId));
-			if (!scope) return;
+			if (!scope) return [];
 			const task = row.taskId ? await tasks.getById(tx, row.projectId, row.taskId) : null;
-			await produce(
+			return produce(
 				tx,
 				{ ...scope, settings: workspaceSettings.parse(scope.workspace.settings) },
 				{ memberId: null, userId: null, name: null },
@@ -217,6 +226,7 @@ export async function stopForgottenTimers(db: Db, now = new Date()): Promise<{ s
 				],
 			);
 		});
+		instant.push(...notified);
 	}
 	return { stopped: due.length };
 }
@@ -240,10 +250,14 @@ export async function expireInvitations(db: Db, now = new Date()): Promise<{ exp
 /**
  * The time triggers: each enabled rule with "due soon" (due within its days, from today)
  * or "overdue" (past due, catching up three days of missed runs, as the notices) on the
- * open tasks of its scope's active projects. A task runs once per rule and due date: its
- * run's key is claimed first, so a second run of the job (or a moved-back date) finds it.
+ * open tasks of its scope's active projects. A task runs once per rule and due date: a
+ * match claims its run's key, so a second run of the job (or a moved-back date) finds it.
  */
-export async function automationTimeTriggers(db: Db, now = new Date()): Promise<{ runs: number; pruned: number }> {
+export async function automationTimeTriggers(
+	db: Db,
+	now = new Date(),
+	instant: string[] = [],
+): Promise<{ runs: number; pruned: number }> {
 	let runs = 0;
 	for (const rule of await automations.enabledTimeRules(db)) {
 		const [workspace] = await db.select().from(tlWorkspace).where(eq(tlWorkspace.id, rule.workspaceId));
@@ -269,7 +283,7 @@ export async function automationTimeTriggers(db: Db, now = new Date()): Promise<
 			);
 		for (const { task, project } of candidates) {
 			const access = systemAccess(workspace, project);
-			await db.transaction((tx) => runTimeRule(tx, access, rule, task));
+			instant.push(...(await db.transaction((tx) => runTimeRule(tx, access, rule, task))));
 			runs++;
 		}
 	}
@@ -290,12 +304,15 @@ export async function runTasklineCron(
 	db: Db,
 	{ provider, now = new Date() }: { provider?: EmailProvider; now?: Date } = {},
 ): Promise<CronResult> {
+	// What the steps below made with an instant email: sent before the digests, which leave young instant rows alone.
+	const instant: string[] = [];
 	return {
-		timers: await step("timers", () => stopForgottenTimers(db, now)),
+		timers: await step("timers", () => stopForgottenTimers(db, now, instant)),
 		// Before the notices and digests, which then carry what the automations said.
-		automations: await step("automations", () => automationTimeTriggers(db, now)),
+		automations: await step("automations", () => automationTimeTriggers(db, now, instant)),
 		recurrences: await step("recurrences", () => catchUpRecurrences(db, now)),
-		notices: await step("notices", () => dueNotices(db, now)),
+		notices: await step("notices", () => dueNotices(db, now, instant)),
+		instant: await step("instant", (): Promise<DeliveryResult> => deliverInstant(db, instant, { provider, now })),
 		digests: await step("digests", (): Promise<DeliveryResult> => sendDigests(db, { provider, now })),
 		sprints: await step("sprints", () => sprintSnapshots(db, now)),
 		trash: await step("trash", () => purgeTrash(db, now)),

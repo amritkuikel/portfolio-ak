@@ -1,13 +1,11 @@
 import type { ReactElement } from "react";
-import { formatNumber } from "@/lib/i18n/intl";
+import { formatNumber } from "@/lib/i18n/intl"; // @taskline
 import { m } from "@/paraglide/messages";
 import {
 	AccountDeleted,
 	type AccountDeletedProps,
 	ContactMessage, // @portfolio
 	type ContactMessageProps, // @portfolio
-	DailyDigest, // @taskline
-	type DailyDigestProps, // @taskline
 	DeleteAccount,
 	type DeleteAccountProps,
 	EmailChanged,
@@ -20,16 +18,13 @@ import {
 	type PasswordResetProps,
 	SecurityNotice,
 	type SecurityNoticeProps,
-	TaskNotification, // @taskline
-	type TaskNotificationProps, // @taskline
-	TeamInvite, // @taskline
-	type TeamInviteProps, // @taskline
 	VerifyEmail,
 	type VerifyEmailProps,
 	Welcome,
 	type WelcomeProps,
 } from "./emails";
 import type { EmailBaseProps } from "./layout";
+import * as taskline from "./taskline-emails"; // @taskline
 
 /** Full props per template (including locale and siteName). */
 export interface EmailPropsMap {
@@ -43,9 +38,9 @@ export interface EmailPropsMap {
 	"account-deleted": AccountDeletedProps;
 	"security-notice": SecurityNoticeProps;
 	"contact-message": ContactMessageProps; // @portfolio
-	"taskline-invite": TeamInviteProps; // @taskline
-	"taskline-notification": TaskNotificationProps; // @taskline
-	"taskline-digest": DailyDigestProps; // @taskline
+	"taskline-invite": taskline.TeamInviteProps; // @taskline
+	"taskline-notification": taskline.TaskNotificationProps; // @taskline
+	"taskline-digest": taskline.DailyDigestProps; // @taskline
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -129,7 +124,7 @@ export const emailTemplates: EmailRegistry = {
 	// portfolio:end
 	// taskline:start
 	"taskline-invite": {
-		component: TeamInvite,
+		component: taskline.TeamInvite,
 		subject: ({ locale, siteName, team }) => m.email_team_invite_subject({ team, site: siteName }, { locale }),
 		sample: {
 			inviter: "Ram Thapa",
@@ -140,7 +135,7 @@ export const emailTemplates: EmailRegistry = {
 		},
 	},
 	"taskline-notification": {
-		component: TaskNotification,
+		component: taskline.TaskNotification,
 		subject: ({ locale, siteName, heading }) => m.email_taskline_task_subject({ heading, site: siteName }, { locale }),
 		sample: {
 			heading: "WEB-12 · Write the launch announcement",
@@ -151,7 +146,7 @@ export const emailTemplates: EmailRegistry = {
 		},
 	},
 	"taskline-digest": {
-		component: DailyDigest,
+		component: taskline.DailyDigest,
 		subject: ({ locale, siteName, items, more }) =>
 			m.email_taskline_digest_subject(
 				{ count: formatNumber(items.length + more, {}, locale), site: siteName },

@@ -67,6 +67,8 @@ export const sanitizeRichText = (html: string): SafeHtml => sanitizeHtml(html, O
 /**
  * The member ids a sanitized body mentions, in order, each once. Callers keep only
  * those who may see what the body is on (Taskline: the task's project, Task 50).
+ *
+ * @public
  */
 export const mentionedIds = (html: SafeHtml): string[] => {
 	const ids = new Set<string>();
@@ -79,13 +81,14 @@ export const mentionedIds = (html: SafeHtml): string[] => {
 	return [...ids];
 };
 
-// apps:start
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", nbsp: " " };
 
 /**
  * The visible text of sanitized rich text, one line per block: for search and
  * excerpts (decision 0190). Tags go, entities are decoded, whitespace is collapsed
- * within a line.
+ * within a line. Used by Notes and Taskline, so it isn't in either layer's markers.
+ *
+ * @public
  */
 export const richTextToText = (html: string): string =>
 	sanitizeHtml(html.replace(/<br\s*\/?>|<\/(p|h2|h3|li|blockquote|pre)>/gi, "$&\n"), {
@@ -97,4 +100,3 @@ export const richTextToText = (html: string): string =>
 		.map((line) => line.replace(/\s+/g, " ").trim())
 		.filter(Boolean)
 		.join("\n");
-// apps:end

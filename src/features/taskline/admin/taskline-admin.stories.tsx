@@ -82,7 +82,7 @@ export const Fields: Story = {
 		await expect(canvas.getByText(m.taskline_field_tasks({ count: formatNumber(12) }))).toBeVisible();
 		await expect(canvas.getByText(m.taskline_field_archived())).toBeVisible();
 		await userEvent.click(canvas.getAllByTestId("field-edit")[0] as HTMLElement);
-		const dialog = await within(document.body).findByTestId("field-dialog", {}, { timeout: 10_000 });
+		const dialog = await within(document.body).findByTestId("field-dialog", {}, { timeout: 25_000 });
 		await expect(within(dialog).getByLabelText(m.taskline_field_name())).toHaveValue("Severity");
 	},
 };

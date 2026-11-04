@@ -36,6 +36,7 @@ import type { Services } from "@/server/services";
 import { projectAccess, resolveWorkspace } from "../access";
 import { recordActivity } from "../activity";
 import * as automationRepo from "../automations/repository";
+import { removeTaskFiles } from "../collab/repository";
 import * as fieldRepo from "../fields/repository";
 import * as projectRepo from "../projects/repository";
 import * as projects from "../projects/service";
@@ -327,6 +328,12 @@ export async function remove({ db, actor }: Services, { id, confirmKey }: { id: 
 		}
 		const [tasks] = await tx.select({ total: count() }).from(tlTask).where(eq(tlTask.projectId, project.id));
 		await tx.insert(tlRetiredKey).values({ workspaceId: workspace.id, key: project.key }).onConflictDoNothing();
+		// Attachments have no foreign key: marked removed here, the daily cleanup deletes the uploads.
+		const taskRows = await tx.select({ id: tlTask.id }).from(tlTask).where(eq(tlTask.projectId, project.id));
+		await removeTaskFiles(
+			tx,
+			taskRows.map((row) => row.id),
+		);
 		await tx.delete(tlProject).where(eq(tlProject.id, project.id));
 		audit({
 			action: "taskline.project.delete",

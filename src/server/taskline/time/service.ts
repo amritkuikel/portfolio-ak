@@ -400,7 +400,7 @@ export async function copyLastWeek({ db, user }: TasklineServices, ws: string, w
 		const member = memberOf(access);
 		const first = startOfWeek(week, access.settings.weekStart);
 		const [source, here] = await Promise.all([
-			repo.sumsByCell(tx, member.id, addDays(first, -7), addDays(first, -1)),
+			repo.sumsByCellAndBillable(tx, member.id, addDays(first, -7), addDays(first, -1)),
 			repo.sumsByCell(tx, member.id, first, addDays(first, 6)),
 		]);
 		const busy = new Set(here.flatMap((row) => (row.taskId ? [row.taskId] : [])));

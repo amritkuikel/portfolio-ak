@@ -251,6 +251,8 @@ export const formatMonthYear = (date: Date, locale: Locale = getLocale()): strin
 /**
  * A calendar day ("YYYY-MM-DD") as a short day and month: "Oct 30" / "अक्टोबर ३०". The
  * date is a calendar day, not an instant, so no time zone applies (chart axes, 0191).
+ *
+ * @public
  */
 export const formatDayMonth = (day: string, locale: Locale = getLocale()): string => {
 	const [year, month, date] = day.split("-").map(Number);
@@ -263,7 +265,7 @@ export const formatDayMonth = (day: string, locale: Locale = getLocale()): strin
 			).format(instant);
 };
 
-/** A calendar month ("YYYY-MM") as its short name, for chart axes: "Oct" / "अक्टोबर" (no time zone applies). */
+/** @public A calendar month ("YYYY-MM") as its short name, for chart axes: "Oct" / "अक्टोबर" (no time zone applies). */
 export const formatMonthShort = (month: string, locale: Locale = getLocale()): string => {
 	const [year, number] = month.split("-").map(Number);
 	const instant = new Date(Date.UTC(year ?? 1970, (number ?? 1) - 1, 15));

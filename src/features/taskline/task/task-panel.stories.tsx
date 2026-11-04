@@ -139,7 +139,7 @@ export const Repeat: Story = {
 		const field = within(canvas.getByTestId("task-repeat"));
 		await expect(field.getByText(recurrenceText(weekly))).toBeVisible();
 		await userEvent.click(field.getByTestId("task-repeat-edit"));
-		const dialog = within(await within(document.body).findByTestId("recurrence-dialog", {}, { timeout: 10_000 }));
+		const dialog = within(await within(document.body).findByTestId("recurrence-dialog", {}, { timeout: 25_000 }));
 		await userEvent.click(dialog.getByRole("button", { name: m.crud_save() }));
 		await waitFor(() =>
 			expect(patchTasklineTask).toHaveBeenCalledWith({

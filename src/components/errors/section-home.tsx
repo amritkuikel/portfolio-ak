@@ -8,6 +8,7 @@ import { createContext, type ReactElement, type ReactNode, useContext } from "re
  */
 const SectionHomeContext = createContext<ReactElement | null>(null);
 
+/** @public What a section of its own wraps its frame in (with none, the error pages link home). */
 export function SectionHome({ link, children }: { link: ReactElement; children: ReactNode }) {
 	return <SectionHomeContext value={link}>{children}</SectionHomeContext>;
 }

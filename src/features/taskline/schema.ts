@@ -68,7 +68,7 @@ export const suggestKey = (name: string): string => {
 		.normalize("NFKD")
 		.toUpperCase()
 		.replace(/[^A-Z0-9 ]/g, "")
-		.split(/s+/)
+		.split(/\s+/)
 		.filter(Boolean);
 	const initials = words.length > 1 ? words.map((word) => word[0]).join("") : (words[0] ?? "").slice(0, 3);
 	const key = initials.replace(/^[0-9]+/, "").slice(0, 6);

@@ -6,7 +6,7 @@ import { notificationSentence } from "@/features/taskline/notifications";
 import { SANDBOX_SEGMENT } from "@/features/taskline/types";
 import { localizedUrl } from "@/lib/seo";
 import { baseLocale, isLocale, type Locale } from "@/paraglide/runtime";
-import { tlMember, tlNotification, tlProject, tlWorkspace, user } from "@/server/db/schema";
+import { tlMember, tlNotification, tlProject, tlProjectMember, tlWorkspace, user } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import { sendEmail } from "@/server/email/send";
 import type { EmailProvider } from "@/server/email/types";
@@ -24,7 +24,9 @@ import { errorFields, log } from "@/server/log";
  *   emailed (digest ones, and instant ones whose email never went), in one email.
  *
  * A row is claimed (`emailed_at` set) before its email is sent, so two senders never
- * send it twice; a failed send hands it back to the digest.
+ * send it twice; a failed send hands it back to the digest. A recipient deactivated, or
+ * taken off a private project, since the row was made gets no email about it: titles and
+ * excerpts are what they lost access to.
  */
 
 export const COALESCE_MS = 5 * 60 * 1000;
@@ -46,6 +48,7 @@ type Row = {
 	locale: string | null;
 	ws: string;
 	key: string;
+	reachable: boolean;
 };
 
 const columns = {
@@ -62,6 +65,7 @@ const columns = {
 	locale: tlMember.locale,
 	ws: sql<string>`case when ${tlWorkspace.kind} = 'sandbox' then ${SANDBOX_SEGMENT} else ${tlWorkspace.slug} end`,
 	key: tlProject.key,
+	reachable: sql<boolean>`${tlMember.id} is not null and ${tlMember.deactivatedAt} is null and (${tlProject.visibility} <> 'private' or exists (select 1 from ${tlProjectMember} where ${tlProjectMember.projectId} = ${tlNotification.projectId} and ${tlProjectMember.memberId} = ${tlMember.id}))`,
 };
 
 /** Notifications with their recipient (account and member row) and where they point. */
@@ -84,6 +88,13 @@ const linkOf = (row: Row, locale: Locale) =>
 		row.data.ref ? `/app/taskline/${row.ws}/t/${row.data.ref}` : `/app/taskline/${row.ws}/p/${row.key}`,
 		locale,
 	);
+
+/** The rows whose recipient may still read them; the others will never be emailed. */
+async function reachableRows<T extends Pick<Row, "id" | "reachable">>(db: Db, rows: T[]): Promise<T[]> {
+	const gone = rows.filter((row) => !row.reachable).map((row) => row.id);
+	if (gone.length > 0) await db.update(tlNotification).set({ email: "none" }).where(inArray(tlNotification.id, gone));
+	return rows.filter((row) => row.reachable);
+}
 
 /** Sets `emailed_at` on the rows still unclaimed; returns the ids this caller got. */
 async function claim(db: Db, ids: ReadonlyArray<string>): Promise<Set<string>> {
@@ -142,7 +153,7 @@ export async function deliverInstant(
 		)
 		.orderBy(asc(tlNotification.createdAt));
 	const groups = new Map<string, Row[]>();
-	for (const row of rows) {
+	for (const row of await reachableRows(db, rows)) {
 		const key = `${row.userId}:${row.taskId ?? row.id}`;
 		groups.set(key, [...(groups.get(key) ?? []), row]);
 	}
@@ -215,7 +226,7 @@ export async function sendDigests(
 		)
 		.orderBy(asc(tlNotification.userId), asc(tlNotification.createdAt));
 	const byUser = new Map<string, Row[]>();
-	for (const row of rows) byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row]);
+	for (const row of await reachableRows(db, rows)) byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row]);
 	for (const group of byUser.values()) {
 		const first = group[0];
 		if (!first) continue;

@@ -95,7 +95,11 @@ const dateParts = (value: IsoDate): [number, number, number] => {
 	return [year ?? 1970, (month ?? 1) - 1, day ?? 1];
 };
 
-/** Today's calendar day in a time zone, as "YYYY-MM-DD" (en-CA formats dates that way). */
+/**
+ * Today's calendar day in a time zone, as "YYYY-MM-DD" (en-CA formats dates that way).
+ *
+ * @public
+ */
 export const todayInZone = (timeZone: string, now: Date = new Date()): IsoDate =>
 	new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 
@@ -103,7 +107,11 @@ export const todayInZone = (timeZone: string, now: Date = new Date()): IsoDate =
 export const addDays = (day: IsoDate, days: number): IsoDate =>
 	new Date(isoDateInstant(day).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
-/** The day of the week of a calendar day: 0 is Sunday, 6 Saturday (as Date#getDay). */
+/**
+ * The day of the week of a calendar day: 0 is Sunday, 6 Saturday (as Date#getDay).
+ *
+ * @public
+ */
 export const weekdayOf = (day: IsoDate): number => isoDateInstant(day).getUTCDay();
 
 /** A calendar month as "YYYY-MM". */
@@ -116,7 +124,11 @@ export const addMonths = (month: IsoMonth, months: number): IsoMonth => {
 	return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 };
 
-/** The first and last calendar days of a month ("2024-02" -> 2024-02-01, 2024-02-29). */
+/**
+ * The first and last calendar days of a month ("2024-02" -> 2024-02-01, 2024-02-29).
+ *
+ * @public
+ */
 export const monthDays = (month: IsoMonth): { first: IsoDate; last: IsoDate } => ({
 	first: `${month}-01`,
 	last: addDays(`${addMonths(month, 1)}-01`, -1),

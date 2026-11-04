@@ -132,6 +132,8 @@ const SPECS: Record<Layer, LayerSpec> = {
 		sentinel: "src/server/taskline",
 		paths: [
 			"src/features/taskline",
+			"src/components/data-display/scroll-region.tsx",
+			"src/server/email/templates/taskline-emails.tsx",
 			"src/routes/_taskline",
 			"src/server/taskline",
 			"src/functions/taskline",
@@ -164,6 +166,7 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/server/taskline-fields.test.ts",
 			"tests/server/taskline-automations.test.ts",
 			"tests/server/taskline-templates.test.ts",
+			"tests/server/taskline-wrap-up.test.ts",
 			"tests/unit/taskline-moves.test.ts",
 			"tests/unit/taskline-calendar.test.ts",
 			"tests/unit/taskline-import.test.ts",
@@ -192,7 +195,7 @@ const SPECS: Record<Layer, LayerSpec> = {
 
 /** Files more than one layer uses: removed only when every one of those layers goes. */
 const SHARED: ReadonlyArray<{ paths: string[]; layers: Layer[] }> = [
-	// None at the moment: Taskline took Kanban's order keys (src/lib/fractional-index.ts) with it (Task 48).
+	{ paths: ["src/components/forms/csv-source.tsx", "src/server/db/quota.ts"], layers: ["apps", "taskline"] },
 ];
 
 /** Written when the portfolio goes: the home page becomes a neutral landing page. */

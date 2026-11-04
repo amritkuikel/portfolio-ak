@@ -19,6 +19,7 @@ import { type TlProjectRow, tlProject } from "@/server/db/schema";
 import type { Db, Tx } from "@/server/db/types";
 import {
 	assertCan,
+	assertCanArchive,
 	type ProjectAccess,
 	projectAccess,
 	projectLevel,
@@ -216,7 +217,6 @@ export async function setProjectState(
 	return db.transaction(async (tx) => {
 		const access = await resolveProject(tx, user, ws, key);
 		assertCan(access, "manage");
-		if (access.project.archivedAt) throw ruleError("FORBIDDEN", "Project archived", m.taskline_error_archived());
 		const project = await repo.patchProject(tx, access.project.id, state);
 		const next = { ...access, project };
 		await recordActivity(tx, next, {
@@ -238,7 +238,7 @@ export async function setProjectArchived(
 ): Promise<ProjectDetail> {
 	return db.transaction(async (tx) => {
 		const access = await resolveProject(tx, user, ws, key);
-		assertCan(access, "manage");
+		assertCanArchive(access);
 		if ((access.project.archivedAt !== null) === archived) return detailOf(tx, access);
 		const project = await repo.patchProject(
 			tx,

@@ -187,11 +187,25 @@ export async function sumsByCell(db: Db, memberId: string, from: string, to: str
 			taskId: tlTimeEntry.taskId,
 			onDay: tlTimeEntry.onDay,
 			minutes: sql<number>`sum(${tlTimeEntry.minutes})`.mapWith(Number),
-			billable: sql<boolean>`bool_or(${tlTimeEntry.billable})`,
 		})
 		.from(tlTimeEntry)
 		.where(and(eq(tlTimeEntry.memberId, memberId), gte(tlTimeEntry.onDay, from), lte(tlTimeEntry.onDay, to), isStopped))
 		.groupBy(tlTimeEntry.projectId, tlTimeEntry.taskId, tlTimeEntry.onDay);
+}
+
+/** The same, billable and non-billable time apart (what "Copy last week" copies). */
+export async function sumsByCellAndBillable(db: Db, memberId: string, from: string, to: string) {
+	return db
+		.select({
+			projectId: tlTimeEntry.projectId,
+			taskId: tlTimeEntry.taskId,
+			onDay: tlTimeEntry.onDay,
+			billable: tlTimeEntry.billable,
+			minutes: sql<number>`sum(${tlTimeEntry.minutes})`.mapWith(Number),
+		})
+		.from(tlTimeEntry)
+		.where(and(eq(tlTimeEntry.memberId, memberId), gte(tlTimeEntry.onDay, from), lte(tlTimeEntry.onDay, to), isStopped))
+		.groupBy(tlTimeEntry.projectId, tlTimeEntry.taskId, tlTimeEntry.onDay, tlTimeEntry.billable);
 }
 
 /** Per task of a project: logged and billable minutes (tasks deleted for good sum under null). */

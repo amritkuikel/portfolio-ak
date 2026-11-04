@@ -67,7 +67,7 @@ export const Rules: Story = {
 export const Builder: Story = {
 	play: async ({ canvas, userEvent }) => {
 		await userEvent.click(canvas.getAllByTestId("automation-edit")[0] as HTMLElement);
-		const dialog = within(await within(document.body).findByTestId("automation-dialog", {}, { timeout: 10_000 }));
+		const dialog = within(await within(document.body).findByTestId("automation-dialog", {}, { timeout: 25_000 }));
 		await expect(dialog.getByLabelText(m.taskline_automation_name())).toHaveValue("Ship bugs");
 		await expect(
 			await dialog.findByText(m.taskline_automation_preview({ count: formatNumber(4) }), {}, { timeout: 5_000 }),

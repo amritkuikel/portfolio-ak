@@ -119,10 +119,13 @@ export async function resolveWorkspace(db: Db, user: TasklineUser, ws: string): 
 	};
 }
 
-/** What a level allows; an archived project only reads (its lead may still restore it). */
+/**
+ * What a level allows; an archived project only reads. `manage` stays true there so its
+ * lead reaches the settings and can restore it; `assertCan` refuses everything else.
+ */
 const canAt = (level: Level, archived: boolean): ProjectCan => ({
 	view: rank(level) >= rank("read"),
-	comment: rank(level) >= rank("comment"),
+	comment: !archived && rank(level) >= rank("comment"),
 	edit: !archived && rank(level) >= rank("edit"),
 	manage: rank(level) >= rank("manage"),
 	logTime: !archived && rank(level) >= rank("edit"),
@@ -173,9 +176,13 @@ export async function projectAccess(db: Db, access: WorkspaceAccess, project: Tl
  * project, or a read-only role).
  */
 export function assertCan(access: ProjectAccess, action: Exclude<keyof ProjectCan, "view">): void {
-	if (access.can[action]) return;
-	if (access.project.archivedAt && action !== "manage" && action !== "comment") {
+	if (access.project.archivedAt) {
 		throw ruleError("FORBIDDEN", `Project archived: ${action}`, m.taskline_error_archived());
 	}
-	throw ruleError("FORBIDDEN", `Taskline: cannot ${action}`, m.taskline_error_read_only());
+	if (!access.can[action]) throw ruleError("FORBIDDEN", `Taskline: cannot ${action}`, m.taskline_error_read_only());
+}
+
+/** Archiving or restoring: the one change `manage` still allows on an archived project. */
+export function assertCanArchive(access: ProjectAccess): void {
+	if (!access.can.manage) throw ruleError("FORBIDDEN", "Taskline: cannot manage", m.taskline_error_read_only());
 }

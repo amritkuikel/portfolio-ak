@@ -1555,7 +1555,7 @@ Kept, with the reason in 0197 and 0200: the loaders' on-demand import (a chunk b
 
 ---
 
-## 11. Part 5: Taskline, a standalone project management app (Tasks 46–58, in progress)
+## 11. Part 5: Taskline, a standalone project management app (Tasks 46–58, done)
 
 Part 5 turns the Kanban showcase app into **Taskline**, a full project management app with its own URL, shell and brand. It serves one team that the admin runs from `/admin`, and keeps a guest sandbox so visitors can try it.
 
@@ -1599,10 +1599,10 @@ The procedure is section 10.1's, with these differences:
 | 55 | Custom fields | high | Done (decision 0220) |
 | 56 | Automations and recurring tasks | xhigh | Done (decisions 0221–0222) |
 | 57 | Templates, reports and project updates | high | Done (decisions 0224–0225) |
-| 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Planned |
+| 58 | Wrap-up: full sandbox, guide, template matrix, measurements, review | medium | Done (decisions 0226–0227) |
 
 - **Order is fixed:** each task builds on the ones before. 46 → 48 make a working app; 49 makes the admin real; 50–57 add the modules.
-- **Decisions:** numbered from the next free one (0226 after Task 57).
+- **Decisions:** numbered from the next free one (0228 after Task 58).
 
 ### 11.4 What exists today (facts the tasks rely on)
 
@@ -1675,7 +1675,7 @@ The procedure is section 10.1's, with these differences:
 | Middleware | `src/middleware/taskline.ts`: `requireTasklineUser`, `withTasklineServices` |
 | Cron | `src/server/routes/cron-taskline.ts` → `GET /api/cron/taskline` |
 
-- **strip-demo:** shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`. `scripts/strip-demo.ts` gains the layer, with `--keep-taskline`. A file two layers use goes in strip-demo's `SHARED` list, removed only when both go (empty since Task 48: `src/lib/fractional-index.ts` is Taskline's).
+- **strip-demo:** shared files mark Taskline's code with `taskline:start`/`taskline:end` or a trailing `// @taskline`. `scripts/strip-demo.ts` gains the layer, with `--keep-taskline`. A file two layers use goes in strip-demo's `SHARED` list, removed only when both go (since Task 58 `csv-source.tsx` and `db/quota.ts`, apps and Taskline).
 - **`lockQuota`:** moves to core (`src/server/db/quota.ts`); the apps import it from there.
 - **Base path:** `features/taskline/links.ts` has typed `linkOptions` helpers. Every link uses them, so renaming the app is a folder move plus this file.
 
@@ -2095,17 +2095,23 @@ Templates, a project's reports and the admin's, and project updates (decisions 0
   - Run `pnpm db:migrate` on Neon (`0027_taskline_templates`).
   - The demo team's template and updates are written only while the team has no projects, so an existing database doesn't gain them from `pnpm db:seed-taskline`.
 
-### Task 58: Wrap-up (planned)
+### Task 58: Wrap-up (done)
 
-- **The sandbox, complete:** placeholder teammates with assigned tasks, an active sprint with a burndown, milestones and dependencies on the timeline, a week of time, comments and mentions in the inbox, custom fields, an automation, in both languages. Checked as a guest in both languages.
-- **Docs:** `docs/guides/taskline.md` complete; CLAUDE.md (guide table, "Where things are", the layout, commands, pitfalls); this section's summaries.
-- **The template matrix:** in a scratch clone, strip-demo with every layer and with `--keep-taskline`, plus both `new:feature` runs, typecheck, check, knip, test and the migration check.
-- **Performance:**
-  - `EXPLAIN ANALYZE` of the board, list, my work and search on a 10,000-task seed;
-  - the bundle per page;
-  - Lighthouse on the landing;
-  - the dev-server numbers.
-- **Review:** `/code-review` (high) over Part 5, with fixes, and the measurements as a decision.
+The sandbox checked and finished, the review with its fixes, the template matrix and the measurements (decisions 0226, 0227).
+
+- **Sandbox:** already held everything the plan listed; checked as a guest in both languages on 15 pages. Two fixes: the guest's own name in their language, and a past for the two done tasks, so the reports have cycle and lead times.
+- **Review:** `/code-review` (high) over `062f35e..HEAD`: ten findings, nine fixed with a test each (`tests/server/taskline-wrap-up.test.ts`, 11 tests), one kept because 0220 chose it. Fixed: an invited viewer's project role; archived projects really read only (`assertCanArchive` for restoring); the daily job's instant emails; a time rule's run claimed only on a match; "assign to the lead" with no lead; a deleted project's files; no email to who lost access; billable time in "Copy last week"; the key suggested from a name.
+- **Template matrix:** failed at first (the CI job hadn't run since Task 46). Fixed: `vite.config.ts`'s markers, `richTextToText` out of the apps markers, `SHARED` now holding `csv-source.tsx` and `db/quota.ts`, Taskline's emails in `taskline-emails.tsx`, helpers tagged `@public`. Then all four rows green, both `new:feature` runs included.
+- **Numbers (0227):** on a 10,000-task seed the list, My work and search take 22–98 ms; the board 153 ms at 1,000 tasks and 907 ms (4.5 MB) at 8,000. Every page 270.5 kB gzip (budget 275). Lighthouse on the landing 90, 96, 97. `pnpm dev:local` ready in 3.6–4.8 s, first page 12.8–15.5 s. `pnpm test` 133 files, 1,231 tests; Storybook 104 files, 498 tests; `pnpm test:e2e` 1,945 checks, all passed, none flaky, 24.9 min.
+- **Deviations:**
+  - The plan's seed ran on PGlite, not Neon: the owner's database isn't a place for 10,000 sample tasks.
+  - Three more matrix rows than the plan asked, since nothing else runs them before a push.
+  - CLAUDE.md changed only in its status line: decision 0223 takes priority over the plan's list. Its Taskline bullet, kept "while Part 5 is in progress", is the owner's to move.
+  - No migration.
+- **For the owner:**
+  - Decision 0223's documentation pass (16 files: CLAUDE.md, the guides, `decisions.md`) was already uncommitted when this task began, and it's still uncommitted: this commit holds only Task 58's lines of the two files they share.
+  - The board's limit (0227): decide before a team puts thousands of tasks in one project.
+  - Run the matrix, or push, before starting Part 6: the template job only runs in CI.
 
 **Out of scope for Part 5:**
 - several workspaces per tenant, and billing (the organizations recipe is the way);

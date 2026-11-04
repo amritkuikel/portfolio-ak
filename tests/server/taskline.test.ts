@@ -8,6 +8,7 @@ import { GUEST_DATA } from "@/server/guests/data";
 import { claimGuest, seedGuest } from "@/server/guests/service";
 import type { TasklineServices } from "@/server/taskline/access";
 import * as projects from "@/server/taskline/projects/service";
+import * as reports from "@/server/taskline/reports/service";
 import { freeProjectKey, seedSandbox } from "@/server/taskline/sandbox";
 import * as tasks from "@/server/taskline/tasks/service";
 import * as workflow from "@/server/taskline/workflow/service";
@@ -343,6 +344,16 @@ describe("the sandbox", () => {
 		const nepali = await tasks.listTasks(as("guest-ne"), "sandbox", "WEB");
 		expect(nepali.project.name).toBe("वेबसाइट नयाँ रूपमा");
 		expect(nepali.statuses[0]?.name).toBe("ब्याकलग");
+		// The guest is named in their language (Task 58), and an account keeps its name.
+		const ownerOf = (board: typeof nepali) => board.members.find((member) => !member.placeholder)?.name;
+		expect(ownerOf(board)).toBe("Guest");
+		expect(ownerOf(nepali)).toBe("अतिथि");
+		// The two done tasks have a past, so the reports have cycle and lead times.
+		const { cycle } = await reports.getProjectReports(as("guest"), { ws: "sandbox", key: "WEB", range: "4w" });
+		expect(cycle.tasks.map((task) => [task.leadDays, task.cycleDays]).sort()).toEqual([
+			[6, 2],
+			[8, 1],
+		]);
 		// Seeding again (another app's retry, an account starting one) keeps what's there.
 		await env.db.transaction((tx) => seedSandbox(tx, "guest", "en"));
 		expect(await workspaces.listWorkspaces(as("guest"))).toHaveLength(1);

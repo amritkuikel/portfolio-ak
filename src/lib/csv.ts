@@ -36,7 +36,11 @@ export function downloadCsv(filename: string, csv: string) {
 	saveBlob(filename, new Blob([BOM, csv], { type: "text/csv;charset=utf-8" }));
 }
 
-/** Saves JSON text as `filename`. */
+/**
+ * Saves JSON text as `filename`.
+ *
+ * @public
+ */
 export function downloadJson(filename: string, json: string) {
 	saveBlob(filename, new Blob([json], { type: "application/json;charset=utf-8" }));
 }
@@ -123,7 +127,11 @@ export function parseCsv(text: string, delimiter = ","): string[][] {
 export const CSV_DATE_FORMATS = ["ymd", "dmy", "mdy"] as const;
 export type CsvDateFormat = (typeof CSV_DATE_FORMATS)[number];
 
-/** "2026-10-30", "30/10/2026" or "10/30/2026" (also with - or . between) -> "YYYY-MM-DD", or null. */
+/**
+ * "2026-10-30", "30/10/2026" or "10/30/2026" (also with - or . between) -> "YYYY-MM-DD", or null.
+ *
+ * @public
+ */
 export function parseCsvDay(text: string, format: CsvDateFormat): string | null {
 	const parts = text.trim().split(/[-/.]/);
 	if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) return null;

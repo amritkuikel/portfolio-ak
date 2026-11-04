@@ -138,6 +138,8 @@ async function act(
 						: action.to === "reporter"
 							? task.reporterId
 							: action.to;
+			// "The lead" or "the reporter" when there's none: the rule can't act (not a request to unassign).
+			if (!to && action.to !== "none") throw missing("member");
 			if (to) {
 				const member = await members.memberById(sp, access.workspace.id, to);
 				if (!member || member.deactivatedAt) throw missing("member");
@@ -267,7 +269,11 @@ async function act(
 	}
 }
 
-/** One rule on one task: the conditions, then the actions in a savepoint; the run is logged either way. */
+/**
+ * One rule on one task: the conditions, then the actions in a savepoint; the run is logged
+ * either way. A time rule (with a `key`) that doesn't match leaves no trace, so it can
+ * still fire when the task later matches: only a match claims the task's one run.
+ */
 async function runRule(
 	tx: Tx,
 	context: Context,
@@ -278,14 +284,6 @@ async function runRule(
 	const { access } = context;
 	const task = await tasks.getById(tx, access.project.id, taskId);
 	if (!task || task.deletedAt) return [];
-	const runId = key
-		? await repo.claimRun(tx, { automationId: rule.id, taskId, outcome: "skipped", detail: {}, key })
-		: null;
-	if (key && !runId) return [];
-	const record = async (outcome: "ok" | "skipped" | "failed", detail: AutomationRunDetail) => {
-		if (runId) await repo.finishRun(tx, runId, { outcome, detail });
-		else await repo.insertRun(tx, { automationId: rule.id, taskId, outcome, detail });
-	};
 	const labelIds = (await tasks.labelIdsOf(tx, [task.id])).get(task.id) ?? [];
 	const category = context.statuses.find((status) => status.id === task.statusId)?.category ?? "unstarted";
 	const matched = matchesConditions(
@@ -301,9 +299,19 @@ async function runRule(
 		context,
 	);
 	if (!matched) {
-		await record("skipped", { reason: "conditions" });
+		if (!key) {
+			await repo.insertRun(tx, { automationId: rule.id, taskId, outcome: "skipped", detail: { reason: "conditions" } });
+		}
 		return [];
 	}
+	const runId = key
+		? await repo.claimRun(tx, { automationId: rule.id, taskId, outcome: "skipped", detail: {}, key })
+		: null;
+	if (key && !runId) return [];
+	const record = async (outcome: "ok" | "skipped" | "failed", detail: AutomationRunDetail) => {
+		if (runId) await repo.finishRun(tx, runId, { outcome, detail });
+		else await repo.insertRun(tx, { automationId: rule.id, taskId, outcome, detail });
+	};
 	try {
 		const { changed, notify } = await tx.transaction(async (sp) => {
 			const out: Applied = { entries: [], events: [], changed: 0 };

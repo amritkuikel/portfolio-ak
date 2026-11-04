@@ -41,6 +41,9 @@ describe("<form> method", () => {
 		const gets = forms
 			.filter(({ tag }) => tag.includes('method="get"'))
 			.map(({ file }) => file.split(path.sep).join("/"));
-		expect(gets).toEqual(["src/components/filters/filter-bar.tsx", "src/features/taskline/find/search-page.tsx"]);
+		expect(gets).toEqual([
+			"src/components/filters/filter-bar.tsx",
+			"src/features/taskline/find/search-page.tsx", // @taskline
+		]);
 	});
 });

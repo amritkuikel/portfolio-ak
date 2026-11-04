@@ -79,6 +79,8 @@ type SampleTask = {
 	/** Task 54: its start (days from today), and its milestone (0 the design sign-off, 1 the launch). */
 	start?: number;
 	milestone?: 0 | 1;
+	/** Task 58: a done task's past, in days from today, so the reports have real cycle and lead times. */
+	history?: { created: number; started: number; completed: number };
 };
 
 const TEAMMATES = [
@@ -134,6 +136,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		start: -5,
 		due: -2,
 		milestone: 1,
+		history: { created: -9, started: -5, completed: -3 },
 	},
 	{
 		title: (t) => m.taskline_seed_task_contrast({}, t),
@@ -189,6 +192,7 @@ const TASKS: ReadonlyArray<SampleTask> = [
 		start: -14,
 		due: -9,
 		milestone: 0,
+		history: { created: -21, started: -14, completed: -13 },
 	},
 ];
 
@@ -229,8 +233,11 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 	if (existing) return existing;
 	const t = { locale };
 	const workspace = await workspaces.insertSandbox(tx, userId, m.taskline_sandbox_name({}, t));
+	const account = await workspaces.userIdentity(tx, userId);
+	// A guest's name is "Guest" whatever they speak (auth.ts); the claim puts the account's name here.
+	const ownerName = account?.isAnonymous ? m.guest_label({}, t) : (account?.name ?? "");
 	const [owner, ...teammates] = await workspaces.insertMembers(tx, [
-		{ workspaceId: workspace.id, userId, displayName: (await workspaces.userName(tx, userId)) ?? "" },
+		{ workspaceId: workspace.id, userId, displayName: ownerName },
 		...TEAMMATES.map((mate) => ({
 			workspaceId: workspace.id,
 			userId: null,
@@ -281,10 +288,12 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 		positions.set(status.id, generateKeysBetween(null, null, count));
 	}
 	const ids: string[] = [];
+	const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 	for (const sample of TASKS) {
 		const status = statuses[sample.status] ?? statuses[0];
 		if (!status) break;
 		const closed = status.category === "completed" || status.category === "canceled";
+		const past = sample.history;
 		const task = await tasks.insertTask(tx, {
 			workspaceId: workspace.id,
 			projectId: project.id,
@@ -304,7 +313,8 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 				text: text(t),
 				done: index === 0,
 			})),
-			completedAt: closed ? new Date() : null,
+			completedAt: past ? daysFromNow(past.completed) : closed ? new Date() : null,
+			...(past ? { createdAt: daysFromNow(past.created) } : {}),
 			points: sample.points ?? null,
 			estimateMinutes: sample.estimate === undefined ? null : sample.estimate * 60,
 		});
@@ -315,7 +325,18 @@ export async function seedSandbox(tx: Tx, userId: string, locale: Locale): Promi
 			(sample.labels ?? []).flatMap((index) => (labels[index] ? [labels[index].id] : [])),
 		);
 		await tasks.addWatchers(tx, task.id, [owner.id, task.assigneeId]);
-		await recordActivity(tx, created, { kind: "task.created", taskId: task.id, data: { title: task.title } });
+		if (!past) {
+			await recordActivity(tx, created, { kind: "task.created", taskId: task.id, data: { title: task.title } });
+			continue;
+		}
+		// Task 58: its life so far, with the days it happened (to do, in progress, done).
+		const [toDo, inProgress] = [statuses[1]?.id ?? status.id, statuses[2]?.id ?? status.id];
+		const entry = { workspaceId: workspace.id, projectId: project.id, taskId: task.id, actorId: task.assigneeId };
+		await tx.insert(tlActivity).values([
+			{ ...entry, kind: "task.created", data: { title: task.title }, at: daysFromNow(past.created) },
+			{ ...entry, kind: "task.moved", data: { from: toDo, to: inProgress }, at: daysFromNow(past.started) },
+			{ ...entry, kind: "task.moved", data: { from: inProgress, to: status.id }, at: daysFromNow(past.completed) },
+		]);
 	}
 	await seedConversation(tx, { workspaceId: workspace.id, projectId: project.id, owner, teammates, taskIds: ids, t });
 	await seedSprints(tx, created, ids, today, t);

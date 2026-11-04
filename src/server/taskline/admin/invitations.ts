@@ -192,7 +192,7 @@ export async function revoke({ db, actor }: Services, { id }: { id: string }): P
  * starts. Only a verified, non-guest account counts (the address is then its
  * owner's); expired and revoked invitations are skipped. The account becomes a
  * member (a deactivated one is reactivated) with the invitation's role, and joins the
- * project it names. Returns how many it accepted.
+ * project it names: a viewer's invitation as a viewer there too. Returns how many it accepted.
  */
 export async function acceptInvitations(db: Db, userId: string): Promise<number> {
 	const [account] = await db
@@ -213,27 +213,36 @@ export async function acceptInvitations(db: Db, userId: string): Promise<number>
 		const [latest] = open;
 		if (!latest) return 0;
 		const member = await joinTeam(tx, workspace.id, account, latest.role);
-		const projectIds = [...new Set(open.flatMap((invitation) => (invitation.projectId ? [invitation.projectId] : [])))];
-		const joined: string[] = [];
-		for (const projectId of projectIds) {
+		// The newest invitation naming a project says the role there (`open` is newest first).
+		const invitedTo = new Map<string, "member" | "viewer">();
+		for (const invitation of open) {
+			if (invitation.projectId && !invitedTo.has(invitation.projectId)) {
+				invitedTo.set(invitation.projectId, invitation.role);
+			}
+		}
+		const joined: Array<{ projectId: string; role: "member" | "viewer" }> = [];
+		for (const [projectId, role] of invitedTo) {
 			const [project] = await tx.select().from(tlProject).where(eq(tlProject.id, projectId));
 			if (!project || project.archivedAt) continue;
 			const roles = await projectRepo.rolesOf(tx, member.id, [project.id]);
 			if (roles.has(project.id)) continue;
-			await projectRepo.upsertProjectMember(tx, project.id, member.id, "member");
-			joined.push(project.id);
+			await projectRepo.upsertProjectMember(tx, project.id, member.id, role);
+			joined.push({ projectId: project.id, role });
 		}
 		await recordTeamActivity(
 			tx,
-			joined.map((projectId) => ({
+			joined.map(({ projectId, role }) => ({
 				workspaceId: workspace.id,
 				projectId,
 				actorId: member.id,
 				kind: "project.member_added" as const,
-				data: { memberId: member.id, role: "member", invited: true },
+				data: { memberId: member.id, role, invited: true },
 			})),
 		);
-		await bumpRevs(tx, joined);
+		await bumpRevs(
+			tx,
+			joined.map(({ projectId }) => projectId),
+		);
 		await tx
 			.update(tlInvitation)
 			.set({ acceptedAt: new Date() })

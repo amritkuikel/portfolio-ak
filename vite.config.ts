@@ -111,11 +111,13 @@ export default defineConfig(async ({ command, mode }) => {
 					// Nitro routes so dev serves them to manifest fetches too (see the file). One per locale.
 					"/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
 					"/ne/manifest.webmanifest": { handler: "./src/server/routes/manifest.ts", method: "GET" },
-					"/app/taskline/manifest.webmanifest": { handler: "./src/server/routes/taskline-manifest.ts", method: "GET" }, // @taskline
+					// taskline:start
+					"/app/taskline/manifest.webmanifest": { handler: "./src/server/routes/taskline-manifest.ts", method: "GET" },
 					"/ne/app/taskline/manifest.webmanifest": {
 						handler: "./src/server/routes/taskline-manifest.ts",
 						method: "GET",
-					}, // @taskline
+					},
+					// taskline:end
 				},
 				// Security headers on every response (pages, assets, API). The CSP is per
 				// request (nonce) and is added by src/middleware/security-headers.ts.

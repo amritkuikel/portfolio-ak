@@ -113,3 +113,12 @@ export async function userName(db: Db, userId: string): Promise<string | null> {
 	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId));
 	return row?.name ?? null;
 }
+
+/** An account's name, and whether it's a guest's (a sandbox's seed names a guest in their language). */
+export async function userIdentity(db: Db, userId: string): Promise<{ name: string; isAnonymous: boolean } | null> {
+	const [row] = await db
+		.select({ name: user.name, isAnonymous: user.isAnonymous })
+		.from(user)
+		.where(eq(user.id, userId));
+	return row ? { name: row.name, isAnonymous: row.isAnonymous === true } : null;
+}

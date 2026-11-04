@@ -229,6 +229,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0222](#0222-the-typecheck-runs-tsc-with-a-4-gb-heap): The typecheck runs tsc with a 4 GB heap
 - [0224](#0224-tasklines-templates-one-definition-with-local-ids-built-ins-in-code-edited-as-json): Taskline's templates: one definition with local ids, built-ins in code, edited as JSON
 - [0225](#0225-tasklines-reports-computed-from-live-tasks-and-the-activity-log-updates-set-the-health): Taskline's reports: computed from live tasks and the activity log; updates set the health
+- [0226](#0226-part-5-reviewed-what-changed-and-what-stayed): Part 5 reviewed: what changed and what stayed
+- [0227](#0227-part-5-measured-task-58): Part 5 measured (Task 58)
 </details>
 
 ---
@@ -2749,3 +2751,62 @@ Measured on the owner's Windows machine (Node 24.11), 2026-10-30.
 - **CSV:** each report saves what it shows, from the data the page already has.
 - **Project updates** are written once by whoever may run the project; posting sets the project's health, and deleting leaves it. They notify nobody: the plan's notification kinds don't include them, and the overview and the feed carry them.
 - **Alternatives considered:** daily snapshots of each project (as sprints have; a job and a table for numbers the tasks already give, except the overdue trend); charts only, without CSV per report (the plan asks for each).
+
+## 0226: Part 5 reviewed: what changed and what stayed
+
+*Task 58. Supersedes part of 0221 (when a time rule claims its run).*
+
+- **The review:** `/code-review` (high) over `062f35e..HEAD` (15 commits, 522 files). Ten findings: nine fixed, each with a test in `tests/server/taskline-wrap-up.test.ts`, and one kept.
+- **Fixed, access:**
+  - An invitation naming a project joined it as `member` whatever the invitation's role, so an invited viewer could edit there. The project role now follows the invitation.
+  - Archived projects read only, as the guide always said, but `manage` and `comment` still passed: a lead could purge tasks and change settings, and a viewer's comment could fire a rule. `assertCan` now refuses every action on an archived project. `can.manage` stays true so its lead reaches the settings, and `assertCanArchive` is the one change it allows: restoring. The settings forms answer "This project is archived"; they aren't made read-only.
+  - The emails went to whoever a notification was made for, even after they lost access. A recipient deactivated, or taken off a private project, gets no email and the row becomes `none`. An admin who sees a private project through `taskline:read` or `manage` without being on it counts as taken off: they keep the inbox row and lose the email, because permissions aren't readable in that query.
+- **Fixed, automations:**
+  - A time rule claimed its keyed run before checking its conditions, so a task that didn't match yet used up its one run for that due date. A match now claims it; a miss writes nothing, not even `skipped`, because a rule that looks again every day would fill the log. This is the part of 0221 it replaces; a second run of the job, or a date moved back, still does nothing twice.
+  - "Assign to the lead" or "to the reporter" with neither cleared the assignee and logged success. It now fails, and the run says why.
+- **Fixed, the rest:**
+  - The daily job threw away the instant ids its steps got back, so a `due` notice set to instant was emailed a day late, by the next run's digest. They now go out in the same run, in a new `instant` step before the digests.
+  - Deleting a project left its tasks' and comments' files live for good, since attachments have no foreign key. It now marks them removed, as purging a task does.
+  - "Copy last week" summed a cell and called all of it billable if any of it was. It now copies billable and non-billable time as separate entries.
+  - `suggestKey` split on `/s+/`, a lost backslash, so "Website relaunch" suggested `WEB` and "A b" an invalid key.
+- **Kept:** a task created or imported straight into a completed status with a required field empty. The review reported it; 0220 chose it ("creating a task, quick adds, imports and canceling aren't held back"), so it stands.
+- **The template matrix** (CI's template job, by hand in scratch clones) failed on the first run. Nothing is pushed during a part, so the job hadn't run since Task 46:
+  - stripping every layer broke `vite.config.ts`: a route spread over three lines was marked only on its last, so it now uses `taskline:start` and `taskline:end`;
+  - `--keep-taskline` lost `richTextToText`, inside the `apps` markers though Taskline uses it too: it's core now, tagged `@public`, as `mentionedIds`;
+  - `csv-source.tsx` and `db/quota.ts` are in strip-demo's `SHARED` list (apps and Taskline), and `scroll-region.tsx` in Taskline's;
+  - Taskline's emails moved from `emails.tsx` to their own `taskline-emails.tsx`, because Biome merges two imports from one module and carries a line's marker onto the merged line, which would have removed the whole import;
+  - eight date, CSV and section helpers only the two layers use are tagged `@public`, as `clientIpHash` (0200): a project without either keeps them as core helpers.
+- **Stories:** three waits for a lazy dialog went from 10 to 25 s, under the 30 s test timeout. On a busy run a dialog's first dynamic import took longer, and a different story failed each time; alone they pass.
+- **The sandbox:** the guest's name is `guest_label` in their language, and the two done tasks have a past (made, started, completed on earlier days, with their moves), so the reports have cycle and lead times. Until now they read "–" and "0 d".
+- **Left as it is:** the `pg` deprecation warning in the dev server's log ("Calling client.query() when the client is already executing a query"), which `Promise.all` on one connection causes. It's a warning until `pg@9`.
+- **Alternatives considered:** `can.manage` false on an archived project with a new `can.restore` (a change to every caller and story, for one button); keeping the time rule's `skipped` row (a row a day per rule and task); making a second, unstripped import of `react-email` work with comment lines (Biome moves those too).
+
+## 0227: Part 5 measured (Task 58)
+
+Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
+
+- **Queries, on a 10,000-task seed:** PGlite (Postgres in WebAssembly, one connection, in process), so these are CPU and plans, not Neon's network. Three projects of 8,000, 1,000 and 1,000 tasks, six members, labels on half the tasks, a watcher per assigned task, 397 dependencies and an activity row per task. `EXPLAIN ANALYZE` of what the real services run, captured at the driver; the median of three warm runs.
+
+  | Page | Time | Queries | JSON |
+  | --- | --- | --- | --- |
+  | Board, 8,000-task project | 907 ms | 18 | 4,467 KB |
+  | Board, 1,000-task project | 153 ms | 18 | 558 KB |
+  | List, default sort | 98 ms | 8 | 11 KB |
+  | List, by due date, page 100 | 47 ms | 8 | 11 KB |
+  | List, grouped by status | 85 ms | 8 | 11 KB |
+  | List, `q=design` | 60 ms | 8 | 11 KB |
+  | List, mine, due this week | 22 ms | 8 | 11 KB |
+  | List, blocked | 52 ms | 8 | 11 KB |
+  | My work | 48 ms | 9 | 74 KB |
+  | Search, `q=design` | 40 ms | 10 | 9 KB |
+  | Search, `q=de` | 38 ms | 10 | 9 KB |
+  | Palette, `q=design` | 35 ms | 10 | 3 KB |
+
+- **What the plans say:** no new index. The list's sorts read the project and sort it (a top-N heapsort, 78 ms at 8,000 rows): an index would serve one sort of eleven. My work starts from the project's rows through `tl_task_number_unique`. Search scans the table and doesn't use the GIN index, since one query in twenty matches and every project is searched: 7 ms at this size. The planner may change its mind on a larger table, and the index is there.
+- **The one real limit: the board reads the whole project** (`listTasks`, every task outside the trash, shared by the board, backlog, calendar and timeline). 4.5 MB at 8,000 tasks, and that goes into the page's HTML too. It's fine at the sizes a team of this kind reaches, and it's left alone: paging it by status is a change to all four views and their TanStack DB collections, not a wrap-up's. The guide's pitfalls say so.
+- **Every page's JavaScript:** 270.5 kB gzip (budget 275; 246.4 at the end of Part 4). Taskline's routes on top of it: the task page 219.9, board 206.9, backlog 197.4, calendar 194.2, timeline 158.1, list 102.9, home 60.4, timesheet 59.2, reports 58.1, overview 55.3, inbox 25.7, landing 24.1. Preloaded fonts within budget.
+- **Lighthouse 13.6, mobile, simulated throttling, behind a brotli proxy** (the harness server doesn't compress, portfolio guide): the landing 90, 96 and 97 in three runs (FCP and LCP 0.9–1.0 s, TBT 200–420 ms, CLS 0), accessibility, best practices and SEO 100. Sign-in 97; its SEO of 63 is its `noindex`.
+- **`pnpm dev:local`:** Vite ready in 3.6–4.8 s (5.3 s with the database, 20 s just after `vite.config.ts` changed, when it optimizes dependencies again). First page 12.8–15.5 s, 36 s after such a change (Part 4: 5.5–8.5 s, with about half as many routes). A new page 0.15–0.5 s, a repeat 0.02–0.09 s.
+- **The template matrix:** all four rows of CI's job (all layers, `--keep-taskline`, `--keep-apps`, `--keep-portfolio`) in a scratch clone with both `new:feature` runs: typecheck, check, knip, test, the migration check, all green after the fixes in 0226. Each takes 3–7 minutes.
+- **Gates:** `pnpm test` 133 files, 1,231 tests, 119 s; `pnpm test:storybook` 104 files, 498 tests, 123 s, twice; `pnpm build` 47 s; `pnpm build-storybook` 499 s; `pnpm test:e2e` 1,945 checks, all passed, none flaky, 24.9 min (Part 4: 1,194 in 14.8 min).
+- **Guests:** the sandbox checked in a browser in both languages, on 15 pages: every module has something to show, no console errors, no untranslated text but the project key, shortcuts' key names and "CSV".
