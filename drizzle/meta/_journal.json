@@ -204,6 +204,13 @@
 			"when": 1793792508750,
 			"tag": "0028_parda_foundation",
 			"breakpoints": true
+		},
+		{
+			"idx": 29,
+			"version": "7",
+			"when": 1793812708428,
+			"tag": "0029_parda_player",
+			"breakpoints": true
 		}
 	]
 }

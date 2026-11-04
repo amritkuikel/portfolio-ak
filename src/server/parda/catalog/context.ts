@@ -1,9 +1,10 @@
 import "@tanstack/react-start/server-only";
-import { getRequest } from "@tanstack/react-start/server";
+import { getCookie, getRequest } from "@tanstack/react-start/server";
 import type { Session } from "@/lib/session";
 import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
 import { db } from "@/server/db/client";
 import { enforceRateLimit } from "@/server/http/rate-limit";
+import { browsingProfile, PROFILE_COOKIE } from "../profiles/service";
 import { pardaCache, pardaControls, pardaTmdb } from "../tmdb/store";
 import type { CatalogScope, CatalogServices } from "./service";
 
@@ -32,12 +33,15 @@ export async function pardaCatalog(session: Session | null): Promise<PardaCatalo
 			await enforceRateLimit(db, `parda-catalog:${ip ?? "unknown"}`, ANONYMOUS_LIMIT);
 		}
 	}
-	const settings = await pardaControls.settings();
-	// Profiles and their kids' cap arrive with Task 64; until then nobody browses capped.
+	const [settings, profile] = await Promise.all([
+		pardaControls.settings(),
+		browsingProfile(db, session, getCookie(PROFILE_COOKIE)),
+	]);
 	return {
 		services: { tmdb: pardaTmdb, cache: pardaCache, controls: pardaControls },
-		region: settings.region,
-		cap: null,
+		region: profile?.region ?? settings.region,
+		// A kids' profile browses under its cap, or the admin's (decision 0236).
+		cap: profile?.kids ? (profile.cap ?? ("kidsCap" in settings ? settings.kidsCap : null)) : null,
 	};
 }
 

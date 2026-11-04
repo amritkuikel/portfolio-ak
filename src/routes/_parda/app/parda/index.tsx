@@ -7,7 +7,7 @@ import { getLocale } from "@/paraglide/runtime";
 export const Route = createFileRoute("/_parda/app/parda/")({
 	loader: async ({ context }) => {
 		const { loadPardaPage } = await import("@/features/parda/home/load");
-		return loadPardaPage(context.queryClient, getLocale(), "home");
+		return loadPardaPage(context.queryClient, getLocale(), "home", Boolean(context.session));
 	},
 	head: ({ loaderData }) => pardaPageHead("home", loaderData),
 	component: PardaHome,

@@ -24,6 +24,7 @@ export * from "./attachments";
 export * from "./audit";
 export * from "./auth";
 export * from "./parda/catalog"; // @parda
+export * from "./parda/library"; // @parda
 export * from "./parda/playback"; // @parda
 export * from "./portfolio"; // @portfolio
 export * from "./rbac";

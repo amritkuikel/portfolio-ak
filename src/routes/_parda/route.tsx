@@ -13,6 +13,15 @@ import { getLocale } from "@/paraglide/runtime";
  */
 export const Route = createFileRoute("/_parda")({
 	staticData: { brand: PARDA_BRAND },
+	// A guest's banner names the day their progress is deleted (decision 0236): read here, so it renders whole.
+	loader: async ({ context }) => {
+		if (!context.session?.isAnonymous) return;
+		const [{ pardaViewerQueryOptions }, { ensureQuery }] = await Promise.all([
+			import("@/features/parda/library/queries"),
+			import("@/lib/query"),
+		]);
+		await ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined);
+	},
 	head: () => ({ meta: [{ title: pardaTitle() }, NOINDEX], links: pardaFontPreloads(getLocale()) }),
 	notFoundComponent: PardaNotFound,
 	component: PardaSection,

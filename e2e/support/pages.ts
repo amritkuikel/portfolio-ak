@@ -339,6 +339,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/parda/$type/$id/credits", params: { from: "parda", page: "credits" } },
 	{ route: "/app/parda/person/$id", params: { from: "parda", page: "person" } },
 	{ route: "/app/parda/collection/$id", params: { from: "parda", page: "collection" } },
+	{ route: "/app/parda/watch/$type/$id", params: { from: "parda", page: "watch-movie" }, label: "movie" },
+	{ route: "/app/parda/watch/$type/$id", params: { from: "parda", page: "watch-series" }, label: "series" },
 	{ route: "/app/parda/about" },
 	{ route: "/app/parda/sign-in" },
 	{ route: "/app/parda/sign-up" },

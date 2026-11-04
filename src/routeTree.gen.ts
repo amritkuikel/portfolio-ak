@@ -165,6 +165,7 @@ import { Route as AdminAdminTasklineProjectsIdMembersRouteImport } from './route
 import { Route as AdminAdminTasklineProjectsIdWorkflowRouteImport } from './routes/_admin/admin/taskline/projects/$id/workflow'
 import { Route as PardaAppPardaTypeIdIndexRouteImport } from './routes/_parda/app/parda/$type/$id/index'
 import { Route as PardaAppPardaTypeIdCreditsRouteImport } from './routes/_parda/app/parda/$type/$id/credits'
+import { Route as PardaAppPardaWatchTypeIdRouteImport } from './routes/_parda/app/parda/watch/$type/$id'
 import { Route as TasklineAppTasklineShellWsIndexRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/index'
 import { Route as TasklineAppTasklineShellWsProjectsRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/projects'
 import { Route as TasklineAppTasklineShellWsSearchRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/search'
@@ -1017,6 +1018,12 @@ const PardaAppPardaTypeIdCreditsRoute =
     path: '/app/parda/$type/$id/credits',
     getParentRoute: () => PardaRouteRoute,
   } as any)
+const PardaAppPardaWatchTypeIdRoute =
+  PardaAppPardaWatchTypeIdRouteImport.update({
+    id: '/app/parda/watch/$type/$id',
+    path: '/app/parda/watch/$type/$id',
+    getParentRoute: () => PardaRouteRoute,
+  } as any)
 const TasklineAppTasklineShellWsIndexRoute =
   TasklineAppTasklineShellWsIndexRouteImport.update({
     id: '/',
@@ -1315,6 +1322,7 @@ export interface FileRoutesByFullPath {
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/parda/$type/$id/credits': typeof PardaAppPardaTypeIdCreditsRoute
+  '/app/parda/watch/$type/$id': typeof PardaAppPardaWatchTypeIdRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/app/taskline/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
@@ -1473,6 +1481,7 @@ export interface FileRoutesByTo {
   '/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/app/parda/$type/$id/credits': typeof PardaAppPardaTypeIdCreditsRoute
+  '/app/parda/watch/$type/$id': typeof PardaAppPardaWatchTypeIdRoute
   '/app/taskline/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/app/taskline/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/app/taskline/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
@@ -1655,6 +1664,7 @@ export interface FileRoutesById {
   '/_admin/admin/taskline/projects/$id/members': typeof AdminAdminTasklineProjectsIdMembersRoute
   '/_admin/admin/taskline/projects/$id/workflow': typeof AdminAdminTasklineProjectsIdWorkflowRoute
   '/_parda/app/parda/$type/$id/credits': typeof PardaAppPardaTypeIdCreditsRoute
+  '/_parda/app/parda/watch/$type/$id': typeof PardaAppPardaWatchTypeIdRoute
   '/_taskline/app/taskline/_shell/$ws/projects': typeof TasklineAppTasklineShellWsProjectsRoute
   '/_taskline/app/taskline/_shell/$ws/search': typeof TasklineAppTasklineShellWsSearchRoute
   '/_taskline/app/taskline/_shell/$ws/timesheet': typeof TasklineAppTasklineShellWsTimesheetRoute
@@ -1832,6 +1842,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/parda/$type/$id/credits'
+    | '/app/parda/watch/$type/$id'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws/search'
     | '/app/taskline/$ws/timesheet'
@@ -1990,6 +2001,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects/$id/members'
     | '/admin/taskline/projects/$id/workflow'
     | '/app/parda/$type/$id/credits'
+    | '/app/parda/watch/$type/$id'
     | '/app/taskline/$ws/projects'
     | '/app/taskline/$ws/search'
     | '/app/taskline/$ws/timesheet'
@@ -2171,6 +2183,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/taskline/projects/$id/members'
     | '/_admin/admin/taskline/projects/$id/workflow'
     | '/_parda/app/parda/$type/$id/credits'
+    | '/_parda/app/parda/watch/$type/$id'
     | '/_taskline/app/taskline/_shell/$ws/projects'
     | '/_taskline/app/taskline/_shell/$ws/search'
     | '/_taskline/app/taskline/_shell/$ws/timesheet'
@@ -3314,6 +3327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PardaAppPardaTypeIdCreditsRouteImport
       parentRoute: typeof PardaRouteRoute
     }
+    '/_parda/app/parda/watch/$type/$id': {
+      id: '/_parda/app/parda/watch/$type/$id'
+      path: '/app/parda/watch/$type/$id'
+      fullPath: '/app/parda/watch/$type/$id'
+      preLoaderRoute: typeof PardaAppPardaWatchTypeIdRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
     '/_taskline/app/taskline/_shell/$ws/': {
       id: '/_taskline/app/taskline/_shell/$ws/'
       path: '/'
@@ -3503,6 +3523,7 @@ interface PardaRouteRouteChildren {
   PardaAppPardaCollectionIdRoute: typeof PardaAppPardaCollectionIdRoute
   PardaAppPardaPersonIdRoute: typeof PardaAppPardaPersonIdRoute
   PardaAppPardaTypeIdCreditsRoute: typeof PardaAppPardaTypeIdCreditsRoute
+  PardaAppPardaWatchTypeIdRoute: typeof PardaAppPardaWatchTypeIdRoute
   PardaAppPardaTypeIdIndexRoute: typeof PardaAppPardaTypeIdIndexRoute
 }
 
@@ -3517,6 +3538,7 @@ const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaCollectionIdRoute: PardaAppPardaCollectionIdRoute,
   PardaAppPardaPersonIdRoute: PardaAppPardaPersonIdRoute,
   PardaAppPardaTypeIdCreditsRoute: PardaAppPardaTypeIdCreditsRoute,
+  PardaAppPardaWatchTypeIdRoute: PardaAppPardaWatchTypeIdRoute,
   PardaAppPardaTypeIdIndexRoute: PardaAppPardaTypeIdIndexRoute,
 }
 

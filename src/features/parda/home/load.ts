@@ -12,8 +12,18 @@ import type { HeroPreload } from "./head";
  * (they stream into the same response), and returns only the first picture for the
  * head's preload.
  */
-export async function loadPardaPage(queryClient: QueryClient, locale: Locale, page: PardaPage): Promise<HeroPreload> {
+export async function loadPardaPage(
+	queryClient: QueryClient,
+	locale: Locale,
+	page: PardaPage,
+	signedIn = false,
+): Promise<HeroPreload> {
 	const data = await ensureQuery(queryClient, pardaPageQueryOptions(locale, page));
+	// The home's Continue watching renders on the server for a session (decision 0236); a failure only leaves it out.
+	if (signedIn && page === "home" && data.configured) {
+		const { pardaContinueQueryOptions } = await import("../library/queries");
+		await ensureQuery(queryClient, pardaContinueQueryOptions(locale)).catch(() => undefined);
+	}
 	if (!data.configured) return { narrow: null, wide: null };
 	for (const rail of data.rails) {
 		if (rail.titles === undefined) prefetch(queryClient, pardaRailQueryOptions(locale, page, rail.id));

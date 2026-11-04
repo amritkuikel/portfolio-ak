@@ -384,6 +384,25 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getPardaCollection",
 		"getPardaSurprise",
 	],
+	"parda/watch.ts": ["getPardaWatch", "recordPardaPlay", "reportPardaProblem"],
+};
+
+/**
+ * Parda's library (decision 0236): anyone with a session, guests included. Each runs
+ * requirePardaViewer (the session and the active profile) then withPardaServices, and
+ * acts on that profile only (tests/server/parda-access.test.ts).
+ */
+const PARDA_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
+	"parda/library.ts": [
+		"getPardaViewer",
+		"getPardaContinue",
+		"getPardaTitleProgress",
+		"savePardaProgress",
+		"markPardaWatched",
+		"removePardaContinue",
+		"rewatchPardaTitle",
+		"importPardaProgress",
+	],
 };
 // parda:end
 
@@ -505,6 +524,7 @@ describe("guarded server functions", () => {
 			...Object.keys(APP_FUNCTIONS), // @apps
 			...Object.keys(TASKLINE_FUNCTIONS), // @taskline
 			...Object.keys(PARDA_PUBLIC_FUNCTIONS), // @parda
+			...Object.keys(PARDA_FUNCTIONS), // @parda
 		];
 		expect(files.filter((file) => !declared.includes(file))).toEqual([]);
 		expect(declared.filter((file) => !files.includes(file))).toEqual([]);
@@ -563,7 +583,22 @@ describe("guarded server functions", () => {
 			const functions = serverFunctions(file);
 			expect(functions.map((fn) => fn.name)).toEqual(expected);
 			for (const { definition } of functions) {
-				expect(definition).toMatch(/= createServerFn\(\{ method: "GET" \}\)\s*\.middleware\(\[withPardaCatalog\]\)/);
+				// Reads are GETs; the watch page's two writes (a playback's measurements, a report) are rate-limited POSTs.
+				expect(definition).toMatch(
+					/= createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[withPardaCatalog\]\)/,
+				);
+			}
+		});
+	}
+
+	for (const [file, expected] of Object.entries(PARDA_FUNCTIONS)) {
+		it(`every function in ${file} runs requirePardaViewer and withPardaServices first`, () => {
+			const functions = serverFunctions(file);
+			expect(functions.map((fn) => fn.name)).toEqual(expected);
+			for (const { definition } of functions) {
+				expect(definition).toMatch(
+					/= createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requirePardaViewer, withPardaServices\]\)/,
+				);
 			}
 		});
 	}

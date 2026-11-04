@@ -78,7 +78,14 @@ export function fixtureTitlePath(): string {
 }
 
 /** A page of each kind the review opens (PLAN Task 63), from what `pnpm tmdb:record` always records. */
-export type PardaFixturePage = "movie" | "series" | "credits" | "person" | "collection";
+export type PardaFixturePage =
+	| "movie"
+	| "series"
+	| "credits"
+	| "person"
+	| "collection"
+	| "watch-movie"
+	| "watch-series";
 
 const popularFirst = (media: "movie" | "tv") => {
 	const first = readJson<{ results?: FixtureItem[] }>(fixtureName(`${media}/popular`, [], "en-US")).results?.[0];
@@ -89,6 +96,10 @@ const popularFirst = (media: "movie" | "tv") => {
 export function pardaFixturePath(page: PardaFixturePage): string {
 	if (page === "movie") return titlePath("movie", popularFirst("movie"));
 	if (page === "series") return titlePath("tv", popularFirst("tv"));
+	// The watch page (Task 64): a series without ?s=&e= plays its first episode, which is recorded.
+	if (page === "watch-movie")
+		return titlePath("movie", popularFirst("movie")).replace("/app/parda/", "/app/parda/watch/");
+	if (page === "watch-series") return titlePath("tv", popularFirst("tv")).replace("/app/parda/", "/app/parda/watch/");
 	if (page === "credits") return `${titlePath("tv", popularFirst("tv"))}/credits`;
 	if (page === "person") {
 		const id = popularFirst("movie").id;

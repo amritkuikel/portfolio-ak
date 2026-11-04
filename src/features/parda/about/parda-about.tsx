@@ -2,28 +2,7 @@ import { ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { m } from "@/paraglide/messages";
-
-/**
- * The official store page of uBlock Origin Lite for each browser (PLAN 12.5, "Install
- * uBlock Origin Lite button"). A page can't install an extension, so these are links:
- * the viewer confirms in the store. Task 64's button picks one from the browser and
- * falls back to this page's #ad-blocker section.
- */
-export const BLOCKER_STORES = [
-	{
-		browser: "Chrome",
-		href: "https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh",
-	},
-	{
-		browser: "Edge",
-		href: "https://microsoftedge.microsoft.com/addons/detail/ublock-origin-lite/cimighlppcgcoapaliogpjjdehbnofhn",
-	},
-	{ browser: "Firefox", href: "https://addons.mozilla.org/firefox/addon/ublock-origin-lite/" },
-	{ browser: "Safari", href: "https://apps.apple.com/app/ublock-origin-lite/id6745342698" },
-] as const;
-
-/** The section id the player's ad-blocker button links to without JavaScript. */
-export const AD_BLOCKER_SECTION = "ad-blocker";
+import { AD_BLOCKER_SECTION, BLOCKER_STORES } from "../player/blocker";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
 	const headingId = `${id}-title`;

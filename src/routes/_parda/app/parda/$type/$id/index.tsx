@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_parda/app/parda/$type/$id/")({
 		const parsed = titleRouteParams(params);
 		if (!parsed) throw notFound();
 		const { loadTitlePage } = await import("@/features/parda/title/load");
-		return loadTitlePage(context.queryClient, getLocale(), parsed, deps);
+		return loadTitlePage(context.queryClient, getLocale(), parsed, deps, Boolean(context.session));
 	},
 	head: ({ loaderData }) => pardaContentHead(loaderData),
 	component: PardaTitlePage,

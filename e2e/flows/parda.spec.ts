@@ -3,6 +3,8 @@
  * real documents framed only by this app, and the player lab loads one and logs what it
  * reports, in a production build under the real CSP (the guard fails on any violation).
  */
+
+import type { Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
 import { fixtureTitlePath, pardaFixturePath } from "../harness/tmdb.ts";
 import { expect, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
@@ -184,13 +186,12 @@ test.describe("Parda's title pages", () => {
 		).toBe(301);
 	});
 
-	test("a movie plays on its first source, opens its trailer and browses its gallery", async ({ page }) => {
+	test("a movie opens its trailer, browses its gallery, and Play leads to the watch page", async ({ page }) => {
 		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
 		await expect(page.getByTestId("title-heading")).toBeVisible();
 		await expect(page.getByTestId("title-cast").getByTestId("person-card").first()).toBeVisible();
 		await expect(page.getByTestId("title-crew")).toContainText(/Director/);
-		await page.getByTestId("title-play").click();
-		await expect(page.locator('iframe[src^="/parda/api/1/movie/"]')).toBeVisible();
+		await expect(page.getByTestId("title-play")).toHaveAttribute("href", /\/app\/parda\/watch\/movie\//);
 
 		await page.getByTestId("title-trailer").click();
 		await expect(page.getByTestId("video-frame")).toHaveAttribute(
@@ -207,6 +208,11 @@ test.describe("Parda's title pages", () => {
 		await expect(position).toHaveText(/^Picture 2 of \d+$/);
 		await page.keyboard.press("ArrowLeft");
 		await expect(position).toHaveText(/^Picture 1 of \d+$/);
+		await page.keyboard.press("Escape");
+
+		await page.getByTestId("title-play").click();
+		await expect(page).toHaveURL(/\/app\/parda\/watch\/movie\//);
+		await expect(page.locator('iframe[src^="/parda/api/1/movie/"]')).toBeVisible();
 	});
 
 	test("the cast leads to the full credits and to a person", async ({ page }) => {
@@ -269,5 +275,167 @@ test.describe("Parda's title pages", () => {
 			await expect(page.getByTestId("parda-frame")).toBeVisible();
 		}
 		expect(fixtureTitlePath()).toMatch(/^\/app\/parda\/(movie|series)\/\d+/);
+	});
+});
+
+// Task 64: the watch page against the placeholder player (decision 0236). `cue` rewrites a
+// server's requests on the way out, the way an admin's row would: `start=` puts the clock
+// where a test needs it, `cue=fail|silent|stall` rehearses trouble.
+const cue = (page: Page, server: number, params: Record<string, string>) =>
+	page.route(`**/parda/api/${server}/**`, async (route) => {
+		const url = new URL(route.request().url());
+		for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+		await route.continue({ url: url.toString() });
+	});
+
+const frame = (page: Page) => page.getByTestId("watch-box").locator("iframe");
+/** Playing: the first position moved (so progress was saved once), and Parda's controls took over. */
+const playing = async (page: Page) => {
+	await expect(page.getByTestId("watch-box")).toHaveAttribute("data-status", "playing", { timeout: 15_000 });
+	await expect(page.getByTestId("click-shield")).toBeVisible();
+};
+
+test.describe("Parda's watch page", () => {
+	test("falls back to another CDN group when a server fails", async ({ page }) => {
+		await cue(page, 1, { cue: "fail" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await expect(page.getByText("Trying Server 3…")).toBeVisible();
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/3\/movie\//);
+		await playing(page);
+	});
+
+	test("moves on when a server's position never moves by its deadline", async ({ page }) => {
+		test.slow();
+		await cue(page, 1, { cue: "silent" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\/movie\//);
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/3\/movie\//, { timeout: 25_000 });
+	});
+
+	test("remembers a picked server until Auto clears it, and a switch starts 30 s earlier", async ({ page }) => {
+		await cue(page, 1, { start: "600" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await playing(page);
+		await page.getByTestId("server-menu").click();
+		await page.getByTestId("server-option").filter({ hasText: "Server 2" }).click();
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/2\/movie\/\d+\?start=(5[7-9]\d|6\d\d)&/);
+		await page.reload();
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/2\//);
+		await page.getByTestId("server-menu").click();
+		await page.getByTestId("server-auto").click();
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\//);
+		expect(await page.evaluate(() => localStorage.getItem("pd_server"))).toBeNull();
+	});
+
+	test("offers a smoother server when playback stutters, and stays put", async ({ page }) => {
+		await cue(page, 1, { cue: "stall" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await expect(page.getByText("Playback is stuttering. Try a smoother server?")).toBeVisible({ timeout: 20_000 });
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\//);
+	});
+
+	test("the click shield takes the clicks, and Parda's controls send commands", async ({ page }) => {
+		await page.goto(pardaFixturePath("watch-movie"));
+		await playing(page);
+		const shield = page.getByTestId("click-shield");
+		const box = await shield.boundingBox();
+		if (!box) throw new Error("no shield");
+		const onTop = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute("data-testid"), {
+			x: box.x + box.width / 2,
+			y: box.y + box.height / 2,
+		});
+		expect(onTop).toBe("click-shield");
+		await shield.click();
+		await expect(page.getByTestId("control-toggle")).toHaveAccessibleName("Play");
+		const paused = await page.getByTestId("control-time").textContent();
+		await page.waitForTimeout(1_000);
+		await expect(page.getByTestId("control-time")).toHaveText(paused ?? "");
+		await page.getByTestId("control-toggle").click();
+		await expect(page.getByTestId("control-toggle")).toHaveAccessibleName("Pause");
+		await page.getByTestId("control-player-menu").click();
+		await expect(shield).toBeHidden();
+	});
+
+	test("the uBlock Origin Lite button opens Chrome's store in a new tab, and Don't show again sticks", async ({
+		page,
+	}) => {
+		await page.goto(pardaFixturePath("watch-movie"));
+		const install = page.getByTestId("blocker-install");
+		await expect(install).toHaveAttribute(
+			"href",
+			/^https:\/\/chromewebstore\.google\.com\/detail\/ublock-origin-lite\//,
+		);
+		await expect(install).toHaveAttribute("target", "_blank");
+		await expect(install).toHaveAttribute("rel", "noopener");
+		await page.getByTestId("blocker-dismiss").click();
+		await expect(page.getByTestId("blocker-hint")).toBeHidden();
+		await page.reload();
+		await expect(page.getByTestId("watch-heading")).toBeVisible();
+		await expect(page.getByTestId("blocker-hint")).toBeHidden();
+		await page.goto("/app/parda/about#ad-blocker");
+		await expect(page.locator("#ad-blocker a[href^='https://']")).toHaveCount(4);
+	});
+
+	test("Up next counts down near the end and plays the next episode", async ({ page }) => {
+		await cue(page, 1, { start: "1485" });
+		await page.goto(pardaFixturePath("watch-series"));
+		await expect(page.getByTestId("up-next")).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId("up-next-countdown")).toBeVisible();
+		await expect(page).toHaveURL(/[?&]e=2(&|$)/, { timeout: 20_000 });
+		await expect(page.getByTestId("watch-heading")).toBeVisible();
+	});
+
+	test("without a session, progress stays in the browser: the title's action and the rail show it", async ({
+		page,
+	}) => {
+		await cue(page, 1, { start: "1800" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await playing(page);
+		await expect.poll(() => page.evaluate(() => localStorage.getItem("pd_progress") ?? "")).toContain('"watched"');
+		await page.goto(pardaFixturePath("movie"));
+		await expect(page.getByTestId("title-play")).toContainText(/Resume · \d+ min left/);
+		await page.goto("/app/parda");
+		await expect(page.getByTestId("continue-rail").getByTestId("backdrop-card")).toHaveCount(1);
+		await page.getByTestId("continue-remove").click();
+		await expect(page.getByTestId("continue-rail")).toBeHidden();
+	});
+});
+
+test.describe("Parda's progress with a session", () => {
+	test.use(signedIn("member"));
+
+	test("progress survives a reload: the action, the bar and the rail show it", async ({ page }) => {
+		await cue(page, 1, { start: "2400" });
+		await page.goto(pardaFixturePath("watch-movie"));
+		await playing(page);
+		// The first moving position is saved at once; pausing saves again.
+		await page.getByTestId("click-shield").click();
+		await expect(page.getByTestId("control-toggle")).toHaveAccessibleName("Play");
+		await expect
+			.poll(async () => {
+				await page.goto(pardaFixturePath("movie"));
+				return page.getByTestId("title-play").textContent();
+			})
+			.toMatch(/Resume · \d+ min left/);
+		await expect(page.getByTestId("title-hero").getByRole("progressbar")).toBeVisible();
+		await page.goto("/app/parda");
+		await expect(page.getByTestId("continue-rail").getByTestId("backdrop-card").first()).toBeVisible();
+		// The watch page resumes from our record.
+		await page.unroute("**/parda/api/1/**");
+		await page.goto(pardaFixturePath("watch-movie"));
+		await expect(frame(page)).toHaveAttribute("src", /start=2[4-9]\d\d/);
+	});
+});
+
+test.describe("Parda's marks for a visitor", () => {
+	test("marking a season watched starts a guest, moves the action and shows the banner", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await page.goto(pardaFixturePath("series"));
+		const play = page.getByTestId("title-play");
+		await expect(play).toHaveText(/Play/);
+		await page.getByTestId("mark-season").click();
+		await expect(play).toHaveText(/Next: |Rewatch/);
+		await expect(page.getByTestId("parda-guest-banner")).toContainText(/deleted on/);
+		await expect(page.getByTestId("season-watched")).toBeVisible();
 	});
 });

@@ -21,7 +21,7 @@ type SourceTemplates = Pick<PardaSourceRow, "movieTemplate" | "tvTemplate">;
 export function playerUrl(
 	source: SourceTemplates,
 	target: PlayerTarget,
-	options: { lang: string; color?: string; start?: number; base?: string | undefined },
+	options: { lang: string; color?: string; start?: number; base?: string | undefined; keepStart?: boolean },
 ): string | null {
 	const template = target.media === "movie" ? source.movieTemplate : source.tvTemplate;
 	const values: TemplateValues = {
@@ -34,7 +34,7 @@ export function playerUrl(
 		...(target.episode === undefined ? {} : { episode: target.episode }),
 		...(options.color ? { color: options.color } : {}),
 	};
-	const filled = fillTemplate(template, values);
+	const filled = fillTemplate(template, values, options.keepStart ? { keep: ["start"] } : {});
 	if (filled === null) return null;
 	return options.base && isRelativeTemplate(filled) ? `${options.base.replace(/\/$/, "")}${filled}` : filled;
 }

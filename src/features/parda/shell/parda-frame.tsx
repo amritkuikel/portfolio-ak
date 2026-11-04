@@ -7,6 +7,7 @@ import { ConsentSettingsButton } from "@/components/layout/observability";
 import { ThemeToggle } from "@/components/layout/theme";
 import { m } from "@/paraglide/messages";
 import { pardaLinks } from "../links";
+import { PardaGuestBanner } from "./guest-banner";
 import { PardaWordmark } from "./parda-mark";
 import { PardaUserMenu } from "./parda-user-menu";
 
@@ -146,6 +147,7 @@ export function PardaFrame({ children }: { children: ReactNode }) {
 		>
 			<NavigationProgress />
 			<PardaHeader />
+			<PardaGuestBanner />
 			<div className="flex flex-1 flex-col">{children}</div>
 			<PardaFooter />
 			<PardaTabBar />

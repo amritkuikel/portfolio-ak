@@ -21,6 +21,13 @@ export const pardaLinks = {
 			to: "/app/parda/$type/$id/credits",
 			params: { type: typeOfMedia(media), id: titleParam(id, slug) },
 		}),
+	/** The watch page (noindex): a movie, or a series' episode (none: where the viewer is, else the first). */
+	watch: (media: Media, id: number, slug: string, episode?: { season: number; episode: number } | null) =>
+		linkOptions({
+			to: "/app/parda/watch/$type/$id",
+			params: { type: typeOfMedia(media), id: titleParam(id, slug) },
+			search: episode ? { s: episode.season, e: episode.episode } : {},
+		}),
 	person: (id: number) => linkOptions({ to: "/app/parda/person/$id", params: { id: String(id) } }),
 	collection: (id: number) => linkOptions({ to: "/app/parda/collection/$id", params: { id: String(id) } }),
 	/** A random title from the page's good lists: a redirect, so it works without JavaScript. */

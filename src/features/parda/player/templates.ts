@@ -10,10 +10,19 @@ export type TemplateValues = Partial<Record<TemplateToken, string | number>>;
 
 const TOKEN = /\{([a-z]+)\}/g;
 
-/** The filled template; null when it needs a value we don't have (an IMDb id TMDB doesn't list). */
-export function fillTemplate(template: string, values: TemplateValues): string | null {
+/**
+ * The filled template; null when it needs a value we don't have (an IMDb id TMDB doesn't
+ * list). Tokens in `keep` stay as they are, for the watch page to fill: `{start}`, where
+ * the viewer is when the player loads (decision 0236).
+ */
+export function fillTemplate(
+	template: string,
+	values: TemplateValues,
+	{ keep = [] }: { keep?: ReadonlyArray<TemplateToken> } = {},
+): string | null {
 	let missing = false;
-	const filled = template.replace(TOKEN, (_, token: TemplateToken) => {
+	const filled = template.replace(TOKEN, (whole, token: TemplateToken) => {
+		if (keep.includes(token)) return whole;
 		const value = values[token];
 		if (value === undefined || value === "") {
 			missing = true;
@@ -23,6 +32,10 @@ export function fillTemplate(template: string, values: TemplateValues): string |
 	});
 	return missing ? null : filled;
 }
+
+/** A watch page's player URL with the viewer's start position, in whole seconds (never below 0). */
+export const withStart = (url: string, seconds: number) =>
+	url.replaceAll("{start}", String(Math.max(0, Math.floor(seconds))));
 
 export const isRelativeTemplate = (template: string) => template.startsWith("/") && !template.startsWith("//");
 

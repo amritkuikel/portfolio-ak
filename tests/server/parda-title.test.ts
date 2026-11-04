@@ -79,7 +79,7 @@ afterAll(async () => {
 });
 
 describe("the title page", () => {
-	it("holds every section a movie has, with its director and a player on the first source", async () => {
+	it("holds every section a movie has, with its director, and Play (the watch page, Task 64)", async () => {
 		const movie = await firstOf("movie");
 		const data = await titlePage(services(), EN, "movie", movie.id);
 		expect(data.title).toMatchObject({ id: movie.id, slug: movie.slug, media: "movie" });
@@ -87,29 +87,29 @@ describe("the title page", () => {
 		expect(data.cast.length).toBeGreaterThan(0);
 		expect(data.crew.some((person) => person.jobs.includes("Director"))).toBe(true);
 		expect(data.videos.every((video) => /^[\w-]+$/.test(video.key))).toBe(true);
-		expect(data.player).toMatchObject({ url: `/parda/api/1/movie/${movie.id}`, adapter: "parda", episode: null });
+		expect(data.playable).toBe(true);
 		expect(data.seasons).toEqual([]);
 		expect(data.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		// Lean: the page's rails carry cut overviews, like the hubs'.
 		expect(data.recommendations.every((title) => title.overview.length <= 281)).toBe(true);
 	});
 
-	it("gives a series its seasons, specials last, and plays its first episode", async () => {
+	it("gives a series its seasons, specials last, and Play", async () => {
 		const series = await firstOf("tv");
 		const data = await titlePage(services(), EN, "tv", series.id);
 		expect(data.seasons.length).toBeGreaterThan(0);
 		const numbers = data.seasons.map((season) => season.number);
 		if (numbers.includes(0)) expect(numbers.at(-1)).toBe(0);
 		const first = numbers.find((number) => number > 0) ?? numbers[0];
-		expect(data.player?.episode).toEqual({ season: first, episode: 1 });
-		expect(data.player?.url).toBe(`/parda/api/1/tv/${series.id}/${first}/1`);
+		expect(first).toBeDefined();
+		expect(data.playable).toBe(true);
 	});
 
-	it("loads no player when playback is off", async () => {
+	it("has no Play when playback is off", async () => {
 		const movie = await firstOf("movie");
 		await env.db.update(schema.pdSettings).set({ playbackEnabled: false });
 		later();
-		expect((await titlePage(services(), EN, "movie", movie.id)).player).toBeNull();
+		expect((await titlePage(services(), EN, "movie", movie.id)).playable).toBe(false);
 	});
 
 	it("names countries and languages in Nepali and fills TMDB's English in, but never the tagline", async () => {

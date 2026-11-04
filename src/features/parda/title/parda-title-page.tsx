@@ -4,6 +4,7 @@ import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { CatalogUnconfigured } from "../home/catalog-unconfigured";
+import { useTitleProgress } from "../library/title-progress";
 import { pardaLinks } from "../links";
 import { pardaTitleQueryOptions } from "../queries";
 import { titleRouteParams } from "../search";
@@ -28,9 +29,24 @@ const route = getRouteApi("/_parda/app/parda/$type/$id/");
 
 function TitleContent({ data }: { data: Extract<TitlePageData, { configured: true }> }) {
 	const { title, imageBase } = data;
+	const progress = useTitleProgress(
+		{ media: title.media, id: title.id, slug: title.slug },
+		title.media === "tv"
+			? {
+					seasons: data.seasons.map((season) => ({ number: season.number, episodes: season.episodes })),
+					latest: title.latest ? { season: title.latest.season, episode: title.latest.episode } : null,
+				}
+			: undefined,
+	);
 	return (
 		<>
-			<TitleHero title={title} imageBase={imageBase} player={data.player} videos={data.videos} />
+			<TitleHero
+				title={title}
+				imageBase={imageBase}
+				playable={data.playable}
+				progress={progress}
+				videos={data.videos}
+			/>
 			<div className="flex flex-col gap-12 pt-8 pb-12">
 				<section aria-label={m.pd_overview_heading()} className={INSET}>
 					{title.overview ? (
@@ -44,7 +60,13 @@ function TitleContent({ data }: { data: Extract<TitlePageData, { configured: tru
 				{title.media === "tv" && data.seasons.length ? (
 					<div className="flex flex-col gap-4">
 						<NewEpisodeBanner latest={title.latest} today={data.today} />
-						<Episodes id={title.id} seasons={data.seasons} imageBase={imageBase} />
+						<Episodes
+							title={{ media: title.media, id: title.id, slug: title.slug }}
+							seasons={data.seasons}
+							imageBase={imageBase}
+							progress={progress.episodes}
+							playable={data.playable}
+						/>
 					</div>
 				) : null}
 				<CastRail
@@ -82,7 +104,7 @@ function TitleContent({ data }: { data: Extract<TitlePageData, { configured: tru
  * A title's page (PLAN Task 63, decision 0235), in the plan's order: the hero and its
  * actions, the overview, a series' episodes, the cast and key crew, the details, where
  * to watch legally, videos and the gallery, the franchise, more like this and similar,
- * reviews and links. My List, ♥, Like and Mark watched arrive with their tables (Tasks 64 and 67).
+ * reviews and links. Progress and marks are Task 64's; My List, ♥ and Like arrive with Task 67.
  */
 export function PardaTitlePage() {
 	// The loader has already turned anything else into a 404.

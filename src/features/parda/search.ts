@@ -61,3 +61,9 @@ export const surpriseSearchSchema = z.object({
 		.default("home")
 		.catch("home"),
 });
+
+/** The watch page's search: a series' season and episode (`?s=2&e=5`); a movie has neither. */
+export const watchSearchSchema = z.object({
+	s: optionalNumber(9_999),
+	e: optionalNumber(99_999, 1),
+});

@@ -1,19 +1,17 @@
-import { PlayIcon, Share2Icon, TvIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { Share2Icon, TvIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatNumber } from "@/lib/i18n/intl";
-import { localizedValue } from "@/lib/i18n/localized";
 import { m } from "@/paraglide/messages";
 import { GENRE_LABELS } from "../genres";
-import { CertBadge, RatingBadge } from "../kit/badges";
+import { CertBadge, ProgressBar, RatingBadge } from "../kit/badges";
 import { formatYear } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
-import { ADAPTERS } from "../player/adapters";
-import { PlayerFrame } from "../player/player-frame";
+import { MarkButton, PlayAction } from "../library/title-progress";
+import type { TitleProgressData } from "../library/types";
 import { statusLabel } from "./labels";
-import type { TitleFacts, TitlePlayer, TitleVideo } from "./types";
+import type { TitleFacts, TitleVideo } from "./types";
 import { VideoDialog } from "./video-dialog";
 
 /** A TMDB air date (a plain date): read at noon UTC, so no time zone moves it to another day. */
@@ -70,22 +68,24 @@ function ShareButton({ title }: { title: string }) {
 /**
  * The title's screen and lower mask (PLAN Task 63): the backdrop between the masks with
  * the tagline as a subtitle, then the poster, the logo or title, the facts and the
- * actions. Play replaces the picture with the player in the same box (a poster facade,
- * PLAN 12.5), so nothing shifts; Task 64 moves it to the watch page.
+ * actions. Play goes to the watch page, as the profile's progress says: *Resume*,
+ * *Next* or *Rewatch* (Task 64); a movie's bar sits under the picture.
  */
 export function TitleHero({
 	title,
 	imageBase,
-	player,
+	playable,
+	progress,
 	videos,
 }: {
 	title: TitleFacts;
 	imageBase: string;
-	player: TitlePlayer | null;
+	playable: boolean;
+	progress: TitleProgressData;
 	videos: ReadonlyArray<TitleVideo>;
 }) {
-	const [playing, setPlaying] = useState(false);
-	const frameRef = useRef<HTMLIFrameElement>(null);
+	const ref = { media: title.media, id: title.id, slug: title.slug };
+	const watchedAll = progress.cta?.kind === "rewatch";
 	const length = lengthOf(title);
 	const trailer = trailerOf(videos);
 	const genres = title.genres.flatMap((genre) => (GENRE_LABELS[genre] ? [GENRE_LABELS[genre]()] : []));
@@ -95,39 +95,27 @@ export function TitleHero({
 		<section aria-labelledby="title-heading" data-testid="title-hero">
 			<div className="bg-pd-mask">
 				<div className={SCREEN}>
-					{playing && player ? (
-						<div className="relative aspect-video bg-black">
-							<PlayerFrame
-								url={player.url}
-								origins={player.origins}
-								adapter={ADAPTERS[player.adapter]}
-								sandbox={player.sandbox}
-								title={m.pd_player_frame({ title: title.title, source: localizedValue(player.name) })}
-								frameRef={frameRef}
-								onEvent={() => {}}
-								className="absolute inset-0 size-full"
-							/>
+					<TmdbImage
+						image={tmdbImage(imageBase, title.backdrop, "backdrop")}
+						alt=""
+						label={title.title}
+						aspect="backdrop"
+						sizes="100vw"
+						priority
+					/>
+					{title.tagline ? (
+						<p
+							aria-hidden
+							className="pd-scrim absolute inset-x-0 bottom-0 flex h-28 items-end justify-center px-6 pb-4 text-center"
+						>
+							<span className="line-clamp-2 max-w-3xl text-pd-sub text-pd-subtitle">{title.tagline}</span>
+						</p>
+					) : null}
+					{progress.share !== null && progress.share > 0 ? (
+						<div className="absolute inset-x-0 bottom-0">
+							<ProgressBar value={progress.share} />
 						</div>
-					) : (
-						<>
-							<TmdbImage
-								image={tmdbImage(imageBase, title.backdrop, "backdrop")}
-								alt=""
-								label={title.title}
-								aspect="backdrop"
-								sizes="100vw"
-								priority
-							/>
-							{title.tagline ? (
-								<p
-									aria-hidden
-									className="pd-scrim absolute inset-x-0 bottom-0 flex h-28 items-end justify-center px-6 pb-4 text-center"
-								>
-									<span className="line-clamp-2 max-w-3xl text-pd-sub text-pd-subtitle">{title.tagline}</span>
-								</p>
-							) : null}
-						</>
-					)}
+					) : null}
 				</div>
 			</div>
 			<div className="bg-pd-mask px-4 pt-4 pb-6 sm:px-6 lg:px-8">
@@ -190,31 +178,28 @@ export function TitleHero({
 							) : null}
 						</div>
 						<div className="flex shrink-0 flex-wrap items-center gap-2">
-							{player ? (
-								<Button
-									size="lg"
-									onClick={() => setPlaying(true)}
-									disabled={playing}
-									data-testid="title-play"
-									aria-describedby={player.episode ? "title-play-episode" : undefined}
-								>
-									<PlayIcon aria-hidden />
-									{m.pd_action_play()}
-									{player.episode ? (
-										<span id="title-play-episode" className="text-xs opacity-80">
-											{episodeCode(player.episode.season, player.episode.episode)}
-										</span>
-									) : null}
-								</Button>
-							) : null}
+							{playable ? <PlayAction title={ref} progress={progress} /> : null}
 							{trailer ? (
 								<VideoDialog video={trailer} title={title.title}>
-									<Button variant={player ? "outline" : "default"} size="lg" data-testid="title-trailer">
+									<Button variant={playable ? "outline" : "default"} size="lg" data-testid="title-trailer">
 										<TvIcon aria-hidden />
 										{m.pd_action_trailer()}
 									</Button>
 								</VideoDialog>
 							) : null}
+							<MarkButton
+								title={ref}
+								target={{ scope: "title" }}
+								watched={watchedAll}
+								size="lg"
+								label={
+									watchedAll
+										? m.pd_mark_unwatched()
+										: title.media === "movie"
+											? m.pd_mark_watched()
+											: m.pd_mark_series_watched()
+								}
+							/>
 							<ShareButton title={title.title} />
 						</div>
 					</div>

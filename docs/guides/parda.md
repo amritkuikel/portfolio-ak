@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 63)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 64)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -97,10 +97,34 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 
 - **The title page, in order:** the hero (backdrop, tagline, poster, logo or title, facts, status and next episode; Play, Trailer, Share), the overview, a series' "New episode" banner and episodes, the cast rail and key crew, details, where to watch legally (with JustWatch's credit), videos, the gallery, the franchise banner, More like this, Similar, reviews and links.
 - **The URL holds the episodes' state:** `?season`, `?page` (30 a page; some seasons have over a thousand) and `?episode` (its sheet). Season and page links don't scroll.
-- **Play** loads the first enabled source in the hero's box (Task 64 moves it to the watch page); none when the kill switch is off. Trailers play in YouTube's privacy-enhanced embed inside a dialog, created only when it opens.
+- **Play** is a link to the watch page, saying what the profile's progress says (*Resume · 23 min left*, *Next: S2 E6*, *Rewatch*); none when the kill switch is off or no source can play the title (`playable`). Trailers play in YouTube's privacy-enhanced embed inside a dialog, created only when it opens.
 - **A blocked or unknown title, person or collection** is Parda's 404, TMDB failing a 503; a season TMDB can't answer says so inside its block.
 - **"Surprise me"** (`/app/parda/surprise?from=`) redirects to a random title from the page's popular and top rated lists. Its link is never preloaded.
-- **Not yet:** My List, ♥, Like, Mark watched and progress (Tasks 64 and 67), keywords as links (Task 66).
+- **Progress on the page** (Task 64): a movie's bar under the picture; each episode's bar, Play and watched mark; each season's bar and mark; *Mark series watched* in the hero.
+- **Not yet:** My List, ♥ and Like (Task 67), keywords as links (Task 66).
+
+## Watching and progress
+
+`/app/parda/watch/{movie|series}/{id}-{slug}` (`?s=&e=`), noindex, decision 0236.
+
+| File | Holds |
+| --- | --- |
+| `src/server/parda/player/watch.ts` | `watchPage`: the title, the episode and its neighbours, every enabled source filled except `{start}`, the `ok` and `slow` orders, the deadlines, the resume |
+| `src/features/parda/player/machine.ts` | The pure choices: the order, the next source (another CDN group first), the start position, stuttering, Up next |
+| `src/features/parda/player/use-watch-player.ts` | The player's life: picks on mount, loads, falls back, saves progress and `pd_play`, offers a smoother server, the redirect guard |
+| `src/features/parda/player/watch-page.tsx`, `watch-panels.tsx` | The page: the box, the click shield and Parda's controls, the bar (server, episodes, theater, report), Up next, the episodes sheet, *Report a problem*, the ad-blocker hint |
+| `src/features/parda/player/blocker.ts` | `BLOCKER_STORES` and `blockerStore(userAgent)` |
+| `src/features/parda/library/progress.ts` | Continue watching's rules, pure and isomorphic |
+| `src/features/parda/library/local.ts` | The browser's own progress (`pd_progress`), the pick (`pd_server`), the hint (`pd_blocker_hint`), the `pd_local` cookie |
+| `src/server/parda/library/`, `profiles/` | The upsert and its throttle, marks, *Remove*, *Rewatch*, the rail; the default profile and the `pd_profile` cookie |
+| `src/functions/parda/watch.ts`, `library.ts` | The watch page, plays and reports (`withPardaCatalog`, rate limited); the library (`requirePardaViewer` → `withPardaServices`) |
+
+- **Nothing loads before mount:** the server renders the picture in the player's box; the page reads the connection and the pick, then sets the iframe's `src`, so a slow connection never loads the wrong player and nothing shifts.
+- **Failing:** the adapter's `failed`, or no moving position by the source's deadline (15 s until Task 65a measures it; a needs-click source's starts at the first click in the player). The next source is in another CDN group if there is one ("Trying Server 3…"), then the rest, then "Not available right now" with the trailer and *Report*.
+- **Switching** (the server menu, or the stuttering toast's offer) starts the new player 30 s earlier; Auto clears the pick.
+- **Progress** goes to the profile with a session and to the browser without one. Watching never starts a guest; a mark, *Remove* or *Rewatch* does (`guest_scope=parda`), and the browser's progress is imported once a session exists.
+- **Shortcuts** (outside the iframe): `N` next, `P` previous, `E` episodes, `T` theater, `Esc` leaves theater, `K` play or pause.
+- **Guests** see a banner under the top mask with the day their progress is deleted.
 
 ## Catalogue
 
@@ -165,6 +189,10 @@ Then try it in the player lab.
 - **`pd_blocked_title`:** a takedown. The title leaves lists and its details are a 404, from every entry point, within 30 s. Admin screens for both arrive in Task 65.
 
 ## Pitfalls already solved
+
+- **The player bar grew on mount** (Parda's controls appear once the player is ready, a picked server's name is longer than Auto), shifting the page: the controls row renders from the server, disabled until ready, and the server menu is last in the bar.
+- **Two `<main>` landmarks:** a player's own document can have one, and axe counts it; the watch page's `<main>` is named.
+- **Paused before it moved:** progress is saved from the first moving position, so a test (or a viewer) pausing at once saves nothing; the e2e flows wait for `data-status="playing"`.
 
 - **Nothing under `/app/parda` matched an unknown address,** so the site's 404 answered outside Parda's frame. The splat route `/app/parda/$` fixes it.
 - **sr-only text inside a scrolling list widens the page:** it's absolutely positioned, so the list must be `relative` (`Rail` is, as `ScrollRegion`).

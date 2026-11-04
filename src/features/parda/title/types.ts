@@ -83,17 +83,6 @@ export type TitleFacts = HubSlide & {
 	collection: { id: number; name: string; backdrop: string | null; poster: string | null } | null;
 };
 
-/** What the title page's Play loads until Task 64's watch page: the first enabled source, filled for this title. */
-export type TitlePlayer = {
-	url: string;
-	origins: string[];
-	adapter: "parda" | "none";
-	sandbox: "none" | "popups" | "strict";
-	name: { en: string; ne: string };
-	/** A series plays this episode: the first of its first season. */
-	episode: { season: number; episode: number } | null;
-};
-
 export type TitlePageData =
 	| { configured: false }
 	| {
@@ -109,8 +98,8 @@ export type TitlePageData =
 			recommendations: ListTitle[];
 			similar: ListTitle[];
 			reviews: TitleReview[];
-			/** Null when playback is off or no source can play it. */
-			player: TitlePlayer | null;
+			/** False when playback is off or no source can play it: no Play. */
+			playable: boolean;
 			/** The server's date (UTC), so "new" and "upcoming" read the same in the HTML and in the browser. */
 			today: TmdbDate;
 	  };

@@ -123,6 +123,7 @@ export async function loadTitlePage(
 	locale: Locale,
 	params: TitleParams,
 	deps: { season?: number | undefined; page?: number | undefined },
+	signedIn = false,
 ): Promise<ContentHead | undefined> {
 	const data = await loadDetailOr404(queryClient, pardaTitleQueryOptions(locale, params.type, params.id));
 	if (!data.configured) return undefined;
@@ -131,6 +132,13 @@ export async function loadTitlePage(
 	// The season's episodes are part of the page: a failure there stays inside its block (`episodes: null`).
 	if (title.media === "tv" && data.seasons.length) {
 		await ensureQuery(queryClient, pardaSeasonQueryOptions(locale, title.id, deps.season, deps.page));
+	}
+	// The profile's progress is part of the page too: the main action and the bars render on the server.
+	if (signedIn) {
+		const { pardaTitleProgressQueryOptions } = await import("../library/queries");
+		await ensureQuery(queryClient, pardaTitleProgressQueryOptions(locale, title.media, title.id)).catch(
+			() => undefined,
+		);
 	}
 	return {
 		title: title.year ? `${title.title} (${title.year})` : title.title,

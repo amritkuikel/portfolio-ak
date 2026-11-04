@@ -14,3 +14,17 @@ export const pardaKeys = {
 	person: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "person", id] as const,
 	collection: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "collection", id] as const,
 };
+
+/**
+ * The viewer's own reads (decision 0236): not per language for progress, but the rail's
+ * titles are; all under `library`, so a save invalidates them together.
+ */
+export const pardaLibraryKeys = {
+	all: [...pardaKeys.all, "library"] as const,
+	viewer: () => [...pardaLibraryKeys.all, "viewer"] as const,
+	continue: (locale: Locale) => [...pardaLibraryKeys.all, "continue", locale] as const,
+	title: (locale: Locale, media: "movie" | "tv", id: number) =>
+		[...pardaLibraryKeys.all, "title", locale, media, id] as const,
+	watch: (locale: Locale, type: PardaType, id: number, season?: number, episode?: number) =>
+		[...pardaLibraryKeys.all, "watch", locale, type, id, season ?? null, episode ?? null] as const,
+};

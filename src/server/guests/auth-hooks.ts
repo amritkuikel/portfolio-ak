@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { GUEST_SCOPE_COOKIE, parseGuestScope } from "@/lib/guests";
 import { type AfterHookContext, isGuestUser } from "@/server/auth/hooks";
 import { resolveEmailLocale } from "@/server/auth/locale";
 import { GUEST_SIGN_IN_PATH } from "@/server/auth/policy";
@@ -10,6 +11,7 @@ import {
 	guestClaimCookieOptions,
 	guestClaimValue,
 } from "./claim-cookie";
+import { guestOwnersFor } from "./data";
 import { claimGuest, seedGuest } from "./service";
 
 /**
@@ -27,8 +29,11 @@ export async function startGuest(ctx: AfterHookContext): Promise<void> {
 	const created = ctx.context.newSession;
 	if (!created || !isGuestUser(created.user)) return;
 	ctx.setCookie(GUEST_CLAIM_COOKIE, guestClaimValue(created.user.id), guestClaimCookieOptions);
+	// A section that starts its own guests (Parda) names itself, and gets only its own samples.
+	const scope = parseGuestScope(ctx.getCookie(GUEST_SCOPE_COOKIE));
+	if (scope) ctx.setCookie(GUEST_SCOPE_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
 	try {
-		await seedGuest(db, created.user.id, resolveEmailLocale(ctx.request));
+		await seedGuest(db, created.user.id, resolveEmailLocale(ctx.request), guestOwnersFor(scope));
 	} catch (error) {
 		log("error", "guest seed failed", { userId: created.user.id, ...errorFields(error) });
 	}

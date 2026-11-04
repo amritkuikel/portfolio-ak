@@ -1,17 +1,20 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, linkOptions } from "@tanstack/react-router";
-import { ChevronLeftIcon, ChevronRightIcon, SparklesIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, PlayIcon, SparklesIcon } from "lucide-react";
 import { Rail, RailItem } from "@/components/data-display/rail";
 import { SearchLink } from "@/components/navigation/search-link";
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { RatingBadge } from "../kit/badges";
+import { ProgressBar, RatingBadge } from "../kit/badges";
 import { EpisodeCard, PersonCard } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
+import { MarkButton } from "../library/title-progress";
+import type { EpisodeProgress } from "../library/types";
 import { pardaLinks } from "../links";
 import { pardaSeasonQueryOptions } from "../queries";
 import { episodeCode, formatTmdbDate } from "./title-hero";
@@ -58,10 +61,13 @@ function SeasonPicker({
 	seasons,
 	current,
 	imageBase,
+	watched,
 }: {
 	seasons: ReadonlyArray<SeasonSummary>;
 	current: number;
 	imageBase: string;
+	/** Finished episodes per season, for its bar. */
+	watched: ReadonlyMap<number, number>;
 }) {
 	return (
 		<Rail title={m.pd_seasons_heading()} titleClassName="sr-only" data-testid="season-picker">
@@ -83,6 +89,9 @@ function SeasonPicker({
 								aspect="poster"
 								sizes="8rem"
 							/>
+							{watched.get(season.number) ? (
+								<ProgressBar value={Math.min(1, (watched.get(season.number) ?? 0) / Math.max(1, season.episodes))} />
+							) : null}
 							{/* The season shown is underlined in subtitle yellow, the one colour. */}
 							<span className={cn("block h-1", active ? "bg-pd-action" : "bg-transparent")} aria-hidden />
 							<span className="mt-2 flex flex-col gap-0.5">
@@ -221,7 +230,19 @@ function EpisodePager({ page, pageCount }: { page: number; pageCount: number }) 
 	);
 }
 
-function EpisodeList({ data }: { data: Extract<SeasonData, { configured: true }> }) {
+type TitleRef = { media: "movie" | "tv"; id: number; slug: string };
+
+function EpisodeList({
+	data,
+	title,
+	progress,
+	playable,
+}: {
+	data: Extract<SeasonData, { configured: true }>;
+	title: TitleRef;
+	progress: ReadonlyMap<string, EpisodeProgress>;
+	playable: boolean;
+}) {
 	const search = route.useSearch();
 	const navigate = route.useNavigate();
 	if (data.episodes === null) {
@@ -236,6 +257,7 @@ function EpisodeList({ data }: { data: Extract<SeasonData, { configured: true }>
 			<ol className={cn(INSET, "flex flex-col gap-4")} data-testid="episode-list">
 				{data.episodes.map((episode) => {
 					const upcoming = episode.airDate !== null && episode.airDate > data.today;
+					const own = progress.get(`${data.number}:${episode.number}`);
 					return (
 						<li key={episode.number} className="flex flex-col gap-1">
 							<EpisodeCard
@@ -249,7 +271,32 @@ function EpisodeList({ data }: { data: Extract<SeasonData, { configured: true }>
 									overview: episode.overview,
 								}}
 								link={episodeLink(episode.number)}
+								{...(own && own.share > 0 ? { progress: own.share } : {})}
 							/>
+							{upcoming ? null : (
+								<span className="flex flex-wrap items-center gap-1">
+									{playable ? (
+										<Button asChild variant="ghost" size="sm">
+											<Link
+												{...pardaLinks.watch(title.media, title.id, title.slug, {
+													season: data.number,
+													episode: episode.number,
+												})}
+												data-testid="episode-play"
+											>
+												<PlayIcon aria-hidden />
+												{m.pd_action_play()}
+												<span className="sr-only">{episodeCode(data.number, episode.number)}</span>
+											</Link>
+										</Button>
+									) : null}
+									<MarkButton
+										title={title}
+										target={{ scope: "episode", season: data.number, episode: episode.number }}
+										watched={own?.finished ?? false}
+									/>
+								</span>
+							)}
 							{upcoming ? (
 								<span className="w-fit bg-pd-ground-2 px-2 py-0.5 text-pd-muted text-xs" data-testid="episode-upcoming">
 									{m.pd_episode_upcoming()}
@@ -275,20 +322,28 @@ function EpisodeList({ data }: { data: Extract<SeasonData, { configured: true }>
 /**
  * A series' episodes (PLAN Task 63): the seasons as links (`?season`, specials last),
  * then the season's episodes a page at a time, each opening its sheet (`?episode`).
- * Progress and watched marks arrive with Task 64.
+ * Each has its bar, Play and a watched mark; a season has its bar and mark (Task 64).
  */
 export function Episodes({
-	id,
+	title,
 	seasons,
 	imageBase,
+	progress,
+	playable,
 }: {
-	id: number;
+	title: TitleRef;
 	seasons: ReadonlyArray<SeasonSummary>;
 	imageBase: string;
+	progress: ReadonlyArray<EpisodeProgress>;
+	playable: boolean;
 }) {
 	const search = route.useSearch();
-	const { data } = useSuspenseQuery(pardaSeasonQueryOptions(getLocale(), id, search.season, search.page));
+	const { data } = useSuspenseQuery(pardaSeasonQueryOptions(getLocale(), title.id, search.season, search.page));
 	if (!data.configured) return null;
+	const byEpisode = new Map(progress.map((each) => [`${each.season}:${each.episode}`, each]));
+	const watched = new Map<number, number>();
+	for (const each of progress) if (each.finished) watched.set(each.season, (watched.get(each.season) ?? 0) + 1);
+	const seasonDone = data.total > 0 && (watched.get(data.number) ?? 0) >= data.total;
 	return (
 		<section
 			id="episodes"
@@ -301,15 +356,33 @@ export function Episodes({
 					{m.pd_episodes_heading()}
 				</h2>
 			</div>
-			{seasons.length > 1 ? <SeasonPicker seasons={seasons} current={data.number} imageBase={imageBase} /> : null}
+			{seasons.length > 1 ? (
+				<SeasonPicker seasons={seasons} current={data.number} imageBase={imageBase} watched={watched} />
+			) : null}
 			<div className={cn(INSET, "flex flex-col gap-1")}>
 				<h3 className="font-medium text-base" data-testid="season-heading">
 					{data.name}
 					<span className="ms-2 text-pd-muted text-sm">{m.pd_episode_count({ count: formatNumber(data.total) })}</span>
 				</h3>
 				{data.overview ? <p className="max-w-prose text-pd-muted text-sm leading-relaxed">{data.overview}</p> : null}
+				<span className="flex flex-wrap items-center gap-3">
+					{watched.get(data.number) ? (
+						<span className="text-pd-muted text-xs" data-testid="season-watched">
+							{m.pd_season_watched({
+								count: formatNumber(watched.get(data.number) ?? 0),
+								total: formatNumber(data.total),
+							})}
+						</span>
+					) : null}
+					<MarkButton
+						title={title}
+						target={{ scope: "season", season: data.number }}
+						watched={seasonDone}
+						label={seasonDone ? m.pd_mark_season_unwatched() : m.pd_mark_season_watched()}
+					/>
+				</span>
 			</div>
-			<EpisodeList data={data} />
+			<EpisodeList data={data} title={title} progress={byEpisode} playable={playable} />
 		</section>
 	);
 }

@@ -1,10 +1,8 @@
 import "@tanstack/react-start/server-only";
 import { EPISODES_PER_PAGE } from "@/features/parda/search";
-import type { CreditsPageData, SeasonData, TitlePageData, TitlePlayer } from "@/features/parda/title/types";
+import type { CreditsPageData, SeasonData, TitlePageData } from "@/features/parda/title/types";
 import { isAppError } from "@/lib/errors";
-import { originOf } from "@/lib/http/csp";
 import type { PardaMedia } from "@/server/db/schema";
-import { serverEnv } from "@/server/env";
 import { errorFields, log } from "@/server/log";
 import { playerUrl } from "../player/sources";
 import type { TitleDetails } from "../tmdb/mappers";
@@ -44,40 +42,25 @@ export const firstSeason = (details: Pick<TitleDetails, "seasonList">) =>
 	details.seasonList.find((season) => season.number > 0)?.number ?? details.seasonList[0]?.number ?? null;
 
 /**
- * What Play loads until Task 64's watch page (decision 0235): the first enabled source
- * that can fill its template for this title, a series on its first episode. Nothing
- * when the kill switch is off.
+ * Whether Play leads anywhere (decision 0236): playback is on and some enabled source can
+ * fill its template for this title. The watch page does the rest.
  */
-async function titlePlayer(
-	services: CatalogServices,
-	details: TitleDetails,
-	locale: Locale,
-): Promise<TitlePlayer | null> {
+async function isPlayable(services: CatalogServices, details: TitleDetails, locale: Locale): Promise<boolean> {
 	const settings = await services.controls.settings();
-	if (!settings.playbackEnabled) return null;
+	if (!settings.playbackEnabled) return false;
 	const season = details.media === "tv" ? firstSeason(details) : null;
-	if (details.media === "tv" && season === null) return null;
-	const episode = season === null ? null : { season, episode: 1 };
-	const base = serverEnv.PARDA_PLAYER_BASE;
-	const baseOrigin = originOf(base);
+	if (details.media === "tv" && season === null) return false;
 	for (const source of await services.controls.sources()) {
 		if (!source.enabled) continue;
-		const url = playerUrl(
-			source,
-			{ media: details.media, id: details.id, imdb: details.imdbId, ...(episode ?? {}) },
-			{ lang: locale, base },
-		);
-		if (url === null) continue;
-		return {
-			url,
-			origins: [...source.origins, ...(baseOrigin && url.startsWith(baseOrigin) ? [baseOrigin] : [])],
-			adapter: source.adapter,
-			sandbox: source.sandbox,
-			name: source.name,
-			episode,
+		const target = {
+			media: details.media,
+			id: details.id,
+			imdb: details.imdbId,
+			...(season === null ? {} : { season, episode: 1 }),
 		};
+		if (playerUrl(source, target, { lang: locale, keepStart: true }) !== null) return true;
 	}
-	return null;
+	return false;
 }
 
 export async function titlePage(
@@ -131,7 +114,7 @@ export async function titlePage(
 		recommendations: details.recommendations.map(toHubTitle),
 		similar: details.similar.map(toHubTitle),
 		reviews: details.reviews,
-		player: await titlePlayer(services, details, scope.locale),
+		playable: await isPlayable(services, details, scope.locale),
 		today: today(),
 	};
 }

@@ -2172,7 +2172,7 @@ As 11.1, with these differences:
 | 61 | Shell, brand, auth pages and the media kit | high | Done (decision 0233) |
 | 62 | Home and hubs | high | Done (decision 0234) |
 | 63 | Title, credits, person and collection pages | xhigh | Done (decision 0235) |
-| 64 | The player, progress and Continue watching, guests | xhigh | Planned |
+| 64 | The player, progress and Continue watching, guests | xhigh | Done (decision 0236) |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Planned |
 | 66 | Search and discover | high | Planned |
@@ -2574,40 +2574,28 @@ Across the players:
 
 **Left for the owner:** nothing (no migration).
 
-### Task 64: The player, progress and Continue watching (planned)
+### Task 64: The player, progress and Continue watching (done)
 
-- **Watch route:**
-  - the server choice (Auto first, then "Vidy · 1080p"), the `ok` and `slow` lists, deadlines, and fallback across CDN groups, as in 12.5, in the seed order until Task 65a ranks them;
-  - the stuttering toast;
-  - the click shield, the redirect guard and the *Install uBlock Origin Lite* button;
-  - progress and resume from the adapter, and the `pd_play` measurements;
-  - the "You were at…" toast;
-  - Up next: a 10 s countdown near the end, Cancel, honouring the profile;
-  - the episodes `Sheet`, shortcuts outside the iframe (`N`, `P`, `E`, `T`, `Esc`), theater mode;
-  - *Report a problem*, rate limited, with the `ads` kind.
-- **Notice page:** players bring their own ads and trackers, with the uBlock Origin Lite section and all four store links.
-- **Continue watching,** fully, as in 12.5: the rail, the CTAs (*Resume · 23 min left*, *Next: S2 E6*, *Rewatch*), episode and season bars, marks, *Remove*.
-- **Storage:** localStorage progress without a session. Tables `pd_profile`, `pd_progress`, `pd_continue_state`, `pd_play`, `pd_report`.
-- **Middleware:** `requirePardaViewer` and `withPardaCatalog`.
-- **Guests:**
-  - `guest_scope` and Parda's `GUEST_DATA` entry: seed is a no-op; the claim merges profiles, as `claimSandbox` merges labels;
-  - a guest starts on the first save, and local progress is imported;
-  - the banner with the deletion date.
-- **Tests:**
-  - Unit: `blockerStore` for each browser, including unsupported ones.
-  - PGlite: the upsert throttle, started and finished, next unwatched across seasons, specials, unaired, marks, rewatch, claim merge, scoped seeding.
-  - e2e with the fake player:
-    - progress → reload → the CTA, the bars and the rail show it;
-    - a failure → the next source in another CDN group;
-    - a source with no moving position → its deadline → the next source;
-    - a needs-click source with no click → no fallback;
-    - picking a server → it's remembered → Auto clears it;
-    - switching source → the new player gets `{start}` 30 s earlier;
-    - stalls → the toast;
-    - the click shield: clicks don't reach the iframe, and the controls send commands;
-    - the uBlock Origin Lite button: the right store link on Chromium, opens in a new tab, *Don't show again* persists, and the notice page keeps all four links;
-    - the end → Up next → the next episode;
-    - marking a season watched moves the CTA.
+**Done** (decision 0236; the guide's "Watching and progress").
+
+**What changed:**
+- **Watch page** `/app/parda/watch/{movie|series}/{id}-{slug}` (`?s=&e=`), noindex: every enabled source filled except `{start}`, in the `ok` and `slow` orders (seed order until Task 65a), picked on mount for the connection and the stored server (`pd_server`); fallback to another CDN group on `failed` or the 15 s deadline (needs-click: from the first click); "Trying Server 3…", then "Not available right now" with the trailer and *Report*; the server menu (Auto first; a switch starts 30 s earlier); the stuttering toast; the click shield and Parda's controls (play, pause, seek, full screen, *Player menu*); the redirect guard; Up next (10 s countdown, Cancel, the profile's autoplay); the episodes sheet; shortcuts N, P, E, T, Esc, K; theater mode; *Report a problem* (rate limited, `ads` among its kinds); the *Install uBlock Origin Lite* hint.
+- **Progress:** saved from the first moving position, every 15 s, on pause, end, switch and `pagehide` (keepalive), throttled inside the upsert; `pd_play` per playback. "You were at…" for players that keep their own memory. Without a session, the browser keeps it (`pd_progress`, 50 entries) and it's imported when one starts.
+- **Continue watching** on the home (the server's for a session, the browser's otherwise, its space kept by the `pd_local` cookie), with *Remove*; on the title page Play says *Resume · 23 min left*, *Next: S2 E6* or *Rewatch*, with the movie's bar, episode and season bars and marks (episode, season, series).
+- **Tables** `pd_profile`, `pd_progress`, `pd_continue_state`, `pd_play`, `pd_report` (migration `0029_parda_player`, which also puts Servers 1–2 and 3–4 in two CDN groups). **Middleware** `requirePardaViewer` (default profile `on conflict do nothing`, the `pd_profile` cookie) and `withPardaServices`; `withPardaCatalog` caps a kids' profile.
+- **Guests:** `guest_scope` in `startGuest` (`GuestData.section`, `guestOwnersFor`), Parda's `GUEST_DATA` entry (no samples; the claim merges profiles), the banner with the deletion date. A mark, *Remove* or *Rewatch* starts a Parda guest; watching doesn't.
+- **Tests:** `tests/unit/parda-library.test.ts` (the rules, the machine, `blockerStore` for each browser), `tests/server/parda-library.test.ts` (profiles, the throttle, started and finished, next across seasons, marks, *Remove*, *Rewatch*, import, the watch page, plays, reports, claim merge, scoped seeding), `tests/server/parda-access.test.ts` (the library's matrix), the guard test's `PARDA_FUNCTIONS`, nine e2e flows and the review of the watch page.
+
+**Deviations (0236):**
+- **The rules live in `src/features/parda/library/progress.ts`,** isomorphic, because the browser applies them to its own progress.
+- **Watching never starts a guest:** library actions do; progress without a session stays in the browser.
+- **No volume control:** the `parda` protocol has no volume command.
+- **"A needs-click source with no click → no fallback"** is a unit test: no seeded source needs a click, and a changed row reaches the server only after the 30 s cache.
+- **Checked against the placeholder only:** the click shield, the redirect guard and resume wait for the real provider (0228).
+
+**Numbers:** entry 276.6 of 280 kB (275.9 before). `pnpm test` 143 files, 1,377 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, the Parda and rail stories in en/light and ne/dark (30 of 30), build-storybook, `e2e/flows/parda.spec.ts` with the review of every `/app/parda` and `/admin/parda` page (225 of 225). The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0029_parda_player`).
 
 ### Task 65: Admin I, control (planned)
 
