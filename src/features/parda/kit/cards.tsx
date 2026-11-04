@@ -3,9 +3,9 @@ import { UserRoundIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate, formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { getLocale } from "@/paraglide/runtime";
 import { ProgressBar, RatingBadge } from "./badges";
 import type { PardaImage } from "./image";
 import { TmdbImage } from "./tmdb-image";
@@ -29,21 +29,44 @@ export type PosterCardItem = {
 const cardLink =
 	"group pd-press block outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-pd-ground";
 
-/** A caption under a picture: never on it (decision 0232). */
+/**
+ * A caption under a picture: never on it (decision 0232). One height whatever the title:
+ * two lines for it and one for the detail, so a rail's cards line up and a streamed
+ * rail takes exactly its skeleton's place (decision 0234).
+ */
+const CAPTION = "mt-2 flex flex-col gap-0.5";
+const CAPTION_TITLE = "h-[2lh] text-sm leading-snug";
+const CAPTION_DETAIL = "h-4 text-xs";
+
 function Caption({ title, detail }: { title: string; detail?: ReactNode }) {
 	return (
-		<span className="mt-2 flex flex-col gap-0.5">
-			<span className="line-clamp-2 font-medium text-sm leading-snug group-hover:underline group-hover:underline-offset-4">
+		<span className={CAPTION}>
+			<span
+				className={cn(CAPTION_TITLE, "line-clamp-2 font-medium group-hover:underline group-hover:underline-offset-4")}
+			>
 				{title}
 			</span>
-			{detail ? <span className="text-pd-muted text-xs">{detail}</span> : null}
+			<span className={cn(CAPTION_DETAIL, "truncate text-pd-muted")}>{detail}</span>
 		</span>
 	);
 }
 
+/** The caption's skeleton: the same boxes, with a bar in each. */
+function CaptionSkeleton({ title, detail }: { title: string; detail: string }) {
+	return (
+		<div className={CAPTION}>
+			<div className={CAPTION_TITLE}>
+				<Skeleton className={cn("h-4", title)} />
+			</div>
+			<div className={cn(CAPTION_DETAIL, "flex items-center")}>
+				<Skeleton className={cn("h-3", detail)} />
+			</div>
+		</div>
+	);
+}
+
 /** The year in the page's numerals, without grouping ("२०२४", not "२,०२४"). */
-export const formatYear = (year: number | null) =>
-	year === null ? "" : new Intl.NumberFormat(getLocale(), { useGrouping: false }).format(year);
+export const formatYear = (year: number | null) => (year === null ? "" : formatNumber(year, { useGrouping: false }));
 
 /**
  * A title's poster (2:3) and caption. With a fine pointer, resting on it opens a
@@ -139,10 +162,8 @@ export type EpisodeCardItem = {
 	overview: string;
 };
 
-const formatAirDate = (date: string) =>
-	new Intl.DateTimeFormat(getLocale(), { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-
-const formatNumber = (value: number) => new Intl.NumberFormat(getLocale()).format(value);
+/** A TMDB air date (a plain date): read at noon UTC, so no time zone moves it to another day. */
+const formatAirDate = (date: string) => formatDate(`${date}T12:00:00Z`, { dateStyle: "medium" });
 
 /**
  * One episode in a season's list: the still (16:9) at the start, its number, name,
@@ -219,8 +240,7 @@ export function PosterCardSkeleton({ className }: { className?: string }) {
 	return (
 		<div className={className}>
 			<Skeleton className="aspect-[2/3] w-full" />
-			<Skeleton className="mt-2 h-4 w-4/5" />
-			<Skeleton className="mt-1.5 h-3 w-1/3" />
+			<CaptionSkeleton title="w-4/5" detail="w-1/3" />
 		</div>
 	);
 }
@@ -229,8 +249,7 @@ export function BackdropCardSkeleton({ className }: { className?: string }) {
 	return (
 		<div className={className}>
 			<Skeleton className="aspect-video w-full" />
-			<Skeleton className="mt-2 h-4 w-3/5" />
-			<Skeleton className="mt-1.5 h-3 w-1/4" />
+			<CaptionSkeleton title="w-3/5" detail="w-1/4" />
 		</div>
 	);
 }
@@ -252,8 +271,7 @@ export function PersonCardSkeleton({ className }: { className?: string }) {
 	return (
 		<div className={className}>
 			<Skeleton className="aspect-[2/3] w-full" />
-			<Skeleton className="mt-2 h-4 w-4/5" />
-			<Skeleton className="mt-1.5 h-3 w-1/2" />
+			<CaptionSkeleton title="w-4/5" detail="w-1/2" />
 		</div>
 	);
 }

@@ -64,7 +64,8 @@ export function Rail({
 			onPointerEnter={measure}
 			data-testid={testId}
 		>
-			<div className={cn("flex items-end justify-between gap-4", inset)}>
+			{/* At least the buttons' height, which only fine pointers get: as tall as RailSkeleton's heading everywhere. */}
+			<div className={cn("flex min-h-8 items-end justify-between gap-4", inset)}>
 				<h2 id={`${id}-title`} className={cn("font-semibold text-heading", titleClassName)}>
 					{title}
 				</h2>

@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 61) it is a foundation, a design system, a frame and a media kit:** the pages are a placeholder home, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 62)** it has a home and three hubs (movies, series, anime) of rails from TMDB, a title page stub, the notice page, sign-in, sign-up and the 404, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -33,15 +33,16 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 | --- | --- |
 | `src/routes/_parda/route.tsx` | The layout: `PARDA_BRAND` in `staticData`, the `· Parda` title, `noindex` unless a page uses `seo()`, `pardaFontPreloads`, the 404 |
 | `src/features/parda/brand.ts` | `PARDA_NAME`, `pardaTitle`, `pardaHead` (a private page's head), `PARDA_BRAND` (`id: "parda"`, `defaultScheme: "dark"`, `themeColors` from the masks, icons, manifest) |
-| `src/features/parda/links.ts` | `pardaLinks` and `PARDA_PATHS`: every link into Parda. A link arrives with its route |
+| `src/features/parda/links.ts` | `pardaLinks`, `PARDA_PATHS` and `PARDA_SITEMAP`: every link into Parda. A link arrives with its route |
+| `src/features/parda/search.ts` | The URL contract: `PARDA_HUBS`, `isPardaHub`, `PARDA_TYPES` (`series` in the URL is TMDB's `tv`), `titleParamsSchema` |
 | `src/features/parda/shell/` | `PardaFrame` (top mask, footer, tab bar), `PardaSection` and `PardaNotFound`, the wordmark, the account menu |
 | `src/server/parda/manifest.ts`, `src/server/routes/parda-manifest.ts` | The manifest in each language, a Nitro route (`vite.config.ts`) |
 | `public/parda/` | The icons, rendered from `icon.svg`, and TMDB's logo (`tmdb.svg`, TMDB's own file) |
 
 - **One frame on every page** (decision 0233): the layout renders it, and the page renders its `<main>`. The top mask is always solid, so nothing in it sits on a picture.
-- **Sections:** the top mask's links from `md` up, the tab bar below. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists. The frame keeps the tab bar's height clear on phones.
-- **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame.
-- **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's `/app/parda/about`; the home becomes indexable in Task 62.
+- **Sections:** Home, Movies, Series, Anime and About: the top mask's links from `md` up, the tab bar below. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists. The frame keeps the tab bar's height clear on phones.
+- **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame. One segment (`/app/parda/whatever`) reaches `$hub`, whose loader does the same for anything but a hub.
+- **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's the home, the hubs and `/app/parda/about` (`PARDA_SITEMAP`); title pages join with Task 63.
 - **The notice page** (`/app/parda/about`) holds TMDB's logo and notice, JustWatch's attribution, playback, players' ads, the uBlock Origin Lite stores (`BLOCKER_STORES`, the section `#ad-blocker` Task 64's button falls back to) and takedowns.
 - **Sign-in and sign-up** are copies of Taskline's (layers don't import each other).
 
@@ -51,7 +52,7 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 
 | Piece | Notes |
 | --- | --- |
-| `TmdbImage` | A server-built `PardaImage` (`{ src, srcSet, width, height }`) in a fixed box: `poster` 2:3, `backdrop` 16:9, `scope` 2.39:1. Lazy unless `priority`. No picture: the title (`label`) on a piece of mask |
+| `TmdbImage` | A `PardaImage` (`{ src, srcSet, width, height }`, built by `tmdbImage(imageBase, path, kind)` in `kit/image.ts`) in a fixed box: `poster` 2:3, `backdrop` 16:9, `scope` 2.39:1. Lazy unless `priority`. No picture: the title (`label`) on a piece of mask |
 | `PosterCard` | Poster and caption. A preview (backdrop, year, genres, score, overview) opens on a resting mouse; touch never opens it |
 | `BackdropCard`, `EpisodeCard`, `PersonCard` | Wide cards with a detail line; an episode row; a portrait with the part or the job |
 | `Rail`, `RailItem`, `RailSkeleton` | Core, in `src/components/data-display/rail.tsx`: scroll-snap, a named region, buttons for fine pointers. Give each item a width |
@@ -62,7 +63,26 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 
 Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit under pictures, never on them; pass `alt=""` where the caption names the title.
 
-**The billboard:** a poster between the masks on phones, a 2.39:1 backdrop from `md`, the tagline as a subtitle over the scrim (none when TMDB has none), and the title, facts and `actions` in the lower mask. It moves every 8 s and stops for its visible pause button, a resting mouse, focus inside it and a hidden tab; under reduced motion it never moves and the button is hidden by CSS. Only the current, previous and next pictures are mounted. The title box has one height (two lines on phones, one from `md`, a long title at half size in two lines), so moving on shifts nothing. Preload the first picture from the page's head (Task 62).
+**The billboard:** a poster between the masks on phones, a 2.39:1 backdrop from `md`, the tagline as a subtitle over the scrim (none when TMDB has none), and the title, facts and `actions` in the lower mask. It moves every 8 s and stops for its visible pause button, a resting mouse, focus inside it and a hidden tab; under reduced motion it never moves and the button is hidden by CSS. Only the current, previous and next pictures are mounted. The title box has one height (two lines on phones, one from `md`, a long title at half size in two lines), so moving on shifts nothing. The home's and hubs' heads preload the first picture (`pardaPageHead`).
+
+**Captions** have one height: two lines for the title, one for the detail, so cards line up and a skeleton is exactly its card's size. **Numbers and dates** go through `formatNumber` and `formatDate` (`src/lib/i18n/intl.ts`), never `Intl.*(getLocale())`: Chrome has no Nepali ICU data, so it would print Latin digits where the server printed Devanagari and break hydration.
+
+## Home and hubs
+
+`/app/parda` and `/app/parda/$hub` (movies, series, anime), decision 0234. One component (`home/parda-page.tsx`) renders either from `getPardaHub`.
+
+| File | Holds |
+| --- | --- |
+| `src/server/parda/catalog/rails.ts` | The layout of each page: its rails in order (id, `top10` or `poster`, label, the TMDB request), and the rail that fills the billboard. No runtime imports, so `pnpm tmdb:record` records exactly these requests. Task 69 makes it editable |
+| `src/server/parda/catalog/hubs.ts` | `hubPage` (the billboard with each title's details, and the first `AWAITED_RAILS` rails) and `hubRail` (one later rail) |
+| `src/features/parda/home/` | `load.ts` (the loader: awaits the page, starts every later rail, returns the picture to preload), `head.ts` (`seo()`, JSON-LD, the preload), `title-rails.tsx` (`TitleRail`, `StreamedRail`), `rail-labels.ts`, `types.ts` (the DTOs) |
+
+- **Streaming:** the first two rails come with the page; each later one is its own `getPardaRail` query, started by the loader and rendered under `<Suspense>` with a skeleton of its size, so it streams into the same response.
+- **Failure:** a rail TMDB can't answer is `null` and says "couldn't load" in a box of a rail's height; in the browser a `CatchBoundary` does the same. An empty rail isn't shown. Only `UPSTREAM_UNAVAILABLE` degrades.
+- **Lean answers:** pictures are TMDB paths plus one `imageBase`, overviews are cut to 280 characters, genres are ids, rail labels are structured and named on the client.
+- **Adding a rail:** add it to the page's list in `rails.ts` (and its label to `RailLabelKey` and `rail-labels.ts` if it's new), then `pnpm tmdb:record`. `tests/server/parda-catalog.test.ts` fails for a rail without a recording.
+
+**The title page** (`/app/parda/$type/$id`, `movie` or `series`) is a stub until Task 63: the backdrop between the masks (16:9, as wide as the height allows, side masks for the rest), the tagline, the title and facts, the overview. Private. A blocked or unknown title is Parda's 404; TMDB failing a 503.
 
 ## Catalogue
 
@@ -73,14 +93,14 @@ TMDB, read through `src/server/parda/catalog/service.ts` only: that module appli
 | `tmdb/client.ts` | `createTmdb(config, fetcher)`: 8 s timeout, one retry on 5xx, one `Retry-After` wait on 429 (at most 10 s), `include_adult=false`. Failures are `UPSTREAM_UNAVAILABLE` (503); a 404 is `NOT_FOUND` |
 | `tmdb/cache.ts` | LRU, a TTL per class (configuration 7 d, details 24 h, lists 1 h, search 10 min), stale for one more TTL while refreshing, concurrent reads coalesced |
 | `tmdb/mappers.ts` | Zod to lean DTOs, only the fields pages use, plus the Nepali fill-in from English |
-| `tmdb/images.ts` | `{ src, srcSet, width, height }` with fixed aspects (posters 2:3, backdrops 16:9) |
-| `tmdb/store.ts` | The singletons: `pardaTmdb` (null without `TMDB_READ_TOKEN`) and `pardaControls` |
+| `tmdb/store.ts` | The singletons: `pardaTmdb` (null without `TMDB_READ_TOKEN`), `pardaControls` and `pardaCache` |
+| `catalog/context.ts`, `src/middleware/parda.ts` | `withPardaCatalog`: the services, the region and the cap (null until profiles, Task 64), null when not configured; anonymous calls over HTTP limited to 300 per 5 minutes per IP (SSR isn't counted) |
 | `controls.ts` | Takedowns, settings and sources from Postgres, at most every 30 s per process |
 | `catalog/refresh.ts`, `cron.ts` | The daily `pd_title` refresh, the top 500 of each media type |
 
 Genre names are our own messages (`src/features/parda/genres.ts`), because TMDB's Nepali genre names are null.
 
-**Fixtures:** `pnpm tmdb:record` writes `tests/fixtures/tmdb/` from the real API (`TMDB_READ_TOKEN` in `.env`). Tests inject them as the fetcher, and `e2e/harness/tmdb.ts` serves them. CI never calls TMDB. Tests take their ids from the popular lists, so recording again changes no test.
+**Fixtures:** `pnpm tmdb:record` writes `tests/fixtures/tmdb/` from the real API (`TMDB_READ_TOKEN` in `.env`): every rail of every page, each billboard's details and the popular lists. Tests inject them as the fetcher, and `e2e/harness/tmdb.ts` serves them. CI never calls TMDB. A file's name (`fixtureName`) is the path plus the parameters that pick the answer, without date values. Details are trimmed (long lists cut) and every file is one line. Tests take their ids from the recorded lists, so recording again changes no test.
 
 ## Sources and the player
 
@@ -136,3 +156,7 @@ Then try it in the player lab.
 - **`x-frame-options`:** `/**` sends `DENY` to every response, so `/parda/api/**` needs its own Nitro route rule (`SAMEORIGIN`), and the document sets `frame-ancestors 'self'`.
 - **Nitro routes own their CSP:** the request middleware that adds the app's nonce doesn't run for them, so the placeholder sets its own policy with its own nonce.
 - **Layer independence:** `ScrollRegion` and `.impeccable/config.json` are shared with other layers, so they're in `SHARED` in `scripts/strip-demo.ts`.
+- **Two discover queries on one path** shared a fixture file named by the path alone; names now carry the parameters (`fixtureName`).
+- **Trending mixes people in, and ignores `include_adult`:** the mapper keeps movies and series and drops `adult` and `softcore` items.
+- **Hydration in Nepali:** the kit used `Intl.NumberFormat(getLocale())`, which prints Latin digits in Chrome and Devanagari in Node; it uses `formatNumber` now.
+- **A rail heading without its buttons** (coarse pointers) was shorter than the skeleton's; the heading row is `min-h-8` everywhere.

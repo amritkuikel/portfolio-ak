@@ -365,6 +365,19 @@ const TASKLINE_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 };
 // taskline:end
 
+// parda:start
+/**
+ * Parda's catalogue files (PLAN 12.5, decision 0234): open to everyone, signed in or
+ * not, so no permission; every function starts with `withPardaCatalog`, whose service
+ * (src/server/parda/catalog/service.ts) is the only way to TMDB and applies takedowns
+ * and the cache epoch. Its admin files (parda-admin/) are guarded by permission, in
+ * GUARDED_FUNCTIONS.
+ */
+const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
+	"parda/catalog.ts": ["getPardaHub", "getPardaRail", "getPardaTitle"],
+};
+// parda:end
+
 /**
  * Files whose functions deliberately don't require a permission, with why, and
  * the functions they hold (adding one to these files also needs a look here).
@@ -482,6 +495,7 @@ describe("guarded server functions", () => {
 			...Object.keys(UNGUARDED_FILES),
 			...Object.keys(APP_FUNCTIONS), // @apps
 			...Object.keys(TASKLINE_FUNCTIONS), // @taskline
+			...Object.keys(PARDA_PUBLIC_FUNCTIONS), // @parda
 		];
 		expect(files.filter((file) => !declared.includes(file))).toEqual([]);
 		expect(declared.filter((file) => !files.includes(file))).toEqual([]);
@@ -533,6 +547,18 @@ describe("guarded server functions", () => {
 		});
 	}
 	// taskline:end
+
+	// parda:start
+	for (const [file, expected] of Object.entries(PARDA_PUBLIC_FUNCTIONS)) {
+		it(`every function in ${file} runs withPardaCatalog first`, () => {
+			const functions = serverFunctions(file);
+			expect(functions.map((fn) => fn.name)).toEqual(expected);
+			for (const { definition } of functions) {
+				expect(definition).toMatch(/= createServerFn\(\{ method: "GET" \}\)\s*\.middleware\(\[withPardaCatalog\]\)/);
+			}
+		});
+	}
+	// parda:end
 
 	for (const [file, { functions }] of Object.entries(UNGUARDED_FILES)) {
 		it(`${file} holds only its declared functions`, () => {

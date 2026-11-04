@@ -3,7 +3,7 @@
 Record every non-obvious choice here: **What**, **Why**, **Alternatives considered**. Newest entries at the bottom.
 
 <details>
-<summary>Index (232 entries)</summary>
+<summary>Index (233 entries)</summary>
 
 - [0001](#0001-project-has-its-own-git-repository): Project has its own git repository
 - [0002](#0002-default-deployment-target-is-vercel-assumption): Default deployment target is Vercel (assumption)
@@ -238,6 +238,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0231](#0231-no-sandbox-decision-is-taken-yet): No sandbox decision is taken yet
 - [0232](#0232-pardas-look-is-masking-dark-by-default-and-a-section-can-resolve-its-own-theme): Parda's look is "Masking", dark by default, and a section can resolve its own theme
 - [0233](#0233-pardas-frame-and-media-kit): Parda's frame and media kit
+- [0234](#0234-pardas-home-and-hubs-the-catalogue-gate-and-a-title-page-stub): Parda's home and hubs, the catalogue gate, and a title page stub
 </details>
 
 ---
@@ -2900,3 +2901,21 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Why:** PLAN Task 61 and the direction contract (decision 0232).
 
 **Alternatives considered:** a full home in this task (it would need the catalogue functions and middleware Task 62 builds); an auth frame with a picture panel like Taskline's (Masking keeps the picture for titles); rendering every billboard slide (bandwidth on slow connections); a fixed 2-line title box on every width (a void under short titles on laptops).
+
+## 0234: Parda's home and hubs, the catalogue gate, and a title page stub
+
+**What:** Task 62's home (`/app/parda`) and hubs (`/app/parda/$hub`: movies, series, anime).
+- **Rails are a config in code** (`src/server/parda/catalog/rails.ts`): per page, an ordered list of rails, each an id, a kind (`top10` or `poster`), a label and the TMDB request behind it, plus the rail whose first titles with a backdrop fill the billboard (5). Task 69 replaces it with `pd_rail`. The module imports nothing at runtime, so `pnpm tmdb:record` records exactly the requests the pages make.
+- **Rails per page:** the home has Top 10 today (`trending/all/day`), trending this week, popular movies, series and anime, top rated movies and series, coming soon and three genre rails; movies and series have Top 10 today, trending, popular, top rated, coming soon (movies) or on the air this week (series) and five genres; anime has aired today, new this season, popular, top rated, anime films and four keyword rails (isekai, shounen, mecha, slice of life; TMDB keyword ids checked 2026-11-04). Anime's "today" and "season" are Tokyo's dates, because anime airs on Japanese dates. Genre rails ask for 100 votes and top rated anime for 200, so nothing three people rated leads a rail.
+- **Loading:** `getPardaHub` returns the billboard (with each title's details, for tagline, runtime and certificate) and the first two rails; every later rail has only its head, and the loader starts `getPardaRail` for each without waiting, so it streams into the same response behind a skeleton of its size. A rail TMDB can't answer is `null` and renders "couldn't load" in place; only `UPSTREAM_UNAVAILABLE` degrades, anything else is a bug and throws. An empty rail (a takedown, a quiet day) isn't shown.
+- **Lean answers:** pictures travel as TMDB paths with one `imageBase` per answer, and the client builds the srcsets (`tmdbImage` moved from `src/server/parda/tmdb/images.ts` to `src/features/parda/kit/image.ts`); overviews are cut to 280 characters (the preview shows four lines); genres are ids named by our messages; rail labels are structured (`{ key }`, `{ genre, of }`, `{ keyword }`) and rendered by the client in the page's language.
+- **Trending lists** mix movies, series and people, and TMDB's `include_adult=false` doesn't reach them: the mapper keeps movies and series and drops `adult` and `softcore` items. A mixed list's Nepali fill-in matches by media type and id.
+- **`withPardaCatalog`** (`src/middleware/parda.ts`): the session is optional, the region comes from `pd_settings`, the cap is null until profiles exist (Task 64), and the context is null without `TMDB_READ_TOKEN` (the page says the catalogue isn't connected). Anonymous **server-function calls over HTTP** are limited to 300 per 5 minutes per IP; a page load reads the catalogue inside its own request, so SSR isn't counted (it's bounded by the cache), and the e2e review isn't throttled.
+- **A title page stub** at `/app/parda/$type/$id` (`movie` or `series`), chosen by the owner: every card and the billboard's *Details* need a target, and the full page is Task 63. It shows the backdrop between the masks (16:9, narrowed so the title stays on a laptop's first screen), the tagline, the title and facts in the lower mask and the overview. It's private until Task 63 makes it indexable; a blocked or unknown title is Parda's 404, TMDB failing a 503.
+- **SEO:** home and hubs use `seo()` with JSON-LD (`WebSite` on the home, `CollectionPage` on hubs), are in `INDEXABLE` and the sitemap (`PARDA_SITEMAP`), and preload the first billboard picture in the shape each width shows (the poster below `md`, the backdrop from it).
+- **Nav:** Movies, Series and Anime in the top mask and the tab bar. `/app/parda/<anything>` now reaches `$hub`, which answers Parda's 404 for anything but a hub.
+- **Fixtures:** a recording's name now carries the parameters that pick the answer (`fixtureName` in `e2e/harness/tmdb.ts`, shared by the recorder, the stand-in and the tests), with date values left out so "aired today" keeps answering. Details answers are trimmed (12 cast and crew, 4 of each image kind, 6 videos, 8 recommendations and similar, certificates for US, IN and GB) and every file is one line: 96 files, 1.5 MB (3.5 MB untrimmed and indented).
+
+**Why:** PLAN Task 62 and 12.5 (lean DTOs, rails degrade, catalogue reads through `catalog/service.ts`). Sending paths instead of srcsets keeps a home of eleven rails from carrying about 200 kB of image URLs in its HTML.
+
+**Alternatives considered:** labels as server-rendered strings (a client-side change of language would read another locale's labels); one call returning every rail (it can't stream); counting SSR reads against the per-IP limit (the review's 18 passes of each page would trip it, and page loads are already bounded by the cache); links to a title route that doesn't exist yet (typed links refuse it) or posters without links until Task 63 (the owner chose the stub); untrimmed details fixtures (3.5 MB in the repo).

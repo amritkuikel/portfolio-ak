@@ -125,6 +125,7 @@ import { Route as AppsAppsNotesIndexRouteImport } from './routes/_apps/apps/note
 import { Route as AppsAppsNotesNoteIdRouteImport } from './routes/_apps/apps/notes/$noteId'
 import { Route as PardaAppPardaIndexRouteImport } from './routes/_parda/app/parda/index'
 import { Route as PardaAppPardaSplatRouteImport } from './routes/_parda/app/parda/$'
+import { Route as PardaAppPardaHubRouteImport } from './routes/_parda/app/parda/$hub'
 import { Route as PardaAppPardaAboutRouteImport } from './routes/_parda/app/parda/about'
 import { Route as PardaAppPardaSignInRouteImport } from './routes/_parda/app/parda/sign-in'
 import { Route as PardaAppPardaSignUpRouteImport } from './routes/_parda/app/parda/sign-up'
@@ -150,6 +151,7 @@ import { Route as AdminAdminTasklineTimesheetsUtilizationRouteImport } from './r
 import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
 import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
+import { Route as PardaAppPardaTypeIdRouteImport } from './routes/_parda/app/parda/$type/$id'
 import { Route as TasklineAppTasklineShellWsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/route'
 import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_taskline/app/taskline/_shell/account'
 import { Route as TasklineAppTasklineShellHomeRouteImport } from './routes/_taskline/app/taskline/_shell/home'
@@ -781,6 +783,11 @@ const PardaAppPardaSplatRoute = PardaAppPardaSplatRouteImport.update({
   path: '/app/parda/$',
   getParentRoute: () => PardaRouteRoute,
 } as any)
+const PardaAppPardaHubRoute = PardaAppPardaHubRouteImport.update({
+  id: '/app/parda/$hub',
+  path: '/app/parda/$hub',
+  getParentRoute: () => PardaRouteRoute,
+} as any)
 const PardaAppPardaAboutRoute = PardaAppPardaAboutRouteImport.update({
   id: '/app/parda/about',
   path: '/app/parda/about',
@@ -923,6 +930,11 @@ const AppsAppsNotesSTokenRoute = AppsAppsNotesSTokenRouteImport.update({
   id: '/apps/notes/s/$token',
   path: '/apps/notes/s/$token',
   getParentRoute: () => AppsRoute,
+} as any)
+const PardaAppPardaTypeIdRoute = PardaAppPardaTypeIdRouteImport.update({
+  id: '/app/parda/$type/$id',
+  path: '/app/parda/$type/$id',
+  getParentRoute: () => PardaRouteRoute,
 } as any)
 const TasklineAppTasklineShellWsRouteRoute =
   TasklineAppTasklineShellWsRouteRouteImport.update({
@@ -1228,6 +1240,7 @@ export interface FileRoutesByFullPath {
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/app/parda/$': typeof PardaAppPardaSplatRoute
+  '/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/app/parda/about': typeof PardaAppPardaAboutRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1259,6 +1272,7 @@ export interface FileRoutesByFullPath {
   '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/parda/$type/$id': typeof PardaAppPardaTypeIdRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
@@ -1383,6 +1397,7 @@ export interface FileRoutesByTo {
   '/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/app/parda/$': typeof PardaAppPardaSplatRoute
+  '/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/app/parda/about': typeof PardaAppPardaAboutRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1411,6 +1426,7 @@ export interface FileRoutesByTo {
   '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/parda/$type/$id': typeof PardaAppPardaTypeIdRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
@@ -1556,6 +1572,7 @@ export interface FileRoutesById {
   '/_apps/apps/links/$linkId': typeof AppsAppsLinksLinkIdRoute
   '/_apps/apps/notes/$noteId': typeof AppsAppsNotesNoteIdRoute
   '/_parda/app/parda/$': typeof PardaAppPardaSplatRoute
+  '/_parda/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/_parda/app/parda/about': typeof PardaAppPardaAboutRoute
   '/_parda/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/_parda/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1587,6 +1604,7 @@ export interface FileRoutesById {
   '/_admin/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/_parda/app/parda/$type/$id': typeof PardaAppPardaTypeIdRoute
   '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
   '/_taskline/app/taskline/_shell/inbox': typeof TasklineAppTasklineShellInboxRoute
@@ -1727,6 +1745,7 @@ export interface FileRouteTypes {
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
     | '/app/parda/$'
+    | '/app/parda/$hub'
     | '/app/parda/about'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
@@ -1758,6 +1777,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/parda/$type/$id'
     | '/app/taskline/account'
     | '/app/taskline/home'
     | '/app/taskline/inbox'
@@ -1882,6 +1902,7 @@ export interface FileRouteTypes {
     | '/apps/links/$linkId'
     | '/apps/notes/$noteId'
     | '/app/parda/$'
+    | '/app/parda/$hub'
     | '/app/parda/about'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
@@ -1910,6 +1931,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/parda/$type/$id'
     | '/app/taskline/account'
     | '/app/taskline/home'
     | '/app/taskline/inbox'
@@ -2054,6 +2076,7 @@ export interface FileRouteTypes {
     | '/_apps/apps/links/$linkId'
     | '/_apps/apps/notes/$noteId'
     | '/_parda/app/parda/$'
+    | '/_parda/app/parda/$hub'
     | '/_parda/app/parda/about'
     | '/_parda/app/parda/sign-in'
     | '/_parda/app/parda/sign-up'
@@ -2085,6 +2108,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/taskline/timesheets/utilization'
     | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
+    | '/_parda/app/parda/$type/$id'
     | '/_taskline/app/taskline/_shell/account'
     | '/_taskline/app/taskline/_shell/home'
     | '/_taskline/app/taskline/_shell/inbox'
@@ -2959,6 +2983,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PardaAppPardaSplatRouteImport
       parentRoute: typeof PardaRouteRoute
     }
+    '/_parda/app/parda/$hub': {
+      id: '/_parda/app/parda/$hub'
+      path: '/app/parda/$hub'
+      fullPath: '/app/parda/$hub'
+      preLoaderRoute: typeof PardaAppPardaHubRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
     '/_parda/app/parda/about': {
       id: '/_parda/app/parda/about'
       path: '/app/parda/about'
@@ -3133,6 +3164,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/apps/notes/s/$token'
       preLoaderRoute: typeof AppsAppsNotesSTokenRouteImport
       parentRoute: typeof AppsRoute
+    }
+    '/_parda/app/parda/$type/$id': {
+      id: '/_parda/app/parda/$type/$id'
+      path: '/app/parda/$type/$id'
+      fullPath: '/app/parda/$type/$id'
+      preLoaderRoute: typeof PardaAppPardaTypeIdRouteImport
+      parentRoute: typeof PardaRouteRoute
     }
     '/_taskline/app/taskline/_shell/$ws': {
       id: '/_taskline/app/taskline/_shell/$ws'
@@ -3377,18 +3415,22 @@ declare module '@tanstack/react-router' {
 
 interface PardaRouteRouteChildren {
   PardaAppPardaSplatRoute: typeof PardaAppPardaSplatRoute
+  PardaAppPardaHubRoute: typeof PardaAppPardaHubRoute
   PardaAppPardaAboutRoute: typeof PardaAppPardaAboutRoute
   PardaAppPardaSignInRoute: typeof PardaAppPardaSignInRoute
   PardaAppPardaSignUpRoute: typeof PardaAppPardaSignUpRoute
   PardaAppPardaIndexRoute: typeof PardaAppPardaIndexRoute
+  PardaAppPardaTypeIdRoute: typeof PardaAppPardaTypeIdRoute
 }
 
 const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaSplatRoute: PardaAppPardaSplatRoute,
+  PardaAppPardaHubRoute: PardaAppPardaHubRoute,
   PardaAppPardaAboutRoute: PardaAppPardaAboutRoute,
   PardaAppPardaSignInRoute: PardaAppPardaSignInRoute,
   PardaAppPardaSignUpRoute: PardaAppPardaSignUpRoute,
   PardaAppPardaIndexRoute: PardaAppPardaIndexRoute,
+  PardaAppPardaTypeIdRoute: PardaAppPardaTypeIdRoute,
 }
 
 const PardaRouteRouteWithChildren = PardaRouteRoute._addFileChildren(

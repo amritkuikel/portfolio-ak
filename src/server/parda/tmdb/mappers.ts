@@ -17,8 +17,12 @@ export type TitleSummary = {
 	poster: string | null;
 	backdrop: string | null;
 	genres: number[];
+	/** TMDB's average vote out of 10, to one decimal; 0 when nobody has voted. */
+	rating: number;
 };
 export type TitleDetails = TitleSummary & {
+	/** Often empty, and rarely in Nepali: then there's no subtitle, never the English one (the direction contract). */
+	tagline: string;
 	runtime: number | null;
 	imdbId: string | null;
 	certification: string | null;
@@ -42,6 +46,12 @@ const itemSchema = z.object({
 	first_air_date: z.string().nullish(),
 	genre_ids: z.array(z.number()).optional(),
 	genres: z.array(z.object({ id: z.number() })).optional(),
+	vote_average: z.number().nullish(),
+	/** Trending answers mix movies, series and people; other lists leave it out. */
+	media_type: z.string().optional(),
+	/** `include_adult=false` doesn't reach trending, so adult titles are dropped here too. */
+	adult: z.boolean().optional(),
+	softcore: z.boolean().optional(),
 });
 
 const listSchema = z.object({
@@ -51,6 +61,7 @@ const listSchema = z.object({
 });
 
 const detailsSchema = itemSchema.extend({
+	tagline: text,
 	runtime: z.number().nullish(),
 	episode_run_time: z.array(z.number()).optional(),
 	imdb_id: z.string().nullish(),
@@ -84,14 +95,28 @@ const toSummary = (media: PardaMedia, item: z.output<typeof itemSchema>): TitleS
 	poster: item.poster_path ?? null,
 	backdrop: item.backdrop_path ?? null,
 	genres: item.genre_ids ?? item.genres?.map((genre) => genre.id) ?? [],
+	rating: Math.round((item.vote_average ?? 0) * 10) / 10,
 });
 
-export const mapList = (media: PardaMedia, raw: unknown): TitleList => {
+/** What a list holds: one media type, or `mixed` (trending/all), where each item says which it is. */
+export type ListMedia = PardaMedia | "mixed";
+
+const mediaOf = (media: ListMedia, item: z.output<typeof itemSchema>): PardaMedia | null => {
+	if (media !== "mixed") return media;
+	return item.media_type === "movie" || item.media_type === "tv" ? item.media_type : null;
+};
+
+export const mapList = (media: ListMedia, raw: unknown): TitleList => {
 	const list = parse(listSchema, raw, "list");
 	return {
 		page: list.page,
 		totalPages: list.total_pages,
-		results: list.results.map((item) => toSummary(media, item)),
+		results: list.results.flatMap((item) => {
+			const itemMedia = mediaOf(media, item);
+			// People in trending/all, and adult titles where TMDB's own filter doesn't apply.
+			if (!itemMedia || item.adult || item.softcore) return [];
+			return [toSummary(itemMedia, item)];
+		}),
 	};
 };
 
@@ -106,6 +131,7 @@ export const mapDetails = (media: PardaMedia, raw: unknown, region: string): Tit
 	const details = parse(detailsSchema, raw, "details");
 	return {
 		...toSummary(media, details),
+		tagline: details.tagline,
 		runtime: details.runtime ?? details.episode_run_time?.[0] ?? null,
 		imdbId: details.imdb_id ?? details.external_ids?.imdb_id ?? null,
 		certification: certificationOf(details, region),
@@ -121,11 +147,12 @@ export const fillIn = <T extends TitleSummary>(nepali: T, english: T): T => ({
 });
 
 export const fillInList = (nepali: TitleList, english: TitleList): TitleList => {
-	const byId = new Map(english.results.map((item) => [item.id, item]));
+	// Keyed by media type too: a mixed list (trending/all) can hold a movie and a series with one id.
+	const byKey = new Map(english.results.map((item) => [`${item.media}:${item.id}`, item]));
 	return {
 		...nepali,
 		results: nepali.results.map((item) => {
-			const fallback = byId.get(item.id);
+			const fallback = byKey.get(`${item.media}:${item.id}`);
 			return fallback ? fillIn(item, fallback) : item;
 		}),
 	};

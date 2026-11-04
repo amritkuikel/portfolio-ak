@@ -2,35 +2,34 @@ import { readFileSync } from "node:fs";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { sourceProblems } from "@/features/parda/player/templates";
-import { isAppError } from "@/lib/errors";
+import { AppError, isAppError } from "@/lib/errors";
 import * as schema from "@/server/db/schema";
 import { listLabSources, openLabPlayer } from "@/server/parda/admin/player-lab";
+import { hubPage, hubRail } from "@/server/parda/catalog/hubs";
+import { AWAITED_RAILS, BILLBOARD_SIZE, PAGE_LAYOUTS } from "@/server/parda/catalog/rails";
 import { refreshTitles } from "@/server/parda/catalog/refresh";
 import { type CatalogServices, popularTitles, titleDetails } from "@/server/parda/catalog/service";
+import { titlePage } from "@/server/parda/catalog/title-page";
 import { createPardaControls } from "@/server/parda/controls";
 import { runPardaCron } from "@/server/parda/cron";
 import { createTmdbCache } from "@/server/parda/tmdb/cache";
 import { createTmdb, type Tmdb } from "@/server/parda/tmdb/client";
+import { fixtureName, readFixture } from "../../e2e/harness/tmdb";
 import { createTestDb } from "../utils/test-db";
 
 /**
- * Parda's catalogue on PGlite (decisions 0229, 0230): takedowns from every entry point, the
- * cache epoch, locale fill-in, the daily refresh, the seeded sources and the lab's service.
+ * Parda's catalogue on PGlite (decisions 0229, 0230, 0234): takedowns from every entry
+ * point, the cache epoch, locale fill-in, the home and the hubs, the daily refresh, the
+ * seeded sources and the lab's service.
  */
 let env: Awaited<ReturnType<typeof createTestDb>>;
-
-const fixture = (name: string): unknown =>
-	JSON.parse(readFileSync(new URL(`../fixtures/tmdb/${name}.json`, import.meta.url), "utf8"));
 
 /** TMDB answered from the fixtures, the way the e2e stand-in does. */
 const fixtureFetcher = vi.fn<typeof fetch>(async (input) => {
 	const url = new URL(String(input));
-	const name = url.pathname.replace("/3/", "").replaceAll("/", "_");
-	try {
-		return new Response(JSON.stringify(fixture(`${name}.${url.searchParams.get("language")}`)));
-	} catch {
-		return new Response("{}", { status: 404 });
-	}
+	const name = fixtureName(url.pathname.replace("/3/", ""), url.searchParams, url.searchParams.get("language") ?? "");
+	const body = readFixture(name);
+	return body === undefined ? new Response("{}", { status: 404 }) : new Response(body);
 });
 const tmdb: Tmdb = createTmdb(
 	{ token: "t".repeat(24), apiBase: "https://tmdb.test/3", imageBase: "https://img.test" },
@@ -137,6 +136,78 @@ describe("the catalogue", () => {
 		expect((await controls.settings()).cacheEpoch).toBe(0);
 		later();
 		expect((await controls.settings()).cacheEpoch).toBe(5);
+	});
+});
+
+describe("the home and the hubs", () => {
+	it("send the billboard and the first rails, and leave the rest to stream", async () => {
+		for (const page of ["home", "movies", "series", "anime"] as const) {
+			const data = await hubPage(services(), EN, page);
+			expect(data.billboard.length, page).toBeGreaterThan(0);
+			expect(data.billboard.length, page).toBeLessThanOrEqual(BILLBOARD_SIZE);
+			expect(
+				data.billboard.every((slide) => slide.backdrop),
+				page,
+			).toBe(true);
+			expect(data.rails.map((rail) => rail.id)).toEqual(PAGE_LAYOUTS[page].rails.map((rail) => rail.id));
+			for (const [index, rail] of data.rails.entries()) {
+				if (index < AWAITED_RAILS) expect(rail.titles, `${page} ${rail.id}`).toEqual(expect.any(Array));
+				else expect(rail.titles, `${page} ${rail.id}`).toBeUndefined();
+			}
+		}
+	});
+
+	it("answer every rail of every page from the recording", async () => {
+		for (const [page, layout] of Object.entries(PAGE_LAYOUTS)) {
+			for (const rail of layout.rails) {
+				const { titles } = await hubRail(services(), EN, page as keyof typeof PAGE_LAYOUTS, rail.id);
+				expect(titles?.length, `${page} ${rail.id}: run pnpm tmdb:record`).toBeGreaterThan(0);
+			}
+		}
+	});
+
+	it("keep people and adult titles out of trending, and cut long overviews", async () => {
+		const data = await hubPage(services(), EN, "home");
+		const titles = data.rails.flatMap((rail) => rail.titles ?? []);
+		expect(titles.every((title) => title.media === "movie" || title.media === "tv")).toBe(true);
+		expect(titles.every((title) => title.overview.length <= 281)).toBe(true);
+	});
+
+	it("leave a taken-down title out of the billboard and every rail", async () => {
+		const first = (await hubPage(services(), EN, "home")).billboard[0];
+		if (!first) throw new Error("no billboard");
+		await env.db.insert(schema.pdBlockedTitle).values({ media: first.media, tmdbId: first.id, reason: "A notice" });
+		later();
+		const live = services();
+		const data = await hubPage(live, NE, "home");
+		const keys = (titles: ReadonlyArray<{ media: string; id: number }>) => titles.map((t) => `${t.media}:${t.id}`);
+		const blocked = `${first.media}:${first.id}`;
+		expect(keys(data.billboard)).not.toContain(blocked);
+		expect(keys(data.rails.flatMap((rail) => rail.titles ?? []))).not.toContain(blocked);
+		const trending = await hubRail(live, EN, "home", "trending");
+		expect(keys(trending.titles ?? [])).not.toContain(blocked);
+		const type = first.media;
+		const error = await titlePage(live, EN, type, first.id).catch((caught: unknown) => caught);
+		expect(isAppError(error) && error.code).toBe("NOT_FOUND");
+	});
+
+	it("degrade to rails that couldn't load when TMDB is down, and refuse an unknown rail", async () => {
+		const down: Tmdb = { ...tmdb, get: () => Promise.reject(new AppError("UPSTREAM_UNAVAILABLE", "down")) };
+		const data = await hubPage({ ...services(), tmdb: down }, EN, "movies");
+		expect(data.billboard).toEqual([]);
+		expect(data.rails.slice(0, AWAITED_RAILS).map((rail) => rail.titles)).toEqual([null, null]);
+		expect((await hubRail({ ...services(), tmdb: down }, EN, "movies", "popular")).titles).toBeNull();
+		const error = await hubRail(services(), EN, "movies", "nope").catch((caught: unknown) => caught);
+		expect(isAppError(error) && error.code).toBe("NOT_FOUND");
+	});
+
+	it("open a title's page with its facts, in Nepali with English filled in", async () => {
+		const first = (await hubPage(services(), EN, "home")).billboard[0];
+		if (!first) throw new Error("no billboard");
+		const data = await titlePage(services(), NE, first.media, first.id);
+		expect(data.title).toMatchObject({ id: first.id, media: first.media, title: expect.any(String) });
+		expect(data.title.title).not.toBe("");
+		expect(data.title.overview.length).toBeGreaterThanOrEqual(first.overview.replace(/…$/, "").length);
 	});
 });
 

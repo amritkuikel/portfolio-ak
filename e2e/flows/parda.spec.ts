@@ -121,3 +121,42 @@ test.describe("Parda's frame on a phone", () => {
 		await expect(page.getByTestId("parda-header").getByTestId("parda-nav-about")).toBeHidden();
 	});
 });
+
+// Task 62: the home, the hubs and the title page stub, on the recorded catalogue.
+test.describe("Parda's home and hubs", () => {
+	test("streams every rail, and the billboard leads to a title", async ({ page }) => {
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		await expect(page.getByTestId("billboard")).toBeVisible();
+		await expect(page.getByTestId("top10-rail").getByRole("link")).toHaveCount(10);
+		// Every later rail streamed in: no skeleton is left, and nothing failed.
+		await expect(page.getByTestId("rail-skeleton")).toHaveCount(0);
+		await expect(page.getByTestId("rail-unavailable")).toHaveCount(0);
+		await expect(page.getByTestId("title-rail")).toHaveCount(10);
+		// The first picture, in the shape each width shows (the frame preloads other images of its own).
+		await expect(page.locator('link[rel="preload"][as="image"][media]')).toHaveCount(2);
+		const title = await page.getByTestId("billboard").getByRole("heading", { level: 2 }).textContent();
+		await page.getByTestId("billboard-details").click();
+		await expect(page).toHaveURL(/\/app\/parda\/(movie|series)\/\d+$/);
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText(title ?? "");
+	});
+
+	test("reaches each hub from the top mask, in Nepali too", async ({ page }) => {
+		await page.goto("/ne/app/parda", { waitUntil: "networkidle" });
+		for (const hub of ["movies", "series", "anime"] as const) {
+			await page.getByTestId(`parda-nav-${hub}`).click();
+			await expect(page).toHaveURL(new RegExp(`/ne/app/parda/${hub}$`));
+			await expect(page.getByTestId(`parda-page-${hub}`)).toBeVisible();
+			await expect(page.getByTestId(`parda-nav-${hub}`)).toHaveAttribute("aria-current", "page");
+			await expect(page.getByTestId("title-rail").first()).toBeVisible();
+		}
+	});
+
+	test("answers Parda's 404 for an unknown hub or title", async ({ page, guard }) => {
+		guard.allow(RESOURCE_STATUS(404));
+		for (const path of ["/app/parda/cartoons", "/app/parda/movie/abc", "/app/parda/film/550"]) {
+			const response = await page.goto(path, { waitUntil: "networkidle" });
+			expect(response?.status(), path).toBe(404);
+			await expect(page.getByTestId("parda-frame")).toBeVisible();
+		}
+	});
+});

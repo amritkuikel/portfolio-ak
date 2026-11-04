@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { expect, waitFor, within } from "storybook/test";
 import { Rail, RailItem, RailSkeleton } from "@/components/data-display/rail";
 import { Button } from "@/components/ui/button";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import {
 	sampleBillboard,
@@ -94,7 +95,7 @@ export const Top10: Story = {
 	play: async ({ canvas }) => {
 		const region = canvas.getByRole("region", { name: "Top 10 today" });
 		await expect(within(region).getAllByRole("link")).toHaveLength(10);
-		await expect(within(region).getByText(m.pd_top10_rank({ rank: "1" }))).toBeInTheDocument();
+		await expect(within(region).getByText(m.pd_top10_rank({ rank: formatNumber(1) }))).toBeInTheDocument();
 	},
 };
 

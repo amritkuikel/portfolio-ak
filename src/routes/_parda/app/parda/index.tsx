@@ -1,9 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { pardaHead } from "@/features/parda/brand";
-import { PardaHome } from "@/features/parda/home/parda-home";
+import { pardaPageHead } from "@/features/parda/home/head";
+import { PardaHome } from "@/features/parda/home/parda-page";
+import { getLocale } from "@/paraglide/runtime";
 
-/** /app/parda: Parda's home. Task 62 brings its billboard and rails, and makes it indexable. */
+/** /app/parda: Parda's home, its billboard and rails (PLAN Task 62). Indexable. */
 export const Route = createFileRoute("/_parda/app/parda/")({
-	head: () => pardaHead(),
+	loader: async ({ context }) => {
+		const { loadPardaPage } = await import("@/features/parda/home/load");
+		return loadPardaPage(context.queryClient, getLocale(), "home");
+	},
+	head: ({ loaderData }) => pardaPageHead("home", loaderData),
 	component: PardaHome,
 });

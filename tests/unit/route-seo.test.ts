@@ -94,7 +94,17 @@ const INDEXABLE: ReadonlyArray<{
 	{ to: "/apps/forms", label: "forms", context: {}, path: "/apps/forms" },
 	// apps:end
 	{ to: "/app/taskline", label: "taskline", context: {}, path: "/app/taskline", siteName: "Taskline" }, // @taskline
-	{ to: "/app/parda/about", label: "parda about", context: {}, path: "/app/parda/about", siteName: "Parda" }, // @parda
+	// parda:start
+	{ to: "/app/parda", label: "parda home", context: {}, path: "/app/parda", siteName: "Parda" },
+	...(["movies", "series", "anime"] as const).map((hub) => ({
+		to: "/app/parda/$hub",
+		label: `parda ${hub}`,
+		context: { params: { hub } },
+		path: `/app/parda/${hub}`,
+		siteName: "Parda",
+	})),
+	{ to: "/app/parda/about", label: "parda about", context: {}, path: "/app/parda/about", siteName: "Parda" },
+	// parda:end
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)
 	// @new-feature:indexable
 ];

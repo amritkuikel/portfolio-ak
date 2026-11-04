@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { HouseIcon, InfoIcon, type LucideIcon } from "lucide-react";
+import { Link, type LinkOptions } from "@tanstack/react-router";
+import { ClapperboardIcon, HouseIcon, InfoIcon, type LucideIcon, SparklesIcon, TvIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
@@ -12,16 +12,19 @@ import { PardaUserMenu } from "./parda-user-menu";
 
 /**
  * Parda's sections: the top mask's links on wide screens, the tab bar on phones.
- * A link arrives with its route (PLAN 12.3): Task 61 has Home and About.
+ * A link arrives with its route (PLAN 12.3): Home and About (Task 61), the hubs (Task 62).
  */
 const SECTIONS: ReadonlyArray<{
-	link: ReturnType<typeof pardaLinks.home> | ReturnType<typeof pardaLinks.about>;
+	link: LinkOptions;
 	label: () => string;
 	icon: LucideIcon;
 	exact?: boolean;
 	testId: string;
 }> = [
 	{ link: pardaLinks.home(), label: m.pd_nav_home, icon: HouseIcon, exact: true, testId: "parda-nav-home" },
+	{ link: pardaLinks.hub("movies"), label: m.pd_hub_movies, icon: ClapperboardIcon, testId: "parda-nav-movies" },
+	{ link: pardaLinks.hub("series"), label: m.pd_hub_series, icon: TvIcon, testId: "parda-nav-series" },
+	{ link: pardaLinks.hub("anime"), label: m.pd_hub_anime, icon: SparklesIcon, testId: "parda-nav-anime" },
 	{ link: pardaLinks.about(), label: m.pd_nav_about, icon: InfoIcon, testId: "parda-nav-about" },
 ];
 

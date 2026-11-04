@@ -3,7 +3,7 @@ import { expect, within } from "storybook/test";
 import { m } from "@/paraglide/messages";
 import { sampleParda, withParda } from "../../../../.storybook/mocks/parda";
 import { PardaAbout } from "../about/parda-about";
-import { PardaHome } from "../home/parda-home";
+import { CatalogUnconfigured } from "../home/catalog-unconfigured";
 import { PardaFrame } from "./parda-frame";
 
 /** Parda's frame (PLAN Task 61): the top mask, the footer with TMDB's notice, and the phone's tab bar. */
@@ -15,11 +15,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A visitor on the home page: Sign in in the top mask, Home current, TMDB's logo and notice in the footer. */
+/** A visitor on the home page (here without a catalogue): Sign in in the top mask, Home current, TMDB's logo and notice in the footer. */
 export const Visitor: Story = {
 	render: () => (
 		<PardaFrame>
-			<PardaHome />
+			<main className="flex flex-1 flex-col">
+				<CatalogUnconfigured />
+			</main>
 		</PardaFrame>
 	),
 	play: async ({ canvas }) => {
@@ -37,7 +39,9 @@ export const Guest: Story = {
 	parameters: { app: { session: sampleParda.guest, route: "/app/parda" } },
 	render: () => (
 		<PardaFrame>
-			<PardaHome />
+			<main className="flex flex-1 flex-col">
+				<CatalogUnconfigured />
+			</main>
 		</PardaFrame>
 	),
 	play: async ({ canvas }) => {
@@ -66,7 +70,9 @@ export const Phone: Story = {
 	globals: { viewport: { value: "mobile1" } },
 	render: () => (
 		<PardaFrame>
-			<PardaHome />
+			<main className="flex flex-1 flex-col">
+				<CatalogUnconfigured />
+			</main>
 		</PardaFrame>
 	),
 	play: async ({ canvas }) => {

@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Rail, RailItem, RailSkeleton } from "@/components/data-display/rail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
-import { getLocale } from "@/paraglide/runtime";
 import { formatYear, type PardaLink, type PosterCardItem } from "./cards";
 import { TmdbImage } from "./tmdb-image";
 
@@ -23,7 +23,6 @@ export function Top10Rail({
 	items: ReadonlyArray<{ key: string; item: PosterCardItem; link: PardaLink }>;
 	className?: string;
 }) {
-	const format = new Intl.NumberFormat(getLocale());
 	return (
 		<Rail
 			title={title}
@@ -46,10 +45,10 @@ export function Top10Rail({
 						/>
 						<span className="flex h-20 items-start gap-3 bg-pd-mask px-3 py-2.5">
 							<span aria-hidden className="pd-display text-[2.5rem] text-pd-action tabular-nums leading-none">
-								{format.format(index + 1)}
+								{formatNumber(index + 1)}
 							</span>
 							<span className="flex min-w-0 flex-col gap-0.5 pt-0.5">
-								<span className="sr-only">{m.pd_top10_rank({ rank: format.format(index + 1) })}</span>
+								<span className="sr-only">{m.pd_top10_rank({ rank: formatNumber(index + 1) })}</span>
 								<span className="line-clamp-2 font-medium text-sm leading-snug group-hover:underline group-hover:underline-offset-4">
 									{item.title}
 								</span>

@@ -4,7 +4,15 @@ import type { PardaMedia } from "@/server/db/schema";
 import { type PardaControls, titleKey } from "../controls";
 import type { TmdbCache, TmdbCacheClass } from "../tmdb/cache";
 import type { Tmdb, TmdbParams } from "../tmdb/client";
-import { fillIn, fillInList, mapDetails, mapList, type TitleDetails, type TitleList } from "../tmdb/mappers";
+import {
+	fillIn,
+	fillInList,
+	type ListMedia,
+	mapDetails,
+	mapList,
+	type TitleDetails,
+	type TitleList,
+} from "../tmdb/mappers";
 
 /**
  * Every catalogue read goes through here (PLAN 12.6): the one place that applies
@@ -55,6 +63,24 @@ export async function popularTitles(
 		`${media}/popular`,
 		{ page },
 		(raw) => mapList(media, raw),
+		fillInList,
+	);
+	return withoutBlocked(services, list);
+}
+
+/** Any list a rail shows (`catalog/rails.ts`): trending, a TMDB list or a discover query, minus takedowns. */
+export async function listTitles(
+	services: CatalogServices,
+	scope: CatalogScope,
+	request: { media: ListMedia; path: string; params: TmdbParams },
+): Promise<TitleList> {
+	const list = await read(
+		services,
+		scope,
+		"list",
+		request.path,
+		{ page: 1, ...request.params },
+		(raw) => mapList(request.media, raw),
 		fillInList,
 	);
 	return withoutBlocked(services, list);

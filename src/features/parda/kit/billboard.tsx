@@ -2,9 +2,9 @@ import { PauseIcon, PlayIcon } from "lucide-react";
 import { type FocusEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { getLocale } from "@/paraglide/runtime";
 import { CertBadge, RatingBadge } from "./badges";
 import { formatYear } from "./cards";
 import type { PardaImage } from "./image";
@@ -122,13 +122,12 @@ export function Billboard({
 	const item = items[index];
 	if (!item) return null;
 	const mounted = new Set([index, previous, (index + 1) % count]);
-	const format = new Intl.NumberFormat(getLocale());
 	const length = item.runtime
-		? m.pd_runtime_minutes({ minutes: format.format(item.runtime) })
+		? m.pd_runtime_minutes({ minutes: formatNumber(item.runtime) })
 		: item.seasons
 			? item.seasons === 1
 				? m.pd_season_one()
-				: m.pd_seasons({ count: format.format(item.seasons) })
+				: m.pd_seasons({ count: formatNumber(item.seasons) })
 			: null;
 	const moving = count > 1 && !paused && !held;
 
@@ -167,7 +166,7 @@ export function Billboard({
 					id={`${id}-slide`}
 					role="group"
 					aria-roledescription={m.pd_billboard_slide()}
-					aria-label={m.pd_billboard_position({ current: format.format(index + 1), total: format.format(count) })}
+					aria-label={m.pd_billboard_position({ current: formatNumber(index + 1), total: formatNumber(count) })}
 					aria-live={moving ? "off" : "polite"}
 					className="flex min-w-0 flex-col gap-2"
 				>
@@ -214,7 +213,7 @@ export function Billboard({
 											type="button"
 											aria-controls={`${id}-slide`}
 											aria-current={at === index ? "true" : undefined}
-											aria-label={m.pd_billboard_show({ current: format.format(at + 1), title: each.title })}
+											aria-label={m.pd_billboard_show({ current: formatNumber(at + 1), title: each.title })}
 											onClick={() => show(at)}
 											className="group flex size-6 items-center justify-center outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 										>

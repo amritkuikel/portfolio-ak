@@ -2170,7 +2170,7 @@ As 11.1, with these differences:
 | 59 | Foundation: the `parda` layer, TMDB client and cache, sources and adapters, CSP, the legal controls, the player lab | xhigh | Done (decisions 0228–0231) |
 | 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Done (decision 0232) |
 | 61 | Shell, brand, auth pages and the media kit | high | Done (decision 0233) |
-| 62 | Home and hubs | high | Planned |
+| 62 | Home and hubs | high | Done (decision 0234) |
 | 63 | Title, credits, person and collection pages | xhigh | Planned |
 | 64 | The player, progress and Continue watching, guests | xhigh | Planned |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Planned |
@@ -2527,16 +2527,33 @@ Across the players:
 
 **Left for the owner:** nothing.
 
-### Task 62: Home and hubs (planned)
+### Task 62: Home and hubs (done)
 
-- **Pages:** `/app/parda` and `/$hub` (movies, series, anime), with catalogue rails from a config in code (Task 69 makes it editable).
-  - Rails: Top 10 today (from `trending/{type}/day`), Trending, Popular, Top rated, Upcoming, genre rails (linking to Discover).
-  - Anime: airing today, this season, popular, top rated, anime films, keyword rails.
-- **Loading:** the billboard and the first two rails are awaited; the rest stream behind skeletons of the right size (CLS 0).
-- **Nav:** the Movies, Series and Anime links.
+**Done** (decision 0234; the guide's "Home and hubs").
+
+**What changed:**
+- **Pages:** `/app/parda` and `/app/parda/$hub` (movies, series, anime), indexable, in the sitemap (`PARDA_SITEMAP`), with JSON-LD and the first billboard picture preloaded per width. Rails come from `src/server/parda/catalog/rails.ts`: Top 10 today, trending, popular, top rated, coming soon or on the air, and genre rails; anime has aired today, new this season, popular, top rated, films and four keyword rails (Tokyo's dates).
+- **Loading:** `getPardaHub` returns the billboard (5 titles with their details) and the first two rails; the loader starts `getPardaRail` for the rest, which stream behind skeletons of their exact size. A rail TMDB can't answer says "couldn't load" in place.
+- **Catalogue gate:** `withPardaCatalog` (`src/middleware/parda.ts`) and `src/functions/parda/catalog.ts` (`PARDA_PUBLIC_FUNCTIONS` in the guard test); anonymous HTTP calls limited per IP. Lean answers: image paths plus one `imageBase`, overviews cut, labels named on the client.
+- **Title page stub** `/app/parda/$type/$id` (the owner's choice, so cards and the billboard's *Details* have a target): backdrop, tagline, title, facts, overview; private.
+- **Nav:** Movies, Series and Anime in the top mask and the tab bar.
+- **Kit fixes:** captions have one height (two title lines, one detail line), so skeletons match their cards; `Rail`'s heading row is `min-h-8`; numbers and dates go through `formatNumber`/`formatDate` (raw `Intl.NumberFormat("ne")` broke hydration in Chrome).
+- **Fixtures:** named by path plus picking parameters (`fixtureName`), every rail and each billboard's details recorded, details trimmed, one line per file: 96 files, 1.5 MB.
+- **Tests:** hubs, streaming, takedowns in rails and billboard, TMDB down, unknown rails, the title page (server); mixed lists, the anime season, fixture names (unit); three e2e flows; the review of the hubs and a title.
+
+**Deviations (0234):**
+- **The title page stub** belongs to Task 63, which replaces it and makes it indexable.
+- **Genre rails don't link to Discover yet:** Discover is Task 66, which adds the links.
+- **No kids' cap yet:** profiles arrive in Task 64, so `withPardaCatalog` passes no cap.
+- **No "Parda/Home" story:** the page reads its route and queries; the e2e review covers it in every width, language and theme. The shell stories show the unconfigured screen instead of the old placeholder.
+
+**Numbers:** entry 274.3 of 275 kB (272.5 before): three routes and the hub heads. Task 63's routes need room; consider trimming or raising the budget there, with a decision. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test` (138 files, 1,306 tests), the Parda and rail stories in en/light and ne/dark (56 of 56), build-storybook, `e2e/flows/parda.spec.ts` (16 of 16) and the review of every `/app/parda` and `/admin/parda` page (120 of 120). The full suites wait for Task 70.
+
+**Left for the owner:** nothing (no migration).
 
 ### Task 63: Title, credits, person and collection pages (planned)
 
+- **Starts from Task 62's stub** at `/app/parda/$type/$id` (`src/features/parda/title/`, `catalog/title-page.ts`): replace it, add the slug in `pardaLinks.title`, and make it indexable.
 - **Title page** `/$type/$id`, in this order:
   1. **Hero:** backdrop, logo or title, poster, tagline. Meta: year · certification · runtime or seasons · ★ (votes) · genres; status and the next episode for series.
   2. **Actions:** one primary action (a plain *Play* until Task 64), then Trailer, My List and ♥ (live in Task 67), Like, Mark watched, Share.

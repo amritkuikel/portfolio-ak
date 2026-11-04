@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { GENRE_LABELS } from "@/features/parda/genres";
+import { tmdbImage } from "@/features/parda/kit/image";
 import { isAppError } from "@/lib/errors";
+import { PAGE_LAYOUTS, railContext } from "@/server/parda/catalog/rails";
 import { createTmdbCache, TMDB_TTL, tmdbCacheKey } from "@/server/parda/tmdb/cache";
 import { createTmdb } from "@/server/parda/tmdb/client";
-import { tmdbImage } from "@/server/parda/tmdb/images";
 import { fillIn, fillInList, mapDetails, mapList } from "@/server/parda/tmdb/mappers";
+import { fixtureName } from "../../e2e/harness/tmdb";
 
 const fixture = (name: string): unknown =>
 	JSON.parse(readFileSync(new URL(`../fixtures/tmdb/${name}.json`, import.meta.url), "utf8"));
@@ -158,7 +160,7 @@ describe("the mappers", () => {
 	it("keeps only what pages use", () => {
 		const [item] = mapList("movie", fixture("movie_popular.en-US")).results;
 		expect(Object.keys(item ?? {}).sort()).toEqual(
-			["backdrop", "genres", "id", "media", "overview", "poster", "title", "year"].sort(),
+			["backdrop", "genres", "id", "media", "overview", "poster", "rating", "title", "year"].sort(),
 		);
 	});
 
@@ -187,6 +189,27 @@ describe("the mappers", () => {
 		).toBe("R");
 	});
 
+	it("keeps movies and series from a mixed list, and nothing adult", () => {
+		const item = { overview: "", poster_path: null, backdrop_path: null };
+		const list = mapList("mixed", {
+			page: 1,
+			total_pages: 1,
+			results: [
+				{ ...item, id: 1, title: "A film", media_type: "movie" },
+				{ ...item, id: 1, name: "A series", media_type: "tv" },
+				{ ...item, id: 2, name: "A person", media_type: "person" },
+				{ ...item, id: 3, title: "Adult", media_type: "movie", adult: true },
+				{ ...item, id: 4, title: "Softcore", media_type: "movie", softcore: true },
+			],
+		});
+		expect(list.results.map((row) => [row.media, row.id, row.title])).toEqual([
+			["movie", 1, "A film"],
+			["tv", 1, "A series"],
+		]);
+		const nepali = { ...list, results: list.results.map((row) => ({ ...row, title: "" })) };
+		expect(fillInList(nepali, list).results.map((row) => row.title)).toEqual(["A film", "A series"]);
+	});
+
 	it("refuses an unexpected shape as unavailable", () => {
 		expect(() => mapList("movie", { results: "nope" })).toThrowError(/unexpected list/);
 	});
@@ -199,7 +222,7 @@ describe("the mappers", () => {
 			const source = english.results.find((row) => row.id === item.id);
 			if (source?.overview) expect(item.overview).toBe(source.overview);
 		}
-		const base = { media: "movie" as const, id: 1, year: null, poster: null, backdrop: null, genres: [] };
+		const base = { media: "movie" as const, id: 1, year: null, poster: null, backdrop: null, genres: [], rating: 0 };
 		expect(
 			fillIn({ ...base, title: "शीर्षक", overview: "  " }, { ...base, title: "Title", overview: "Text" }),
 		).toMatchObject({
@@ -223,5 +246,47 @@ describe("the mappers", () => {
 	it("names all of TMDB's 27 genres", () => {
 		expect(Object.keys(GENRE_LABELS)).toHaveLength(27);
 		for (const label of Object.values(GENRE_LABELS)) expect(label()).not.toBe("");
+	});
+});
+
+describe("the rails", () => {
+	it("give anime its Tokyo date and season", () => {
+		// 23:30 in Kathmandu on 31 March is already 1 April in Tokyo: spring's first day.
+		expect(railContext("US", new Date("2026-03-31T17:45:00Z"))).toEqual({
+			today: "2026-04-01",
+			seasonStart: "2026-04-01",
+			seasonEnd: "2026-06-30",
+			region: "US",
+		});
+		expect(railContext("IN", new Date("2026-11-04T00:00:00Z"))).toMatchObject({
+			seasonStart: "2026-10-01",
+			seasonEnd: "2026-12-31",
+		});
+		expect(railContext("US", new Date("2028-02-10T00:00:00Z")).seasonEnd).toBe("2028-03-31");
+	});
+
+	it("are unique within each page, with the billboard's among them", () => {
+		for (const layout of Object.values(PAGE_LAYOUTS)) {
+			const ids = layout.rails.map((rail) => rail.id);
+			expect(new Set(ids).size).toBe(ids.length);
+			expect(ids).toContain(layout.billboardFrom);
+			for (const id of ids) expect(id).toMatch(/^[a-z0-9-]{1,40}$/);
+		}
+	});
+
+	it("name a recording by what picks the answer, without dates", () => {
+		expect(
+			fixtureName(
+				"discover/tv",
+				[
+					["with_genres", "16"],
+					["air_date.gte", "2026-11-04"],
+					["page", "1"],
+					["language", "ne-NP"],
+				],
+				"ne-NP",
+			),
+		).toBe("discover_tv+air_date.gte+with_genres=16.ne-NP.json");
+		expect(fixtureName("movie/550", [["append_to_response", "credits"]], "en-US")).toBe("movie_550.en-US.json");
 	});
 });

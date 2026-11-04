@@ -1,7 +1,7 @@
 import { StarIcon } from "lucide-react";
+import { formatNumber } from "@/lib/i18n/intl";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { getLocale } from "@/paraglide/runtime";
 
 /**
  * TMDB's audience score (0–10), one decimal, in the page's numerals. A score from no
@@ -9,9 +9,7 @@ import { getLocale } from "@/paraglide/runtime";
  */
 export function RatingBadge({ rating, className }: { rating: number | null; className?: string }) {
 	if (!rating) return null;
-	const value = new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-		rating,
-	);
+	const value = formatNumber(rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	return (
 		<span className={cn("inline-flex items-center gap-1 tabular-nums", className)}>
 			<StarIcon aria-hidden className="size-3.5 fill-current text-pd-action" />
@@ -49,7 +47,7 @@ export function ProgressBar({ value, className }: { value: number; className?: s
 			aria-valuemin={0}
 			aria-valuemax={100}
 			aria-valuenow={percent}
-			aria-label={m.pd_progress({ percent: new Intl.NumberFormat(getLocale()).format(percent) })}
+			aria-label={m.pd_progress({ percent: formatNumber(percent) })}
 			className={cn("h-1 w-full bg-pd-track", className)}
 		>
 			<div className="h-full bg-pd-progress" style={{ width: `${percent}%` }} />

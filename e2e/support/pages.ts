@@ -29,7 +29,8 @@ export type ReviewedPage = {
 		| { from: "habit-id" } // @apps
 		| { from: "form-data" } // @apps
 		| { from: "form-id" } // @apps
-		| { from: "form-slug" }; // @apps
+		| { from: "form-slug" } // @apps
+		| { from: "parda-title" }; // @parda
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -327,12 +328,16 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/taskline/timesheets/utilization", as: "admin" },
 	// taskline:end
 	// parda:start
-	// Parda (decision 0228): its pages for visitors, in its own frame (Task 61).
+	// Parda (decision 0228): its pages for visitors, in its own frame (Task 61), the hubs and a title (Task 62).
 	{ route: "/app/parda" },
+	{ route: "/app/parda/$hub", path: "/app/parda/movies", label: "movies" },
+	{ route: "/app/parda/$hub", path: "/app/parda/series", label: "series" },
+	{ route: "/app/parda/$hub", path: "/app/parda/anime", label: "anime" },
+	{ route: "/app/parda/$type/$id", params: { from: "parda-title" } },
 	{ route: "/app/parda/about" },
 	{ route: "/app/parda/sign-in" },
 	{ route: "/app/parda/sign-up" },
-	{ route: "/app/parda/$", path: "/app/parda/no-such-page", status: 404, label: "unknown page" },
+	{ route: "/app/parda/$", path: "/app/parda/no/such/page", status: 404, label: "unknown page" },
 	{ route: "/admin/parda/player-lab", as: "admin" },
 	// parda:end
 	// @new-feature:reviewed-pages
