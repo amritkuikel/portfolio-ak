@@ -51,9 +51,8 @@ export function SystemThemeScript() {
 	);
 }
 
-/** Keeps <html class="dark"> in sync with the preference and, for "system", with OS changes. */
-export function ThemeSync() {
-	const { theme } = useTheme();
+/** Keeps <html class="dark"> in sync with the theme in force (the preference as the section resolves it) and, for "system", with OS changes. */
+export function ThemeSync({ theme }: { theme: ThemePreference }) {
 	// Layout effect: React clears className when leaving "dark"; re-apply before paint.
 	useLayoutEffect(() => {
 		const root = document.documentElement;

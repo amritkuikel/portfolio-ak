@@ -2863,3 +2863,20 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **What:** PLAN 12.2 and its Task 59 decision record iframes without a `sandbox`, because the measured players refuse one. With none of those players here, the question doesn't arise. `pd_source.sandbox` still defaults to `none`.
 
 **Why:** the choice depends on the provider. Decide it in the player lab when one is connected, and prefer a sandbox if it plays under one.
+
+## 0232: Parda's look is "Masking", dark by default, and a section can resolve its own theme
+
+**What:** the owner picked Masking from three comped worlds: two masks hold the interface and fit each picture's shape, and subtitle yellow is the one colour. `SectionBrand` gains `id` (`<html data-section>`), `defaultScheme` and `themeColors`. `sectionTheme()` turns "system" into the section's scheme in the root, and that value feeds `preferenceHtmlProps`, `ThemeSync`, `ThemeColor` and `<Toaster>`. An explicit Light or Dark wins.
+
+**Why:**
+- **Masking keeps text off the picture,** apart from the subtitle over its scrim, so contrast doesn't depend on the image. Pictures keep their real shape, which suits posters on phones and backdrops on laptops equally.
+- **Resolving in the root, not in a script:** the section is known on the server, so the first byte is already dark. `SystemThemeScript` only acts on `data-theme="system"`, so it stays out of the way with no change.
+- **`ThemeSync` takes a prop** because the store holds the preference, which stays "system" so the toggle shows the viewer's real choice. Only the document uses the resolved value.
+
+**Fonts:** Anek Devanagari sets display type, because it covers both scripts and its width axis gives the wide Latin the owner chose. Its variable Devanagari files are 258 and 726 kB, over the 150 kB preload budget, so Latin uses the variable width file (114 kB) and Devanagari the static 700 cut (95 kB). That means two Fontsource packages. Nepali display type is therefore one weight at one width.
+
+**The scrim:** a test proves subtitle text at 4.5:1 on a pure white picture under 72% black, so no backdrop can make it unreadable.
+
+**Changed in the plan:** Task 61's header is a solid top mask, not transparent over the billboard.
+
+**Rejected:** The Listings (bars as long as a title's runtime, starting from now), which the design roll assigned, and Cyclorama (a stage wall lit from below), both the owner's call after seeing the comps. A `.dark` class set by a script for the section, which would flash.

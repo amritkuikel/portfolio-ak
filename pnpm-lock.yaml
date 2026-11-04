@@ -17,6 +17,9 @@ importers:
       '@dnd-kit/react':
         specifier: 0.5.1
         version: 0.5.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@fontsource-variable/anek-devanagari':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/eczar':
         specifier: 5.3.0
         version: 5.3.0
@@ -28,6 +31,9 @@ importers:
         version: 5.3.0
       '@fontsource-variable/noto-sans-devanagari':
         specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/anek-devanagari':
+        specifier: 5.3.0
         version: 5.3.0
       '@sentry/tanstackstart-react':
         specifier: 11.4.0
@@ -1322,6 +1328,9 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
+  '@fontsource-variable/anek-devanagari@5.3.0':
+    resolution: {integrity: sha512-mng3nw6XK5/5agZqIgCHcspyYbXe5HcF3F6b8J3v7He3Ilk4Mp7/irelZnCNde1rPg2JSiC7LeuI9Y9DcZk4yw==}
+
   '@fontsource-variable/eczar@5.3.0':
     resolution: {integrity: sha512-PUhoTaMOSudsWXgBRmqqv3e2MoB0xgA0u/+wl6ZPm/1hO/Uv0fs4ztNa1L6elF9ssrMVFU/o3y1W3riVOx9pNw==}
 
@@ -1333,6 +1342,9 @@ packages:
 
   '@fontsource-variable/noto-sans-devanagari@5.3.0':
     resolution: {integrity: sha512-52XBcJS3jRvZ5ugFXJvdKgffXPYnN08LeodXkgCbepOdMKVRVTQu1yj071cq8S3zmUwT6w6XKKXRSQlQkwwNNg==}
+
+  '@fontsource/anek-devanagari@5.3.0':
+    resolution: {integrity: sha512-xm1njSXuFruCRCv747+fUcI8fluLn0lTxsHOeHGC/17zVH5D3FuSSttN9vNCvDrtopLLAiL4lvG65WErCWX85A==}
 
   '@inlang/cli@3.4.4':
     resolution: {integrity: sha512-OvclI5kvFqXCMHdd1U06MT/L3FNyJL8sJ3kX57kPxS6o3PVAc+ByQV828zuQdg0T2sT11a8pntLF0yhVXYRyuQ==}
@@ -7573,6 +7585,8 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@fontsource-variable/anek-devanagari@5.3.0': {}
+
   '@fontsource-variable/eczar@5.3.0': {}
 
   '@fontsource-variable/inter@5.3.0': {}
@@ -7580,6 +7594,8 @@ snapshots:
   '@fontsource-variable/jetbrains-mono@5.3.0': {}
 
   '@fontsource-variable/noto-sans-devanagari@5.3.0': {}
+
+  '@fontsource/anek-devanagari@5.3.0': {}
 
   '@inlang/cli@3.4.4':
     dependencies:

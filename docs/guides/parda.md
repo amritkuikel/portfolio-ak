@@ -2,7 +2,30 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Task 59) it is a foundation:** no public page exists yet, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 and 60) it is a foundation and a design system:** no public page exists yet, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+
+## Design: "Masking"
+
+The page is a cinema screen: two masks hold the interface and fit each picture's shape. The direction contract is [.impeccable/surfaces/parda.md](../../.impeccable/surfaces/parda.md); read it before any UI work. The comps are in `.impeccable/mocks/parda/` (gitignored; `board.html` shows every frame). Decision 0232.
+
+**Tokens** (`src/styles/parda.css`, under `html[data-section="parda"]`, `.dark` for the dark values):
+
+| Token | Use |
+| --- | --- |
+| `--pd-mask` | The two masks: header, lower bar, footer, tab bar |
+| `--pd-ground`, `--pd-ground-2` | The page, and one step up |
+| `--pd-ink`, `--pd-muted` | Text |
+| `--pd-action`, `--pd-on-action` | Yellow fill in dark; ink fill with yellow text in light |
+| `--pd-subtitle`, `--pd-on-picture`, `--pd-scrim` | Text on a picture, the same in both themes. Always over `pd-scrim` |
+| `--pd-progress`, `--pd-track` | The progress bar, always on its track |
+
+They redefine Graphite's `--background`, `--primary`, `--border` and the rest, so the shared kit needs no variants. Tailwind has `bg-pd-mask`, `text-pd-ink` and so on.
+
+**Type:** `pd-display` with `text-pd-title` or `text-pd-head`; a subtitle is `text-pd-sub text-pd-subtitle` (size, then colour), at most two lines, inside `pd-scrim`'s solid 5.5rem. Anek Devanagari is display only; text stays Inter and Noto Sans Devanagari.
+
+**Motion:** one ease (`--pd-ease`), transform and opacity only, inside the `no-preference` block at the end of the file: `pd-move` and `pd-press`. A test enforces it.
+
+**How the theme resolves:** a route's `staticData.brand` with `defaultScheme: "dark"` makes `sectionTheme()` turn "system" into "dark" in the root, on the server, so there's no flash. An explicit Light or Dark wins. `<html data-section>` scopes the stylesheet, so portalled menus and toasts match.
 
 ## Catalogue
 
@@ -66,6 +89,9 @@ Then try it in the player lab.
 
 ## Pitfalls already solved
 
+- **Parda's tokens must outrank the visitor's presets:** `html[data-radius]` comes later in `app.css` with the same specificity, and `.dark[data-accent]` outranks the light rule, so `--radius` has its own `:root` rule and the dark rule repeats `--primary`. The "Parda/Tokens" stories check this with a rose accent and a round radius.
+- **Anek's Devanagari is too big as a variable font** (258 and 726 kB), so Devanagari uses the static 700 cut, mapped to every weight and width. Only Latin takes the width axis.
+- **A route `select` can't return `links`:** `useMatches` refuses functions in a selection, so `useSectionBrand` picks the plain fields with `structuralSharing`, and the head still reads the whole brand through `sectionBrandOf`.
 - **`x-frame-options`:** `/**` sends `DENY` to every response, so `/parda/api/**` needs its own Nitro route rule (`SAMEORIGIN`), and the document sets `frame-ancestors 'self'`.
 - **Nitro routes own their CSP:** the request middleware that adds the app's nonce doesn't run for them, so the placeholder sets its own policy with its own nonce.
 - **Layer independence:** `ScrollRegion` and `.impeccable/config.json` are shared with other layers, so they're in `SHARED` in `scripts/strip-demo.ts`.

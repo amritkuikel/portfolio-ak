@@ -17,6 +17,7 @@ export const tasklineHead = (page?: string) => ({ meta: [{ title: tasklineTitle(
 
 /** On the `_taskline` layout: the root puts the accent on <html> and links these instead of the app's icons. */
 export const TASKLINE_BRAND: SectionBrand = {
+	id: "taskline",
 	accent: "emerald",
 	links: () => [
 		{ rel: "icon", type: "image/svg+xml", href: "/taskline/icon.svg" },

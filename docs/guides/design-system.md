@@ -45,6 +45,7 @@ Three preferences, each an attribute on `<html>`, rendered by the server from a 
 - **Where they're set:** `/admin/settings/appearance`, per browser, like the theme. The store (`useAppearance()` in `src/lib/stores/hooks.ts`) re-renders `<html>`'s attributes at once, and the cookie makes the next request render them.
 - **Controls follow density:** `Button` (default, `sm`, `icon`, `icon-sm`), `Input`, `InputGroup`, `NativeSelect`, `Select` and the filter bar use `h-(--control-height)`; table cells use `py-(--row-padding)`. Use the same variables in a new control.
 - **A section's own accent:** a route's `staticData.brand` (`src/lib/section-brand.ts`) puts its accent on `<html>` for every page below it, whatever the visitor picked, and swaps the icons and manifest (Taskline, 0208). On `<html>`, menus and dialogs that portal to `<body>` and the tokens derived from `--primary` follow too.
+- **A section's own default theme:** a brand's `defaultScheme: "dark"` makes "system" resolve to dark in that section, on the server, while an explicit Light or Dark still wins; `id` becomes `<html data-section>` for a stylesheet scoped to the whole document, and `themeColors` sets the browser UI's colour (Parda, 0232).
 - **Scoped accents:** accent selectors match any element, so `<span data-accent="rose" class="bg-primary">` draws a rose swatch inside an indigo page. Only the tokens a preset sets change in such a scope.
 
 ## Contrast is tested

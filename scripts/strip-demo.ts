@@ -199,6 +199,10 @@ const SPECS: Record<Layer, LayerSpec> = {
 		sentinel: "src/server/parda",
 		paths: [
 			"src/features/parda",
+			// The "Masking" design system and its direction contract (Task 60, decision 0232).
+			"src/styles/parda.css",
+			".impeccable/surfaces/parda.md",
+			"tests/unit/parda-tokens.test.ts",
 			"src/server/parda",
 			"src/functions/parda-admin",
 			"src/routes/_admin/admin/parda",

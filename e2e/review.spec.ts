@@ -97,6 +97,12 @@ for (const page of REVIEWED_PAGES) {
 						test(locale, async ({ page: browserPage, harness, guard }) => {
 							if (page.status) guard.allow(RESOURCE_STATUS(page.status));
 							const path = await resolvePath(page, harness);
+							// parda:start
+							// Parda resolves "system" to dark (0232), so its light pass needs the explicit choice.
+							if (theme === "light" && page.route.startsWith("/app/parda")) {
+								await browserPage.context().addCookies([{ name: "theme", value: "light", url: E2E.baseURL }]);
+							}
+							// parda:end
 							await reviewPage(browserPage, localizedPath(path, locale), page.status ? { status: page.status } : {});
 						});
 					}

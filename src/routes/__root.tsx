@@ -11,7 +11,7 @@ import { ConsentBanner, ObservabilitySync } from "@/components/layout/observabil
 import { SkipLink } from "@/components/layout/skip-link";
 import { preferenceHtmlProps, SystemThemeScript, ThemeSync } from "@/components/layout/theme";
 import { sessionQueryOptions } from "@/features/auth/queries";
-import { sectionBrandOf, useSectionAccent } from "@/lib/section-brand";
+import { sectionBrandOf, sectionTheme, useSectionBrand } from "@/lib/section-brand";
 import { pageTitle } from "@/lib/seo";
 import type { Session } from "@/lib/session";
 import { skipsSession } from "@/lib/session-scope";
@@ -69,12 +69,18 @@ const Toaster = lazy(() => import("@/components/ui/sonner").then((module) => ({ 
  */
 const THEME_COLORS = { light: "#fdfdfe", dark: "#0d0e11" } as const;
 
-function ThemeColor({ theme }: { theme: ThemePreference }) {
-	if (theme !== "system") return <meta name="theme-color" content={THEME_COLORS[theme]} />;
+function ThemeColor({
+	theme,
+	colors = THEME_COLORS,
+}: {
+	theme: ThemePreference;
+	colors?: { light: string; dark: string } | undefined;
+}) {
+	if (theme !== "system") return <meta name="theme-color" content={colors[theme]} />;
 	return (
 		<>
-			<meta name="theme-color" media="(prefers-color-scheme: light)" content={THEME_COLORS.light} />
-			<meta name="theme-color" media="(prefers-color-scheme: dark)" content={THEME_COLORS.dark} />
+			<meta name="theme-color" media="(prefers-color-scheme: light)" content={colors.light} />
+			<meta name="theme-color" media="(prefers-color-scheme: dark)" content={colors.dark} />
 		</>
 	);
 }
@@ -82,27 +88,30 @@ function ThemeColor({ theme }: { theme: ThemePreference }) {
 function RootDocument({ children }: { children: ReactNode }) {
 	const locale = getLocale();
 	const appearance = useAppearance();
-	const { theme } = appearance;
+	const brand = useSectionBrand();
+	// The theme in force: a branded section may resolve "system" itself (decision 0232).
+	const theme = sectionTheme(appearance.theme, brand);
 	// A branded section's accent wins over the visitor's (on <html>, so portalled menus match too).
-	const accent = useSectionAccent() ?? appearance.accent;
+	const accent = brand?.accent ?? appearance.accent;
 	return (
 		// suppressHydrationWarning: SystemThemeScript may add class="dark" before hydration (this element only).
 		<html
 			lang={locale}
 			dir={getTextDirection(locale)}
-			{...preferenceHtmlProps({ ...appearance, accent })}
+			data-section={brand?.id}
+			{...preferenceHtmlProps({ ...appearance, theme, accent })}
 			suppressHydrationWarning
 		>
 			<head>
 				<SystemThemeScript />
-				<ThemeColor theme={theme} />
+				<ThemeColor theme={theme} colors={brand?.themeColors} />
 				<HeadContent />
 			</head>
 			<body className="flex min-h-dvh flex-col">
 				<SkipLink />
 				<ImpersonationBanner />
 				<div className="flex flex-1 flex-col">{children}</div>
-				<ThemeSync />
+				<ThemeSync theme={theme} />
 				<ObservabilitySync />
 				<ConsentBanner />
 				<ClientOnly>

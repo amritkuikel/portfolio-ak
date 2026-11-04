@@ -19,7 +19,7 @@ import { AppearanceSettings } from "@/features/admin/components/appearance-setti
 import { sessionQueryOptions } from "@/features/auth/queries";
 import { ALL_PERMISSIONS } from "@/features/rbac/permissions";
 import type { Session } from "@/lib/session";
-import { useTablePreferences } from "@/lib/stores/hooks";
+import { useTablePreferences, useTheme } from "@/lib/stores/hooks";
 import { createPreferencesStore, DEFAULT_PREFERENCES, type Preferences } from "@/lib/stores/preferences";
 import type { RouterContext } from "@/router";
 
@@ -53,6 +53,12 @@ async function renderWithPreferences(ui: ReactNode, initial: Partial<Preferences
 	return { preferences, user: userEvent.setup() };
 }
 
+/** ThemeSync as the root uses it outside a branded section: fed the preference. */
+function SyncedTheme() {
+	const { theme } = useTheme();
+	return <ThemeSync theme={theme} />;
+}
+
 // jsdom has no matchMedia; ThemeSync listens to the OS colour scheme.
 let osDark = false;
 const listeners = new Set<() => void>();
@@ -84,7 +90,7 @@ describe("ThemeToggle + ThemeSync", () => {
 		const { user, preferences } = await renderWithPreferences(
 			<>
 				<ThemeToggle />
-				<ThemeSync />
+				<SyncedTheme />
 			</>,
 		);
 		const trigger = await screen.findByRole("button", { name: "Theme: System" });
@@ -100,13 +106,19 @@ describe("ThemeToggle + ThemeSync", () => {
 
 	it("follows the OS setting while on system", async () => {
 		osDark = true;
-		await renderWithPreferences(<ThemeSync />);
+		await renderWithPreferences(<SyncedTheme />);
 		expect(document.documentElement).toHaveClass("dark");
 		osDark = false;
 		act(() => {
 			for (const listener of listeners) listener();
 		});
 		expect(document.documentElement).not.toHaveClass("dark");
+	});
+
+	it("applies the theme it's given, not the OS's, once a section has resolved system", async () => {
+		await renderWithPreferences(<ThemeSync theme="dark" />);
+		expect(document.documentElement).toHaveClass("dark");
+		expect(listeners.size).toBe(0);
 	});
 });
 

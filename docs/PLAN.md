@@ -2152,7 +2152,7 @@ As 11.1, with these differences:
 | What it is | A full streaming product for movies, series and anime: discovery, complete title details, and playback first |
 | Where | **A layer of its own like Taskline**, at **`/app/parda`**, admin at `/admin/parda`, removable with `pnpm strip-demo` |
 | Name | **Parda** |
-| Look | **Dark by default, light allowed:** "system" resolves to dark in Parda, and an explicit Light choice wins. Its own tokens on Graphite, chosen from comps in Task 60 |
+| Look | **Dark by default, light allowed:** "system" resolves to dark in Parda, and an explicit Light choice wins. Its own tokens on Graphite: **"Masking"**, the owner's pick from the comps in Task 60 (0232). Phone and laptop weigh equally, and Nepal stays quiet: the name and the Nepali type, no motifs |
 | Catalogue | TMDB (read token in the local `.env` as `TMDB_READ_TOKEN`, never committed; the v3 API key isn't needed) |
 | Playback | **Servers 1 to 4 on a placeholder player** at `/parda/api/{n}/...` (changed 2026-11-04, 0228), until the owner connects a real provider. Viewers can choose a server. Sources are rows the admin adds, edits, removes and reorders, with no deploy |
 | Order | **Automatic:** real viewers and a daily probe score the sources, the order changes once a day, and each play starts on the best source for that viewer and title. The admin can pin a source or switch to a manual order |
@@ -2168,7 +2168,7 @@ As 11.1, with these differences:
 | Task | Name | Effort | Status |
 | --- | --- | --- | --- |
 | 59 | Foundation: the `parda` layer, TMDB client and cache, sources and adapters, CSP, the legal controls, the player lab | xhigh | Done (decisions 0228–0231) |
-| 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Planned |
+| 60 | Design direction and the theme plumbing (the owner picks a comp) | high | Done (decision 0232) |
 | 61 | Shell, brand, auth pages and the media kit | high | Planned |
 | 62 | Home and hubs | high | Planned |
 | 63 | Title, credits, person and collection pages | xhigh | Planned |
@@ -2269,7 +2269,7 @@ Across the players:
 | Layer | `"parda"` in `LAYERS`; a full `SPECS.parda` (sentinel, paths, knipEntries, schema, `crons: ["/api/cron/parda"]`, `packageScripts: ["tmdb:record", "parda:probe"]`, with `scripts/probe-sources.ts` and `.github/workflows/parda-probe.yml` in its paths); the CI strip matrix |
 
 **Shared changes (core, unmarked):**
-- **Theme:** `SectionBrand` gains `id` (rendered as `data-section` on `<html>`) and `defaultScheme?: "dark"`.
+- **Theme:** `SectionBrand` gains `id` (rendered as `data-section` on `<html>`), `defaultScheme?: "dark"` and `themeColors?` (the browser UI's colours).
   - The resolved theme feeds `preferenceHtmlProps`, `SystemThemeScript`, `ThemeSync` (given a `theme` prop), `ThemeColor` and `<Toaster>`. It's set during SSR, so there's no flash and portals match.
   - The e2e review's light pass sets an explicit light cookie on Parda pages.
 - **Guests:** `guest_scope` in `startGuest`. A cookie set before `signIn.anonymous()` limits seeding to that section's owners; without it, behaviour is as today.
@@ -2483,23 +2483,32 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0028_parda_foundation`).
 
-### Task 60: Design direction and the theme plumbing (planned)
+### Task 60: Design direction and the theme plumbing (done)
 
-- **impeccable `shape`:** the direction contract in `.impeccable/surfaces/parda.md` (THESIS / OWN-WORLD / STORY / FIRST VIEWPORT / FORM / FINISH) and comps of Home, Title and Player at 390 and 1280, dark and light.
-  - It's fed by `ui-ux-pro-max` (palettes, font pairings with Devanagari, media and carousel UX), `taste-skill` (`design-taste-frontend`, its app-screens run and look-and-fix loop) and `frontend-design`. `awesome-design` is used only for token rigour.
-- **The owner picks a comp.**
-- **Then:**
-  - `parda.css` for both themes, one display face for Latin and Devanagari (at most two preloads per locale, in `features/parda/lib/fonts.ts`);
-  - motion rules: one ease, and only transform and opacity, under `prefers-reduced-motion: no-preference`;
-  - `tests/unit/parda-tokens.test.ts`: 4.5:1 in both themes, including text over the billboard scrim;
-  - a "Parda/Tokens" story;
-  - the shared theme changes (12.5), with the review's explicit light pass.
-- **Decision:** dark by default with light allowed, and how a section resolves its theme.
+**Done** (decision 0232; the contract is [.impeccable/surfaces/parda.md](../.impeccable/surfaces/parda.md)).
+
+**What changed:**
+- **Direction:** three worlds comped with real titles, Home, Title and Player at 390 and 1280, dark and light, plus Nepali Home: The Listings, Masking and Cyclorama. **The owner picked Masking:** two masks hold the interface and fit each picture's shape, and subtitle yellow is the one colour. The comps are in `.impeccable/mocks/parda/` (gitignored, because they load TMDB's images).
+- **`src/styles/parda.css`:** both themes under `html[data-section="parda"]`, redefining Graphite's tokens so the shared kit follows, plus the `pd-*` utilities and the motion rules.
+- **Fonts:** Anek Devanagari with no-shift fallbacks measured in Chrome, and `pardaFontPreloads`, two files per locale.
+- **Theme plumbing:** `SectionBrand` gains `id`, `defaultScheme` and `themeColors`. `sectionTheme()` resolves the theme for `preferenceHtmlProps`, `ThemeSync` (now given a `theme` prop), `ThemeColor` and `<Toaster>`. `SystemThemeScript` needs no change, because it reads `data-theme`. The review's light pass sets the cookie on `/app/parda` pages.
+- **Tests:** `tests/unit/parda-tokens.test.ts`, `tests/unit/section-brand.test.ts`, and the "Parda/Tokens" stories, which check the real cascade against a rose accent and a round radius.
+
+**Deviations (0232):**
+- **Two font packages for one family.** Anek's variable Devanagari files are 258 and 726 kB, over the 150 kB preload budget. Latin uses the variable width file (114 kB) and Devanagari the static 700 cut (95 kB).
+- **No generated comps.** No image generator is available here, so the comps are real pages captured with Playwright. That also made the decision page's build path code-led.
+- **`themeColors`** is new in `SectionBrand`, because Graphite's light browser colour would look wrong beside the stone mask.
+- **Task 61's header changed:** a solid top mask, not transparent over the billboard.
+- **Nothing renders on a Parda page yet.** `_parda` arrives in Task 61, so dark by default on a real page and the light pass are first exercised there.
+
+**Numbers:** entry 271.4 of 275 kB (271.1 before). Preloads: English 111.7 + 47.1 kB, Nepali 92.3 + 118.4 kB, each under the 150 kB budget. Run, per the owner's changed-files rule: the token, section-brand, preferences, strip-marker and e2e-page tests, the "Parda/Tokens" stories in en/light and ne/dark, `e2e/flows/parda.spec.ts` (8 of 8), and the review of `/admin/parda/player-lab` and `/app/taskline/sign-in` (24 of 24). The full suites wait for Task 70.
+
+**Left for the owner:** nothing.
 
 ### Task 61: Shell, brand, auth pages and the media kit (planned)
 
-- **Layout and brand:** the `_parda` layout, `PARDA_BRAND`, `pardaLinks`, the manifest route, `public/parda`, the `· Parda` suffix.
-- **Header:** transparent over the billboard, solid on scroll (CSS `animation-timeline` with a static fallback), the user menu, language, theme. Nav links arrive with their routes; this task adds Home and About.
+- **Layout and brand:** the `_parda` layout, `PARDA_BRAND` (`id: "parda"`, `defaultScheme: "dark"`, `themeColors` from the mask tokens: `#d9d6ce` and `#08080a`), `pardaLinks`, the manifest route, `public/parda`, the `· Parda` suffix. The layout's head uses `pardaFontPreloads`.
+- **Header:** the top mask, always solid (0232 replaced "transparent over the billboard": in Masking, text never sits on the picture except the subtitle), with the user menu, language and theme. Nav links arrive with their routes; this task adds Home and About.
 - **Phone tab bar.** **Footer** with the TMDB logo and notice. **The notice page** `/about`. **The 404.**
 - **Sign-in and sign-up,** copied from Taskline's.
 - **Kit:**

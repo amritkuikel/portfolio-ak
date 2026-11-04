@@ -13,6 +13,10 @@
 /* "Himal": scoped tokens and utilities of the portfolio at / (hm-*, under .himal). */
 @import "./himal.css";
 /* portfolio:end */
+/* parda:start */
+/* "Masking": Parda's tokens and utilities (pd-*, under html[data-section="parda"]). */
+@import "./parda.css";
+/* parda:end */
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
