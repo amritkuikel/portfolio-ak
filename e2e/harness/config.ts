@@ -21,6 +21,8 @@ export const E2E = {
 	password: "e2e-password-1234",
 	/** PARDA_PROBE_SECRET for the server under test: the flows call the probe's route (decision 0238). */
 	probeSecret: "e2e-probe-secret-0123456789", // @parda
+	/** PARDA_REALTIME_KEY for the server under test; the relay checks tokens with its secret. */
+	realtimeKey: "e2e.key:e2e-realtime-secret-0123456789", // @parda
 	users: {
 		admin: { email: "admin@example.com", name: "E2E Admin" },
 		editor: { email: "editor@example.com", name: "Demo Editor" },

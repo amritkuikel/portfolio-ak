@@ -35,6 +35,8 @@ export const pardaLibraryKeys = {
 		[...pardaLibraryKeys.all, "title", locale, media, id] as const,
 	watch: (locale: Locale, type: PardaType, id: number, season?: number, episode?: number) =>
 		[...pardaLibraryKeys.all, "watch", locale, type, id, season ?? null, episode ?? null] as const,
+	/** A watch party's page: this viewer's resume and cap are in it. */
+	party: (locale: Locale, code: string) => [...pardaLibraryKeys.all, "party", locale, code] as const,
 	/** What the profile saved: every page's My List, ♥ and Like buttons (decision 0240). */
 	saved: () => [...pardaLibraryKeys.all, "saved"] as const,
 	shelf: (locale: Locale, tab: "list" | "favourites", query: LibraryQuery) =>

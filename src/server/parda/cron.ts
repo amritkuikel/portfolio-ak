@@ -6,6 +6,7 @@ import { refreshCertificates, refreshTitles } from "./catalog/refresh";
 import { createPardaControls, type PardaControls } from "./controls";
 import { type CheckResult, checkNewEpisodes } from "./notify/check";
 import { type DigestResult, sendDigests } from "./notify/digest";
+import { endIdleParties } from "./party/service";
 import { type DailyResult, rollupDaily } from "./player/daily";
 import { type RollupResult, rollupSources } from "./player/stats";
 import type { Tmdb } from "./tmdb/client";
@@ -17,6 +18,7 @@ export type PardaCronResult = {
 	overview: { ok: boolean } & Partial<DailyResult>;
 	episodes: { ok: boolean; skipped?: boolean } & Partial<CheckResult>;
 	digest: { ok: boolean } & Partial<DigestResult>;
+	parties: { ok: boolean; ended?: number; deleted?: number };
 };
 
 /**
@@ -26,7 +28,7 @@ export type PardaCronResult = {
  * check and, once its alerts are committed, the digest emails (decision 0241), each on
  * its own, so one failing leaves the others done. Running it twice changes nothing but
  * `refreshed_at` and today's rollup rows: a series checked today waits a day, and an
- * alert is emailed once.
+ * alert is emailed once. Idle watch parties end last (decision 0243).
  */
 export async function runPardaCron(
 	db: Db,
@@ -107,5 +109,12 @@ export async function runPardaCron(
 		log("error", "parda digest failed", errorFields(error));
 		digest = { ok: false };
 	}
-	return { titles, certificates, ranking, overview, episodes, digest };
+	let parties: PardaCronResult["parties"];
+	try {
+		parties = { ok: true, ...(await endIdleParties(db, options.now)) };
+	} catch (error) {
+		log("error", "parda party cleanup failed", errorFields(error));
+		parties = { ok: false };
+	}
+	return { titles, certificates, ranking, overview, episodes, digest, parties };
 }

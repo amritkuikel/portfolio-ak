@@ -1,17 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import {
-	ArrowLeftIcon,
-	CheckIcon,
-	ListVideoIcon,
-	MaximizeIcon,
-	MousePointerClickIcon,
-	PauseIcon,
-	PlayIcon,
-	RectangleHorizontalIcon,
-	ServerIcon,
-	TvIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ListVideoIcon, RectangleHorizontalIcon, ServerIcon, TvIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
@@ -25,7 +14,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useHotkeys } from "@/hooks/use-hotkeys";
-import { formatNumber } from "@/lib/i18n/intl";
 import { localizedValue } from "@/lib/i18n/localized";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -36,11 +24,12 @@ import { TmdbImage } from "../kit/tmdb-image";
 import { pardaWatchQueryOptions } from "../library/queries";
 import { HeartButton, ListIconButton } from "../library/save-buttons";
 import { pardaLinks } from "../links";
+import { WatchTogetherButton } from "../party/watch-together";
 import { titleRouteParams } from "../search";
 import { episodeCode } from "../title/title-hero";
 import { VideoDialog } from "../title/video-dialog";
 import { ADAPTERS } from "./adapters";
-import { formatClock } from "./machine";
+import { playerBox, ShieldControls } from "./player-chrome";
 import { PlayerFrame } from "./player-frame";
 import { useWatchPlayer, type WatchPlayer } from "./use-watch-player";
 import { BlockerHint, EpisodesSheet, ReportDialog, UpNext } from "./watch-panels";
@@ -49,19 +38,6 @@ import type { WatchPageData } from "./watch-types";
 const route = getRouteApi("/_parda/app/parda/watch/$type/$id");
 
 type Data = Extract<WatchPageData, { configured: true }>;
-
-/** Clock digits in the page's language ("३४:१०" in Nepali). */
-const clock = (seconds: number) => formatClock(seconds).replace(/\d/g, (digit) => formatNumber(Number(digit)));
-
-/**
- * The player's box (PLAN 12.6, "Player size"): as wide as the height allows at 16:9,
- * never wider than the page; theater mode gives it the height the details took.
- */
-const box = (theater: boolean) =>
-	cn(
-		"relative mx-auto aspect-video w-full bg-black",
-		theater ? "max-w-[calc((100dvh-7.5rem)*16/9)]" : "max-w-[max(20rem,calc((100dvh-12rem)*16/9))]",
-	);
 
 /**
  * The server switcher: Auto, then the sources in their order. The server renders it from
@@ -103,80 +79,6 @@ function ServerMenu({ player, sources }: { player: WatchPlayer; sources: Data["s
 	);
 }
 
-/**
- * Parda's own controls, for a player that obeys commands (PLAN 12.5, "Click shield"):
- * play, pause, a seek bar and fullscreen on our wrapper. *Player menu* lifts the shield
- * for the player's own settings, and says clicks there may open ads.
- */
-function ShieldControls({
-	player,
-	shielded,
-	onShield,
-	wrapper,
-	enabled,
-}: {
-	player: WatchPlayer;
-	/** False until the player is ready (and for one that doesn't obey commands): shown, so nothing moves, but inert. */
-	enabled: boolean;
-	shielded: boolean;
-	onShield: (on: boolean) => void;
-	wrapper: React.RefObject<HTMLDivElement | null>;
-}) {
-	const toggle = () => player.command({ action: player.playing ? "pause" : "play" });
-	return (
-		<div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto" data-testid="shield-controls">
-			<Button
-				variant="ghost"
-				size="icon"
-				onClick={toggle}
-				disabled={!enabled}
-				aria-label={player.playing ? m.pd_player_pause() : m.pd_player_play()}
-				data-testid="control-toggle"
-			>
-				{player.playing ? <PauseIcon aria-hidden /> : <PlayIcon aria-hidden />}
-			</Button>
-			<span className="w-24 shrink-0 text-pd-muted text-xs tabular-nums sm:w-28" data-testid="control-time">
-				{clock(player.position)}
-				{player.duration ? ` / ${clock(player.duration)}` : null}
-			</span>
-			<input
-				type="range"
-				min={0}
-				max={Math.max(1, Math.floor(player.duration ?? 0))}
-				step={1}
-				value={Math.floor(player.position)}
-				disabled={!enabled || !player.duration}
-				onChange={(event) => player.command({ action: "seek", position: Number(event.target.value) })}
-				aria-label={m.pd_player_seek()}
-				aria-valuetext={clock(player.position)}
-				className="h-6 min-w-0 flex-1 accent-[var(--pd-action)]"
-				data-testid="control-seek"
-			/>
-			<Button
-				variant="ghost"
-				size="icon"
-				onClick={() => void wrapper.current?.requestFullscreen?.().catch(() => {})}
-				disabled={!enabled}
-				aria-label={m.pd_player_fullscreen()}
-			>
-				<MaximizeIcon aria-hidden />
-			</Button>
-			<Button
-				variant="ghost"
-				size="sm"
-				aria-pressed={!shielded}
-				onClick={() => onShield(!shielded)}
-				disabled={!enabled}
-				title={m.pd_player_menu_warning()}
-				data-testid="control-player-menu"
-			>
-				{shielded ? <MousePointerClickIcon aria-hidden /> : <CheckIcon aria-hidden />}
-				{shielded ? m.pd_player_menu() : m.pd_player_menu_done()}
-			</Button>
-		</div>
-	);
-}
-
 function Screen({ data }: { data: Data }) {
 	const navigate = useNavigate();
 	const frameRef = useRef<HTMLIFrameElement>(null);
@@ -212,7 +114,7 @@ function Screen({ data }: { data: Data }) {
 	return (
 		<>
 			<section aria-label={m.pd_watch_player()} className="bg-pd-mask" data-testid="watch-player">
-				<div ref={wrapper} className={box(theater)} data-testid="watch-box" data-status={player.status}>
+				<div ref={wrapper} className={playerBox(theater)} data-testid="watch-box" data-status={player.status}>
 					{player.src && player.source ? (
 						<PlayerFrame
 							url={player.src}
@@ -278,7 +180,7 @@ function Screen({ data }: { data: Data }) {
 				<div
 					className={cn(
 						"mx-auto flex flex-wrap items-center gap-1 px-2 py-2 sm:px-4",
-						box(theater),
+						playerBox(theater),
 						"aspect-auto bg-transparent",
 					)}
 					data-testid="player-bar"
@@ -312,6 +214,7 @@ function Screen({ data }: { data: Data }) {
 					<ListIconButton title={{ media: title.media, id: title.id, title: title.title }} playerMounted />
 					<HeartButton title={{ media: title.media, id: title.id, title: title.title }} playerMounted />
 					{data.playback === "on" ? <ReportDialog data={data} sourceId={player.source?.id ?? null} /> : null}
+					{data.party && data.playback === "on" ? <WatchTogetherButton data={data} position={player.position} /> : null}
 					<ServerMenu player={player} sources={data.sources} />
 				</div>
 			</section>

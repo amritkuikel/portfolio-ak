@@ -37,6 +37,8 @@ export const pardaLinks = {
 			params: { type: typeOfMedia(media), id: titleParam(id, slug) },
 			search: episode ? { s: episode.season, e: episode.episode } : {},
 		}),
+	/** A watch party (noindex, decision 0243): the link its host shares. */
+	party: (code: string) => linkOptions({ to: "/app/parda/party/$code", params: { code } }),
 	person: (id: number) => linkOptions({ to: "/app/parda/person/$id", params: { id: String(id) } }),
 	collection: (id: number) => linkOptions({ to: "/app/parda/collection/$id", params: { id: String(id) } }),
 	/** A collection the admin put together (decision 0242). */

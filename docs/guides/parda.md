@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 69)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), the notice page, sign-in, sign-up and the 404, the admin's pages (the overview, billboard slots, collections, the home layout, sources, takedowns, reports, settings, the player lab), curated collections at `/app/parda/c/{slug}`, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 69a)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), watch parties, the notice page, sign-in, sign-up and the 404, the admin's pages (the overview, billboard slots, collections, the home layout, sources, takedowns, reports, settings, the player lab), curated collections at `/app/parda/c/{slug}`, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -314,7 +314,42 @@ Decision 0242. `/admin/parda`, `/billboard`, `/collections`, `/layout`. Reading 
 - **Unique viewers:** `pd_play.viewer_key` is a keyed hash of the user (or the hashed IP) and the UTC day, so a day's viewers can be counted and nobody can be followed across days. The overview says "a day": the period's figure is an average, because different days' keys can't be compared.
 - **The rollup** runs in `GET /api/cron/parda`: every day since the last one stored, so a missed run fills in. `pd_play` and `pd_search_stat` are deleted after 90 days; `pd_daily_stat` is kept.
 
+## Watch party
+
+Decision 0243. `/app/parda/party/{code}`, noindex and never listed; the code is the invitation. Everything is hidden, and the page and functions answer 404, without `PARDA_REALTIME_KEY`.
+
+| File | Holds |
+| --- | --- |
+| `src/server/db/schema/parda/party.ts` | `pd_party` (the state saved for late joiners and reloads) and `pd_party_member` (who's in; the channel knows a member by this row's id, never a user id) |
+| `src/server/parda/party/service.ts`, `repository.ts` | What only the server can keep: creating (rate limited, refused with playback off), seats (10), the host, ending, the pulse |
+| `src/server/parda/party/token.ts` | `partyRealtime()` and the channel's token, an Ably JWT signed here, for this channel and member, 30 minutes |
+| `src/functions/parda/party.ts`, `getPardaParty` in `watch.ts` | `requirePardaViewer` → `withPardaServices`, each with its row in `tests/server/parda-access.test.ts`; the page itself is `withPardaCatalog`, so the link shows what's playing before a session exists |
+| `src/features/parda/party/sync.ts` | **The pure reducer.** Events in; commands, messages and reloads out. Every rule below is here, and unit-tested |
+| `src/features/parda/party/channel.ts` | `PartyChannel`, the only provider code: Ably, or the e2e relay when `relayUrl` is set. Imported on the party's page only, so the SDK reaches no other page |
+| `src/features/parda/party/use-party-room.ts` | Takes a seat, keeps the channel, carries out what the reducer returns, records progress and `pd_play` |
+| `src/features/parda/party/clock.ts` | The offset from server time, from the quickest recent round trip |
+| `e2e/harness/parda-relay.ts` | The stand-in: one channel per party with presence, checking the same tokens. CI never calls Ably |
+
+**The room:**
+- **One source for everyone,** because timecodes differ between sources: the highest-ranked with commands, else the top one. Only the host changes it; everyone reloads, 30 s earlier. A source that's gone hands the party to the best one left.
+- **The lobby:** *Ready* is the gesture autoplay needs. A viewer with a session takes a seat on arrival, so the room shows who's here; a visitor's *Ready* starts a Parda guest first. It starts once all are ready (two or more) or when the host presses *Start now*, after a 3 s countdown.
+- **Full sync** (the source obeys commands): anyone's play, pause and seek reach everyone, the later press winning. Drift over 2 s gets a hard seek, at most every 3 s. The click shield is on.
+- **Buffering, in full sync:** `stall.ts` fires, the others pause and see "Waiting for Sam". Once Sam has moved for a second, everyone seeks to Sam and plays. After 30 s the host can *Continue without Sam*, and Sam holds nobody again.
+- **Start together** (any other source): a shared countdown, then each player runs on its own, with no shared pause and no pause on buffering. A chip shows how far behind, where the player reports. *Resync* reloads at the group's position where the source takes `{start}`. The host is offered a source that can sync.
+- **Late joiners and reloads:** the page reads `pd_party` (saved every 15 s by the host, and at once on a change), and the longest-present of the others tells the newcomer the live state.
+- **The host:** gone for 15 s, the longest-present member asks to take over. The server agrees only if the host left or hasn't pulsed for 90 s, and only for that member.
+- **The pulse** (every member at most every 30 s, the host every 15 s) keeps a seat and the party alive, and says who's host and the server's time. A 404 means the party ended: the host, the kill switch, a takedown, or 12 h idle (the daily job ends those, and deletes them a week later).
+- **Trust:** anyone in the channel can publish anything, so `parsePartyMessage` checks every message, the host's messages count only from the host, and a `source` message can only name a source the page already has: no URL ever travels. The sender's id comes from the service, not the message.
+- **Progress** is each member's own, as usual. `pd_play.in_party` keeps party plays out of ranking.
+
+**Testing:** a message to the placeholder rehearses a stall (`{ type: "parda.command", action: "rehearse-stall", on }`), which a `?cue=` can't let go of. A source without commands is a row with the adapter `none` and `{start}` in its template, and `?cue=silent`.
+
+**Connecting Ably:** create an app, copy its API key (the whole `appId.keyId:secret`) to `PARDA_REALTIME_KEY`. `connect-src` gains Ably's hosts on Parda's pages only then. Another service means another implementation in `channel.ts`, its hosts in `player/csp.ts`, and its token format in `token.ts` and the relay.
+
 ## Pitfalls already solved
+
+- **A timer in an effect without deps restarts on every render:** position reports render four times a second, so a 250 ms tick would never fire. The party's clock has `[]` and reads refs.
+- **A real player can start by itself as it loads,** and the room mustn't read that as someone pressing play: what a player says within 5 s of `ready`, or 1.5 s of a command, is an echo.
 
 - **Seven links overflowed the top mask at 768 px:** About and the language show there only from `lg` (the footer has both).
 - **A takedown in the billboard test needed a title nobody recorded:** the sixth title fills in, and a Nepali answer can lack a backdrop the English one has, so the recorder keeps two spare billboard titles.

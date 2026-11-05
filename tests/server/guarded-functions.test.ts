@@ -429,7 +429,7 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getPardaBanner",
 	],
 	"parda/search.ts": ["getPardaSearch", "getPardaSuggest", "notePardaSearch", "getPardaDiscover"],
-	"parda/watch.ts": ["getPardaWatch", "recordPardaPlay", "reportPardaProblem"],
+	"parda/watch.ts": ["getPardaWatch", "getPardaParty", "recordPardaPlay", "reportPardaProblem"],
 	"parda/schedule.ts": ["getPardaAnimeWeek"],
 };
 
@@ -468,6 +468,16 @@ const PARDA_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"setPardaDigest",
 	],
 	"parda/alerts.ts": ["getPardaInbox", "markPardaInboxRead", "getPardaFollowing"],
+	"parda/party.ts": [
+		"createPardaParty",
+		"joinPardaParty",
+		"getPardaPartyToken",
+		"pulsePardaParty",
+		"leavePardaParty",
+		"setPardaPartySource",
+		"takeOverPardaParty",
+		"endPardaParty",
+	],
 };
 // parda:end
 

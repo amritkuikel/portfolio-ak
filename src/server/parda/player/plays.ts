@@ -31,6 +31,8 @@ export type PlayReport = {
 	watchedS: number;
 	switchedAway: boolean;
 	band: PardaBand;
+	/** Party plays never count for ranking: the source is forced and pauses are shared. */
+	inParty?: boolean | undefined;
 };
 
 /** A source that's gone (deleted, or never one) keeps the row with no source: the play still counts for nothing. */
@@ -64,6 +66,7 @@ export async function recordPlay(
 		watchedS: report.watchedS,
 		switchedAway: report.switchedAway,
 		band: report.band,
+		inParty: report.inParty ?? false,
 	};
 	return db.transaction(async (tx) => {
 		const [before] = await tx

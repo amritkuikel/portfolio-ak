@@ -82,6 +82,7 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	// apps:end
 	if (page.params.from === "parda") return pardaFixturePath(page.params.page); // @parda
 	if (page.params.from === "parda-source-id") return page.route.replace("$id", await harness.pardaSourceId("Server 1")); // @parda
+	if (page.params.from === "parda-party") return page.route.replace("$code", await harness.pardaParty()); // @parda
 	if (page.params.from === "parda-curated") {
 		// @parda
 		const curated = await harness.pardaCurated(); // @parda

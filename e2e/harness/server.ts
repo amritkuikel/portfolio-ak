@@ -117,6 +117,9 @@ const app = spawn(process.execPath, [".output/server/index.mjs"], {
 		TMDB_IMAGE_BASE: `${E2E.harnessURL}/tmdb/img`,
 		// The daily probe's route (decision 0238): the flows call it; CI never runs the probe itself.
 		PARDA_PROBE_SECRET: E2E.probeSecret,
+		// Watch parties (decision 0243): the relay stands in for the realtime service, with the same tokens.
+		PARDA_REALTIME_KEY: E2E.realtimeKey,
+		PARDA_REALTIME_URL: `${E2E.harnessURL.replace("http", "ws")}/parda-relay`,
 		// parda:end
 	},
 });

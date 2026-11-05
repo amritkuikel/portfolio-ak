@@ -157,6 +157,12 @@ export class Harness {
 		return (await response.json()) as { slug: string; billboard: string; collection: string };
 	}
 
+	/** A party in its lobby, for the review's page (Task 69a). */
+	async pardaParty(): Promise<string> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/parda-party`, { method: "POST" });
+		return ((await response.json()) as { code: string }).code;
+	}
+
 	/** An alert of new episodes (S1 E1–2) of a series, as the daily check writes it (Task 68). */
 	async pardaAlert(userId: string, tmdbId: number, title: string) {
 		await fetch(`${E2E.harnessURL}/e2e/parda-alert`, {

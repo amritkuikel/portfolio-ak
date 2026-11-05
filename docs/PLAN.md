@@ -2179,7 +2179,7 @@ As 11.1, with these differences:
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Done (decision 0240) |
 | 68 | Schedule and new-episode alerts | high | Done (decision 0241) |
 | 69 | Admin II: overview, curation, home layout | high | Done (decision 0242) |
-| 69a | Watch party | xhigh | Planned |
+| 69a | Watch party | xhigh | Done (decision 0243) |
 | 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
 
 - **Order is fixed.** The legal controls exist from 59 and get their admin UI in 65, right after public playback.
@@ -2279,7 +2279,7 @@ Across the players:
 - **Error code:** `UPSTREAM_UNAVAILABLE` (503) in `src/lib/errors.ts`, plus its messages.
 
 **Catalogue:**
-- **Env** (the `CLOUDINARY_*` pattern in `src/server/env.ts`): `TMDB_READ_TOKEN`, `TMDB_API_BASE`, `TMDB_IMAGE_BASE`, `PARDA_PLAYER_BASE`, `PARDA_PROBE_SECRET`, `PARDA_REALTIME_KEY`.
+- **Env** (the `CLOUDINARY_*` pattern in `src/server/env.ts`): `TMDB_READ_TOKEN`, `TMDB_API_BASE`, `TMDB_IMAGE_BASE`, `PARDA_PLAYER_BASE`, `PARDA_PROBE_SECRET`, `PARDA_REALTIME_KEY`, and `PARDA_REALTIME_URL` for the e2e stand-in only.
   - They also go in `.env.example`, the README, `scripts/diagnose.ts`, the `OFF` lists of `scripts/dev-offline.ts` and `tests/setup/env.ts`, the harness `APP_ENV` regex, and `tests/unit/env.test.ts`.
   - Without a token, Parda shows "catalogue not configured".
 - **Client:** `createTmdb(config, fetcher = fetch)`. 8 s timeout, one retry on 5xx, one `Retry-After` wait on 429, `include_adult=false`, `log()`.
@@ -2373,6 +2373,7 @@ Across the players:
 - **Admin:** `pd_settings.source_order` is `auto` or `manual`. Pinned rows stay on top in either mode. The sources page shows each row's score, plays, failure rate, median start, stalls, quality, popups, `ads` reports and last probe.
 
 **Watch party** (Task 69a):
+- **The service is Ably** (0243). A party's channel token is an Ably JWT minted on the server.
 - **The link:** a viewer with a session (guests allowed) creates a party on the watch page and shares `/app/parda/party/$code`. The code is random and unguessable. Joining starts a guest session if needed. At most 10 people. A party ends after 12 h idle. Party pages are `noindex` and never listed anywhere.
 - **One source:** everyone plays the same source, because timecodes differ between sources. A party starts on the highest-ranked source with commands, and otherwise on the top source. Only the host changes it; everyone reloads, 30 s earlier.
 - **A lobby first:** everyone taps *Ready*, which is the gesture autoplay needs. The host starts when ready, or it starts once all are.
@@ -2418,7 +2419,7 @@ Across the players:
 | `pd_favourite_person`, `pd_rating`, `pd_account` | favourite people; like or not for me; the account's email digest | 67 |
 | `pd_follow_state`, `pd_notification` | last episode seen per followed series; alerts | 68 |
 | `pd_billboard`, `pd_collection` (+ `_item`), `pd_rail`, `pd_daily_stat` | curation, layouts, rollups | 69 |
-| `pd_party` | code, host, title, season, episode, source, state, position, `state_at`, `expires_at` | 69a |
+| `pd_party`, `pd_party_member` | code, host, title, season, episode, source, state, position, `state_at`, `expires_at`; per member a name, joined, last seen and left | 69a |
 
 **Routes** (few, for the bundle):
 - **Pages:**
@@ -2748,18 +2749,37 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0035_parda_curation`). Unique viewers count from the first play after that; older plays have no key.
 
-### Task 69a: Watch party (planned)
+### Task 69a: Watch party (done)
 
-- **Check first:** the free tier, limits and SDK size of Ably and Pusher, and pick one. The owner creates the account and the key goes in `PARDA_REALTIME_KEY`. Without a key the task still builds and tests, because the UI hides and e2e uses the stand-in.
-- **Server:** `pd_party`, create, join and end in `src/functions/parda/party.ts` (`requirePardaViewer` → `withPardaServices`), each with its access-matrix row, and the channel token. Creating is rate limited. A cron step ends idle parties.
-- **Client:** `party/channel.ts`, the clock offset, shared state, presence, the lobby, and both modes as in 12.5, reusing `stall.ts` and the click shield.
-- **Page:** `/party/$code` with `privateHead()`, its entry in `e2e/support/pages.ts` and `route-seo.test.ts`, the *Watch together* button on the watch page, and copying the link.
-- **Stand-in:** a small WebSocket relay in `e2e/harness/` behind `PartyChannel`. CI never calls the real service.
-- **Tests:**
-  - unit: the sync reducer (drift, stall, resume, host change, *Continue without*), the clock offset;
-  - PGlite: create, join, full, expired, the wrong code, a blocked title, playback off;
-  - e2e with two browser contexts and the fake player: pause on one pauses the other; a stall on one pauses the other and shows the name; resuming seeks both to the same position; a reload rejoins at the group's position; a source without commands shows *Start together*, and *Resync* reloads with `{start}`; a non-host can't change the source.
-- **Decisions:** the realtime service; sync through commands only, with no pause on buffering for other players.
+**Done** (decision 0243; the guide's "Watch party").
+
+**What changed:**
+- **Service:** Ably, on its free package (200 connections, 200 channels, 6 million messages a month, 50 messages a second per channel; Pusher's has 100 connections). The browser loads `ably/modular` only on the party's page, 38.2 kB gzipped, in its own chunk.
+- **Tables** (migration `0036_parda_party`): `pd_party` and `pd_party_member`.
+- **Server:** `src/server/parda/party/` (`service.ts`, `repository.ts`, `token.ts`, an Ably JWT minted without a server SDK), eight functions in `src/functions/parda/party.ts` each with its access-matrix row, `getPardaParty` in `watch.ts`, a daily step that ends idle parties and deletes them a week later, and the guest claim.
+- **Client:** `src/features/parda/party/`: `sync.ts` (the pure reducer), `clock.ts`, `channel.ts` (`PartyChannel`, the only provider code), `source.ts`, `use-party-room.ts`, `party-page.tsx`, `watch-together.tsx`.
+- **Page:** `/app/parda/party/$code` (noindex through the layout), and *Watch together* on the watch page's bar.
+- **Shared with the watch page:** `player/player-chrome.tsx` (`ShieldControls`, `playerBox`), `player/report.ts`, `player/redirect-guard.ts`.
+- **Stand-in:** `e2e/harness/parda-relay.ts`, a WebSocket relay that checks the same tokens, reached through `PARDA_REALTIME_URL`. The placeholder player gained a `rehearse-stall` command, because a cue can't let go of a stall.
+- **Tests:** `tests/unit/parda-party.test.ts` (the reducer, the clock, the source), `tests/server/parda-party.test.ts`, the access matrix, ten e2e flows with two browsers, and the review of the party's page.
+
+**Deviations (0243):**
+- **`pd_party_member` is new:** the 10-person limit, the longest-present rule and a member id that isn't a user id need a row per member.
+- **`PARDA_REALTIME_URL` is new,** for the e2e stand-in only.
+- **The kill switch and a takedown reach a room through its next pulse** (at most 30 s, plus the controls' 30 s), not a server-side publish: no server SDK, and it works with the channel down.
+- **A room starts by itself only with two or more people:** alone, the host presses *Start now*, because friends may still be on their way.
+- **A party starts where the host is** on the watch page, not at 0.
+- **`pardaHead`, not `privateHead()`,** as the watch page: the layout already makes it noindex, so `route-seo.test.ts` needs no entry.
+- **Everyone with a full-sync source loads the player at *Ready*** and holds it paused; start together loads when the countdown ends.
+
+**Numbers:** entry 283.7 of 285 kB (283.4 before). Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, db:check, the build and the bundle check, build-storybook, the Parda, guard, env, route-SEO, e2e-pages, strip-marker, CSP and i18n test files (33 files, 536 tests), `e2e/flows/parda.spec.ts` (66 of 66) and the review of the party and watch pages (48 of 48). No story shows these pages, so `test:storybook` wasn't run. Screenshots of the watch page, lobby, live room and waiting state at 390, 768 and 1280 in en and ne, dark and light, showed nothing to fix; the `impeccable` critique wasn't run. The full suites wait for Task 70.
+
+**Not tested:** the real service. No key exists yet, so `connectAbly` and the CSP's Ably hosts have never run; every flow used the stand-in. The token follows Ably's documented JWT format and the SDK's types.
+
+**Left for the owner:**
+- Create an Ably account and app, and put its API key in `PARDA_REALTIME_KEY` (local `.env` and Vercel).
+- Then open a party in two browsers once, to check the real service.
+- Run `pnpm db:migrate` on Neon (`0036_parda_party`).
 
 ### Task 70: Wrap-up (planned)
 

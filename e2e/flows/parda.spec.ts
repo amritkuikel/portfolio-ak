@@ -4,10 +4,10 @@
  * reports, in a production build under the real CSP (the guard fails on any violation).
  */
 
-import type { Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import { E2E } from "../harness/config.ts";
 import { fixtureTitlePath, pardaFixturePath, popularFixture } from "../harness/tmdb.ts";
-import { expect, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
+import { expect, type Harness, RESOURCE_STATUS, signedIn, test } from "../support/fixtures.ts";
 
 test.describe("Parda's placeholder player", () => {
 	for (const server of [1, 2, 3, 4]) {
@@ -1072,5 +1072,236 @@ test.describe("Parda's alerts", () => {
 		await page.goto("/app/parda/schedule");
 		await expect(page.getByTestId("schedule-signed-out")).toBeVisible();
 		await expect(page.getByTestId("parda-bell")).toHaveCount(0);
+	});
+});
+
+// Task 69a: a watch party, in two browsers, on the stand-in for the realtime service.
+test.describe("Parda's watch party", () => {
+	test.use(signedIn("member"));
+
+	const box = (page: Page) => page.getByTestId("party-box");
+	const status = (page: Page) => page.getByTestId("party-status");
+	const partyFrame = (page: Page) => box(page).locator("iframe");
+	const seconds = async (page: Page) => {
+		const text = (await page.getByTestId("control-time").textContent()) ?? "";
+		const [minutes = "0", rest = "0"] = (text.split(" / ")[0] ?? "").split(":");
+		return Number(minutes) * 60 + Number(rest);
+	};
+	/** Freezes this viewer's placeholder, or lets it go: a stall nobody can fake from a cue. */
+	const rehearseStall = (page: Page, on: boolean) =>
+		page.evaluate(
+			(hold) =>
+				document
+					.querySelector<HTMLIFrameElement>('[data-testid="party-box"] iframe')
+					?.contentWindow?.postMessage({ type: "parda.command", action: "rehearse-stall", on: hold }, location.origin),
+			on,
+		);
+	const openParty = async (page: Page) => {
+		await page.goto(pardaFixturePath("watch-movie"), { waitUntil: "networkidle" });
+		await page.getByTestId("watch-together").click();
+		await page.waitForURL(/\/app\/parda\/party\/[\w-]{16}$/);
+		await expect(page.getByTestId("party-ready")).toBeEnabled();
+		await expect(page.getByTestId("party-start")).toBeEnabled();
+		return page.url();
+	};
+	const visitor = async (browser: Browser, url: string) => {
+		const context = await browser.newContext({ baseURL: E2E.baseURL, storageState: { cookies: [], origins: [] } });
+		const page = await context.newPage();
+		await page.goto(url, { waitUntil: "networkidle" });
+		return { context, page };
+	};
+	const bothPlaying = async (host: Page, guest: Page) => {
+		for (const page of [host, guest]) {
+			await expect(box(page)).toHaveAttribute("data-phase", "live", { timeout: 15_000 });
+			await expect(status(page)).toHaveText("Playing together", { timeout: 15_000 });
+		}
+	};
+	const started = async (browser: Browser, host: Page, harness: Harness) => {
+		await harness.resetRateLimits();
+		const url = await openParty(host);
+		const { context, page: guest } = await visitor(browser, url);
+		await guest.getByTestId("party-ready").click();
+		await expect(host.getByTestId("party-member")).toHaveCount(2, { timeout: 15_000 });
+		await host.getByTestId("party-ready").click();
+		await bothPlaying(host, guest);
+		return { context, guest, url };
+	};
+
+	test("shows the button, with the realtime host in the CSP only as configured", async ({ page }) => {
+		const response = await page.goto(pardaFixturePath("watch-movie"), { waitUntil: "networkidle" });
+		await expect(page.getByTestId("watch-together")).toBeVisible();
+		const relay = new URL(E2E.harnessURL.replace("http", "ws")).origin;
+		expect(response?.headers()["content-security-policy"]).toMatch(new RegExp(`connect-src [^;]*${relay}`));
+	});
+
+	test("a wrong code is Parda's 404", async ({ page, guard }) => {
+		guard.allow(RESOURCE_STATUS(404));
+		const response = await page.goto("/app/parda/party/no-such-party-00", { waitUntil: "networkidle" });
+		expect(response?.status()).toBe(404);
+		await expect(page.getByTestId("parda-frame")).toBeVisible();
+	});
+
+	test("starts once everyone is ready, and a guest joins from the link", async ({ browser, page, harness }) => {
+		const { context, guest } = await started(browser, page, harness);
+		await expect(partyFrame(page)).toHaveAttribute("src", /^\/parda\/api\/\d\/movie\//);
+		await expect(partyFrame(guest)).toHaveAttribute("src", /^\/parda\/api\/\d\/movie\//);
+		// The party's clock runs in both.
+		await expect.poll(() => seconds(guest), { timeout: 10_000 }).toBeGreaterThan(0);
+		await context.close();
+	});
+
+	test("the host can start alone, and a late joiner lands on the group's position", async ({
+		browser,
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const url = await openParty(page);
+		await page.getByTestId("party-ready").click();
+		await page.getByTestId("party-start").click();
+		await expect(status(page)).toHaveText("Playing together", { timeout: 15_000 });
+		await expect.poll(() => seconds(page), { timeout: 15_000 }).toBeGreaterThan(4);
+		const { context, page: late } = await visitor(browser, url);
+		await expect(status(late)).toContainText("already playing");
+		await late.getByTestId("party-ready").click();
+		await expect(partyFrame(late)).toHaveAttribute("src", /start=[1-9]/);
+		await expect.poll(async () => Math.abs((await seconds(late)) - (await seconds(page)))).toBeLessThanOrEqual(3);
+		await context.close();
+	});
+
+	test("a pause on one pauses the other, and either can resume", async ({ browser, page, harness }) => {
+		const { context, guest } = await started(browser, page, harness);
+		await page.getByTestId("control-toggle").click();
+		await expect(status(guest)).toHaveText("Paused for everyone");
+		await expect(guest.getByTestId("control-toggle")).toHaveAttribute("aria-label", "Play");
+		const frozen = await seconds(guest);
+		await guest.waitForTimeout(1500);
+		expect(await seconds(guest)).toBe(frozen);
+		await guest.getByTestId("control-toggle").click();
+		await bothPlaying(page, guest);
+		await context.close();
+	});
+
+	test("a seek moves everyone", async ({ browser, page, harness }) => {
+		const { context, guest } = await started(browser, page, harness);
+		await guest.getByTestId("control-seek").fill("600");
+		await expect.poll(() => seconds(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(600);
+		await expect.poll(() => seconds(guest), { timeout: 10_000 }).toBeGreaterThanOrEqual(600);
+		await context.close();
+	});
+
+	test("a stall on one pauses the other and names them; resuming seeks both to one position", async ({
+		browser,
+		page,
+		harness,
+	}) => {
+		const { context, guest } = await started(browser, page, harness);
+		const name = (await guest.getByTestId("party-member").filter({ hasText: "(you)" }).textContent()) ?? "";
+		const guestName = /^(.+) \(you\)/.exec(name)?.[1] ?? "";
+		expect(guestName).not.toBe("");
+		// Past the commands' grace, so the stall detector counts.
+		await guest.waitForTimeout(3500);
+		await rehearseStall(guest, true);
+		await expect(status(page)).toHaveText(`Waiting for ${guestName}`, { timeout: 10_000 });
+		await expect(status(guest)).toContainText("You're buffering");
+		await expect(page.getByTestId("control-toggle")).toHaveAttribute("aria-label", "Play");
+		await rehearseStall(guest, false);
+		await bothPlaying(page, guest);
+		await expect.poll(async () => Math.abs((await seconds(page)) - (await seconds(guest)))).toBeLessThanOrEqual(2);
+		await context.close();
+	});
+
+	test("a reload rejoins at the group's position", async ({ browser, page, harness }) => {
+		const { context, guest } = await started(browser, page, harness);
+		await page.getByTestId("control-seek").fill("900");
+		await expect.poll(() => seconds(guest), { timeout: 10_000 }).toBeGreaterThanOrEqual(900);
+		await guest.reload({ waitUntil: "networkidle" });
+		await guest.getByTestId("party-ready").click();
+		await expect(partyFrame(guest)).toHaveAttribute("src", /start=9\d\d/);
+		await expect(status(guest)).toHaveText("Playing together", { timeout: 15_000 });
+		await context.close();
+	});
+
+	test("only the host changes the source; everyone moves, 30 s earlier", async ({ browser, page, harness }) => {
+		const { context, guest } = await started(browser, page, harness);
+		await expect(guest.getByTestId("party-server-menu")).toHaveCount(0);
+		await page.getByTestId("control-seek").fill("600");
+		await expect.poll(() => seconds(guest), { timeout: 10_000 }).toBeGreaterThanOrEqual(600);
+		const before = /\/parda\/api\/(\d)\//.exec((await partyFrame(page).getAttribute("src")) ?? "")?.[1];
+		await page.getByTestId("party-server-menu").click();
+		await page
+			.getByTestId("party-server-option")
+			.filter({ hasNotText: `Server ${before}` })
+			.first()
+			.click();
+		for (const viewer of [page, guest]) {
+			await expect(partyFrame(viewer)).not.toHaveAttribute("src", new RegExp(`/parda/api/${before}/`));
+			await expect(partyFrame(viewer)).toHaveAttribute("src", /start=5[7-9]\d/);
+		}
+		await bothPlaying(page, guest);
+		await context.close();
+	});
+
+	test("the host ends it for everyone, and its link is gone", async ({ browser, page, harness, guard }) => {
+		guard.allow(RESOURCE_STATUS(404));
+		const { context, guest, url } = await started(browser, page, harness);
+		await page.getByTestId("party-end").click();
+		await expect(page.getByTestId("party-ended")).toBeVisible();
+		await expect(guest.getByTestId("party-ended")).toBeVisible();
+		await context.close();
+		expect((await page.goto(url))?.status()).toBe(404);
+	});
+});
+
+test.describe("Parda's watch party on a server without commands", () => {
+	test.use(signedIn("admin"));
+
+	test("starts together, says it can't pause together, and resyncs with its start position", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const name = `E2E Silent ${Date.now()}`;
+		await page.goto("/admin/parda/sources/new", { waitUntil: "networkidle" });
+		await page.getByLabel("Name (English)").fill(name);
+		await page.getByLabel("Movie address").fill("/parda/api/1/movie/{id}?start={start}&cue=silent");
+		await page.getByLabel("Episode address").fill("/parda/api/1/tv/{id}/{season}/{episode}?start={start}&cue=silent");
+		await page.getByRole("switch", { name: "Enabled" }).click();
+		await page.getByRole("button", { name: "Create" }).click();
+		await expect(page).toHaveURL(/\/admin\/parda\/sources$/);
+
+		await page.goto(pardaFixturePath("watch-movie"), { waitUntil: "networkidle" });
+		await page.getByTestId("watch-together").click();
+		await page.waitForURL(/\/app\/parda\/party\/[\w-]{16}$/);
+		const partyBox = page.getByTestId("party-box");
+		await expect(page.getByTestId("party-start")).toBeEnabled();
+		await expect(partyBox).toHaveAttribute("data-mode", "full");
+		await page.getByTestId("party-ready").click();
+		await page.getByTestId("party-start").click();
+		await expect(partyBox).toHaveAttribute("data-phase", "live", { timeout: 15_000 });
+
+		await page.getByTestId("party-server-menu").click();
+		await page.getByTestId("party-server-option").filter({ hasText: name }).click();
+		await expect(partyBox).toHaveAttribute("data-mode", "together");
+		await expect(page.getByTestId("party-status")).toContainText("can't pause together");
+		await expect(page.getByTestId("shield-controls")).toHaveCount(0);
+		await expect(page.getByTestId("party-switch-sync")).toBeVisible();
+
+		const frame = partyBox.locator("iframe");
+		await expect(frame).toHaveAttribute("src", /cue=silent/);
+		await expect(frame).toHaveAttribute("src", /start=0&/);
+		await page.waitForTimeout(3000);
+		await page.getByTestId("party-resync").click();
+		await expect(frame).toHaveAttribute("src", /start=[1-9]/);
+
+		await page.getByTestId("party-switch-sync").click();
+		await expect(partyBox).toHaveAttribute("data-mode", "full");
+		await page.getByTestId("party-end").click();
+		await expect(page.getByTestId("party-ended")).toBeVisible();
+
+		await page.goto("/admin/parda/sources", { waitUntil: "networkidle" });
+		await rowAction(page, name, "Delete");
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await expect(page.getByRole("link", { name, exact: true })).toHaveCount(0);
 	});
 });

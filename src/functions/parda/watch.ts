@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { z } from "zod";
+import type { PartyPageData } from "@/features/parda/party/types";
 import { PARDA_BANDS, PARDA_REPORT_KINDS } from "@/features/parda/player/playback";
 import type { WatchPageData } from "@/features/parda/player/watch-types";
 import { PARDA_TYPES, titleParamsSchema } from "@/features/parda/search";
@@ -8,6 +9,8 @@ import { zodInput } from "@/functions/_lib/validator";
 import { withPardaCatalog } from "@/middleware/parda";
 import { locales } from "@/paraglide/runtime";
 import { db } from "@/server/db/client";
+import { partyPage } from "@/server/parda/party/service";
+import { partyRealtime } from "@/server/parda/party/token";
 import { failureClient, limitPlayback, viewerDayKey, viewerKind } from "@/server/parda/player/limits";
 import { recordPlay, reportProblem } from "@/server/parda/player/plays";
 import { noteTitleFailure } from "@/server/parda/player/stats";
@@ -45,6 +48,7 @@ const playInput = z.strictObject({
 	watchedS: z.number().int().min(0).max(86_400),
 	switchedAway: z.boolean(),
 	band: z.enum(PARDA_BANDS),
+	inParty: z.boolean().optional(),
 });
 
 const reportInput = z.strictObject({
@@ -67,6 +71,30 @@ export const getPardaWatch = createServerFn({ method: "GET" })
 			context.catalog,
 			db,
 			{ media: PARDA_TYPES[data.type], id: data.id, season: data.season, episode: data.episode },
+			{
+				profileId: profile?.id ?? null,
+				autoplay: profile?.autoplay ?? true,
+				audioLanguage: profile?.audioLanguage ?? null,
+			},
+			data.locale,
+		);
+	});
+
+/**
+ * A party's page (Task 69a, decision 0243), for anyone holding its link: what's playing, in
+ * the viewer's language and under their cap. Joining is `joinPardaParty`, which needs a session.
+ */
+export const getPardaParty = createServerFn({ method: "GET" })
+	.middleware([withPardaCatalog])
+	.validator(zodInput(z.strictObject({ code: z.string().regex(/^[\w-]{16}$/), locale })))
+	.handler(async ({ data, context }): Promise<PartyPageData> => {
+		if (!context.catalog) return { configured: false };
+		const profile = await browsingProfile(db, context.session, getCookie(PROFILE_COOKIE));
+		return partyPage(
+			context.catalog,
+			db,
+			partyRealtime(),
+			data.code,
 			{
 				profileId: profile?.id ?? null,
 				autoplay: profile?.autoplay ?? true,

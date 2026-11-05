@@ -253,6 +253,13 @@
 			"when": 1793869345338,
 			"tag": "0035_parda_curation",
 			"breakpoints": true
+		},
+		{
+			"idx": 36,
+			"version": "7",
+			"when": 1793878557766,
+			"tag": "0036_parda_party",
+			"breakpoints": true
 		}
 	]
 }

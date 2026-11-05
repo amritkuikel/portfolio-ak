@@ -245,6 +245,10 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"src/server/email/templates/parda-emails.tsx",
 			"tests/unit/parda-alerts.test.ts",
 			"tests/server/parda-alerts.test.ts",
+			// Watch party (Task 69a, decision 0243).
+			"tests/unit/parda-party.test.ts",
+			"tests/server/parda-party.test.ts",
+			"e2e/harness/parda-relay.ts",
 			"e2e/harness/tmdb.ts",
 			"e2e/flows/parda.spec.ts",
 			"docs/guides/parda.md",

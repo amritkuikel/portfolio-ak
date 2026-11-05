@@ -247,6 +247,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0240](#0240-pardas-library-profiles-and-the-kids-cap): Parda's library, profiles and the kids' cap
 - [0241](#0241-pardas-schedule-and-new-episode-alerts): Parda's schedule and new-episode alerts
 - [0242](#0242-pardas-admin-ii-overview-curation-and-layout): Parda's admin II: overview, curation and layout
+- [0243](#0243-pardas-watch-party-ably-and-sync-through-commands): Parda's watch party: Ably, and sync through commands
 </details>
 
 ---
@@ -3139,3 +3140,30 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Alternatives considered:** a stable hashed viewer id (see above); a client-made id in the browser (a persistent tracker needing consent, and easy to reset); a jsonb of top titles per day in `pd_daily_stat` (daily top lists can't be added up into a true 30-day top); seeding `pd_rail` in the migration (see above).
 
 **Numbers:** see PLAN Task 69.
+
+## 0243: Parda's watch party: Ably, and sync through commands
+
+**What:** Task 69a. A shared link plays one title together, on a hosted realtime service, with `pd_party` and `pd_party_member` behind it (docs/guides/parda.md, "Watch party").
+
+- **Ably, not Pusher.** Checked 2026-11-05: Ably's docs give its free package 200 concurrent connections, 200 channels, 6 million messages a month and 50 messages a second per channel; Pusher's sandbox has 100 connections and 200,000 messages a day. Pusher's client is smaller (17.6 kB gzipped against 38.2 kB for `ably/modular` as built here), but it loads only on the party's page, so that decides nothing. A room sends few messages: presence, and what people press.
+- **Sync through commands only.** No player reports buffering or takes a speed, and a page can't reach inside another origin's frame. Full sync is for sources that obey commands. Every other source starts together and runs on its own, with no pause on buffering, and the page says so and offers a source that can.
+- **An Ably JWT, no server SDK.** Ably documents the format, an HMAC is a few lines, and the SDK would be a large server dependency for one signature. The e2e relay checks the same token, so the path from the function to the channel is real there.
+- **A member's id in the channel is `pd_party_member.id`,** never a user id, so nobody in a room learns anyone's account.
+- **The reducer is pure** (`party/sync.ts`): the rules are the hard part, and each has a unit test with no browser, clock or channel.
+- **The server keeps what clients can't be trusted with:** seats, the host, ending. The channel carries everything else, and anyone in it can publish anything, so messages are parsed, the host's count only from the host, and a source is named by id from the page's own list. Pausing a room is open to everyone by design, so a member can annoy a room but can't send it anywhere.
+- **Ending reaches a room through its pulse,** at most 30 s later, plus the controls' 30 s cache. It needs no server-side publish and still works with the channel down, and a 404 on the next token or pulse closes the door to a modified client too. Its player keeps running until then, as any open page does after a takedown.
+
+**Why:** PLAN 12.2 and Task 69a.
+
+**Deviations from PLAN Task 69a and 12.5:**
+- **`pd_party_member`:** the limit of 10, the longest-present rule and an id that isn't a user id need a row per member; a seat is free once its member left or hasn't pulsed for 90 s.
+- **`PARDA_REALTIME_URL`:** the plan's relay needs an address. It's for e2e only, and with it `connect-src` gains the relay instead of Ably.
+- **A room starts by itself only with two or more people.** With the plan's "once all are", a host alone would start at their own *Ready*, before anyone arrived.
+- **A party starts where the host is** on the watch page.
+- **`pardaHead`, not `privateHead()`,** as the watch page: the layout already makes it noindex.
+
+**Not tested against the real service:** no key exists yet, so `connectAbly` and the CSP's Ably hosts haven't run. All the flows use the relay.
+
+**Alternatives considered:** Pusher (above); a server-side publish on the kill switch (a server SDK or REST call, and it reaches only those still connected); a WebSocket server of our own (Vercel functions can't host one); user ids as client ids (they'd reach everyone in the room); a host-only control scheme (the plan has anyone control play, pause and seek).
+
+**Numbers:** see PLAN Task 69a.

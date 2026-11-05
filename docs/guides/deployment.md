@@ -28,6 +28,8 @@ pnpm db:seed-taskline --password "…"   # Taskline's demo team: 5 accounts, 3 p
 - `/api/cron/guests` (03:41 UTC) deletes guest sessions older than 7 days, with their app data and uploads (decision 0186).
 - `/api/cron/parda` (02:30 UTC) refreshes Parda's title snapshot and its US certificates, rolls up the sources' plays and probe runs into the day's scores, checks followed series for new episodes (at most 1,500, under 35 TMDB requests a second: under a minute) and emails the new-episode digest through Resend (decisions 0229, 0238, 0240 and 0241). <!-- @parda -->
 
+**Parda's watch parties** (decision 0243) need `PARDA_REALTIME_KEY`, an Ably API key (the whole `appId.keyId:secret`), in the Vercel env. Without it the party's UI is hidden and its page is a 404. The key stays on the server; browsers get a token for one party's channel.
+
 **Parda's source probe** (decision 0238) is a GitHub Actions workflow, not a Vercel cron: `.github/workflows/parda-probe.yml` runs `pnpm parda:probe` daily at 01:40 UTC. Set `PARDA_PROBE_SECRET` (16+ random characters) in the Vercel env and, with the same value, in the repo's Actions secrets, and the deployed URL as the Actions variable `PARDA_PROBE_URL`; without the variable the job is skipped. It takes about a minute per source and title (about 12 minutes a day for 4 sources): after the first runs, check the Actions minutes against the repo's allowance, and run it every other day if they don't fit. <!-- @parda -->
 
 ## Every release

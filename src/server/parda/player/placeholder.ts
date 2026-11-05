@@ -7,6 +7,7 @@ import { m } from "@/paraglide/messages";
  * built, so this plays no video: it counts seconds and speaks the `parda` adapter's protocol,
  * so everything around a player can be built and tested against it. `?cue=` rehearses
  * trouble: `fail` reports a failure, `stall` freezes the position, `silent` sends nothing.
+ * The command `rehearse-stall` freezes it on demand and lets it go again, which a cue can't.
  */
 
 export type PlaceholderRequest = {
@@ -51,6 +52,7 @@ const clock = document.getElementById("clock");
 const parentOrigin = document.referrer ? new URL(document.referrer).origin : location.origin;
 let position = config.start;
 let playing = false;
+let held = false;
 const send = (name, extra) => {
 	if (config.cue === "silent" || window.parent === window) return;
 	window.parent.postMessage(
@@ -84,6 +86,7 @@ window.addEventListener("message", (event) => {
 	if (!message || message.type !== "parda.command") return;
 	if (message.action === "play") play();
 	else if (message.action === "pause") pause();
+	else if (message.action === "rehearse-stall") held = message.on === true;
 	else if (message.action === "seek" && Number.isFinite(message.position)) {
 		position = Math.min(Math.max(0, message.position), config.duration);
 		send("seeked");
@@ -92,7 +95,7 @@ window.addEventListener("message", (event) => {
 });
 setInterval(() => {
 	if (!playing) return;
-	const frozen = config.cue === "stall" && position >= config.start + 5;
+	const frozen = held || (config.cue === "stall" && position >= config.start + 5);
 	if (!frozen) position += 0.25;
 	if (position >= config.duration) {
 		position = config.duration;

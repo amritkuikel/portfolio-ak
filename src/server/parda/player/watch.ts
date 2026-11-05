@@ -236,6 +236,7 @@ export async function watchPage(
 		order,
 		resume,
 		autoplay: viewer.autoplay,
+		party: Boolean(serverEnv.PARDA_REALTIME_KEY),
 		trailer:
 			details.videos.find((video) => video.type === "Trailer") ??
 			details.videos.find((video) => video.type === "Teaser") ??

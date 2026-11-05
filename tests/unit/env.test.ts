@@ -66,6 +66,13 @@ describe("server env", () => {
 			/PARDA_PLAYER_BASE/,
 		);
 		expect(createServerEnv({ ...validServer }).PARDA_PROBE_SECRET).toBeUndefined();
+		expect(createServerEnv({ ...validServer }).PARDA_REALTIME_KEY).toBeUndefined();
+		expect(createServerEnv({ ...validServer, PARDA_REALTIME_KEY: "app.key:secret" }).PARDA_REALTIME_KEY).toBe(
+			"app.key:secret",
+		);
+		expect((serverError({ ...validServer, PARDA_REALTIME_KEY: "no-secret" }) as Error).message).toMatch(
+			/PARDA_REALTIME_KEY/,
+		);
 		expect((serverError({ ...validServer, PARDA_PROBE_SECRET: "short" }) as Error).message).toMatch(
 			/PARDA_PROBE_SECRET/,
 		);

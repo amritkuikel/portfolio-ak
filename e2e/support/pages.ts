@@ -33,6 +33,7 @@ export type ReviewedPage = {
 		| { from: "form-slug" } // @apps
 		| { from: "parda"; page: PardaFixturePage } // @parda
 		| { from: "parda-source-id" } // @parda
+		| { from: "parda-party" } // @parda
 		| { from: "parda-curated"; id: "slug" | "billboard" | "collection" }; // @parda
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
@@ -383,6 +384,9 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/parda/collections/$id", as: "admin", params: { from: "parda-curated", id: "collection" } },
 	{ route: "/admin/parda/layout", as: "admin" },
 	{ route: "/app/parda/c/$slug", params: { from: "parda-curated", id: "slug" } },
+	// Task 69a: a party's page, before and after taking a seat.
+	{ route: "/app/parda/party/$code", params: { from: "parda-party" }, label: "signed out" },
+	{ route: "/app/parda/party/$code", params: { from: "parda-party" }, as: "viewer", label: "viewer" },
 	// parda:end
 	// @new-feature:reviewed-pages
 	// Errors

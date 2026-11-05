@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withinCap } from "@/features/parda/kids";
+import { PARTY_MAX_MEMBERS } from "@/features/parda/party/source";
 import type { Session } from "@/lib/session";
 import * as schema from "@/server/db/schema";
 import type { PardaCatalog } from "@/server/parda/catalog/context";
@@ -9,6 +10,7 @@ import { createPardaControls } from "@/server/parda/controls";
 import * as saved from "@/server/parda/library/saved";
 import * as library from "@/server/parda/library/service";
 import * as alerts from "@/server/parda/notify/service";
+import * as party from "@/server/parda/party/service";
 import * as profiles from "@/server/parda/profiles/service";
 import { resolveViewer } from "@/server/parda/profiles/service";
 import { createTmdbCache } from "@/server/parda/tmdb/cache";
@@ -23,7 +25,8 @@ import { createTestDb } from "../utils/test-db";
  * profile operation acts on the caller's own profiles, and a kids' profile can only switch.
  * Every alerts operation (decision 0241) reads and marks the caller's own profile's alerts. The
  * functions' middleware (requirePardaViewer, then withPardaServices) is checked by
- * tests/server/guarded-functions.test.ts; party rows join with Task 69a.
+ * tests/server/guarded-functions.test.ts. Every party function (decision 0243) acts only
+ * on a party the caller is in, or is joining with its code.
  */
 let env: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -277,6 +280,102 @@ const alertFor = async (profileId: string) => {
 		.returning();
 	return row;
 };
+
+/** Every party function's service call (src/functions/parda/party.ts, decision 0243). */
+const realtime = { key: "app.key:top-secret", relayUrl: null };
+const PARTY_OPERATIONS: Record<string, (context: Viewer, code: string) => Promise<unknown>> = {
+	createPardaParty: (context) => party.createParty(context, realtime, { media: "movie", id: movie }, "en"),
+	joinPardaParty: (context, code) => party.joinParty(context, realtime, code, "en"),
+	getPardaPartyToken: (context, code) => party.partyToken(context, realtime, code),
+	pulsePardaParty: (context, code) => party.pulseParty(context, code, null),
+	leavePardaParty: (context, code) => party.leaveParty(context, code),
+	setPardaPartySource: async (context, code) => {
+		const [source] = await env.db.select().from(schema.pdSource);
+		return party.setPartySource(context, code, source?.id ?? "");
+	},
+	takeOverPardaParty: (context, code) => party.takeOverParty(context, code),
+	endPardaParty: (context, code) => party.endPartyAsHost(context, code),
+};
+/** What someone holding only a party's code can do: joining is what the code is for, and leaving a party you're not in does nothing. */
+const OPEN_WITH_THE_CODE = new Set(["createPardaParty", "joinPardaParty", "leavePardaParty"]);
+/** What a seat alone doesn't allow: the host's. */
+const HOST_ONLY = new Set(["setPardaPartySource", "endPardaParty"]);
+
+describe("Parda's party access matrix", () => {
+	const seedSource = () =>
+		env.db.insert(schema.pdSource).values({
+			name: { en: "Server 1", ne: "Server 1" },
+			movieTemplate: "/parda/api/1/movie/{id}?start={start}",
+			tvTemplate: "/parda/api/1/tv/{id}/{season}/{episode}?start={start}",
+			adapter: "parda",
+		});
+	const hosted = async () => {
+		await seedSource();
+		time += 30_001;
+		return (await party.createParty(await ctx("asha"), realtime, { media: "movie", id: movie }, "en")).code;
+	};
+
+	it("has a row for every party function", () => {
+		const source = readFileSync("src/functions/parda/party.ts", "utf8");
+		const functions = [...source.matchAll(/export const (\w+) = createServerFn/g)].map((match) => match[1]);
+		expect(functions).toEqual(Object.keys(PARTY_OPERATIONS));
+	});
+
+	for (const [name, operation] of Object.entries(PARTY_OPERATIONS)) {
+		it(`${name}: members only, guests allowed, the wrong code refused`, async () => {
+			const code = await hosted();
+			const stranger = await ctx("bina");
+			if (!OPEN_WITH_THE_CODE.has(name))
+				await expect(operation(stranger, code)).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+			const guest = await ctx("guest", true);
+			await party.joinParty(guest, realtime, code, "en");
+			if (HOST_ONLY.has(name)) {
+				await expect(operation(guest, code)).rejects.toMatchObject({ code: "FORBIDDEN" });
+			} else if (name === "takeOverPardaParty") {
+				// The host is still here.
+				await expect(operation(guest, code)).rejects.toMatchObject({ code: "CONFLICT" });
+			} else {
+				await expect(operation(guest, code)).resolves.not.toThrow();
+			}
+
+			if (name !== "createPardaParty" && name !== "leavePardaParty") {
+				await expect(operation(await ctx("asha"), "no-such-party-00")).rejects.toMatchObject({ code: "NOT_FOUND" });
+			}
+		});
+	}
+
+	it("a full party, a blocked title and playback off refuse a seat", async () => {
+		const code = await hosted();
+		for (let seat = 0; seat < PARTY_MAX_MEMBERS - 1; seat += 1) {
+			await env.db.insert(schema.user).values({ id: `seat${seat}`, name: "Seat", email: `seat${seat}@example.com` });
+			await party.joinParty(await ctx(`seat${seat}`), realtime, code, "en");
+		}
+		await expect(party.joinParty(await ctx("bina"), realtime, code, "en")).rejects.toMatchObject({ code: "CONFLICT" });
+
+		await env.db.insert(schema.pdBlockedTitle).values({ media: "movie", tmdbId: movie, reason: "A notice" });
+		time += 30_001;
+		await expect(party.joinParty(await ctx("bina"), realtime, code, "en")).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await env.db.delete(schema.pdBlockedTitle);
+		time += 30_001;
+		await env.db.update(schema.pdSettings).set({ playbackEnabled: false });
+		time += 30_001;
+		await expect(
+			party.createParty(await ctx("bina"), realtime, { media: "movie", id: movie }, "en"),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+	});
+
+	it("a token reaches its own party's channel and no other", async () => {
+		const one = await hosted();
+		const two = (await party.createParty(await ctx("asha"), realtime, { media: "movie", id: movie }, "en")).code;
+		const joined = await party.joinParty(await ctx("bina"), realtime, one, "en");
+		const claims = JSON.parse(Buffer.from(joined.connection.token.split(".")[1] ?? "", "base64url").toString());
+		const channels = Object.keys(JSON.parse(claims["x-ably-capability"]));
+		expect(channels).toEqual([`parda-party:${one}`]);
+		// A member of one party gets no token for another.
+		await expect(party.partyToken(await ctx("bina"), realtime, two)).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+});
 
 describe("Parda's alerts access matrix", () => {
 	it("has a row for every alerts function", () => {

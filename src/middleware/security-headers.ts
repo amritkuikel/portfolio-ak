@@ -67,7 +67,7 @@ export const securityHeadersMiddleware = createMiddleware().server(async ({ next
 		const [cloudinary, frameOrigins] = await Promise.all([loadCloudinaryOrigins(), loadTurnstileOrigins()]);
 		const reportUrl = new URL(CSP_REPORT_PATH, request.url).href;
 		// What one section's pages add: other pages keep the strict policy.
-		const section = { embed: [] as string[], img: [] as string[] };
+		const section = { embed: [] as string[], img: [] as string[], connect: [] as string[] };
 		// parda:start
 		const { pathname } = new URL(request.url);
 		if (PARDA_PAGE.test(pathname)) {
@@ -80,7 +80,7 @@ export const securityHeadersMiddleware = createMiddleware().server(async ({ next
 			"content-security-policy",
 			buildCsp({
 				nonce,
-				connectOrigins: [...new Set([...clientConnectOrigins, ...cloudinary.connect])],
+				connectOrigins: [...new Set([...clientConnectOrigins, ...cloudinary.connect, ...section.connect])],
 				imgOrigins: [...cloudinary.img, ...section.img],
 				frameOrigins,
 				embedOrigins: section.embed,

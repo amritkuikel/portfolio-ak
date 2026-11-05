@@ -20,6 +20,8 @@ import {
 	startFor,
 } from "./machine";
 import { connectionBand, type PardaBand } from "./playback";
+import { useRedirectGuard } from "./redirect-guard";
+import { reportPlay, reportProgress } from "./report";
 import { createStallDetector } from "./stall";
 import { withStart } from "./templates";
 import type { WatchPageData, WatchSource } from "./watch-types";
@@ -37,8 +39,6 @@ type Data = Extract<WatchPageData, { configured: true }>;
 /** Progress is saved at most this often while playing, and when the page is hidden. */
 const SAVE_EVERY_MS = 15_000;
 const TICK_MS = 500;
-/** A click inside the player (a window blur while it has focus) arms the redirect guard this long. */
-const GUARD_MS = 5_000;
 
 export type PlayerStatus = "waiting" | "loading" | "playing" | "unavailable" | "off";
 
@@ -92,7 +92,6 @@ export function useWatchPlayer(data: Data, frameRef: RefObject<HTMLIFrameElement
 	const watchedS = useRef(0);
 	const lastPosition = useRef<number | null>(null);
 	const deadline = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const guardUntil = useRef(0);
 	/** Where the viewer is, as far as Parda knows: our record, then the player's reports. */
 	const resume = useRef<Resume | null>(data.resume);
 	const positionRef = useRef(0);
@@ -108,28 +107,24 @@ export function useWatchPlayer(data: Data, frameRef: RefObject<HTMLIFrameElement
 		if (!record) return;
 		record.sent = true;
 		const summary = stall.current.summary(Date.now());
-		void import("@/functions/parda/watch")
-			.then(({ recordPardaPlay }) =>
-				recordPardaPlay({
-					data: {
-						playbackId: record.playbackId,
-						sourceId: record.source.id,
-						media: title.media,
-						id: title.id,
-						...(episode ? { season: episode.season, episode: episode.episode } : {}),
-						failed: record.failed,
-						...(record.failReason ? { failReason: record.failReason.slice(0, 200) } : {}),
-						startMs: record.startMs,
-						stallCount: summary.count,
-						stallMs: fixed(summary.ms),
-						watchedS: Math.min(86_400, fixed(watchedS.current)),
-						switchedAway: record.switchedAway,
-						band: bandRef.current,
-					},
-					...(keepalive ? { fetch: (input, init) => fetch(input, { ...init, keepalive: true }) } : {}),
-				}),
-			)
-			.catch(() => {});
+		reportPlay(
+			{
+				playbackId: record.playbackId,
+				sourceId: record.source.id,
+				media: title.media,
+				id: title.id,
+				...(episode ? { season: episode.season, episode: episode.episode } : {}),
+				failed: record.failed,
+				...(record.failReason ? { failReason: record.failReason.slice(0, 200) } : {}),
+				startMs: record.startMs,
+				stallCount: summary.count,
+				stallMs: fixed(summary.ms),
+				watchedS: Math.min(86_400, fixed(watchedS.current)),
+				switchedAway: record.switchedAway,
+				band: bandRef.current,
+			},
+			keepalive,
+		);
 	};
 
 	const saveProgress = (keepalive = false) => {
@@ -152,21 +147,17 @@ export function useWatchPlayer(data: Data, frameRef: RefObject<HTMLIFrameElement
 			});
 			return;
 		}
-		void import("@/functions/parda/library")
-			.then(({ savePardaProgress }) =>
-				savePardaProgress({
-					data: {
-						media: title.media,
-						id: title.id,
-						...(episode ? { season: episode.season, episode: episode.episode } : {}),
-						watched: Math.min(86_400, at),
-						duration: durationRef.current === null ? null : Math.min(86_400, durationRef.current),
-						sourceId: play.current?.source.id ?? null,
-					},
-					...(keepalive ? { fetch: (input, init) => fetch(input, { ...init, keepalive: true }) } : {}),
-				}),
-			)
-			.catch(() => {});
+		reportProgress(
+			{
+				media: title.media,
+				id: title.id,
+				...(episode ? { season: episode.season, episode: episode.episode } : {}),
+				watched: Math.min(86_400, at),
+				duration: durationRef.current === null ? null : Math.min(86_400, durationRef.current),
+				sourceId: play.current?.source.id ?? null,
+			},
+			keepalive,
+		);
 	};
 
 	const armDeadline = (next: WatchSource) => {
@@ -383,32 +374,19 @@ export function useWatchPlayer(data: Data, frameRef: RefObject<HTMLIFrameElement
 		return () => clearInterval(timer);
 	});
 
-	// The redirect guard (PLAN 12.5): a click in the player arms beforeunload for 5 s; it also starts a needs-click deadline.
+	// A click in the player arms the redirect guard; it also starts a needs-click deadline.
+	useRedirectGuard(frameRef, () => {
+		const current = play.current?.source;
+		if (current?.needsClick && firstMoveAt.current === null && !deadline.current) armDeadline(current);
+	});
+
 	useEffect(() => {
-		const onBlur = () => {
-			if (!frameRef.current || document.activeElement !== frameRef.current) return;
-			guardUntil.current = Date.now() + GUARD_MS;
-			const current = play.current?.source;
-			if (current?.needsClick && firstMoveAt.current === null && !deadline.current) armDeadline(current);
-		};
-		const onBeforeUnload = (event: BeforeUnloadEvent) => {
-			if (Date.now() > guardUntil.current) return;
-			event.preventDefault();
-			// Older browsers need a value to ask.
-			event.returnValue = "";
-		};
 		const onPageHide = () => {
 			saveProgress(true);
 			sendPlay(true);
 		};
-		window.addEventListener("blur", onBlur);
-		window.addEventListener("beforeunload", onBeforeUnload);
 		window.addEventListener("pagehide", onPageHide);
-		return () => {
-			window.removeEventListener("blur", onBlur);
-			window.removeEventListener("beforeunload", onBeforeUnload);
-			window.removeEventListener("pagehide", onPageHide);
-		};
+		return () => window.removeEventListener("pagehide", onPageHide);
 	});
 
 	// Leaving for another page (an episode, Up next) is the end of this playback too.

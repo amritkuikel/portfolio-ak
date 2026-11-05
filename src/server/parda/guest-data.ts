@@ -5,6 +5,7 @@ import type { Tx } from "@/server/db/types";
 import type { GuestData } from "@/server/guests/data";
 import { mergeProfiles } from "./library/repository";
 import { mergeSaved } from "./library/saved-repository";
+import { claimParties } from "./party/repository";
 import { defaultProfile, profilesOf } from "./profiles/repository";
 
 /**
@@ -33,5 +34,6 @@ export const PARDA_GUEST_DATA: GuestData = {
 			}
 		}
 		await tx.update(pdReport).set({ reporterId: toUserId }).where(eq(pdReport.reporterId, fromUserId));
+		await claimParties(tx, fromUserId, toUserId);
 	},
 };

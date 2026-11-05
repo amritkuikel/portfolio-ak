@@ -116,6 +116,14 @@ export const serverEnvSchema = {
 	PARDA_PLAYER_BASE: z.url({ protocol: /^https?$/ }).optional(),
 	/** Bearer token for the daily source probe (/api/parda/probe). Unset: the route answers 404. */
 	PARDA_PROBE_SECRET: z.string().trim().min(16).optional(),
+	/** The realtime service's API key for watch parties (`appId.keyId:secret`). Unset: the party's UI is hidden. */
+	PARDA_REALTIME_KEY: z
+		.string()
+		.trim()
+		.regex(/^[^:\s]+:\S+$/, "Use the whole key, name and secret, from Ably's dashboard.")
+		.optional(),
+	/** The e2e suite's stand-in for the realtime service (ws://). Leave unset everywhere else. */
+	PARDA_REALTIME_URL: z.url({ protocol: /^wss?$/ }).optional(),
 	// parda:end
 };
 

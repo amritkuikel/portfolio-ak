@@ -9,6 +9,8 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { DemoQuery } from "../../scripts/lib/demo-data.ts";
+import { E2E } from "./config.ts"; // @parda
+import { servePartyRelay } from "./parda-relay.ts"; // @parda
 import { popularFixture, serveTmdb } from "./tmdb.ts"; // @parda
 
 export type CapturedEmail = { id: string; to: string; subject: string; text: string; html: string; tag?: string };
@@ -428,6 +430,28 @@ export async function serveHarness(port: number, query: DemoQuery) {
 					).rows[0]) as { id: string };
 				return send(response, 200, { slug: "e2e-review-picks", collection: collection.id, billboard: slot.id });
 			}
+			if (route === "POST /e2e/parda-party") {
+				// Task 69a: a party in its lobby, hosted by the admin, for the review's page.
+				const title = popularFixture("movie", 0).id;
+				const { rows: found } = await query(
+					`select p."code" from "pd_party" p where p."code" = 'e2e-review-party' limit 1`,
+				);
+				if (found[0]) return send(response, 200, found[0]);
+				const { rows: hosts } = await query(`select "id" from "user" where "email" = $1`, [E2E.users.admin.email]);
+				const { rows: sources } = await query(`select "id" from "pd_source" order by "position" limit 1`);
+				const host = hosts[0] as { id: string };
+				const { rows: parties } = await query(
+					`insert into "pd_party" ("code", "host_id", "media", "tmdb_id", "source_id", "expires_at")
+					 values ('e2e-review-party', $1, 'movie', $2, $3, now() + interval '30 days') returning "id", "code"`,
+					[host.id, title, (sources[0] as { id: string }).id],
+				);
+				const party = parties[0] as { id: string; code: string };
+				await query(`insert into "pd_party_member" ("party_id", "user_id", "name") values ($1, $2, 'E2E Admin')`, [
+					party.id,
+					host.id,
+				]);
+				return send(response, 200, { code: party.code });
+			}
 			if (route === "POST /e2e/parda-alert") {
 				// Task 68: the daily check's alert, S1 E1–2 of a series, for an account's default profile.
 				const body = (await readJson(request)) as { userId: string; tmdbId: number; title: string };
@@ -455,6 +479,7 @@ export async function serveHarness(port: number, query: DemoQuery) {
 		}
 	});
 
+	servePartyRelay(server, E2E.realtimeKey); // @parda
 	await new Promise<void>((resolve, reject) => {
 		server.once("error", reject);
 		server.listen(port, "127.0.0.1", resolve);

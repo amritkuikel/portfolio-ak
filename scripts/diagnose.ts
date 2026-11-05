@@ -82,6 +82,7 @@ const services: Array<[string, string[]]> = [
 	["Google sign-in", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]],
 	["TMDB (Parda's catalogue)", ["TMDB_READ_TOKEN"]], // @parda
 	["Parda's source probe", ["PARDA_PROBE_SECRET"]], // @parda
+	["Parda's watch parties", ["PARDA_REALTIME_KEY"]], // @parda
 ];
 const on = services.filter(([, keys]) => configured(keys)).map(([name]) => name);
 const off = services.filter(([, keys]) => !configured(keys)).map(([name]) => name);

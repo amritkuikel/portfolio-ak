@@ -58,5 +58,7 @@ export type WatchPageData =
 			resume: { position: number; sourceId: string | null } | null;
 			/** Up next counts down when true (the profile's choice). */
 			autoplay: boolean;
+			/** Watch parties are configured (PARDA_REALTIME_KEY): *Watch together* shows. */
+			party: boolean;
 			trailer: TitleVideo | null;
 	  };

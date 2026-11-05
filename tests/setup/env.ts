@@ -30,5 +30,7 @@ const OFF = [
 	"TMDB_READ_TOKEN", // @parda
 	"PARDA_PLAYER_BASE", // @parda
 	"PARDA_PROBE_SECRET", // @parda
+	"PARDA_REALTIME_KEY", // @parda
+	"PARDA_REALTIME_URL", // @parda
 ];
 for (const key of OFF) delete process.env[key];

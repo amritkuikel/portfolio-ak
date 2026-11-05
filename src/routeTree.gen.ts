@@ -178,6 +178,7 @@ import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/not
 import { Route as PardaAppPardaCSlugRouteImport } from './routes/_parda/app/parda/c/$slug'
 import { Route as PardaAppPardaCollectionIdRouteImport } from './routes/_parda/app/parda/collection/$id'
 import { Route as PardaAppPardaLibraryTabRouteImport } from './routes/_parda/app/parda/library/$tab'
+import { Route as PardaAppPardaPartyCodeRouteImport } from './routes/_parda/app/parda/party/$code'
 import { Route as PardaAppPardaPersonIdRouteImport } from './routes/_parda/app/parda/person/$id'
 import { Route as TasklineAppTasklineShellWsRouteRouteImport } from './routes/_taskline/app/taskline/_shell/$ws/route'
 import { Route as TasklineAppTasklineShellAccountRouteImport } from './routes/_taskline/app/taskline/_shell/account'
@@ -1112,6 +1113,11 @@ const PardaAppPardaLibraryTabRoute = PardaAppPardaLibraryTabRouteImport.update({
   path: '/app/parda/library/$tab',
   getParentRoute: () => PardaRouteRoute,
 } as any)
+const PardaAppPardaPartyCodeRoute = PardaAppPardaPartyCodeRouteImport.update({
+  id: '/app/parda/party/$code',
+  path: '/app/parda/party/$code',
+  getParentRoute: () => PardaRouteRoute,
+} as any)
 const PardaAppPardaPersonIdRoute = PardaAppPardaPersonIdRouteImport.update({
   id: '/app/parda/person/$id',
   path: '/app/parda/person/$id',
@@ -1494,6 +1500,7 @@ export interface FileRoutesByFullPath {
   '/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
+  '/app/parda/party/$code': typeof PardaAppPardaPartyCodeRoute
   '/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
@@ -1673,6 +1680,7 @@ export interface FileRoutesByTo {
   '/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
+  '/app/parda/party/$code': typeof PardaAppPardaPartyCodeRoute
   '/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
   '/app/taskline/account': typeof TasklineAppTasklineShellAccountRoute
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
@@ -1881,6 +1889,7 @@ export interface FileRoutesById {
   '/_parda/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/_parda/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/_parda/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
+  '/_parda/app/parda/party/$code': typeof PardaAppPardaPartyCodeRoute
   '/_parda/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
   '/_taskline/app/taskline/_shell/account': typeof TasklineAppTasklineShellAccountRoute
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
@@ -2084,6 +2093,7 @@ export interface FileRouteTypes {
     | '/app/parda/c/$slug'
     | '/app/parda/collection/$id'
     | '/app/parda/library/$tab'
+    | '/app/parda/party/$code'
     | '/app/parda/person/$id'
     | '/app/taskline/account'
     | '/app/taskline/home'
@@ -2263,6 +2273,7 @@ export interface FileRouteTypes {
     | '/app/parda/c/$slug'
     | '/app/parda/collection/$id'
     | '/app/parda/library/$tab'
+    | '/app/parda/party/$code'
     | '/app/parda/person/$id'
     | '/app/taskline/account'
     | '/app/taskline/home'
@@ -2470,6 +2481,7 @@ export interface FileRouteTypes {
     | '/_parda/app/parda/c/$slug'
     | '/_parda/app/parda/collection/$id'
     | '/_parda/app/parda/library/$tab'
+    | '/_parda/app/parda/party/$code'
     | '/_parda/app/parda/person/$id'
     | '/_taskline/app/taskline/_shell/account'
     | '/_taskline/app/taskline/_shell/home'
@@ -3723,6 +3735,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PardaAppPardaLibraryTabRouteImport
       parentRoute: typeof PardaRouteRoute
     }
+    '/_parda/app/parda/party/$code': {
+      id: '/_parda/app/parda/party/$code'
+      path: '/app/parda/party/$code'
+      fullPath: '/app/parda/party/$code'
+      preLoaderRoute: typeof PardaAppPardaPartyCodeRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
     '/_parda/app/parda/person/$id': {
       id: '/_parda/app/parda/person/$id'
       path: '/app/parda/person/$id'
@@ -4007,6 +4026,7 @@ interface PardaRouteRouteChildren {
   PardaAppPardaCSlugRoute: typeof PardaAppPardaCSlugRoute
   PardaAppPardaCollectionIdRoute: typeof PardaAppPardaCollectionIdRoute
   PardaAppPardaLibraryTabRoute: typeof PardaAppPardaLibraryTabRoute
+  PardaAppPardaPartyCodeRoute: typeof PardaAppPardaPartyCodeRoute
   PardaAppPardaPersonIdRoute: typeof PardaAppPardaPersonIdRoute
   PardaAppPardaTypeIdCreditsRoute: typeof PardaAppPardaTypeIdCreditsRoute
   PardaAppPardaWatchTypeIdRoute: typeof PardaAppPardaWatchTypeIdRoute
@@ -4028,6 +4048,7 @@ const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaCSlugRoute: PardaAppPardaCSlugRoute,
   PardaAppPardaCollectionIdRoute: PardaAppPardaCollectionIdRoute,
   PardaAppPardaLibraryTabRoute: PardaAppPardaLibraryTabRoute,
+  PardaAppPardaPartyCodeRoute: PardaAppPardaPartyCodeRoute,
   PardaAppPardaPersonIdRoute: PardaAppPardaPersonIdRoute,
   PardaAppPardaTypeIdCreditsRoute: PardaAppPardaTypeIdCreditsRoute,
   PardaAppPardaWatchTypeIdRoute: PardaAppPardaWatchTypeIdRoute,
