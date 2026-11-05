@@ -38,6 +38,7 @@ const OFF = [
 	"RESEND_API_KEY",
 	"DATABASE_URL_UNPOOLED",
 	"TMDB_READ_TOKEN", // @parda
+	"PARDA_PROBE_SECRET", // @parda
 ];
 
 console.log(`[offline] database: in-memory PGlite on port ${served.port}`);

@@ -26,6 +26,9 @@ pnpm db:seed-taskline --password "…"   # Taskline's demo team: 5 accounts, 3 p
 
 - `/api/cron/attachments` (03:17 UTC) deletes removed images and day-old unlinked uploads from Cloudinary.
 - `/api/cron/guests` (03:41 UTC) deletes guest sessions older than 7 days, with their app data and uploads (decision 0186).
+- `/api/cron/parda` (02:30 UTC) refreshes Parda's title snapshot and rolls up the sources' plays and probe runs into the day's scores (decisions 0229 and 0238). <!-- @parda -->
+
+**Parda's source probe** (decision 0238) is a GitHub Actions workflow, not a Vercel cron: `.github/workflows/parda-probe.yml` runs `pnpm parda:probe` daily at 01:40 UTC. Set `PARDA_PROBE_SECRET` (16+ random characters) in the Vercel env and, with the same value, in the repo's Actions secrets, and the deployed URL as the Actions variable `PARDA_PROBE_URL`; without the variable the job is skipped. It takes about a minute per source and title (about 12 minutes a day for 4 sources): after the first runs, check the Actions minutes against the repo's allowance, and run it every other day if they don't fit. <!-- @parda -->
 
 ## Every release
 

@@ -8,8 +8,9 @@ import { zodInput } from "@/functions/_lib/validator";
 import { withPardaCatalog } from "@/middleware/parda";
 import { locales } from "@/paraglide/runtime";
 import { db } from "@/server/db/client";
-import { limitPlayback, viewerKind } from "@/server/parda/player/limits";
+import { failureClient, limitPlayback, viewerKind } from "@/server/parda/player/limits";
 import { recordPlay, reportProblem } from "@/server/parda/player/plays";
+import { noteTitleFailure } from "@/server/parda/player/stats";
 import { watchPage } from "@/server/parda/player/watch";
 import { PROFILE_COOKIE, readingProfile } from "@/server/parda/profiles/service";
 
@@ -71,14 +72,27 @@ export const getPardaWatch = createServerFn({ method: "GET" })
 		);
 	});
 
-/** A playback's measurements (`pd_play`), sent as it starts, fails, is left or ends. */
+/**
+ * A playback's measurements (`pd_play`), sent as it starts, fails, is left or ends. A
+ * playback that has just failed also counts against its source on this title (decision
+ * 0238), within its own limit; past it, the failure still counts in the daily rollup.
+ */
 export const recordPardaPlay = createServerFn({ method: "POST" })
 	.middleware([withPardaCatalog])
 	.validator(zodInput(playInput))
 	.handler(async ({ data, context }): Promise<{ ok: true }> => {
 		if (!context.catalog) return { ok: true };
 		await limitPlayback(context.session, "play");
-		await recordPlay(db, context.catalog.services.controls, viewerKind(context.session), data);
+		const { failedNow, sourceId } = await recordPlay(
+			db,
+			context.catalog.services.controls,
+			viewerKind(context.session),
+			data,
+		);
+		if (failedNow && sourceId) {
+			const client = await failureClient(context.session);
+			if (client) await noteTitleFailure(db, { sourceId, media: data.media, tmdbId: data.id }, client);
+		}
 		return { ok: true };
 	});
 

@@ -57,7 +57,10 @@ export const pdSource = pgTable(
 		origins: jsonb().$type<string[]>().notNull().default([]),
 		adapter: text().$type<PardaSourceAdapter>().notNull().default("none"),
 		sandbox: text().$type<PardaSourceSandbox>().notNull().default("none"),
-		adaptive: boolean().notNull().default(false),
+		/** The admin's word on an adaptive stream; null takes the probe's (decision 0238). */
+		adaptive: boolean(),
+		/** The admin's word on the top quality, in pixels of height; null takes the probe's. */
+		quality: integer(),
 		needsClick: boolean().notNull().default(false),
 		/** Rows that fail together share a group: falling back skips to another group first. */
 		cdnGroup: text(),
@@ -75,6 +78,7 @@ export const pdSource = pgTable(
 	(table) => [
 		check("pd_source_adapter_valid", sql`${table.adapter} in ('parda', 'none')`),
 		check("pd_source_sandbox_valid", sql`${table.sandbox} in ('none', 'popups', 'strict')`),
+		check("pd_source_quality_valid", sql`${table.quality} between 144 and 4320`),
 	],
 );
 
@@ -111,6 +115,8 @@ export const pdPlay = pgTable(
 	},
 	(table) => [
 		index("pd_play_source_idx").on(table.sourceId, table.createdAt),
+		/** The rollup's window (decision 0238): the last 7 days, every source at once. */
+		index("pd_play_created_idx").on(table.createdAt),
 		check("pd_play_viewer_kind_valid", sql`${table.viewerKind} in ('account', 'guest', 'anonymous')`),
 		check("pd_play_band_valid", sql`${table.band} in ('slow', 'ok', 'unknown')`),
 		check("pd_play_media_valid", sql`${table.media} in ('movie', 'tv')`),

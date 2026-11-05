@@ -115,6 +115,8 @@ const app = spawn(process.execPath, [".output/server/index.mjs"], {
 		TMDB_READ_TOKEN: "e2e-token-not-for-production",
 		TMDB_API_BASE: `${E2E.harnessURL}/tmdb/3`,
 		TMDB_IMAGE_BASE: `${E2E.harnessURL}/tmdb/img`,
+		// The daily probe's route (decision 0238): the flows call it; CI never runs the probe itself.
+		PARDA_PROBE_SECRET: E2E.probeSecret,
 		// parda:end
 	},
 });

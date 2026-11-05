@@ -32,7 +32,10 @@ export const SourceList: Story = {
 		await expect(await canvas.findByRole("heading", { level: 1, name: m.pd_admin_sources_title() })).toBeVisible();
 		await expect(canvas.getByRole("switch", { name: m.pd_admin_playback_switch() })).toBeChecked();
 		await expect(canvas.getByText(m.pd_admin_source_pinned())).toBeVisible();
-		await expect(canvas.getByText(m.pd_admin_source_sandbox({ sandbox: SANDBOX_LABELS.popups() }))).toBeVisible();
+		// Task 65a: the order's mode, and each row's standing (the player flags sit behind the Columns menu).
+		await expect(canvas.getByTestId("parda-source-order")).toHaveAttribute("data-state", "auto");
+		await expect(canvas.getAllByText(m.pd_admin_score_from_probe()).length).toBeGreaterThan(0);
+		await expect(canvas.getByText(m.pd_admin_quality_from_admin())).toBeVisible();
 		await expect(canvas.getByRole("link", { name: /^(Server 1|सर्भर 1)$/ })).toBeVisible();
 	},
 };

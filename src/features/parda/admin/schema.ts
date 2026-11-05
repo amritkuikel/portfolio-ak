@@ -22,6 +22,10 @@ const version = () => z.string().regex(/^[1-9][0-9]*$/);
 export const SOURCE_ADAPTERS = ["parda", "none"] as const satisfies ReadonlyArray<PardaSourceAdapter>;
 export const SOURCE_SANDBOXES = ["none", "popups", "strict"] as const;
 export type LabSandbox = (typeof SOURCE_SANDBOXES)[number];
+/** The admin's word on an adaptive stream, or the probe's (decision 0238). */
+export const SOURCE_ADAPTIVE = ["probe", "yes", "no"] as const;
+/** The admin's top quality (picture height), or the probe's. */
+export const SOURCE_QUALITIES = ["probe", "2160", "1440", "1080", "720", "480", "360"] as const;
 
 /** Every field of a source but its place in the order (PLAN 12.5): new rows go last, the order is its own write. */
 export const sourceInput = z.strictObject({
@@ -32,7 +36,8 @@ export const sourceInput = z.strictObject({
 	origins: z.array(z.string().trim().min(1).max(200)).max(10),
 	adapter: z.enum(SOURCE_ADAPTERS),
 	sandbox: z.enum(SOURCE_SANDBOXES),
-	adaptive: z.boolean(),
+	adaptive: z.enum(SOURCE_ADAPTIVE),
+	quality: z.enum(SOURCE_QUALITIES),
 	needsClick: z.boolean(),
 	/** Empty: a group of its own. */
 	cdnGroup: optionalText({ max: 40 }),
@@ -55,13 +60,38 @@ export type SourceStateInput = z.output<typeof sourceStateInput>;
 /** The whole order, every source once. */
 export const sourceOrderInput = z.strictObject({ ids: z.array(z.uuid()).min(1).max(100) });
 
+/** A source's latest daily rollup (decision 0238), as the sources page shows it. */
+export type AdminSourceStanding = {
+	/** The UTC day the rollup ran; its window is the 7 days before. */
+	day: string;
+	/** Null: no data, so the source keeps its seed position. */
+	score: number | null;
+	/** `viewers`: 20 plays or more; `probe`: the probe's numbers and neutral values. */
+	from: "viewers" | "probe" | null;
+	plays: number;
+	failureRate: number | null;
+	startMedianMs: number | null;
+	/** Stall seconds per watched minute. */
+	stallPerMinute: number | null;
+	popupsPerClick: number | null;
+	probeRuns: number;
+	probedAt: string | null;
+};
+
 export type AdminSource = SourceInput & {
 	id: string;
 	position: number;
+	/** Where an enabled source starts in today's order (an ordinary connection); null when disabled. */
+	rank: number | null;
 	updatedAt: string;
 	/** Reports still open about this source, and how many of them are about ads (PLAN 12.5). */
 	openReports: number;
 	adsReports: number;
+	/** The quality and adaptive flag in use: the admin's, else the probe's. */
+	height: number | null;
+	heightFrom: "admin" | "probe" | null;
+	adaptiveNow: boolean;
+	standing: AdminSourceStanding | null;
 };
 
 export type LabSource = {
@@ -187,7 +217,12 @@ export type AdminSettings = {
 	banner: Localized;
 	playbackEnabled: boolean;
 	cacheEpoch: number;
+	/** `auto`: by the daily scores; `manual`: the admin's order. Pinned rows lead in either. */
+	sourceOrder: "auto" | "manual";
 	updatedAt: string;
 };
 
 export const playbackInput = z.strictObject({ enabled: z.boolean() });
+
+export const SOURCE_ORDER_MODES = ["auto", "manual"] as const;
+export const sourceOrderModeInput = z.strictObject({ mode: z.enum(SOURCE_ORDER_MODES) });

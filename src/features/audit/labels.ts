@@ -88,6 +88,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"parda.source.update": m.audit_action_parda_source_update,
 	"parda.source.state": m.audit_action_parda_source_state,
 	"parda.source.reorder": m.audit_action_parda_source_reorder,
+	"parda.source.order": m.audit_action_parda_source_order,
 	"parda.source.delete": m.audit_action_parda_source_delete,
 	"parda.title.block": m.audit_action_parda_title_block,
 	"parda.title.unblock": m.audit_action_parda_title_unblock,

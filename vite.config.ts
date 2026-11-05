@@ -123,6 +123,8 @@ export default defineConfig(async ({ command, mode }) => {
 					// parda:start
 					"/app/parda/manifest.webmanifest": { handler: "./src/server/routes/parda-manifest.ts", method: "GET" },
 					"/ne/app/parda/manifest.webmanifest": { handler: "./src/server/routes/parda-manifest.ts", method: "GET" },
+					// The daily source probe (decision 0238): GET what to probe, POST what it saw; 404 without its secret.
+					"/api/parda/probe": { handler: "./src/server/routes/parda-probe.ts" },
 					// parda:end
 				},
 				// Security headers on every response (pages, assets, API). The CSP is per

@@ -1,7 +1,7 @@
 import { defineStatuses } from "@/components/data-display/status-badge";
 import { m } from "@/paraglide/messages";
 import type { PardaReportKind, PardaReportStatus } from "../player/playback";
-import type { LabSandbox, PardaAdminMedia, SOURCE_ADAPTERS } from "./schema";
+import type { LabSandbox, PardaAdminMedia, SOURCE_ADAPTERS, SOURCE_ADAPTIVE } from "./schema";
 import type { PardaReportKindFilter, PardaReportStatusFilter } from "./search";
 
 /** Localized names of Parda's admin values, read at render time. */
@@ -15,6 +15,13 @@ export const SANDBOX_LABELS: Readonly<Record<LabSandbox, () => string>> = {
 	none: m.pd_admin_sandbox_none,
 	popups: m.pd_admin_sandbox_popups,
 	strict: m.pd_admin_sandbox_strict,
+};
+
+/** The admin's word on an adaptive stream, or the probe's (decision 0238). */
+export const ADAPTIVE_LABELS: Readonly<Record<(typeof SOURCE_ADAPTIVE)[number], () => string>> = {
+	probe: m.pd_admin_source_from_probe,
+	yes: m.pd_admin_source_adaptive_yes,
+	no: m.pd_admin_source_adaptive_no,
 };
 
 export const MEDIA_LABELS: Readonly<Record<PardaAdminMedia, () => string>> = {

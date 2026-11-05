@@ -2174,7 +2174,7 @@ As 11.1, with these differences:
 | 63 | Title, credits, person and collection pages | xhigh | Done (decision 0235) |
 | 64 | The player, progress and Continue watching, guests | xhigh | Done (decision 0236) |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Done (decision 0237) |
-| 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Planned |
+| 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Done (decision 0238) |
 | 66 | Search and discover | high | Planned |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
 | 68 | Schedule and new-episode alerts | high | Planned |
@@ -2367,8 +2367,8 @@ Across the players:
 
   The task may tune the weights, with the reasons in a decision. A test checks that the measured table in 12.4 ranks Vidy first.
 - **Data needed:** under 20 plays in the window, a source uses probe numbers for what they cover and neutral values for the rest. With neither, it keeps its seed position. In auto mode, 5% of plays start on an eligible source with under 20 plays, so new sources get data.
-- **Two orders:** `cron-parda.ts` recomputes them once a day, so the order can't flap. `ok` sorts by score. `slow` puts adaptive sources first, then sorts by score, because Vidy's fixed bitrate stalled at 5 Mbps.
-- **At click, per viewer:** `player/sources.ts` reads the cached orders (30 s, with the sources) and this title's failures, which takes milliseconds and calls no player. Two failed playbacks of a title within 24 h skip that source for that title for 24 h (`pd_source_title_fail`). The client treats `navigator.connection.downlink` under 10 (Chrome caps it at 10) or `saveData` as `slow`. Browsers without the API use `ok`.
+- **Two orders:** `cron-parda.ts` recomputes the scores once a day, so the order can't flap; each play makes the orders from them and the rows as they are (0238), so pins and the mode apply at once. `ok` sorts by score. `slow` puts adaptive sources first, then sorts by score, because Vidy's fixed bitrate stalled at 5 Mbps.
+- **At click, per viewer:** `player/sources.ts` reads the cached orders (30 s, with the sources) and this title's failures, which takes milliseconds and calls no player. Failed playbacks of a title from two clients within 24 h send that source last for that title for 24 h (`pd_source_title_fail`; one client can't, 0238). The client treats `navigator.connection.downlink` under 10 (Chrome caps it at 10) or `saveData` as `slow`. Browsers without the API use `ok`.
 - **Rejected:** racing hidden iframes multiplies ads, trackers and data use. A speed test from the browser reaches the embed host, not the video CDN that does the work.
 - **Admin:** `pd_settings.source_order` is `auto` or `manual`. Pinned rows stay on top in either mode. The sources page shows each row's score, plays, failure rate, median start, stalls, quality, popups, `ads` reports and last probe.
 
@@ -2620,20 +2620,31 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0030_parda_admin`; it fails if a title is already blocked twice, which no screen could do before).
 
-### Task 65a: Source ranking (planned)
+### Task 65a: Source ranking (done)
 
-- **Rollup:** `cron-parda.ts` builds `pd_source_stat` from `pd_play` per source and band, then computes the score and the `ok` and `slow` orders, as in 12.5.
-- **Per-title failures:** `pd_source_title_fail`, written when a failed playback is reported and rate limited, so one client can't hide a source.
-- **At click:** `player/sources.ts` serves the cached orders and skips sources failing on this title, including the 5% for sources short of data. Parties are left out of that.
-- **Probe:** `scripts/probe-sources.ts`, `pnpm parda:probe`, `.github/workflows/parda-probe.yml`, and the route `src/server/routes/parda-probe.ts`, with its knip entry and `pd_source_probe`. The rows' adaptive flag and quality come from the probe unless the admin set them.
-  - The first runs check the Actions minutes against the repo's allowance. If they don't fit, run every other day or on fewer titles.
-  - The secret goes in the repo's Actions secrets and the Vercel env. Note this in `deployment.md` and the guide.
-- **Admin:** the order setting, pinning, and the measurement columns on the sources page.
-- **Tests:**
-  - unit: the score (each factor, floors, neutral values, the table in 12.4 ranks Vidy first), the `slow` order, under 20 plays, the seed fallback;
-  - PGlite: the rollup, the title skip and its 24 h expiry, pinned rows, manual order, the probe route (wrong secret, bad payload, 404 without the secret);
-  - e2e with the fake player: a source failing for a title is skipped on the next play; a slow connection (`navigator.connection` stubbed) starts on the adaptive source; switching to manual order uses the admin's order.
-- **Decisions:** ranking from viewers and a probe rather than a live test at each play; the weights.
+**Done** (decision 0238; the guide's "Ranking").
+
+**What changed:**
+- **Rollup:** the daily job's second step (`player/stats.ts`) rolls the last 7 days of `pd_play` up per source and band (party plays out) with the probe's runs into `pd_source_stat`, and scores each source (`player/ranking.ts`, the plan's weights unchanged). Rollups, probes and spent failures older than 35 days are pruned.
+- **At click:** the watch page orders from the latest scores and the rows as they are: pinned first, then by score (an unscored row keeps its seed slot) or the admin's order; `slow` puts adaptive sources first; sources failing on this title go last; 5% of plays start on a source short of data once another has some. Deadlines come from the p90 start, the server menu's quality from the admin or the probe.
+- **Per-title failures:** `pd_source_title_fail`, written when a playback turns failed, with its own rate limit; a failure from a second client within 24 h sends the source last for that title for 24 h.
+- **Probe:** `GET`/`POST /api/parda/probe` (`PARDA_PROBE_SECRET`, a 404 without it), `scripts/probe-sources.ts` (`pnpm parda:probe`), `.github/workflows/parda-probe.yml` (daily, 01:40 UTC, skipped without the `PARDA_PROBE_URL` variable), `pd_source_probe`.
+- **Admin:** the order's mode beside the kill switch (`setPardaSourceOrder`, audited); the sources page's rank, score, plays, failure rate, median start, stalls, quality, popups and last probe; the form's adaptive flag and top quality default to "From the probe" (`pd_source.adaptive` nullable, `pd_source.quality` new; migration `0031_parda_ranking`).
+- **Tests:** `tests/unit/parda-ranking.test.ts` (each factor and floor, neutral values, under 20 plays, the seed fallback, the 12.4 table ranks Vidy first, pins, manual, slow, skips, exploration), `tests/unit/parda-probe.test.ts`, `tests/server/parda-ranking.test.ts` (the rollup, the skip and its 24 h, one client, pinned and manual orders, slow, deadlines, exploration, the probe route, the admin's view), the guard test's `setPardaSourceOrder`, and four e2e flows (the probe route; automatic vs manual order; a slow connection on an adaptive source; a title's failing source tried last).
+
+**Deviations (0238):**
+- **Orders aren't stored,** only scores, so pins and the mode apply at once.
+- **One client can't hide a source:** the second failure must come from someone else, besides the rate limit.
+- **Skipped sources go last** instead of leaving the order.
+- **The probe measured only the placeholder** (start time; no video, so no quality, ladder, popups or hosts). It needs the real provider, and its Actions minutes are checked after its first runs.
+- **E2E sets standings through the harness;** the rollup is covered on PGlite.
+- **Found on the way:** `SPECS.parda` in `scripts/strip-demo.ts` didn't list Tasks 64 and 65's tests (`parda-library`, `parda-access`, `parda-admin`); it does now.
+
+**Numbers:** entry 278.7 of 280 kB (unchanged: no new routes). `pnpm test` 147 files, 1,436 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, `pnpm test:storybook` (536 of 536), build-storybook, `e2e/flows/parda.spec.ts` (41 of 41) and the review of every `/app/parda` and `/admin/parda` page (276 of 276). The full suites wait for Task 70.
+
+**Left for the owner:**
+- Run `pnpm db:migrate` on Neon (`0031_parda_ranking`).
+- To run the probe: set `PARDA_PROBE_SECRET` in Vercel and in the repo's Actions secrets, and the Actions variable `PARDA_PROBE_URL`; after the first runs, check the Actions minutes (deployment.md).
 
 ### Task 66: Search and discover (planned)
 

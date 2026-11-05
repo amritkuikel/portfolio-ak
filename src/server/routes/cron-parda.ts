@@ -10,7 +10,7 @@ import { db } from "../db/client";
 import { serverEnv } from "../env";
 import { log } from "../log";
 import { runPardaCron } from "../parda/cron";
-import { pardaTmdb } from "../parda/tmdb/store";
+import { pardaControls, pardaTmdb } from "../parda/tmdb/store";
 
 const json = (status: number, body: unknown) =>
 	new Response(JSON.stringify(body), {
@@ -28,7 +28,7 @@ export default defineHandler(async (event) => {
 	const secret = serverEnv.CRON_SECRET;
 	if (!secret) return json(404, { error: "Not found" });
 	if (!authorized(event.req.headers.get("authorization"), secret)) return json(401, { error: "Unauthorized" });
-	const result = await runPardaCron(db, pardaTmdb);
+	const result = await runPardaCron(db, pardaTmdb, { onRanked: pardaControls.invalidate });
 	log("info", "parda daily job", result);
 	return json(200, { ok: true, ...result });
 });

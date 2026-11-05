@@ -81,6 +81,7 @@ const services: Array<[string, string[]]> = [
 	["Turnstile (captcha)", ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"]],
 	["Google sign-in", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]],
 	["TMDB (Parda's catalogue)", ["TMDB_READ_TOKEN"]], // @parda
+	["Parda's source probe", ["PARDA_PROBE_SECRET"]], // @parda
 ];
 const on = services.filter(([, keys]) => configured(keys)).map(([name]) => name);
 const off = services.filter(([, keys]) => !configured(keys)).map(([name]) => name);

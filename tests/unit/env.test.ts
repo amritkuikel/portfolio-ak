@@ -65,6 +65,10 @@ describe("server env", () => {
 		expect((serverError({ ...validServer, PARDA_PLAYER_BASE: "ftp://x.example.com" }) as Error).message).toMatch(
 			/PARDA_PLAYER_BASE/,
 		);
+		expect(createServerEnv({ ...validServer }).PARDA_PROBE_SECRET).toBeUndefined();
+		expect((serverError({ ...validServer, PARDA_PROBE_SECRET: "short" }) as Error).message).toMatch(
+			/PARDA_PROBE_SECRET/,
+		);
 	});
 	// parda:end
 

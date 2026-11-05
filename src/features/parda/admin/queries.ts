@@ -5,6 +5,7 @@ import {
 	getPardaSettings,
 	purgePardaCache,
 	setPardaPlayback,
+	setPardaSourceOrder,
 	updatePardaSettings,
 } from "@/functions/parda-admin/settings";
 import {
@@ -108,6 +109,11 @@ export const pardaAdminMutations = {
 		mutationOptions({
 			mutationKey: [...pardaAdminKeys.settings(), "playback"],
 			mutationFn: (enabled: boolean) => setPardaPlayback({ data: { enabled } }),
+		}),
+	setSourceOrder: () =>
+		mutationOptions({
+			mutationKey: [...pardaAdminKeys.settings(), "source-order"],
+			mutationFn: (mode: "auto" | "manual") => setPardaSourceOrder({ data: { mode } }),
 		}),
 	purgeCache: () =>
 		mutationOptions({

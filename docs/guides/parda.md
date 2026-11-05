@@ -109,7 +109,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 
 | File | Holds |
 | --- | --- |
-| `src/server/parda/player/watch.ts` | `watchPage`: the title, the episode and its neighbours, every enabled source filled except `{start}`, the `ok` and `slow` orders, the deadlines, the resume |
+| `src/server/parda/player/watch.ts` | `watchPage`: the title, the episode and its neighbours, every enabled source filled except `{start}`, the `ok` and `slow` orders (see "Ranking"), the deadlines, the resume |
 | `src/features/parda/player/machine.ts` | The pure choices: the order, the next source (another CDN group first), the start position, stuttering, Up next |
 | `src/features/parda/player/use-watch-player.ts` | The player's life: picks on mount, loads, falls back, saves progress and `pd_play`, offers a smoother server, the redirect guard |
 | `src/features/parda/player/watch-page.tsx`, `watch-panels.tsx` | The page: the box, the click shield and Parda's controls, the bar (server, episodes, theater, report), Up next, the episodes sheet, *Report a problem*, the ad-blocker hint |
@@ -120,7 +120,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 | `src/functions/parda/watch.ts`, `library.ts` | The watch page, plays and reports (`withPardaCatalog`, rate limited); the library (`requirePardaViewer` → `withPardaServices`) |
 
 - **Nothing loads before mount:** the server renders the picture in the player's box; the page reads the connection and the pick, then sets the iframe's `src`, so a slow connection never loads the wrong player and nothing shifts.
-- **Failing:** the adapter's `failed`, or no moving position by the source's deadline (15 s until Task 65a measures it; a needs-click source's starts at the first click in the player). The next source is in another CDN group if there is one ("Trying Server 3…"), then the rest, then "Not available right now" with the trailer and *Report*.
+- **Failing:** the adapter's `failed`, or no moving position by the source's deadline (its p90 start + 5 s, 12–30 s, once it has 20 plays; 15 s before; a needs-click source's starts at the first click in the player). The next source is in another CDN group if there is one ("Trying Server 3…"), then the rest, then "Not available right now" with the trailer and *Report*.
 - **Switching** (the server menu, or the stuttering toast's offer) starts the new player 30 s earlier; Auto clears the pick.
 - **Progress** goes to the profile with a session and to the browser without one. Watching never starts a guest; a mark, *Remove* or *Rewatch* does (`guest_scope=parda`), and the browser's progress is imported once a session exists.
 - **Shortcuts** (outside the iframe): `N` next, `P` previous, `E` episodes, `T` theater, `Esc` leaves theater, `K` play or pause.
@@ -177,6 +177,28 @@ Use a provider licensed for the catalogue you show. Either:
 
 Then try it in the player lab.
 
+## Ranking
+
+Decision 0238. Each play starts on the source most likely to play well for that viewer and title.
+
+| File | Holds |
+| --- | --- |
+| `src/server/parda/player/ranking.ts` | Pure: the factors, the score, `okOrder`, `slowOrder`, the per-title skip, exploration (`watchOrders`) |
+| `src/server/parda/player/stats.ts` | The daily rollup into `pd_source_stat`, `latestStandings`, `noteTitleFailure` and `skippedSources` |
+| `src/server/parda/player/probe.ts`, `src/server/routes/parda-probe.ts` | `/api/parda/probe`: `GET` what to probe, `POST` what it saw (`Bearer PARDA_PROBE_SECRET`, a 404 without it) |
+| `scripts/probe-sources.ts`, `.github/workflows/parda-probe.yml` | `pnpm parda:probe`: real Chrome on each enabled source, daily at 01:40 UTC |
+
+```
+score = availability × (0.4 × quality + 0.4 × smoothness + 0.2 × speed) − 0.1 × popups per click
+```
+
+- **Viewers first:** with 20 plays or more in the last 7 days (party plays never count), availability, smoothness and speed are the viewers'. Under 20, the probe's alive rate and neutral values. With neither, no score, and the source keeps its seed slot. A `none` source is never scored.
+- **Quality** is the admin's (the form's "Top quality"), else the probe's tallest picture; unknown is 0.5. The adaptive flag is the admin's, else the probe's ladder.
+- **The scores change once a day** (`GET /api/cron/parda`); the orders are made at each play from them and the rows as they are, so a pin, an enable or the mode applies at once (this server at once, others within 30 s).
+- **Pinned** rows lead in both modes. **Manual** is the admin's order (Reorder). **`slow`** puts adaptive sources first. **5%** of plays start on a source short of data, in automatic order, with no pin, once some source has data.
+- **Per title:** a failure from a second client within 24 h sends the source last for that title for 24 h. One client can't, and these failures have their own rate limit.
+- **The probe** needs `PARDA_PROBE_SECRET` in the app's env and the repo's Actions secrets, and `PARDA_PROBE_URL` as an Actions variable (deployment.md). By hand: `PARDA_PROBE_URL=http://localhost:3000 PARDA_PROBE_SECRET=… pnpm parda:probe --dry-run` (`--headed` to watch, `--seconds=N` per title).
+
 ## Player lab
 
 `/admin/parda/player-lab` (`parda:configure`) loads any row, enabled or not, for any title, logs each message, shows stalls, and sends commands where the adapter has them. It's what you use to judge a new provider. Run it by hand in normal Chrome: automation changes how players behave.
@@ -189,18 +211,21 @@ Then try it in the player lab.
 
 | Page | Holds | Code |
 | --- | --- | --- |
-| `/admin/parda/sources` (`/new`, `/$id`) | Every `pd_source` row in order with its open and ads reports; enable, disable, pin, reorder (dnd-kit), delete; the kill switch above them | `features/parda/admin/sources/`, `server/parda/admin/sources.ts` |
+| `/admin/parda/sources` (`/new`, `/$id`) | Every `pd_source` row in order with its open and ads reports, rank today, score and measurements; enable, disable, pin, reorder (dnd-kit), delete; the kill switch and the order's mode above them | `features/parda/admin/sources/`, `server/parda/admin/sources.ts` |
 | `/admin/parda/titles` (`/new`) | Takedowns (`pd_blocked_title`): block by type, TMDB id and reason; "Delete" unblocks | `admin/titles/`, `server/parda/admin/takedowns.ts` |
 | `/admin/parda/reports` | Viewers' reports, open first; filter by status, kind, source and text; resolve, dismiss, reopen, in bulk too | `admin/reports/`, `server/parda/admin/reports.ts` |
 | `/admin/parda/settings` | The kill switch, region, kids' cap, players' languages, banner and the cache purge | `admin/settings/`, `server/parda/admin/settings.ts` |
 | `/admin/parda/player-lab` | Any row, enabled or not (`?source=` picks one) | `admin/player-lab/` |
 
-- **`pd_settings`** (one row): `region` (TMDB has no NP data), `languages` (the `{lang}` players get: the page's when listed, else the first, `playerLanguage`), `kids_cap`, `banner` (under the top mask on every page, read by the `_parda` layout's loader; empty English hides it), `playback_enabled` (the kill switch: no player loads anywhere), `cache_epoch` (bumping it purges the catalogue cache), `source_order` (Task 65a).
+- **`pd_settings`** (one row): `region` (TMDB has no NP data), `languages` (the `{lang}` players get: the page's when listed, else the first, `playerLanguage`), `kids_cap`, `banner` (under the top mask on every page, read by the `_parda` layout's loader; empty English hides it), `playback_enabled` (the kill switch: no player loads anywhere), `cache_epoch` (bumping it purges the catalogue cache), `source_order` (`auto` or `manual`, the switch on the sources page; see "Ranking").
 - **A source's templates** are checked on save (`sourceFieldProblems`) and refused on their own field. A new source starts disabled: try it in the lab, then enable it. A sandbox warns that most players refuse one.
 - **Versions:** the forms save from the row's integer `version` (`saveVersioned` in `server/parda/admin/context.ts`); enable, pin, the kill switch and the purge leave it alone.
 - **`pd_blocked_title`:** one per title (`pd_blocked_title_unique`). The title is a 404 and leaves every list from every entry point (`catalog/service.ts`) and the sitemap. Deleting a source keeps its plays and reports, with no source.
 
 ## Pitfalls already solved
+
+- **Exploration on a fresh install** would start every play on a random server, because no source has data: it waits until one source has 20 plays.
+- **`adaptive` defaulted to `false`,** which read as the admin's "no" once the probe could say otherwise; migration `0031` made those null.
 
 - **A unique violation inside a transaction crashed the e2e harness's PGlite socket server** ("Received unexpected commandComplete message from backend"). Parda's writes avoid the failed statement: a takedown inserts `on conflict do nothing` and treats no row back as the field error.
 - **A template's server error outlived the fix:** it's checked against the origins, so adding the origin didn't clear it and the form wouldn't submit; the origins field clears the templates' server errors when it changes.

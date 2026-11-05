@@ -234,9 +234,12 @@ describe("the daily refresh", () => {
 	});
 
 	it("is skipped without a token, and reports a failure without throwing", async () => {
-		expect(await runPardaCron(env.db, null)).toEqual({ titles: { ok: true, skipped: true } });
+		expect((await runPardaCron(env.db, null)).titles).toEqual({ ok: true, skipped: true });
 		const broken: Tmdb = { ...tmdb, get: () => Promise.reject(new Error("down")) };
-		expect(await runPardaCron(env.db, broken)).toEqual({ titles: { ok: false } });
+		const failed = await runPardaCron(env.db, broken);
+		expect(failed.titles).toEqual({ ok: false });
+		// The rollup runs on its own.
+		expect(failed.ranking.ok).toBe(true);
 		expect((await runPardaCron(env.db, tmdb)).titles.ok).toBe(true);
 	});
 });

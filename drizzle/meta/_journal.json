@@ -218,6 +218,13 @@
 			"when": 1793829078231,
 			"tag": "0030_parda_admin",
 			"breakpoints": true
+		},
+		{
+			"idx": 31,
+			"version": "7",
+			"when": 1793842706893,
+			"tag": "0031_parda_ranking",
+			"breakpoints": true
 		}
 	]
 }

@@ -29,5 +29,6 @@ const OFF = [
 	"VITE_SENTRY_DEV_TRACING",
 	"TMDB_READ_TOKEN", // @parda
 	"PARDA_PLAYER_BASE", // @parda
+	"PARDA_PROBE_SECRET", // @parda
 ];
 for (const key of OFF) delete process.env[key];

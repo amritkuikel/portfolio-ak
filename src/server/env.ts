@@ -114,6 +114,8 @@ export const serverEnvSchema = {
 	TMDB_IMAGE_BASE: z.url().default("https://image.tmdb.org/t/p"),
 	/** Where Parda's relative source templates live, when the player isn't served by this app. */
 	PARDA_PLAYER_BASE: z.url({ protocol: /^https?$/ }).optional(),
+	/** Bearer token for the daily source probe (/api/parda/probe). Unset: the route answers 404. */
+	PARDA_PROBE_SECRET: z.string().trim().min(16).optional(),
 	// parda:end
 };
 

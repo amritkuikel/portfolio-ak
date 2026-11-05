@@ -9,6 +9,7 @@ export const PARDA_STORY_SETTINGS: AdminSettings = {
 	banner: { en: "", ne: "" },
 	playbackEnabled: true,
 	cacheEpoch: 0,
+	sourceOrder: "auto",
 	updatedAt: "1",
 };
 
@@ -20,5 +21,8 @@ export const updatePardaSettings = fn(async (): Promise<AdminSettings> => PARDA_
 );
 export const setPardaPlayback = fn(async (): Promise<AdminSettings> => PARDA_STORY_SETTINGS).mockName(
 	"setPardaPlayback",
+);
+export const setPardaSourceOrder = fn(async (): Promise<AdminSettings> => PARDA_STORY_SETTINGS).mockName(
+	"setPardaSourceOrder",
 );
 export const purgePardaCache = fn(async (): Promise<AdminSettings> => PARDA_STORY_SETTINGS).mockName("purgePardaCache");

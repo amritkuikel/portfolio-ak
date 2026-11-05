@@ -13,35 +13,23 @@ import { firstSeason } from "../catalog/title-page";
 import type { PardaSourceRow } from "../controls";
 import * as library from "../library/repository";
 import type { TitleDetails } from "../tmdb/mappers";
+import { effectiveAdaptive, effectiveHeight, qualityLabel, RANKING, watchOrders } from "./ranking";
 import { playerLanguage, playerUrl } from "./sources";
+import { type SourceStanding, skippedSources } from "./stats";
 
 /**
- * The watch page (PLAN 12.5, decision 0236): the title, the episode, its neighbours, and
- * every enabled source filled for it, in two orders. Sources are in their seed order
- * (pinned first) until Task 65a ranks them; the `slow` order puts adaptive ones first.
+ * The watch page (PLAN 12.5, decisions 0236 and 0238): the title, the episode, its
+ * neighbours, and every enabled source filled for it, in two orders: by the latest daily
+ * scores (or the admin's order), adaptive sources first for slow connections, sources
+ * failing on this title last.
  */
 
 type Locale = "en" | "ne";
 
-/** Before there's data on a source's start time (Task 65a): 15 s. Later p90 + 5 s, kept between 12 and 30. */
+/** Until a source has enough plays: 15 s. Then its p90 start + 5 s, kept between 12 and 30. */
 export const DEFAULT_DEADLINE_MS = 15_000;
 export const deadlineFor = (p90StartMs: number | null) =>
 	p90StartMs === null ? DEFAULT_DEADLINE_MS : Math.min(30_000, Math.max(12_000, p90StartMs + 5_000));
-
-const ranked = (sources: ReadonlyArray<PardaSourceRow>) =>
-	sources
-		.filter((source) => source.enabled)
-		.sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.position - b.position);
-
-/** The two orders (PLAN 12.5, "Two orders"): `ok` by rank, `slow` adaptive first, each keeping the rank. */
-export function orders(sources: ReadonlyArray<Pick<WatchSource, "id" | "adaptive">>): { ok: string[]; slow: string[] } {
-	const ok = sources.map((source) => source.id);
-	const slow = [
-		...sources.filter((source) => source.adaptive).map((source) => source.id),
-		...sources.filter((source) => !source.adaptive).map((source) => source.id),
-	];
-	return { ok, slow };
-}
 
 type Target = { season: number; episode: number } | null;
 
@@ -111,6 +99,8 @@ export async function watchPage(
 	request: WatchRequest,
 	viewer: { profileId: string | null; autoplay: boolean },
 	locale: Locale,
+	/** Tests pin the dice and the clock; a play rolls them. */
+	options: { random?: () => number; now?: Date } = {},
 ): Promise<Extract<WatchPageData, { configured: true }>> {
 	const { services } = catalog;
 	const scope = catalogScope(catalog, locale);
@@ -145,8 +135,15 @@ export async function watchPage(
 	const settings = await services.controls.settings();
 	const base = serverEnv.PARDA_PLAYER_BASE;
 	const baseOrigin = originOf(base);
+	const sourceRows = settings.playbackEnabled ? await services.controls.sources() : [];
+	const standings: ReadonlyMap<string, SourceStanding> = settings.playbackEnabled
+		? await services.controls.standings()
+		: new Map();
+	const playable: PardaSourceRow[] = [];
 	const sources: WatchSource[] = settings.playbackEnabled
-		? ranked(await services.controls.sources()).flatMap((source) => {
+		? sourceRows.flatMap((source) => {
+				if (!source.enabled) return [];
+				const standing = standings.get(source.id);
 				const url = playerUrl(
 					source,
 					{ media: details.media, id: details.id, imdb: details.imdbId, ...(at ?? {}) },
@@ -157,6 +154,8 @@ export async function watchPage(
 					},
 				);
 				if (url === null) return [];
+				playable.push(source);
+				const measured = standing && standing.plays >= RANKING.minPlays;
 				return [
 					{
 						id: source.id,
@@ -165,16 +164,41 @@ export async function watchPage(
 						origins: [...source.origins, ...(baseOrigin && url.startsWith(baseOrigin) ? [baseOrigin] : [])],
 						adapter: source.adapter,
 						sandbox: source.sandbox,
-						adaptive: source.adaptive,
+						adaptive: effectiveAdaptive(source.adaptive, standing?.probeAdaptive),
 						needsClick: source.needsClick,
 						autoFallback: source.autoFallback,
 						cdnGroup: source.cdnGroup,
-						deadlineMs: deadlineFor(null),
-						quality: null,
+						deadlineMs: deadlineFor(measured ? (standing.startP90Ms ?? null) : null),
+						quality: qualityLabel(effectiveHeight(source.quality, standing?.probeHeight)),
 					},
 				];
 			})
 		: [];
+	const skipped = await skippedSources(
+		db,
+		{ media: details.media, tmdbId: details.id },
+		sources.map((source) => source.id),
+		options.now,
+	);
+	const order = watchOrders(
+		playable.map((source) => {
+			const standing = standings.get(source.id);
+			return {
+				id: source.id,
+				position: source.position,
+				pinned: source.pinned,
+				adaptive: effectiveAdaptive(source.adaptive, standing?.probeAdaptive),
+				score: standing?.score ?? null,
+				plays: standing?.plays ?? 0,
+				measurable: source.adapter !== "none",
+			};
+		}),
+		{
+			mode: settings.sourceOrder,
+			skipped,
+			random: options.random ?? Math.random,
+		},
+	);
 
 	let resume: Extract<WatchPageData, { configured: true }>["resume"] = null;
 	if (viewer.profileId) {
@@ -205,7 +229,7 @@ export async function watchPage(
 		seasons: details.seasonList.filter((season) => season.episodes > 0),
 		playback: settings.playbackEnabled ? (sources.length ? "on" : "none") : "off",
 		sources,
-		order: orders(sources),
+		order,
 		resume,
 		autoplay: viewer.autoplay,
 		trailer:

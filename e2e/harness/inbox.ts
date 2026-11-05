@@ -336,6 +336,30 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				]);
 				return send(response, rows[0] ? 200 : 404, rows[0] ?? { error: "not found" });
 			}
+			if (route === "POST /e2e/parda-rank") {
+				// Task 65a: today's standings, as the daily rollup would write them ({ "Server 4": 0.9, ... }).
+				const scores = (await readJson(request)) as Record<string, number>;
+				await query(`delete from "pd_source_stat"`);
+				for (const [name, score] of Object.entries(scores)) {
+					await query(
+						`insert into "pd_source_stat" ("day", "source_id", "band", "plays", "score")
+						 select current_date, "id", 'all', 50, $2 from "pd_source" where "name"->>'en' = $1`,
+						[name, score],
+					);
+				}
+				return send(response, 200, { ok: true });
+			}
+			if (route === "GET /e2e/parda-title-fails") {
+				const { rows } = await query(
+					`select "source_id", "media", "tmdb_id", "failures", "skip_until" from "pd_source_title_fail"`,
+				);
+				return send(response, 200, rows);
+			}
+			if (route === "DELETE /e2e/parda-rank") {
+				await query(`delete from "pd_source_stat"`);
+				await query(`delete from "pd_source_title_fail"`);
+				return send(response, 200, { ok: true });
+			}
 			// parda:end
 			// apps:start
 			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));

@@ -9,12 +9,21 @@ import { FormSection, StickyFormBar } from "@/components/page/form-layout";
 import { Page, PageHeader } from "@/components/page/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { TEMPLATE_TOKENS } from "../../player/templates";
 import { pardaAdminKeys } from "../keys";
-import { ADAPTER_LABELS, SANDBOX_LABELS } from "../labels";
+import { ADAPTER_LABELS, ADAPTIVE_LABELS, SANDBOX_LABELS } from "../labels";
 import { pardaAdminMutations, pardaSourceQueryOptions } from "../queries";
-import { type AdminSource, SOURCE_ADAPTERS, SOURCE_SANDBOXES, type SourceFormValues, sourceInput } from "../schema";
+import {
+	type AdminSource,
+	SOURCE_ADAPTERS,
+	SOURCE_ADAPTIVE,
+	SOURCE_QUALITIES,
+	SOURCE_SANDBOXES,
+	type SourceFormValues,
+	sourceInput,
+} from "../schema";
 
 const editRoute = getRouteApi("/_admin/admin/parda/sources/$id");
 
@@ -27,7 +36,9 @@ const sourceFormOptions = (item?: AdminSource) =>
 			origins: item?.origins ?? [],
 			adapter: item?.adapter ?? "none",
 			sandbox: item?.sandbox ?? "none",
-			adaptive: item?.adaptive ?? false,
+			// The probe measures both unless the admin says otherwise (decision 0238).
+			adaptive: item?.adaptive ?? "probe",
+			quality: item?.quality ?? "probe",
 			needsClick: item?.needsClick ?? false,
 			cdnGroup: item?.cdnGroup ?? "",
 			autoFallback: item?.autoFallback ?? true,
@@ -59,6 +70,14 @@ function SourceForm({ item }: { item?: AdminSource }) {
 	const form = useAppForm({ ...sourceFormOptions(item), ...crud.formProps });
 	const adapters = SOURCE_ADAPTERS.map((adapter) => ({ value: adapter, label: ADAPTER_LABELS[adapter]() }));
 	const sandboxes = SOURCE_SANDBOXES.map((sandbox) => ({ value: sandbox, label: SANDBOX_LABELS[sandbox]() }));
+	const adaptiveChoices = SOURCE_ADAPTIVE.map((value) => ({ value, label: ADAPTIVE_LABELS[value]() }));
+	const qualities = SOURCE_QUALITIES.map((value) => ({
+		value,
+		label:
+			value === "probe"
+				? m.pd_admin_source_from_probe()
+				: m.pd_admin_quality_value({ height: formatNumber(Number(value), { useGrouping: false }) }),
+	}));
 
 	return (
 		<CrudForm form={form} crud={crud} data-testid="parda-source-form">
@@ -135,9 +154,19 @@ function SourceForm({ item }: { item?: AdminSource }) {
 				</form.Subscribe>
 				<form.AppField name="adaptive">
 					{(field) => (
-						<field.SwitchField
+						<field.SelectField
 							label={m.pd_admin_source_adaptive_label()}
 							description={m.pd_admin_source_adaptive_hint()}
+							options={adaptiveChoices}
+						/>
+					)}
+				</form.AppField>
+				<form.AppField name="quality">
+					{(field) => (
+						<field.SelectField
+							label={m.pd_admin_source_quality_label()}
+							description={m.pd_admin_source_quality_hint()}
+							options={qualities}
 						/>
 					)}
 				</form.AppField>

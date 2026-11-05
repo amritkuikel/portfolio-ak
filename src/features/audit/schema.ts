@@ -95,6 +95,7 @@ export const AUDIT_ACTIONS = [
 	"parda.source.update",
 	"parda.source.state",
 	"parda.source.reorder",
+	"parda.source.order",
 	"parda.source.delete",
 	"parda.title.block",
 	"parda.title.unblock",

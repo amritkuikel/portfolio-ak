@@ -129,6 +129,23 @@ export class Harness {
 		return row.id;
 	}
 
+	/** Today's source standings, by name (Task 65a): what the daily rollup would leave. */
+	async pardaRank(scores: Record<string, number>) {
+		await fetch(`${E2E.harnessURL}/e2e/parda-rank`, { method: "POST", body: JSON.stringify(scores) });
+	}
+
+	/** The failures counted against sources per title (Task 65a). */
+	async pardaTitleFails(): Promise<Array<{ failures: number; skip_until: string | null }>> {
+		return (await fetch(`${E2E.harnessURL}/e2e/parda-title-fails`)).json() as Promise<
+			Array<{ failures: number; skip_until: string | null }>
+		>;
+	}
+
+	/** No standings and no per-title failures: the seed order again. */
+	async pardaUnrank() {
+		await fetch(`${E2E.harnessURL}/e2e/parda-rank`, { method: "DELETE" });
+	}
+
 	// parda:end
 
 	// taskline:start

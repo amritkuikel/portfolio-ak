@@ -2,17 +2,19 @@ import "@tanstack/react-start/server-only";
 import { asc } from "drizzle-orm";
 import { pdBlockedTitle, pdSettings, pdSource } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
+import { latestStandings } from "./player/stats";
 
 /**
  * The rows every page's reads depend on, read from Postgres at most every 30 s per
- * process (decision 0229): takedowns, the settings and the sources. A change reaches
+ * process (decision 0229): takedowns, the settings, the sources and their latest daily
+ * standings (decision 0238). A change reaches
  * every server within 30 s, without a query on each read.
  */
 const TTL_MS = 30_000;
 
 export type PardaSourceRow = typeof pdSource.$inferSelect;
 
-const DEFAULT_SETTINGS = { region: "US", cacheEpoch: 0, playbackEnabled: true } as const;
+const DEFAULT_SETTINGS = { region: "US", cacheEpoch: 0, playbackEnabled: true, sourceOrder: "auto" } as const;
 
 const cached = <T>(load: () => Promise<T>, now: () => number) => {
 	let entry: { value: Promise<T>; until: number } | undefined;
@@ -47,10 +49,13 @@ export function createPardaControls(db: Db, now: () => number = Date.now) {
 		return row ?? DEFAULT_SETTINGS;
 	}, now);
 	const sources = cached(() => db.select().from(pdSource).orderBy(asc(pdSource.position)), now);
+	const standings = cached(() => latestStandings(db), now);
 	return {
 		blocked,
 		settings,
 		sources,
+		/** Each source's latest daily rollup and score: what the automatic order reads. */
+		standings,
 		/**
 		 * After an admin's write (decision 0237): this process reads the rows again at once,
 		 * so the admin sees the change on the next page; other servers within 30 s.
@@ -59,6 +64,7 @@ export function createPardaControls(db: Db, now: () => number = Date.now) {
 			blocked.clear();
 			settings.clear();
 			sources.clear();
+			standings.clear();
 		},
 	};
 }

@@ -574,3 +574,119 @@ test.describe("Parda's admin", () => {
 		await visitor.close();
 	});
 });
+
+// Task 65a: source ranking (decision 0238). Standings come from the harness, as the daily
+// rollup would leave them; each flow puts the seed order back when it ends.
+const setOrder = async (page: Page, mode: "auto" | "manual") => {
+	await page.goto("/admin/parda/sources", { waitUntil: "networkidle" });
+	const order = page.getByTestId("parda-source-order");
+	if ((await order.getAttribute("data-state")) !== mode) await page.getByTestId(`parda-source-order-${mode}`).click();
+	await expect(order).toHaveAttribute("data-state", mode);
+};
+
+test.describe("Parda's source ranking", () => {
+	test.use(signedIn("admin"));
+
+	test.afterEach(async ({ page, harness }) => {
+		await harness.pardaUnrank();
+		// Switching the mode clears this server's 30 s cache of the standings.
+		await setOrder(page, "manual");
+		await setOrder(page, "auto");
+	});
+
+	test("the probe's route needs its secret, names what to probe and stores a run", async ({ request }) => {
+		const endpoint = "/api/parda/probe";
+		expect((await request.get(endpoint)).status()).toBe(401);
+		const headers = { authorization: `Bearer ${E2E.probeSecret}` };
+		const plan = (await (await request.get(endpoint, { headers })).json()) as {
+			titles: unknown[];
+			sources: Array<{ id: string; name: string; urls: Array<string | null> }>;
+		};
+		expect(plan.sources.map((source) => source.name)).toEqual(
+			expect.arrayContaining(["Server 1", "Server 2", "Server 3", "Server 4"]),
+		);
+		expect(plan.sources.every((source) => source.urls.length === plan.titles.length)).toBe(true);
+		const run = {
+			sourceId: plan.sources[0]?.id,
+			media: "movie",
+			tmdbId: 550,
+			alive: true,
+			startMs: 1_200,
+			topHeight: null,
+			ladder: [],
+			popups: 0,
+			clicks: 0,
+			redirects: 0,
+			videoHosts: [],
+			error: null,
+		};
+		expect((await request.post(endpoint, { headers, data: { results: [{ ...run, extra: 1 }] } })).status()).toBe(400);
+		const stored = await request.post(endpoint, { headers, data: { results: [run] } });
+		expect(await stored.json()).toEqual({ ok: true, stored: 1, ignored: 0 });
+	});
+
+	test("automatic order starts on the best score; manual order on the admin's first", async ({ page, harness }) => {
+		const watch = pardaFixturePath("watch-movie");
+		await harness.pardaRank({ "Server 1": 0.2, "Server 2": 0.3, "Server 3": 0.4, "Server 4": 0.9 });
+		await setOrder(page, "manual");
+		await page.goto(watch);
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\/movie\//);
+
+		await setOrder(page, "auto");
+		// The list shows the scores and today's order.
+		const row = page.getByRole("row").filter({ has: page.getByRole("link", { name: "Server 4", exact: true }) });
+		await expect(row).toContainText("0.9");
+		await page.goto(watch);
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/4\/movie\//);
+	});
+
+	test("a slow connection starts on an adaptive source", async ({ page, harness }) => {
+		const edit = async (choice: string) => {
+			await page.goto(`/admin/parda/sources/${await harness.pardaSourceId("Server 4")}`, { waitUntil: "networkidle" });
+			await page.getByRole("combobox", { name: "Adaptive quality" }).click();
+			await page.getByRole("option", { name: choice, exact: true }).click();
+			await page.getByRole("button", { name: "Save" }).click();
+			await expect(page).toHaveURL(/\/admin\/parda\/sources$/);
+		};
+		await edit("Adaptive");
+		try {
+			await page.addInitScript(() => {
+				Object.defineProperty(navigator, "connection", {
+					configurable: true,
+					value: { downlink: 1.5, saveData: false },
+				});
+			});
+			await page.goto(pardaFixturePath("watch-movie"));
+			await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/4\/movie\//);
+		} finally {
+			await edit("From the probe");
+		}
+	});
+
+	test("a source failing on a title for two viewers is tried last there", async ({ page, browser, harness }) => {
+		await harness.resetRateLimits();
+		const watch = pardaFixturePath("watch-series");
+		// Each failure must come from someone else (a visitor, then the admin): one client can't hide a source.
+		const failOnce = async (viewer: Page, failures: number) => {
+			await cue(viewer, 1, { cue: "fail" });
+			await viewer.goto(watch);
+			await expect(viewer.getByText("Trying Server 3…")).toBeVisible();
+			await expect(viewer.getByTestId("watch-box")).toHaveAttribute("data-status", "playing", { timeout: 15_000 });
+			await expect.poll(async () => (await harness.pardaTitleFails())[0]?.failures ?? 0).toBe(failures);
+			await viewer.unroute("**/parda/api/1/**");
+		};
+		// A visitor: newContext would otherwise take the admin's storageState from test.use.
+		const visitor = await browser.newContext({ baseURL: E2E.baseURL, storageState: { cookies: [], origins: [] } });
+		await failOnce(await visitor.newPage(), 1);
+		await visitor.close();
+		await page.goto(watch);
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\//);
+		await failOnce(page, 2);
+		expect((await harness.pardaTitleFails())[0]?.skip_until).not.toBeNull();
+		await page.goto(watch);
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/2\//);
+		// Another title still starts on Server 1.
+		await page.goto(pardaFixturePath("watch-movie"));
+		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\//);
+	});
+});

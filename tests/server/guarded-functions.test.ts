@@ -198,6 +198,7 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 		["getPardaSettings", "parda:read"],
 		["updatePardaSettings", "parda:configure"],
 		["setPardaPlayback", "parda:configure"],
+		["setPardaSourceOrder", "parda:configure"],
 		["purgePardaCache", "parda:configure"],
 	],
 	"parda-admin/sources.ts": [

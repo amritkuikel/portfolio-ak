@@ -29,6 +29,7 @@ const toAdmin = (row: Row): AdminSettings => ({
 	banner: row.banner ?? { en: "", ne: "" },
 	playbackEnabled: row.playbackEnabled,
 	cacheEpoch: row.cacheEpoch,
+	sourceOrder: row.sourceOrder,
 	updatedAt: String(row.version),
 });
 
@@ -100,6 +101,31 @@ export async function setPlayback(
 			target: TARGET,
 			before: { playbackEnabled: before.playbackEnabled },
 			after: { playbackEnabled: enabled },
+		});
+		return row;
+	});
+	controls.invalidate();
+	return toAdmin(saved);
+}
+
+/**
+ * The sources' order (decision 0238): `auto` by the daily scores, `manual` the admin's.
+ * Its own write, like the kill switch, so an open settings form stays current.
+ */
+export async function setSourceOrder(
+	{ db, actor, controls }: PardaAdminServices,
+	{ mode }: { mode: "auto" | "manual" },
+): Promise<AdminSettings> {
+	const saved = await withAudit(db, actor, async (tx, audit) => {
+		const before = await settingsRow(tx);
+		if (before.sourceOrder === mode) return before;
+		const [row] = await tx.update(pdSettings).set({ sourceOrder: mode }).where(eq(pdSettings.id, ID)).returning();
+		if (!row) throw notFound(WHAT);
+		audit({
+			action: "parda.source.order",
+			target: TARGET,
+			before: { sourceOrder: before.sourceOrder },
+			after: { sourceOrder: mode },
 		});
 		return row;
 	});

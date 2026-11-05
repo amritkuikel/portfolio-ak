@@ -1,21 +1,30 @@
 import "@tanstack/react-start/server-only";
 import { and, asc, count, eq, inArray, isNotNull, max, sql } from "drizzle-orm";
-import type { AdminSource, SourceInput, SourceStateInput } from "@/features/parda/admin/schema";
+import {
+	type AdminSource,
+	type AdminSourceStanding,
+	SOURCE_QUALITIES,
+	type SourceInput,
+	type SourceStateInput,
+} from "@/features/parda/admin/schema";
 import { sourceFieldProblems, type TemplateProblem } from "@/features/parda/player/templates";
 import { AppError } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 import { changes } from "@/server/audit/record";
 import { notFound, withAudit } from "@/server/db/crud";
-import { pdReport, pdSource } from "@/server/db/schema";
+import { pdReport, pdSettings, pdSource } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
 import type { PardaSourceRow } from "../controls";
+import { effectiveAdaptive, okOrder, RANKING } from "../player/ranking";
+import { latestStandings, type SourceStanding } from "../player/stats";
 import { type PardaAdminServices, saveVersioned } from "./context";
 
 /**
  * /admin/parda/sources (PLAN Task 65, decision 0237): add, edit, delete, enable, pin and
  * reorder the rows the watch page plays from. A template is checked against its row's
  * origins when it's saved, and a problem comes back on its field. Every write is audited
- * and clears the controls' cache, so the watch page and the CSP follow at once.
+ * and clears the controls' cache, so the watch page and the CSP follow at once. The list
+ * shows each row's latest daily standing and its place in today's order (decision 0238).
  */
 
 const WHAT = "Parda source";
@@ -44,7 +53,8 @@ const fields = (input: SourceInput) => ({
 	origins: [...new Set(input.origins)],
 	adapter: input.adapter,
 	sandbox: input.sandbox,
-	adaptive: input.adaptive,
+	adaptive: input.adaptive === "probe" ? null : input.adaptive === "yes",
+	quality: input.quality === "probe" ? null : Number(input.quality),
 	needsClick: input.needsClick,
 	cdnGroup: input.cdnGroup || null,
 	autoFallback: input.autoFallback,
@@ -68,6 +78,7 @@ const summary = (row: PardaSourceRow) => ({
 	adapter: row.adapter,
 	sandbox: row.sandbox,
 	adaptive: row.adaptive,
+	quality: row.quality,
 	needsClick: row.needsClick,
 	cdnGroup: row.cdnGroup,
 	autoFallback: row.autoFallback,
@@ -83,6 +94,7 @@ const COMPARED = [
 	"adapter",
 	"sandbox",
 	"adaptive",
+	"quality",
 	"needsClick",
 	"cdnGroup",
 	"autoFallback",
@@ -90,7 +102,32 @@ const COMPARED = [
 	"pinned",
 ] as const satisfies ReadonlyArray<keyof ReturnType<typeof summary>>;
 
-const toAdmin = (row: PardaSourceRow, reports?: { open: number; ads: number }): AdminSource => ({
+const ratio = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 1000 : null);
+
+function standingOf(standing: SourceStanding | undefined): AdminSourceStanding | null {
+	if (!standing) return null;
+	return {
+		day: standing.day,
+		score: standing.score,
+		from: standing.score === null ? null : standing.plays >= RANKING.minPlays ? "viewers" : "probe",
+		plays: standing.plays,
+		failureRate: ratio(standing.failed, standing.plays),
+		startMedianMs: standing.startMedianMs,
+		stallPerMinute: ratio(standing.stallMs / 1000, standing.watchedS / 60),
+		popupsPerClick: ratio(standing.probePopups, standing.probeClicks),
+		probeRuns: standing.probeRuns,
+		probedAt: standing.probedAt?.toISOString() ?? null,
+	};
+}
+
+const toAdmin = (
+	row: PardaSourceRow,
+	extra: {
+		reports?: { open: number; ads: number } | undefined;
+		standing?: SourceStanding | undefined;
+		rank?: number | null;
+	} = {},
+): AdminSource => ({
 	id: row.id,
 	name: row.name,
 	movieTemplate: row.movieTemplate,
@@ -98,21 +135,31 @@ const toAdmin = (row: PardaSourceRow, reports?: { open: number; ads: number }): 
 	origins: row.origins,
 	adapter: row.adapter,
 	sandbox: row.sandbox,
-	adaptive: row.adaptive,
+	adaptive: row.adaptive === null ? "probe" : row.adaptive ? "yes" : "no",
+	quality: SOURCE_QUALITIES.find((quality) => quality === String(row.quality)) ?? "probe",
 	needsClick: row.needsClick,
 	cdnGroup: row.cdnGroup ?? "",
 	autoFallback: row.autoFallback,
 	enabled: row.enabled,
 	pinned: row.pinned,
 	position: row.position,
+	rank: extra.rank ?? null,
 	updatedAt: String(row.version),
-	openReports: reports?.open ?? 0,
-	adsReports: reports?.ads ?? 0,
+	openReports: extra.reports?.open ?? 0,
+	adsReports: extra.reports?.ads ?? 0,
+	height: row.quality ?? extra.standing?.probeHeight ?? null,
+	heightFrom: row.quality !== null ? "admin" : extra.standing?.probeHeight ? "probe" : null,
+	adaptiveNow: effectiveAdaptive(row.adaptive, extra.standing?.probeAdaptive),
+	standing: standingOf(extra.standing),
 });
 
-/** Every source in the order the watch page starts from, with its open reports. Read fresh, not from the cache. */
+/**
+ * Every source in the admin's order, with its open reports, its latest standing and its
+ * place in today's order (pinned first, then by score or by the admin's order). Read
+ * fresh, not from the cache.
+ */
 export async function listSources({ db }: { db: Db }): Promise<AdminSource[]> {
-	const [rows, reports] = await Promise.all([
+	const [rows, reports, standings, [settings]] = await Promise.all([
 		db.select().from(pdSource).orderBy(asc(pdSource.position), asc(pdSource.createdAt)),
 		db
 			.select({
@@ -123,16 +170,45 @@ export async function listSources({ db }: { db: Db }): Promise<AdminSource[]> {
 			.from(pdReport)
 			.where(and(eq(pdReport.status, "open"), isNotNull(pdReport.sourceId)))
 			.groupBy(pdReport.sourceId),
+		latestStandings(db),
+		db.select({ sourceOrder: pdSettings.sourceOrder }).from(pdSettings).limit(1),
 	]);
 	const bySource = new Map(reports.map((row) => [row.sourceId, row]));
+	const order = okOrder(
+		rows
+			.filter((row) => row.enabled)
+			.map((row) => ({
+				id: row.id,
+				position: row.position,
+				pinned: row.pinned,
+				adaptive: false,
+				score: standings.get(row.id)?.score ?? null,
+				plays: standings.get(row.id)?.plays ?? 0,
+				measurable: row.adapter !== "none",
+			})),
+		settings?.sourceOrder ?? "auto",
+	);
 	// `position` is the place in this order (the seed counts from 1, and gaps are harmless).
-	return rows.map((row, index) => ({ ...toAdmin(row, bySource.get(row.id)), position: index }));
+	return rows.map((row, index) => {
+		const rank = order.indexOf(row.id);
+		return {
+			...toAdmin(row, {
+				reports: bySource.get(row.id),
+				standing: standings.get(row.id),
+				rank: rank === -1 ? null : rank,
+			}),
+			position: index,
+		};
+	});
 }
 
 export async function getSource({ db }: { db: Db }, id: string): Promise<AdminSource> {
-	const [row] = await db.select().from(pdSource).where(eq(pdSource.id, id));
+	const [[row], standings] = await Promise.all([
+		db.select().from(pdSource).where(eq(pdSource.id, id)),
+		latestStandings(db),
+	]);
 	if (!row) throw notFound(WHAT);
-	return toAdmin(row);
+	return toAdmin(row, { standing: standings.get(id) });
 }
 
 /** A new source goes last. */

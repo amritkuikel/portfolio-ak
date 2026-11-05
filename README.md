@@ -55,6 +55,7 @@ Everything is validated at startup with T3 Env (`src/server/env.ts` and `src/lib
 | `CLOUDINARY_FOLDER` | no | public_id prefix for uploads (default `portfolio`). |
 | `TMDB_READ_TOKEN` | no | TMDB's API read token: Parda's catalogue. Non-commercial use only. <!-- @parda --> |
 | `PARDA_PLAYER_BASE` | no | Where Parda's relative source templates live, when this app doesn't serve the player. <!-- @parda --> |
+| `PARDA_PROBE_SECRET` | no | Bearer token for Parda's daily source probe (`/api/parda/probe`, `.github/workflows/parda-probe.yml`); unset, the route answers 404. <!-- @parda --> |
 | `CRON_SECRET` | no | Bearer token for `/api/cron/*` (Vercel Cron, `vercel.json`); unset, the routes answer 404. |
 
 ## Architecture
