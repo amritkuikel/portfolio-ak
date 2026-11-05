@@ -1,5 +1,6 @@
 import { Link, type LinkOptions } from "@tanstack/react-router";
 import {
+	BookmarkIcon,
 	ClapperboardIcon,
 	CompassIcon,
 	HouseIcon,
@@ -24,7 +25,8 @@ import { PardaUserMenu } from "./parda-user-menu";
 /**
  * Parda's sections: the top mask's links on wide screens, the tab bar on phones.
  * A link arrives with its route (PLAN 12.3): Home and About (Task 61), the hubs (Task 62),
- * Discover (Task 66). About isn't in the tab bar: the footer links it on every page.
+ * Discover (Task 66), My List (Task 67). About isn't in the tab bar: the footer links it on
+ * every page. My List is in the top mask from `lg` (the account menu has it below).
  */
 const SECTIONS: ReadonlyArray<{
 	link: LinkOptions;
@@ -34,21 +36,22 @@ const SECTIONS: ReadonlyArray<{
 	testId: string;
 	/** In the phone's tab bar too. */
 	tab?: false;
-	/** In the top mask only from `lg`: below it the footer has it. */
-	wide?: true;
+	/** In the top mask only from `lg` (`xl` for About, decision 0240): below it the footer or the account menu has it. */
+	wide?: "lg" | "xl";
 }> = [
 	{ link: pardaLinks.home(), label: m.pd_nav_home, icon: HouseIcon, exact: true, testId: "parda-nav-home" },
 	{ link: pardaLinks.hub("movies"), label: m.pd_hub_movies, icon: ClapperboardIcon, testId: "parda-nav-movies" },
 	{ link: pardaLinks.hub("series"), label: m.pd_hub_series, icon: TvIcon, testId: "parda-nav-series" },
 	{ link: pardaLinks.hub("anime"), label: m.pd_hub_anime, icon: SparklesIcon, testId: "parda-nav-anime" },
 	{ link: pardaLinks.discover(), label: m.pd_nav_discover, icon: CompassIcon, testId: "parda-nav-discover" },
+	{ link: pardaLinks.library(), label: m.pd_my_list, icon: BookmarkIcon, testId: "parda-nav-library", wide: "lg" },
 	{
 		link: pardaLinks.about(),
 		label: m.pd_nav_about,
 		icon: InfoIcon,
 		testId: "parda-nav-about",
 		tab: false,
-		wide: true,
+		wide: "xl",
 	},
 ];
 
@@ -71,11 +74,14 @@ function PardaHeader() {
 				<nav aria-label={m.pd_nav_label()} className="max-md:hidden">
 					<ul className="flex items-center gap-1">
 						{SECTIONS.map((section) => (
-							<li key={section.testId} className={section.wide ? "max-lg:hidden" : undefined}>
+							<li
+								key={section.testId}
+								className={section.wide === "xl" ? "max-xl:hidden" : section.wide ? "max-lg:hidden" : undefined}
+							>
 								<Link
 									{...section.link}
 									activeOptions={{ exact: section.exact ?? false }}
-									className={`block px-2 py-2 text-pd-muted lg:px-3 text-sm transition-colors hover:text-pd-ink aria-[current=page]:text-pd-ink aria-[current=page]:shadow-[inset_0_-2px_0_var(--pd-action)] ${focusRing}`}
+									className={`block whitespace-nowrap px-2 py-2 text-pd-muted lg:px-3 text-sm transition-colors hover:text-pd-ink aria-[current=page]:text-pd-ink aria-[current=page]:shadow-[inset_0_-2px_0_var(--pd-action)] ${focusRing}`}
 									data-testid={section.testId}
 								>
 									{section.label()}

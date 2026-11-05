@@ -20,7 +20,10 @@ export const pdTitle = pgTable(
 		year: integer(),
 		genres: jsonb().$type<number[]>().notNull().default([]),
 		runtime: integer(),
+		/** The US certificate (the kids' cap ladder, decision 0240); null when TMDB has none or nobody asked yet. */
 		certification: text(),
+		/** When `certification` was last asked of TMDB: the daily job asks for the oldest first. */
+		certificationCheckedAt: timestamp({ withTimezone: true }),
 		/** 1 is the most popular of its media type; null once it left the top of the list. */
 		popularityRank: integer(),
 		refreshedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),

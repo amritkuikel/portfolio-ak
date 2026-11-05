@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 66)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 67)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -40,7 +40,7 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 | `public/parda/` | The icons, rendered from `icon.svg`, and TMDB's logo (`tmdb.svg`, TMDB's own file) |
 
 - **One frame on every page** (decision 0233): the layout renders it, and the page renders its `<main>`. The top mask is always solid, so nothing in it sits on a picture.
-- **Sections:** Home, Movies, Series, Anime, Discover and About: the top mask's links from `md` up (About and the language from `lg`, decision 0239), the tab bar below (without About: the footer links it). Search sits in the top mask at every width. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists, and check the top mask at 768 px. The frame keeps the tab bar's height clear on phones.
+- **Sections:** Home, Movies, Series, Anime, Discover, My List and About: the top mask's links from `md` up (My List and the language from `lg`, About from `xl`, decisions 0239 and 0240; the account menu has My List below), the tab bar below (without About: the footer links it). Search sits in the top mask at every width. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists, and check the top mask at 768 px. The frame keeps the tab bar's height clear on phones.
 - **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame. One segment (`/app/parda/whatever`) reaches `$hub`, whose loader does the same for anything but a hub.
 - **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's the home, the hubs and `/app/parda/about` (`PARDA_SITEMAP`), and the title pages (`catalog/sitemap.ts`, from `pd_title`). A page titled by TMDB also goes in `CONTENT_TITLED`.
 - **The notice page** (`/app/parda/about`) holds TMDB's logo and notice, JustWatch's attribution, playback, players' ads, the uBlock Origin Lite stores (`BLOCKER_STORES`, the section `#ad-blocker` Task 64's button falls back to) and takedowns.
@@ -103,7 +103,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **"Surprise me"** (`/app/parda/surprise?from=`) redirects to a random title from the page's popular and top rated lists. Its link is never preloaded.
 - **Progress on the page** (Task 64): a movie's bar under the picture; each episode's bar, Play and watched mark; each season's bar and mark; *Mark series watched* in the hero.
 - **Keywords** link to Discover (`?keyword=`, Task 66).
-- **Not yet:** My List, ♥ and Like (Task 67).
+- **My List, ♥, Like and Not for me** sit in the hero's actions (Task 67); a person's page has ♥.
 
 ## Watching and progress
 
@@ -127,6 +127,31 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **Progress** goes to the profile with a session and to the browser without one. Watching never starts a guest; a mark, *Remove* or *Rewatch* does (`guest_scope=parda`), and the browser's progress is imported once a session exists.
 - **Shortcuts** (outside the iframe): `N` next, `P` previous, `E` episodes, `T` theater, `Esc` leaves theater, `K` play or pause.
 - **Guests** see a banner under the top mask with the day their progress is deleted.
+
+## The library and profiles
+
+Decision 0240. `/app/parda/library/{list,favourites,continue,history}` and `/app/parda/profiles`, both noindex.
+
+| File | Holds |
+| --- | --- |
+| `src/server/db/schema/parda/saved.ts` | `pd_list_item` (My List is `watchlist`, ♥ is `favourite`), `pd_favourite_person`, `pd_rating` (`like`, `dislike`), `pd_account` (the email digest) |
+| `src/server/parda/library/saved.ts`, `saved-repository.ts` | Saving (a title is read through the catalogue, then its snapshot written to `pd_title`), the lists a page at a time, History, the personal rails, the guest claim's merge |
+| `src/server/parda/profiles/` | Profiles: the rules between fields, PIN locks (scrypt, five tries per 15 minutes), the cookie's proof, the fallback profile, the digest |
+| `src/functions/parda/library.ts`, `profiles.ts` | `requirePardaViewer` → `withPardaServices`, each with its row in `tests/server/parda-access.test.ts` |
+| `src/features/parda/library/save-buttons.tsx` | + My List, ♥ and Like: on cards (`PosterCard`'s `action`), the hero, a person's page and the player's bar |
+| `src/features/parda/library/library-page.tsx`, `for-you-rails.tsx` | The library's tabs; "Because you liked …" and "New from people you love" on the home |
+| `src/features/parda/profiles/` | The picker and managing (`profiles-page.tsx`), the form and PIN (`profile-form.tsx`), pictures (`profile-avatar.tsx`), `options.ts` (pictures, TMDB's regions, the limit) |
+| `src/features/parda/kids.ts`, `src/server/parda/catalog/kids-requests.ts` | The cap's ladder and the capped TMDB requests, pure |
+
+- **What the buttons read:** the layout loads the profile's saved keys for a session (`getPardaSaved`, the latest 2,000 of each); a press changes them at once, then writes. Without a session the first press starts a Parda guest, as a mark does.
+- **Lists are named from `pd_title`:** saving reads the title (takedowns and the cap apply) and writes its snapshot, so My List sorts by title or year without TMDB. History names its titles through the catalogue, like Continue watching.
+- **History** is the progress rows by day in Parda's time zone (`APP_TIME_ZONE`), each title once a day with its episodes. Taking a day out deletes those rows; *Clear history* deletes every row and what Continue watching kept.
+- **Personal rails:** recommendations of the latest liked title (♥ when nothing is liked), minus Not for me and My List; the latest titles (two years back, and those to come) of the eight newest favourite people. Awaited by the home's loader for a session.
+- **Profiles:** at most five; the default is the account's own and never a kids' one. A kids' profile can only switch. A PIN locks a profile: choosing it from another asks for the PIN, and the `pd_profile` cookie then carries an HMAC of the profile and its PIN hash, so a guessed id opens nothing and a new PIN ends old cookies. Without a usable cookie a browser is on the default profile, or the oldest unlocked one when the default is locked. A locked profile is changed only from inside it.
+- **Switching** reloads Parda at its home: every cached list may differ for another profile.
+- **The kids' cap** (TMDB's US ladder, the profile's or the admin's): lists TMDB can filter (discover, a type's popular, trending and top rated) are asked as discover queries with the exact certificates (`certification=G|PG`; never `certification.lte`, which lets NR in). Everything else (both types' trending, upcoming, on the air, search, recommendations, filmographies, collections) passes only titles whose US certificate `pd_title` knows to be within the cap; the daily job fills those in (400 a day, the unasked first). A title over the cap, or with no US certificate, is a 404, with its season and credits.
+- **Region:** the profile's, else the visitor's country (`x-vercel-ip-country`) when TMDB has watch data for it (`TMDB_REGIONS`), else the admin's. **Players' language:** the profile's when the admin lists it, else the page's rule.
+- **Fixtures:** `pnpm tmdb:record` records a kids' home too; `pnpm tmdb:record --kids` adds only those files.
 
 ## Search and Discover
 
@@ -160,11 +185,11 @@ TMDB, read through `src/server/parda/catalog/service.ts` only: that module appli
 | `tmdb/cache.ts` | LRU, a TTL per class (configuration 7 d, details 24 h, lists 1 h, search 10 min), stale for one more TTL while refreshing, concurrent reads coalesced |
 | `tmdb/mappers.ts` | Zod to lean DTOs, only the fields pages use, plus the Nepali fill-in from English |
 | `tmdb/store.ts` | The singletons: `pardaTmdb` (null without `TMDB_READ_TOKEN`), `pardaControls` and `pardaCache` |
-| `catalog/context.ts`, `src/middleware/parda.ts` | `withPardaCatalog`: the services, the region and the cap (null until profiles, Task 64), null when not configured; anonymous calls over HTTP limited to 300 per 5 minutes per IP (SSR isn't counted) |
+| `catalog/context.ts`, `src/middleware/parda.ts` | `withPardaCatalog`: the services, the region and the cap (a kids' profile's, decision 0240), null when not configured; anonymous calls over HTTP limited to 300 per 5 minutes per IP (SSR isn't counted) |
 | `controls.ts` | Takedowns, settings and sources from Postgres, at most every 30 s per process |
 | `catalog/requests.ts` | The title pages' TMDB requests (the details `append_to_response`, credits, season and person paths, the key jobs), shared with the recorder; no runtime imports |
 | `tmdb/pages.ts` | A season, the full credits, a person and a collection, each with its Nepali fill-in |
-| `catalog/refresh.ts`, `cron.ts` | The daily `pd_title` refresh, the top 500 of each media type |
+| `catalog/refresh.ts`, `cron.ts` | The daily `pd_title` refresh, the top 500 of each media type, then their US certificates (400 a run) |
 
 Genre names are our own messages (`src/features/parda/genres.ts`), because TMDB's Nepali genre names are null.
 

@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
+import { withinCap } from "@/features/parda/kids";
 import { AppError } from "@/lib/errors";
 import type { PardaMedia } from "@/server/db/schema";
 import { type PardaControls, titleKey } from "../controls";
@@ -30,15 +31,21 @@ import {
 	type TitleCredits,
 } from "../tmdb/pages";
 import { fillInSearch, mapSearch, type SearchKind, type SearchResults } from "../tmdb/search";
+import { cappedRequest } from "./kids-requests";
 import { creditsPath, DETAILS_PARAMS, PERSON_PARAMS, seasonPath } from "./requests";
 
 /**
  * Every catalogue read goes through here (PLAN 12.6): the one place that applies
- * takedowns and the cache epoch, so no page can show a blocked title.
+ * takedowns, the kids' cap (decision 0240) and the cache epoch, so no page can show a
+ * blocked title, or a kids' profile one over its cap.
  */
 
 export type CatalogServices = { tmdb: Tmdb; cache: TmdbCache; controls: PardaControls };
-/** What an answer depends on, beside its path: part of the cache key. */
+/**
+ * What an answer depends on, beside its path. `cap` is a kids' profile's certificate:
+ * it changes which requests are made and what passes, never TMDB's answer to one, so it
+ * isn't part of the cache key (a kids' page shares the cache with everyone else's).
+ */
 export type CatalogScope = { locale: "en" | "ne"; region: string; cap: string | null };
 
 const TMDB_LOCALE = { en: "en-US", ne: "ne-NP" } as const;
@@ -54,7 +61,7 @@ async function read<T>(
 ): Promise<T> {
 	const { cacheEpoch: epoch } = await services.controls.settings();
 	const inLocale = (locale: CatalogScope["locale"]) =>
-		services.cache.read({ path, params, locale, region: scope.region, cap: scope.cap, epoch }, cacheClass, async () =>
+		services.cache.read({ path, params, locale, region: scope.region, cap: null, epoch }, cacheClass, async () =>
 			map(await services.tmdb.get(path, { ...params, language: TMDB_LOCALE[locale] })),
 		);
 	if (scope.locale === "en") return inLocale("en");
@@ -62,24 +69,42 @@ async function read<T>(
 	return fill(nepali, english);
 }
 
-/** Titles minus takedowns: every list a page shows passes through here. */
-const unblocked = async <T extends Pick<TitleSummary, "media" | "id">>(
+/**
+ * Titles minus takedowns, and under a cap minus every title whose US certificate
+ * `pd_title` doesn't know to be within it: every list a page shows passes through here.
+ * `capped` says TMDB already filtered the list by certificate (`cappedRequest`).
+ */
+const visible = async <T extends Pick<TitleSummary, "media" | "id">>(
 	services: CatalogServices,
+	scope: CatalogScope,
 	titles: ReadonlyArray<T>,
+	capped = false,
 ): Promise<T[]> => {
 	const blocked = await services.controls.blocked();
-	return titles.filter((item) => !blocked.has(titleKey(item.media, item.id)));
+	const cap = capped ? null : scope.cap;
+	const certificates = cap ? await services.controls.certifications() : null;
+	return titles.filter((item) => {
+		const key = titleKey(item.media, item.id);
+		if (blocked.has(key)) return false;
+		return !cap || withinCap(cap, item.media, certificates?.get(key));
+	});
 };
-
-const withoutBlocked = async (services: CatalogServices, list: TitleList): Promise<TitleList> => ({
-	...list,
-	results: await unblocked(services, list.results),
-});
 
 /** A blocked title is a 404, the same as one that doesn't exist, and TMDB is never asked. */
 const refuseBlocked = async (services: CatalogServices, media: PardaMedia, id: number) => {
 	const blocked = await services.controls.blocked();
 	if (blocked.has(titleKey(media, id))) throw new AppError("NOT_FOUND", `Blocked title ${media}/${id}`);
+};
+
+/** A title's US certificate, from its details (every country's are there). */
+export const usCertificate = (details: Pick<TitleDetails, "ratings">): string | null =>
+	details.ratings.find((row) => row.country === "US")?.rating ?? null;
+
+/** Over a kids' profile's cap, a title is a 404 like a blocked one; without a US certificate too. */
+const refuseOverCap = (scope: CatalogScope, details: Pick<TitleDetails, "media" | "id" | "ratings">) => {
+	if (scope.cap && !withinCap(scope.cap, details.media, usCertificate(details))) {
+		throw new AppError("NOT_FOUND", `Over the cap: ${details.media}/${details.id}`);
+	}
 };
 
 export async function popularTitles(
@@ -88,34 +113,31 @@ export async function popularTitles(
 	media: PardaMedia,
 	page = 1,
 ): Promise<TitleList> {
-	const list = await read(
-		services,
-		scope,
-		"list",
-		`${media}/popular`,
-		{ page },
-		(raw) => mapList(media, raw),
-		fillInList,
-	);
-	return withoutBlocked(services, list);
+	return listTitles(services, scope, { media, path: `${media}/popular`, params: { page } });
 }
 
-/** Any list a rail shows (`catalog/rails.ts`): trending, a TMDB list or a discover query, minus takedowns. */
+/**
+ * Any list a rail shows (`catalog/rails.ts`): trending, a TMDB list or a discover query,
+ * minus takedowns. Under a cap, asked as its capped discover query when TMDB can filter
+ * it, else filtered through `pd_title`'s certificates.
+ */
 export async function listTitles(
 	services: CatalogServices,
 	scope: CatalogScope,
 	request: { media: ListMedia; path: string; params: TmdbParams },
 ): Promise<TitleList> {
+	const capped = scope.cap ? cappedRequest(request, scope.cap) : null;
+	const asked = capped ?? request;
 	const list = await read(
 		services,
 		scope,
 		"list",
-		request.path,
-		{ page: 1, ...request.params },
-		(raw) => mapList(request.media, raw),
+		asked.path,
+		{ page: 1, ...asked.params },
+		(raw) => mapList(asked.media, raw),
 		fillInList,
 	);
-	return withoutBlocked(services, list);
+	return { ...list, results: await visible(services, scope, list.results, capped !== null) };
 }
 
 /**
@@ -138,9 +160,14 @@ export async function searchCatalog(
 		(raw) => mapSearch(kind, raw),
 		fillInSearch,
 	);
-	const blocked = await services.controls.blocked();
+	const titles = results.hits.flatMap((hit) => (hit.media === "person" ? hit.knownFor : [hit]));
+	const shown = new Set(
+		(await visible(services, scope, titles as ReadonlyArray<{ media: PardaMedia; id: number }>)).map((item) =>
+			titleKey(item.media, item.id),
+		),
+	);
 	const allowed = (item: { media: string; id: number }) =>
-		item.media === "person" || !blocked.has(titleKey(item.media as PardaMedia, item.id));
+		item.media === "person" || shown.has(titleKey(item.media, item.id));
 	return {
 		...results,
 		hits: results.hits
@@ -162,7 +189,7 @@ export async function keywordName(services: CatalogServices, scope: CatalogScope
 	);
 }
 
-/** A title's details, with its recommendations and similar titles minus takedowns. */
+/** A title's details, with its recommendations and similar titles minus takedowns (and over the cap). */
 export async function titleDetails(
 	services: CatalogServices,
 	scope: CatalogScope,
@@ -179,10 +206,11 @@ export async function titleDetails(
 		(raw) => mapDetails(media, raw, scope.region),
 		fillInDetails,
 	);
+	refuseOverCap(scope, details);
 	return {
 		...details,
-		recommendations: await unblocked(services, details.recommendations),
-		similar: await unblocked(services, details.similar),
+		recommendations: await visible(services, scope, details.recommendations),
+		similar: await visible(services, scope, details.similar),
 	};
 }
 
@@ -194,6 +222,7 @@ export async function titleSeason(
 	season: number,
 ): Promise<SeasonDetails> {
 	await refuseBlocked(services, "tv", id);
+	if (scope.cap) await titleDetails(services, scope, "tv", id);
 	return read(services, scope, "details", seasonPath(id, season), {}, mapSeason, fillInSeason);
 }
 
@@ -205,6 +234,7 @@ export async function titleCredits(
 	id: number,
 ): Promise<TitleCredits> {
 	await refuseBlocked(services, media, id);
+	if (scope.cap) await titleDetails(services, scope, media, id);
 	// Names and jobs don't change with the language: one answer serves both.
 	return read(services, { ...scope, locale: "en" }, "details", creditsPath(media, id), {}, mapCredits, (ne) => ne);
 }
@@ -216,7 +246,7 @@ export async function personDetails(
 	id: number,
 ): Promise<PersonDetails> {
 	const person = await read(services, scope, "details", `person/${id}`, PERSON_PARAMS, mapPerson, fillInPerson);
-	return { ...person, credits: await unblocked(services, person.credits) };
+	return { ...person, credits: await visible(services, scope, person.credits) };
 }
 
 /** A collection, its parts in release order minus takedowns. */
@@ -226,5 +256,5 @@ export async function collectionDetails(
 	id: number,
 ): Promise<CollectionDetails> {
 	const collection = await read(services, scope, "details", `collection/${id}`, {}, mapCollection, fillInCollection);
-	return { ...collection, parts: await unblocked(services, collection.parts) };
+	return { ...collection, parts: await visible(services, scope, collection.parts) };
 }

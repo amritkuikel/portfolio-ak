@@ -25,7 +25,9 @@ import { gzipSync } from "node:zlib";
 // same way, so their line rose too (the heaviest, the portfolio's project editor, 266.5 kB).
 // Task 63 (0235): 280. Every route definition is in the entry (0151), and Parda's title, credits,
 // person, collection and surprise routes took it to 276.0 kB; the rest of Part 6 is measured in Task 70.
-const ENTRY_BUDGET_KB = 280;
+// Task 67 (0240): 285. The library and profiles routes took it to 280.9 kB; Tasks 68 to 69a add four
+// more routes (about 0.3 kB each), and Task 70 measures and trims.
+const ENTRY_BUDGET_KB = 285;
 const ROUTE_BUDGET_KB = 300;
 const FONT_BUDGET_KB = 150;
 /** Code that must never be preloaded by every page, found by a string it always contains: its pages load it. */

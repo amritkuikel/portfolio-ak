@@ -12,7 +12,7 @@ import { failureClient, limitPlayback, viewerKind } from "@/server/parda/player/
 import { recordPlay, reportProblem } from "@/server/parda/player/plays";
 import { noteTitleFailure } from "@/server/parda/player/stats";
 import { watchPage } from "@/server/parda/player/watch";
-import { PROFILE_COOKIE, readingProfile } from "@/server/parda/profiles/service";
+import { browsingProfile, PROFILE_COOKIE } from "@/server/parda/profiles/service";
 
 /**
  * The watch page's functions (PLAN 12.5, decision 0236): open to everyone, like the
@@ -62,12 +62,16 @@ export const getPardaWatch = createServerFn({ method: "GET" })
 	.validator(zodInput(watchInput))
 	.handler(async ({ data, context }): Promise<WatchPageData> => {
 		if (!context.catalog) return { configured: false };
-		const profile = await readingProfile(db, context.session, getCookie(PROFILE_COOKIE));
+		const profile = await browsingProfile(db, context.session, getCookie(PROFILE_COOKIE));
 		return watchPage(
 			context.catalog,
 			db,
 			{ media: PARDA_TYPES[data.type], id: data.id, season: data.season, episode: data.episode },
-			{ profileId: profile?.id ?? null, autoplay: profile?.autoplay ?? true },
+			{
+				profileId: profile?.id ?? null,
+				autoplay: profile?.autoplay ?? true,
+				audioLanguage: profile?.audioLanguage ?? null,
+			},
 			data.locale,
 		);
 	});

@@ -19,10 +19,14 @@ export async function loadPardaPage(
 	signedIn = false,
 ): Promise<HeroPreload> {
 	const data = await ensureQuery(queryClient, pardaPageQueryOptions(locale, page));
-	// The home's Continue watching renders on the server for a session (decision 0236); a failure only leaves it out.
+	// The home's Continue watching (decision 0236) and personal rails (decision 0240) render on the server
+	// for a session; a failure only leaves one out.
 	if (signedIn && page === "home" && data.configured) {
-		const { pardaContinueQueryOptions } = await import("../library/queries");
-		await ensureQuery(queryClient, pardaContinueQueryOptions(locale)).catch(() => undefined);
+		const { pardaContinueQueryOptions, pardaForYouQueryOptions } = await import("../library/queries");
+		await Promise.all([
+			ensureQuery(queryClient, pardaContinueQueryOptions(locale)).catch(() => undefined),
+			ensureQuery(queryClient, pardaForYouQueryOptions(locale)).catch(() => undefined),
+		]);
 	}
 	if (!data.configured) return { narrow: null, wide: null };
 	for (const rail of data.rails) {

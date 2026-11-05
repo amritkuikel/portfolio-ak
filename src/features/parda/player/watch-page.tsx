@@ -34,6 +34,7 @@ import { CatalogUnconfigured } from "../home/catalog-unconfigured";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
 import { pardaWatchQueryOptions } from "../library/queries";
+import { HeartButton, ListIconButton } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { titleRouteParams } from "../search";
 import { episodeCode } from "../title/title-hero";
@@ -308,6 +309,8 @@ function Screen({ data }: { data: Data }) {
 						<RectangleHorizontalIcon aria-hidden />
 						{m.pd_watch_theater()}
 					</Button>
+					<ListIconButton title={{ media: title.media, id: title.id, title: title.title }} playerMounted />
+					<HeartButton title={{ media: title.media, id: title.id, title: title.title }} playerMounted />
 					{data.playback === "on" ? <ReportDialog data={data} sourceId={player.source?.id ?? null} /> : null}
 					<ServerMenu player={player} sources={data.sources} />
 				</div>

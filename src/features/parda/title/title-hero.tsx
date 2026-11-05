@@ -8,6 +8,7 @@ import { CertBadge, ProgressBar, RatingBadge } from "../kit/badges";
 import { formatYear } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
+import { HeartButton, ListButton, RateButtons } from "../library/save-buttons";
 import { MarkButton, PlayAction } from "../library/title-progress";
 import type { TitleProgressData } from "../library/types";
 import { statusLabel } from "./labels";
@@ -129,7 +130,7 @@ export function TitleHero({
 							sizes="(min-width: 1024px) 7rem, 6rem"
 						/>
 					</div>
-					<div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-8">
+					<div className="flex min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-end xl:justify-between xl:gap-8">
 						<div className="flex min-w-0 flex-col gap-2">
 							<h1
 								id="title-heading"
@@ -177,7 +178,7 @@ export function TitleHero({
 								</p>
 							) : null}
 						</div>
-						<div className="flex shrink-0 flex-wrap items-center gap-2">
+						<div className="flex flex-wrap items-center gap-2 xl:max-w-[55%] xl:justify-end">
 							{playable ? <PlayAction title={ref} progress={progress} /> : null}
 							{trailer ? (
 								<VideoDialog video={trailer} title={title.title}>
@@ -200,6 +201,9 @@ export function TitleHero({
 											: m.pd_mark_series_watched()
 								}
 							/>
+							<ListButton title={{ media: title.media, id: title.id, title: title.title }} />
+							<HeartButton title={{ media: title.media, id: title.id, title: title.title }} />
+							<RateButtons title={{ media: title.media, id: title.id, title: title.title }} />
 							<ShareButton title={title.title} />
 						</div>
 					</div>

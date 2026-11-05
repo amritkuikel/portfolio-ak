@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
-import { getCookie, getRequest } from "@tanstack/react-start/server";
+import { getCookie, getRequest, getRequestHeader } from "@tanstack/react-start/server";
+import { isTmdbRegion } from "@/features/parda/profiles/options";
 import { isAppError } from "@/lib/errors";
 import type { Localized } from "@/lib/i18n/localized";
 import type { Session } from "@/lib/session";
@@ -12,10 +13,26 @@ import type { CatalogScope, CatalogServices } from "./service";
 
 /**
  * What `withPardaCatalog` hands a catalogue function (PLAN 12.5): the services, and the
- * scope's region and cap. Null when TMDB_READ_TOKEN is unset: the page then says the
- * catalogue isn't configured.
+ * scope's region and cap, and the profile's players' language. Null when TMDB_READ_TOKEN
+ * is unset: the page then says the catalogue isn't configured.
  */
-export type PardaCatalog = { services: CatalogServices; region: string; cap: string | null };
+export type PardaCatalog = {
+	services: CatalogServices;
+	region: string;
+	cap: string | null;
+	/** The profile's audio language for players (`{lang}`), when it chose one. */
+	audioLanguage?: string | null;
+};
+
+/**
+ * The region (decision 0240): the profile's, else the visitor's country (Vercel's
+ * `x-vercel-ip-country`) when TMDB has data for it, else the admin's.
+ */
+export function regionFor(profileRegion: string | null | undefined, country: string | undefined, fallback: string) {
+	if (profileRegion) return profileRegion;
+	const upper = country?.trim().toUpperCase();
+	return isTmdbRegion(upper) ? upper : fallback;
+}
 
 /**
  * Calls over HTTP without a session, per IP (decision 0234). A page load reads the
@@ -41,9 +58,10 @@ export async function pardaCatalog(session: Session | null): Promise<PardaCatalo
 	]);
 	return {
 		services: { tmdb: pardaTmdb, cache: pardaCache, controls: pardaControls },
-		region: profile?.region ?? settings.region,
-		// A kids' profile browses under its cap, or the admin's (decision 0236).
-		cap: profile?.kids ? (profile.cap ?? ("kidsCap" in settings ? settings.kidsCap : null)) : null,
+		region: regionFor(profile?.region, getRequestHeader("x-vercel-ip-country"), settings.region),
+		// A kids' profile browses under its cap, or the admin's (decisions 0236 and 0240).
+		cap: profile?.kids ? (profile.cap ?? ("kidsCap" in settings ? settings.kidsCap : "PG")) : null,
+		audioLanguage: profile?.audioLanguage ?? null,
 	};
 }
 

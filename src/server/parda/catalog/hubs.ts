@@ -68,8 +68,13 @@ async function billboard(
 	const picked = titles.filter((title) => title.backdrop).slice(0, BILLBOARD_SIZE);
 	const slides = await Promise.all(
 		picked.map((title) =>
-			degrade(`${title.media}/${title.id}`, async (): Promise<HubSlide> => {
-				const details = await titleDetails(services, scope, title.media, title.id);
+			degrade(`${title.media}/${title.id}`, async (): Promise<HubSlide | null> => {
+				// A title a kids' cap refuses (its US certificate disagrees with the list's) is left out.
+				const details = await titleDetails(services, scope, title.media, title.id).catch((error: unknown) => {
+					if (isAppError(error) && error.code === "NOT_FOUND") return null;
+					throw error;
+				});
+				if (!details) return null;
 				return {
 					...toHubTitle(details),
 					tagline: details.tagline,
@@ -80,7 +85,7 @@ async function billboard(
 			}),
 		),
 	);
-	return slides.filter((slide) => slide !== null);
+	return slides.filter((slide): slide is HubSlide => slide !== null);
 }
 
 export async function hubPage(

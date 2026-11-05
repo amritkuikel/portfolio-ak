@@ -10,7 +10,10 @@
  * - the first actor of the review's title and of each popular first, and the collection
  *   of every recorded movie that belongs to one (person and collection pages);
  * - search and Discover (Task 66): each sample query in every tab, each sample of
- *   Discover's filters, and the popular movie's first keyword with its Discover page.
+ *   Discover's filters, and the popular movie's first keyword with its Discover page;
+ * - a kids' profile's home (Task 67, decision 0240): each rail TMDB can filter by
+ *   certificate, asked with the admin's default cap. `--kids` records only these, beside
+ *   the files already there.
  *
  * Files are named by `fixtureName` (e2e/harness/tmdb.ts). Tests pick their ids from the
  * recorded lists, so recording again changes no test.
@@ -24,6 +27,7 @@ import {
 	discoverRequest,
 	SEARCH_SAMPLES,
 } from "../src/server/parda/catalog/discover-requests.ts";
+import { cappedRequest } from "../src/server/parda/catalog/kids-requests.ts";
 import { BILLBOARD_SIZE, PAGE_LAYOUTS, railContext } from "../src/server/parda/catalog/rails.ts";
 import {
 	creditsPath,
@@ -248,7 +252,21 @@ const titlesOf = (answer: Answer, media: string) =>
 		return [{ ...item, media: itemMedia }];
 	});
 
+/** The cap a new install's kids' profiles browse under (`pd_settings.kids_cap`'s default). */
+const KIDS_CAP = "PG";
+const recordKids = async () => {
+	for (const spec of PAGE_LAYOUTS.home.rails) {
+		const capped = cappedRequest(spec.request(railContext("US")), KIDS_CAP);
+		if (capped) await record(capped.path, { page: 1, ...capped.params });
+	}
+};
+
 mkdirSync(OUT, { recursive: true });
+if (process.argv.includes("--kids")) {
+	await recordKids();
+	console.log("record-tmdb-fixtures: recorded the kids' home rails");
+	process.exit(0);
+}
 for (const file of readdirSync(OUT)) rmSync(path.join(OUT, file));
 
 const collections = new Set<number>();
@@ -313,4 +331,5 @@ if (keyword) {
 	await record(`keyword/${keyword.id}`);
 	await discover({ keyword: keyword.id });
 }
+await recordKids();
 console.log(`record-tmdb-fixtures: wrote ${readdirSync(OUT).length} files to tests/fixtures/tmdb`);

@@ -1,5 +1,14 @@
 import { linkOptions } from "@tanstack/react-router";
-import { type DiscoverSearch, PARDA_HUBS, type PardaHub, type PardaPage, type SearchTab, typeOfMedia } from "./search";
+import {
+	type DiscoverSearch,
+	type LibraryQuery,
+	type LibraryTab,
+	PARDA_HUBS,
+	type PardaHub,
+	type PardaPage,
+	type SearchTab,
+	typeOfMedia,
+} from "./search";
 import { titleParam } from "./slug";
 
 /**
@@ -36,6 +45,11 @@ export const pardaLinks = {
 	search: (q?: string, tab?: SearchTab) => linkOptions({ to: "/app/parda/search", search: { q, tab } }),
 	/** Discover (indexable), with any of its filters (decision 0239). */
 	discover: (filters: Partial<DiscoverSearch> = {}) => linkOptions({ to: "/app/parda/discover", search: filters }),
+	/** The library (noindex, decision 0240): My List, ♥, Continue watching, History. */
+	library: (tab: LibraryTab = "list", query: Partial<LibraryQuery> = {}) =>
+		linkOptions({ to: "/app/parda/library/$tab", params: { tab }, search: query }),
+	/** Who's watching: the picker, and managing profiles (noindex). */
+	profiles: () => linkOptions({ to: "/app/parda/profiles" }),
 	about: (hash?: string) => linkOptions({ to: "/app/parda/about", ...(hash ? { hash } : {}) }),
 	signIn: (redirect?: string) => linkOptions({ to: "/app/parda/sign-in", search: { redirect } }),
 	signUp: (redirect?: string) => linkOptions({ to: "/app/parda/sign-up", search: { redirect } }),
@@ -47,6 +61,8 @@ export const PARDA_PATHS = {
 	about: "/app/parda/about",
 	discover: "/app/parda/discover",
 	search: "/app/parda/search",
+	library: (tab: LibraryTab = "list") => `/app/parda/library/${tab}`,
+	profiles: "/app/parda/profiles",
 	hub: (hub: PardaHub) => `/app/parda/${hub}`,
 	title: (media: Media, id: number, slug: string) => `/app/parda/${typeOfMedia(media)}/${titleParam(id, slug)}`,
 	credits: (media: Media, id: number, slug: string) => `${PARDA_PATHS.title(media, id, slug)}/credits`,

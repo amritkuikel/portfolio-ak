@@ -1,4 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import { ConfirmProvider } from "@/components/dialogs/confirm";
 import { NotFoundPage } from "@/components/errors/not-found-page";
 import { SectionHome } from "@/components/errors/section-home";
 import { m } from "@/paraglide/messages";
@@ -12,9 +13,12 @@ const home = () => <Link {...pardaLinks.home()}>{m.pd_go_home()}</Link>;
 export function PardaSection() {
 	return (
 		<SectionHome link={home()}>
-			<PardaFrame>
-				<Outlet />
-			</PardaFrame>
+			{/* History's "Clear" and deleting a profile ask first (decision 0240). */}
+			<ConfirmProvider>
+				<PardaFrame>
+					<Outlet />
+				</PardaFrame>
+			</ConfirmProvider>
 		</SectionHome>
 	);
 }

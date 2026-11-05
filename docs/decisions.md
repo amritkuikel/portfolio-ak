@@ -244,6 +244,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0237](#0237-pardas-admin-i-sources-takedowns-reports-and-settings): Parda's admin I: sources, takedowns, reports and settings
 - [0238](#0238-parda-ranks-its-sources-from-viewers-and-a-daily-probe): Parda ranks its sources from viewers and a daily probe
 - [0239](#0239-parda-searches-and-discovers-through-the-catalogue-service): Parda searches and discovers through the catalogue service
+- [0240](#0240-pardas-library-profiles-and-the-kids-cap): Parda's library, profiles and the kids' cap
 </details>
 
 ---
@@ -3048,3 +3049,40 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Numbers:** entry 279.9 of 280 kB (278.7 before): two routes and Discover's URL contract. The next task with a route must trim route options or raise the budget, with a decision.
 
 **Alternatives considered:** counting searches inside the page's server function (a hover preload would count, and the query cache would hide repeats unevenly); `FilterBar` for the search box (it applies after each pause in typing, which would count "sta", "star", "star w"); free-text network and studio ids (TMDB has no Nepali names for them, and a select works without JavaScript); TMDB's `with_genres` as "any of" (a pipe): "all of" is what a viewer narrowing a list expects.
+
+## 0240: Parda's library, profiles and the kids' cap
+
+**What:** Task 67. The library at `/app/parda/library/{list,favourites,continue,history}`, profiles at `/app/parda/profiles` (both noindex), the save buttons, the home's personal rails, and the kids' cap applied to every catalogue read.
+- **Tables** (migration `0033_parda_library`): `pd_list_item` (My List is `watchlist`, ♥ is `favourite`, unique per profile, kind and title), `pd_favourite_person` (the name and portrait as TMDB gave them: people have no snapshot table), `pd_rating` (`like` or `dislike`; taking it back deletes the row), `pd_account` (the email digest, per user, never for a guest), and `pd_title.certification_checked_at`.
+- **Saving a title reads it through the catalogue** (so a takedown or a kids' cap refuses it, a 404) and writes its snapshot to `pd_title` (titles in both languages, pictures, year, genres, its US certificate). My List and ♥ are named and sorted from `pd_title` with no TMDB call; the daily refresh keeps the rank and never deletes a row (0229). History names its titles through the catalogue, as Continue watching does, because watching writes no snapshot.
+- **The buttons:** the `_parda` layout loads, for a session, the profile and its saved keys (`getPardaSaved`, the latest 2,000 of each kind), so every + My List, ♥ and Like renders pressed or not from the server. A press changes the keys at once, writes, then reads the library again; without a session it starts a Parda guest first (`useEnsureViewer`, as marks do). Cards take the button through a new `action` slot on `PosterCard`, a sibling of the link over the poster's corner (like Continue watching's *Remove*): shown on hover or focus for a fine pointer, always on touch and when listed.
+- **History** is the progress rows by day in `APP_TIME_ZONE`, each title once a day with its episodes, 60 rows a page. Taking a day out deletes those rows, so Continue watching forgets them too; *Clear history* (confirmed) deletes every row and every `pd_continue_state`.
+- **Personal rails** on the home, awaited by its loader for a session: "Because you liked …" (TMDB's recommendations for the latest liked title, else the latest ♥, minus Not for me and My List) and "New from people you love" (the eight newest favourite people's titles from the last two years and those to come, newest first, talk shows out).
+- **Profiles:** at most five per owner; the default is the account's own and never a kids' one (dropping the cookie must never lift a cap). Pictures are eight drawn icons, not uploads. A kids' profile can only switch: adding, changing, deleting and locking are FORBIDDEN from it. Region is a TMDB watch region or Automatic; the players' language is one the admin lists or Automatic; autoplay is the Up next switch.
+- **PIN locks:** any profile can have a four-digit PIN (scrypt, a random salt). Choosing a locked profile from another asks for it, five tries per profile in 15 minutes; a wrong PIN is a field error. The `pd_profile` cookie for a locked profile carries `id.HMAC(secret, id, pin hash)`, so knowing an id opens nothing and a new PIN ends every old cookie. Without a usable cookie a browser is on the default profile, or on the oldest unlocked one when the default is locked (so a kid who clears cookies lands on their own profile); when every profile is locked, the default. A locked profile is changed only from inside it, so another adult profile can't lift its lock.
+- **Switching** sets the cookie and reloads Parda at its home: every cached list may differ for another profile (a cap, a region).
+- **The kids' cap** (the profile's, else `pd_settings.kids_cap`) in `catalog/service.ts`, the one module every read goes through:
+  - lists TMDB can filter are asked as discover queries with the cap's exact US certificates (`certification_country=US&certification=G|PG`; TV gets TV-Y…TV-PG for PG): discover rails, and a type's popular, trending and top rated lists (`cappedRequest`, pure, beside `rails.ts`). `certification.lte` isn't used: TMDB counts NR as below every rating, so it let unrated titles in (checked 2026-11-05);
+  - everything else (trending of both types, upcoming, on the air, search, recommendations, similar, filmographies, collections) keeps only titles whose US certificate `pd_title` knows to be within the cap. An unknown certificate is out (fail closed);
+  - a title over the cap, or with no US certificate, is a 404, and so are its season and credits.
+- **Certificates:** the daily job's new step asks `movie/{id}/release_dates` and `tv/{id}/content_ratings` for the ranked titles never asked, then those asked over 30 days ago, 400 a run, four at a time; a failure is tried again next run. The controls cache the known certificates for 10 minutes. Saving a title writes its certificate too.
+- **The cap left the cache key:** it decides which requests are made and what passes, never TMDB's answer to one, so a kids' page shares the cache with everyone's.
+- **Region:** the profile's, else `x-vercel-ip-country` when TMDB has watch data for that country (`TMDB_REGIONS`, 139 on 2026-11-05, no NP), else the admin's. The catalogue now reads the default profile when there's no cookie (one query) so its region counts.
+- **Players' language** (`{lang}`): the profile's when the admin lists it, else the page's rule (0237).
+- **Guests:** the claim merges the guest's My List, ♥, favourite people and likes into the account's default profile (the account's row wins, a later like wins).
+- **Fixtures:** the recorder also records a kids' home (each capped rail at PG); `pnpm tmdb:record --kids` adds only those files, which is what this task did (16 files) instead of re-recording all 224.
+
+**Why:** PLAN Task 67 and 12.5 ("Kids", "Data model", "Guests").
+
+**Deviations from PLAN Task 67:**
+- **The PIN locks a profile** rather than being a kids' profile's own: a PIN on the kids' profile would keep others out of it, not the kid in it. Locking the parents' profiles is what keeps a kid in theirs.
+- **No automatic "Who's watching?" on arrival:** the picker is a page linked from the account menu ("Switch profile" from two profiles); redirecting every page load to it would cost a query and a hop for everyone.
+- **Without a session the library says how it starts** rather than listing the browser's own progress (Continue watching stays on the home's rail): that progress needs the catalogue's image base, which only the catalogue's pages carry.
+- **The kids' home has no billboard and no Top 10 in the e2e build:** both come from the mixed trending list, filtered through `pd_title`'s certificates, which the harness never fills.
+- **The digest is only the opt-in;** Task 68 sends it.
+
+**Found on the way:** the four flows that start a guest with the first click (Task 64's "marking a season watched" among them, flaky since Task 66) clicked before hydration; they wait for the network to settle first now. The title hero's actions, four buttons longer, crushed its facts at 768 px: they sit under the title until `xl`. Seven top-mask links overflowed at 1024 px: About shows there from `xl` (the footer has it), and the links don't wrap.
+
+**Numbers:** entry 280.8 kB (279.9 before): two routes. The budget is 285 kB (was 280): Tasks 68 to 69a add four routes, and Task 70 measures and trims.
+
+**Alternatives considered:** a title snapshot on each list row (a second copy of `pd_title`); filtering every list through `pd_title` (the kids' rails would be nearly empty until the certificates fill in); a details call per title to check its certificate (hundreds of TMDB calls for a kids' home); `certification.lte` (lets NR in); a plain profile id in the cookie for a locked profile (anyone who saw the id could open it).

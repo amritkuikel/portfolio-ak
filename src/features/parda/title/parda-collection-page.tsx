@@ -10,6 +10,7 @@ import { POSTER_SIZES, toPosterItem } from "../home/title-rails";
 import { PosterCard } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
+import { CardListToggle } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { pardaCollectionQueryOptions } from "../queries";
 import { INSET } from "./title-sections";
@@ -60,6 +61,7 @@ function CollectionContent({ data }: { data: Extract<CollectionPageData, { confi
 									item={toPosterItem(part, imageBase)}
 									link={pardaLinks.title(part.media, part.id, part.slug)}
 									sizes={POSTER_SIZES}
+									action={<CardListToggle title={{ media: part.media, id: part.id, title: part.title }} />}
 								/>
 							</li>
 						))}

@@ -3,6 +3,7 @@ import type { Localized } from "@/lib/i18n/localized";
 import type { Paged } from "@/lib/list/paging";
 import { localizedText, optionalText, required } from "@/lib/validation";
 import { locales } from "@/paraglide/runtime";
+import { KIDS_CAPS } from "../kids";
 import type { PardaSourceAdapter } from "../player/adapters/types";
 import type { PardaReportKind, PardaReportStatus } from "../player/playback";
 
@@ -192,7 +193,6 @@ export type AdminReportPage = Paged<AdminReport>;
 // ---------------------------------------------------------------------------
 
 /** The certifications a kids' profile may be capped at (TMDB's US ladder: NP has none, PLAN 12.4). */
-export const KIDS_CAPS = ["G", "PG", "PG-13", "R"] as const;
 
 export const settingsInput = z.strictObject({
 	/** ISO 3166-1 alpha-2: TMDB's certifications and watch providers fall back to it. */

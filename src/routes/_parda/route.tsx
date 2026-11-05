@@ -14,18 +14,22 @@ import { getLocale } from "@/paraglide/runtime";
 export const Route = createFileRoute("/_parda")({
 	staticData: { brand: PARDA_BRAND },
 	// The admin's banner (decision 0237) and a guest's, which names the day their progress is
-	// deleted (decision 0236): read here, so both render whole. Neither can fail the page.
+	// deleted (decision 0236): read here, so both render whole. None of these can fail the page.
 	loader: async ({ context }) => {
 		const [{ pardaBannerQueryOptions }, { ensureQuery }] = await Promise.all([
 			import("@/features/parda/queries"),
 			import("@/lib/query"),
 		]);
-		const guest = async () => {
-			if (!context.session?.isAnonymous) return;
-			const { pardaViewerQueryOptions } = await import("@/features/parda/library/queries");
-			await ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined);
+		// A session's profile (the account menu) and what it saved (every My List and ♥ button, decision 0240).
+		const viewer = async () => {
+			if (!context.session) return;
+			const { pardaSavedQueryOptions, pardaViewerQueryOptions } = await import("@/features/parda/library/queries");
+			await Promise.all([
+				ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined),
+				ensureQuery(context.queryClient, pardaSavedQueryOptions()).catch(() => undefined),
+			]);
 		};
-		await Promise.all([ensureQuery(context.queryClient, pardaBannerQueryOptions()).catch(() => undefined), guest()]);
+		await Promise.all([ensureQuery(context.queryClient, pardaBannerQueryOptions()).catch(() => undefined), viewer()]);
 	},
 	head: () => ({ meta: [{ title: pardaTitle() }, NOINDEX], links: pardaFontPreloads(getLocale()) }),
 	notFoundComponent: PardaNotFound,

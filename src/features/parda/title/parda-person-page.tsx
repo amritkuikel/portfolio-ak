@@ -10,6 +10,7 @@ import { CatalogUnconfigured } from "../home/catalog-unconfigured";
 import { formatYear } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
+import { PersonHeartButton } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { pardaPersonQueryOptions } from "../queries";
 import { useRememberViewed } from "../search/recent";
@@ -88,6 +89,7 @@ function PersonContent({ data }: { data: Extract<PersonPageData, { configured: t
 							))}
 						</ul>
 					) : null}
+					<PersonHeartButton id={person.id} name={person.name} />
 				</div>
 			</header>
 			<div className="flex flex-col gap-12 pt-8 pb-12">

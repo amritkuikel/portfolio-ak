@@ -2176,7 +2176,7 @@ As 11.1, with these differences:
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Done (decision 0237) |
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Done (decision 0238) |
 | 66 | Search and discover | high | Done (decision 0239) |
-| 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
+| 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Done (decision 0240) |
 | 68 | Schedule and new-episode alerts | high | Planned |
 | 69 | Admin II: overview, curation, home layout | high | Planned |
 | 69a | Watch party | xhigh | Planned |
@@ -2248,7 +2248,7 @@ Across the players:
 - Guests are deleted 7 days after creation (`GUEST_LIFETIME_DAYS`).
 - `refresh()` calls `router.invalidate()`.
 
-**Bundle:** the entry was 267.5 of 275 KB after Task 53, and every route definition adds about 0.3 KB (0217). Task 63 raised the budget to 280 KB at 275.9 (0235).
+**Bundle:** the entry was 267.5 of 275 KB after Task 53, and every route definition adds about 0.3 KB (0217). Task 63 raised the budget to 280 KB at 275.9 (0235), Task 67 to 285 KB at 280.9 (0240).
 
 ### 12.5 Architecture (every task follows it)
 
@@ -2290,7 +2290,7 @@ Across the players:
   - Takedowns and sources are read from Postgres with a 30 s TTL. No CDN page caching (0147).
 - **Locale:** `ne-NP` filled in from the cached `en-US` response.
 - **Images:** `TmdbImage` takes a server-built `{ src, srcSet, width, height }`, with fixed aspects (2:3, 16:9). The billboard is preloaded with the same `imagesrcset` and `imagesizes`; everything else is lazy.
-- **Kids:** rails use discover `certification.lte` + `certification_country`. Search, trending and recommendations are filtered through `pd_title.certification`.
+- **Kids:** lists TMDB can filter are discover queries with the cap's exact US certificates (`certification_country=US&certification=G|PG`; `certification.lte` lets NR in, 0240). Search, trending of both types, recommendations and the rest are filtered through `pd_title.certification`, which the daily job fills in; an unknown certificate is out.
 - **Takedowns and caps** are applied in `catalog/service.ts` only, and tested from every entry point.
 - **Fixtures:**
   - `scripts/record-tmdb-fixtures.ts` (`pnpm tmdb:record`) writes `tests/fixtures/tmdb/`.
@@ -2415,7 +2415,7 @@ Across the players:
 | `pd_source_stat`, `pd_source_probe`, `pd_source_title_fail` | daily viewer rollups per source and band, with the scores and orders; probe results; recent failures per source and title | 65a |
 | `pd_search_stat` | day, normalized query, count, zero results (search page only, no user) | 66 |
 | `pd_list_item` | profile, kind (`watchlist` or `favourite`), title, added | 67 |
-| `pd_favourite_person`, `pd_rating` | favourite people; like or not for me | 67 |
+| `pd_favourite_person`, `pd_rating`, `pd_account` | favourite people; like or not for me; the account's email digest | 67 |
 | `pd_follow_state`, `pd_notification` | last episode seen per followed series; alerts | 68 |
 | `pd_billboard`, `pd_collection` (+ `_item`), `pd_rail`, `pd_daily_stat` | curation, layouts, rollups | 69 |
 | `pd_party` | code, host, title, season, episode, source, state, position, `state_at`, `expires_at` | 69a |
@@ -2669,22 +2669,35 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0032_parda_search`).
 
-### Task 67: Library and profiles (planned)
+### Task 67: Library and profiles (done)
 
-- **Library** `/library/$tab`:
-  - **My List** (watch later; sort and type filter);
-  - **Favourites:** ♥ titles and people;
-  - **Continue watching**;
-  - **History:** by day, remove one, clear all.
-  - The + My List and ♥ buttons on cards, the title page and the player. Like and Not for me.
-  - The Because you liked and New from people you love rails. The My List nav link.
-- **Profiles:**
-  - the picker with 2 or more profiles; create, edit, delete; avatars;
-  - **kids** with a certification cap and a PIN (hashed, rate limited);
-  - the cap also filters search and Discover (0239);
-  - region per profile (falling back to `x-vercel-ip-country` when TMDB supports it, then the admin default);
-  - audio language, autoplay next.
-- **Accounts:** the email digest opt-in.
+**Done** (decision 0240; the guide's "The library and profiles").
+
+**What changed:**
+- **Tables** (migration `0033_parda_library`): `pd_list_item` (My List and ♥), `pd_favourite_person`, `pd_rating`, `pd_account` (the digest opt-in), `pd_title.certification_checked_at`.
+- **Library** `/app/parda/library/{list,favourites,continue,history}` (noindex): My List and ♥ with type and order links and 24 a page, favourite people, Continue watching as a grid, History by day with *Remove* per title and day and *Clear history* (confirmed). Saving writes the title's snapshot to `pd_title`, so lists sort without TMDB.
+- **Buttons:** + My List on every poster (`PosterCard`'s new `action`), My List, ♥, Like and Not for me in the title hero, ♥ on a person's page, My List and ♥ in the player's bar. The layout loads the profile's saved keys for a session; without one, the first press starts a Parda guest.
+- **Home:** "Because you liked …" and "New from people you love", awaited for a session. **Nav:** My List in the top mask from `lg` (About from `xl`) and in the tab bar; the account menu shows the profile's picture and links My List and Profiles.
+- **Profiles** `/app/parda/profiles` (noindex): the picker, add, edit and delete (at most five; the default is never a kids' one), eight drawn pictures, kids with a cap, region (Automatic or a TMDB region), players' language, autoplay, PIN locks (scrypt, five tries per 15 minutes, the cookie carries an HMAC proof), the email digest for accounts. A kids' profile can only switch; a locked profile is changed only from inside it. Switching reloads Parda.
+- **Kids' cap** in `catalog/service.ts`: capped discover queries with exact US certificates for lists TMDB can filter (`kids-requests.ts`), `pd_title`'s certificates for the rest (the daily job fills 400 a run), a 404 over the cap. The cap left the cache key.
+- **Region:** the profile's, else `x-vercel-ip-country` when TMDB has it, else the admin's. **Players' language:** the profile's when the admin lists it.
+- **Guests:** the claim merges My List, ♥, people and likes.
+- **Fixtures:** a kids' home (16 files, `pnpm tmdb:record --kids`).
+- **Tests:** `tests/unit/parda-kids.test.ts`, `tests/server/parda-saved.test.ts`, `tests/server/parda-profiles.test.ts`, the access matrix's nine library rows and a profiles matrix, the guard test's sixteen functions, the "Parda/Library" stories, three e2e flows (My List and ♥ to the library; History; a kids' profile and a PIN) and seven library and profiles pages in the review.
+
+**Deviations (0240):**
+- **The PIN locks a profile,** not a kids' profile's exit: locking the parents' profiles keeps a kid in theirs.
+- **No automatic "Who's watching?":** the picker is linked from the account menu.
+- **Signed out, the library says how it starts;** the browser's own progress stays on the home's rail.
+- **The e2e kids' home has no billboard or Top 10:** both are the mixed trending list, filtered through certificates the harness never fills.
+- **The digest is the opt-in only;** Task 68 sends it.
+- **The entry budget is 285 kB** (was 280).
+
+**Found on the way:** the flows that start a guest with their first click clicked before hydration (Task 64's "marking a season watched" was flaky for that reason); they wait for the network to settle now. The title hero's actions crushed its facts at 768 px with four more buttons; they sit under the title until `xl`.
+
+**Numbers:** entry 280.8 of 285 kB (279.9 before). `pnpm test` 152 files, 1,512 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, `pnpm test:storybook` (544 of 544), build-storybook, `e2e/flows/parda.spec.ts` (50 of 50) and the review of every `/app/parda` page (336 of 336). The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0033_parda_library`). The daily job fills the kids' certificates over its next three runs; until then a kids' profile sees TMDB-filtered rails but few search hits.
 
 ### Task 68: Schedule and new-episode alerts (planned)
 
@@ -2723,7 +2736,7 @@ Across the players:
 - **Review:**
   - the `impeccable-finish-reviewer` agent against the contract, then fixes;
   - `impeccable-documenter` (`docs/design/parda.md`);
-  - `/code-review` (high) and `/security-review`, with fixes;
+  - `/security-review`, with fixes;
   - the measurements as a decision.
 
 **Out of scope for Part 6:**
@@ -3331,7 +3344,7 @@ As 12.1, with these differences:
 - **Review:**
   - the `impeccable-finish-reviewer` agent against the contract, then fixes;
   - `impeccable-documenter` (`docs/design/chaal.md`);
-  - `/code-review` (high) and `/security-review`, with fixes;
+  - `/security-review`, with fixes;
   - the measurements as a decision.
 
 **Out of scope for Part 7:**
@@ -4046,7 +4059,7 @@ Kharcha's data, money core, access and server, tested on PGlite, with no UI. Exp
 - **Review:**
   - the `impeccable-finish-reviewer` agent against the contract, then fixes;
   - `impeccable-documenter` (`docs/design/kharcha.md`);
-  - `/code-review` (high) and `/security-review`, with fixes;
+  - `/security-review`, with fixes;
   - the measurements as a decision.
 
 **Out of scope for Part 8:**

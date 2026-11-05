@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { toPosterItem } from "../home/title-rails";
 import { PersonCard, PosterCard } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
+import { CardListToggle } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { departmentLabel } from "../title/labels";
 import type { SearchHit } from "./types";
@@ -39,6 +40,7 @@ export function HitGrid({
 							item={toPosterItem(hit, imageBase)}
 							link={pardaLinks.title(hit.media, hit.id, hit.slug)}
 							sizes={SIZES}
+							action={<CardListToggle title={{ media: hit.media, id: hit.id, title: hit.title }} />}
 						/>
 					)}
 				</li>

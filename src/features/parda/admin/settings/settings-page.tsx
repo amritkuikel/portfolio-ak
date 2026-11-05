@@ -15,9 +15,10 @@ import { useCan } from "@/features/rbac/can";
 import { formatNumber } from "@/lib/i18n/intl";
 import { m } from "@/paraglide/messages";
 import { locales } from "@/paraglide/runtime";
+import { KIDS_CAPS } from "../../kids";
 import { pardaAdminKeys } from "../keys";
 import { pardaAdminMutations, pardaSettingsQueryOptions } from "../queries";
-import { type AdminSettings, KIDS_CAPS, settingsInput } from "../schema";
+import { type AdminSettings, settingsInput } from "../schema";
 import { PlaybackSwitch } from "./playback-switch";
 
 const formSchema = settingsInput.omit({ updatedAt: true });

@@ -97,7 +97,7 @@ export async function watchPage(
 	catalog: PardaCatalog,
 	db: Db,
 	request: WatchRequest,
-	viewer: { profileId: string | null; autoplay: boolean },
+	viewer: { profileId: string | null; autoplay: boolean; audioLanguage?: string | null },
 	locale: Locale,
 	/** Tests pin the dice and the clock; a play rolls them. */
 	options: { random?: () => number; now?: Date } = {},
@@ -148,7 +148,11 @@ export async function watchPage(
 					source,
 					{ media: details.media, id: details.id, imdb: details.imdbId, ...(at ?? {}) },
 					{
-						lang: playerLanguage(locale, "languages" in settings ? settings.languages : undefined),
+						lang: playerLanguage(
+							locale,
+							"languages" in settings ? settings.languages : undefined,
+							viewer.audioLanguage ?? catalog.audioLanguage,
+						),
 						base,
 						keepStart: true,
 					},

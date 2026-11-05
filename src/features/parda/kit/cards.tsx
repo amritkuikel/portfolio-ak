@@ -80,6 +80,7 @@ export function PosterCard({
 	progress,
 	preview = true,
 	priority = false,
+	action,
 	className,
 }: {
 	item: PosterCardItem;
@@ -89,19 +90,33 @@ export function PosterCard({
 	progress?: number;
 	preview?: boolean;
 	priority?: boolean;
+	/** A button over the poster's top corner (+ My List), beside the link rather than in it. */
+	action?: ReactNode;
 	className?: string;
 }) {
-	const card = (
-		<Link {...link} className={cn(cardLink, className)} data-testid="poster-card">
+	const linked = (
+		<Link {...link} className={cn(cardLink, action ? null : className)} data-testid="poster-card">
 			<TmdbImage image={item.poster} alt="" label={item.title} aspect="poster" sizes={sizes} priority={priority} />
 			{progress !== undefined ? <ProgressBar value={progress} /> : null}
 			<Caption title={item.title} detail={formatYear(item.year)} />
 		</Link>
 	);
-	if (!preview || !(item.overview || item.backdrop)) return card;
+	const card =
+		preview && (item.overview || item.backdrop) ? <PosterPreview item={item}>{linked}</PosterPreview> : linked;
+	if (!action) return card;
+	return (
+		<div className={cn("group/card relative", className)}>
+			{card}
+			<div className="absolute end-1.5 top-1.5">{action}</div>
+		</div>
+	);
+}
+
+/** The preview a resting mouse opens over a poster. */
+function PosterPreview({ item, children }: { item: PosterCardItem; children: ReactNode }) {
 	return (
 		<HoverCard openDelay={600} closeDelay={80}>
-			<HoverCardTrigger asChild>{card}</HoverCardTrigger>
+			<HoverCardTrigger asChild>{children}</HoverCardTrigger>
 			<HoverCardContent
 				side="right"
 				align="start"
@@ -215,7 +230,8 @@ export function PersonCard({
 	className,
 }: {
 	name: string;
-	role: string | null;
+	/** The part or the job; none (a favourite person) leaves the line empty. */
+	role?: string | null;
 	profile: PardaImage | null;
 	link: PardaLink;
 	sizes?: string;

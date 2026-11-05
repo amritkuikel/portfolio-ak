@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { withinCap } from "@/features/parda/kids";
 import type { Session } from "@/lib/session";
 import * as schema from "@/server/db/schema";
 import type { PardaCatalog } from "@/server/parda/catalog/context";
-import { popularTitles } from "@/server/parda/catalog/service";
+import { popularTitles, titleDetails, usCertificate } from "@/server/parda/catalog/service";
 import { createPardaControls } from "@/server/parda/controls";
+import * as saved from "@/server/parda/library/saved";
 import * as library from "@/server/parda/library/service";
+import * as profiles from "@/server/parda/profiles/service";
 import { resolveViewer } from "@/server/parda/profiles/service";
 import { createTmdbCache } from "@/server/parda/tmdb/cache";
 import { createTmdb } from "@/server/parda/tmdb/client";
@@ -13,9 +16,10 @@ import { fixtureName, readFixture } from "../../e2e/harness/tmdb";
 import { createTestDb } from "../utils/test-db";
 
 /**
- * Parda's access matrix (PLAN 12.5, "Guard test"; decision 0236): every library operation
- * acts on the caller's own profile, works for a guest, and refuses a blocked title. Saving
- * progress is refused with playback off. The functions' middleware (requirePardaViewer,
+ * Parda's access matrix (PLAN 12.5, "Guard test"; decisions 0236 and 0240): every library
+ * operation acts on the caller's own profile, works for a guest, and refuses a blocked
+ * title (or one over a kids' cap). Saving progress is refused with playback off. Every
+ * profile operation acts on the caller's own profiles, and a kids' profile can only switch. The functions' middleware (requirePardaViewer,
  * then withPardaServices) is checked by tests/server/guarded-functions.test.ts; party
  * rows join with Task 69a.
  */
@@ -33,10 +37,10 @@ const tmdb = createTmdb(
 	fetcher,
 );
 let time = 0;
-const catalog = (): PardaCatalog => ({
+const catalog = (cap: string | null = null): PardaCatalog => ({
 	services: { tmdb, cache: createTmdbCache(), controls: createPardaControls(env.db, () => time) },
 	region: "US",
-	cap: null,
+	cap,
 });
 const session = (id: string, guest = false): Session => ({
 	user: { id, email: `${id}@example.com`, name: id, role: "user", twoFactorEnabled: false },
@@ -50,6 +54,7 @@ const ctx = async (id: string, guest = false): Promise<library.PardaServices> =>
 });
 
 let movie = 0;
+let person = 0;
 type Operation = (context: library.PardaServices, id: number) => Promise<unknown>;
 
 /** Every library function's service call (src/functions/parda/library.ts), on a movie. */
@@ -65,7 +70,25 @@ const OPERATIONS: Record<string, Operation> = {
 		library.importLocal(context, [
 			{ media: "movie", id, watched: 600, duration: 7200, sourceId: null, updatedAt: Date.now() },
 		]),
+	getPardaSaved: (context) => saved.savedState(context),
+	setPardaListed: (context, id) => saved.setListed(context, { media: "movie", id, kind: "watchlist", on: true }),
+	setPardaPersonFavourite: (context) => saved.setPersonFavourite(context, { id: person, on: true }),
+	ratePardaTitle: (context, id) => saved.rate(context, { media: "movie", id, value: "like" }),
+	getPardaLibrary: (context) => saved.listPage(context, { type: "all", sort: "added", page: 1 }, "en"),
+	getPardaHistory: (context) => saved.history(context, 1, "en"),
+	removePardaHistory: (context, id) =>
+		saved.removeHistory(context, { media: "movie", id, day: new Date().toISOString().slice(0, 10) }),
+	clearPardaHistory: (context) => saved.clearHistory(context),
+	getPardaForYou: (context) => saved.forYou(context, "en"),
 };
+
+/** Every row a library operation can write: none of another profile's may change. */
+const libraryRows = async () => ({
+	progress: await env.db.select().from(schema.pdProgress),
+	list: await env.db.select().from(schema.pdListItem),
+	people: await env.db.select().from(schema.pdFavouritePerson),
+	ratings: await env.db.select().from(schema.pdRating),
+});
 
 /** The operations a takedown refuses; the rest leave a blocked title out instead. */
 const REFUSED_WHEN_BLOCKED = new Set([
@@ -73,6 +96,8 @@ const REFUSED_WHEN_BLOCKED = new Set([
 	"savePardaProgress",
 	"markPardaWatched",
 	"rewatchPardaTitle",
+	"setPardaListed",
+	"ratePardaTitle",
 ]);
 
 beforeAll(async () => {
@@ -80,6 +105,8 @@ beforeAll(async () => {
 	const first = (await popularTitles(catalog().services, { locale: "en", region: "US", cap: null }, "movie"))
 		.results[0];
 	movie = first?.id ?? 550;
+	const details = await titleDetails(catalog().services, { locale: "en", region: "US", cap: null }, "movie", movie);
+	person = details.cast[0]?.id ?? 287;
 }, 120_000);
 beforeEach(async () => {
 	await env.reset();
@@ -108,12 +135,18 @@ describe("Parda's library access matrix", () => {
 			const asha = await ctx("asha");
 			await operation(asha, movie);
 			// Another viewer never sees or changes Asha's rows.
-			const before = await env.db.select().from(schema.pdProgress);
+			const before = await libraryRows();
 			await operation(await ctx("bina"), movie);
 			const bina = await ctx("bina");
-			const after = await env.db.select().from(schema.pdProgress);
-			for (const row of before) expect(after.find((each) => each.id === row.id)).toEqual(row);
-			expect(after.every((row) => [asha.viewer.profile.id, bina.viewer.profile.id].includes(row.profileId))).toBe(true);
+			const after = await libraryRows();
+			for (const table of Object.keys(before) as Array<keyof typeof before>) {
+				const owned = (rows: ReadonlyArray<{ profileId: string }>) =>
+					rows.filter((row) => row.profileId === asha.viewer.profile.id);
+				expect(owned(after[table])).toEqual(owned(before[table]));
+				expect(
+					after[table].every((row) => [asha.viewer.profile.id, bina.viewer.profile.id].includes(row.profileId)),
+				).toBe(true);
+			}
 			// A guest has a session, so the library is theirs too.
 			await expect(operation(await ctx("guest", true), movie)).resolves.not.toThrow();
 
@@ -124,6 +157,17 @@ describe("Parda's library access matrix", () => {
 			else await expect(blocked).resolves.not.toThrow();
 		});
 	}
+
+	it("refuses what a kids' cap refuses: a title over it can't be saved or rated", async () => {
+		const details = await titleDetails(catalog().services, { locale: "en", region: "US", cap: null }, "movie", movie);
+		const kids: library.PardaServices = { ...(await ctx("asha")), catalog: catalog("G") };
+		const within = withinCap("G", "movie", usCertificate(details));
+		for (const name of ["setPardaListed", "ratePardaTitle"]) {
+			const run = OPERATIONS[name]?.(kids, movie);
+			if (within) await expect(run).resolves.not.toThrow();
+			else await expect(run).rejects.toMatchObject({ code: "NOT_FOUND" });
+		}
+	});
 
 	it("refuses saving progress while playback is off", async () => {
 		await env.db.update(schema.pdSettings).set({ playbackEnabled: false });
@@ -143,4 +187,69 @@ describe("Parda's library access matrix", () => {
 			]),
 		).toEqual({ imported: 0 });
 	});
+});
+
+type Viewer = Awaited<ReturnType<typeof ctx>>;
+const fields = (name: string, kids = false) => ({
+	name,
+	avatar: null,
+	kids,
+	cap: null,
+	region: null,
+	audioLanguage: null,
+	autoplay: true,
+});
+
+/** Every profile function's service call (src/functions/parda/profiles.ts). */
+const PROFILE_OPERATIONS: Record<string, (context: Viewer, target: string) => Promise<unknown>> = {
+	getPardaProfiles: (context) => profiles.profilesOf(context.db, context.viewer.userId),
+	createPardaProfile: (context) => profiles.createProfile(context, fields("Another")),
+	updatePardaProfile: (context, target) => profiles.updateProfile(context, target, fields("Renamed")),
+	deletePardaProfile: (context, target) => profiles.deleteProfile(context, target),
+	setPardaProfilePin: (context, target) => profiles.setPin(context, target, "1234"),
+	switchPardaProfile: (context, target) => profiles.switchProfile(context, target, undefined),
+	setPardaDigest: (context) => profiles.setDigest({ ...context, isGuest: context.viewer.isGuest }, true),
+};
+/** What only the profile's owner may do to a profile, by id. */
+const TARGETED = new Set(["updatePardaProfile", "deletePardaProfile", "setPardaProfilePin", "switchPardaProfile"]);
+/** What a kids' profile can still do: read its profiles and switch. */
+const KIDS_ALLOWED = new Set(["getPardaProfiles", "switchPardaProfile", "setPardaDigest"]);
+
+describe("Parda's profiles access matrix", () => {
+	it("has a row for every profile function", () => {
+		const source = readFileSync("src/functions/parda/profiles.ts", "utf8");
+		const functions = [...source.matchAll(/export const (\w+) = createServerFn/g)].map((match) => match[1]);
+		expect(functions).toEqual(Object.keys(PROFILE_OPERATIONS));
+	});
+
+	for (const [name, operation] of Object.entries(PROFILE_OPERATIONS)) {
+		it(`${name}: own profiles only, guests allowed, kids' profiles ${KIDS_ALLOWED.has(name) ? "allowed" : "refused"}`, async () => {
+			const asha = await ctx("asha");
+			const ashaSecond = await profiles.createProfile(asha, fields("Second"));
+			const bina = await ctx("bina");
+			if (TARGETED.has(name)) {
+				// Bina can't reach Asha's profile by its id: as if it didn't exist.
+				await expect(operation(bina, ashaSecond.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+			}
+			await expect(operation(asha, ashaSecond.id)).resolves.not.toThrow();
+
+			const guest = await ctx("guest", true);
+			const guestSecond = await profiles.createProfile(guest, fields("Guest two"));
+			const asGuest = operation(guest, guestSecond.id);
+			// A guest has no email, so no digest.
+			if (name === "setPardaDigest") await expect(asGuest).rejects.toMatchObject({ code: "FORBIDDEN" });
+			else await expect(asGuest).resolves.not.toThrow();
+
+			const kidsRow = await profiles.createProfile(await ctx("bina"), fields("Kid", true));
+			const other = await profiles.createProfile(await ctx("bina"), fields("Third"));
+			const kid: Viewer = {
+				...bina,
+				viewer: await resolveViewer(env.db, session("bina"), profiles.profileCookieValue(kidsRow), "en"),
+			};
+			expect(kid.viewer.profile.kids).toBe(true);
+			const asKid = operation(kid, other.id);
+			if (KIDS_ALLOWED.has(name)) await expect(asKid).resolves.not.toThrow();
+			else await expect(asKid).rejects.toMatchObject({ code: "FORBIDDEN" });
+		});
+	}
 });

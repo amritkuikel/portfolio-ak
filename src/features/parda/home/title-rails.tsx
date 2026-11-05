@@ -8,6 +8,7 @@ import { GENRE_LABELS } from "../genres";
 import { PosterCard, type PosterCardItem, PosterCardSkeleton } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { Top10Rail, Top10RailSkeleton } from "../kit/top10-rail";
+import { CardListToggle } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { pardaRailQueryOptions } from "../queries";
 import type { PardaPage } from "../search";
@@ -104,6 +105,7 @@ export function TitleRail({
 						item={toPosterItem(each, imageBase)}
 						link={pardaLinks.title(each.media, each.id, each.slug)}
 						sizes={POSTER_SIZES}
+						action={<CardListToggle title={{ media: each.media, id: each.id, title: each.title }} />}
 					/>
 				</RailItem>
 			))}

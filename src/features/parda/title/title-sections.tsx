@@ -10,6 +10,7 @@ import { HEADING, POSTER_ITEM, POSTER_SIZES, toPosterItem } from "../home/title-
 import { PersonCard, PosterCard } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
+import { CardListToggle } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { typeOfMedia } from "../search";
 import { jobLabel, PROVIDER_ORDER, providerKindLabel } from "./labels";
@@ -86,6 +87,7 @@ export function PosterRail({
 						item={toPosterItem(each, imageBase)}
 						link={pardaLinks.title(each.media, each.id, each.slug)}
 						sizes={POSTER_SIZES}
+						action={<CardListToggle title={{ media: each.media, id: each.id, title: each.title }} />}
 					/>
 				</RailItem>
 			))}

@@ -12,7 +12,7 @@ import * as library from "@/server/parda/library/service";
 import { recordPlay, reportProblem } from "@/server/parda/player/plays";
 import { watchPage } from "@/server/parda/player/watch";
 import { ensureDefaultProfile } from "@/server/parda/profiles/repository";
-import { browsingProfile, readingProfile, resolveViewer } from "@/server/parda/profiles/service";
+import { browsingProfile, resolveViewer } from "@/server/parda/profiles/service";
 import { createTmdbCache } from "@/server/parda/tmdb/cache";
 import { createTmdb } from "@/server/parda/tmdb/client";
 import { fixtureName, readFixture } from "../../e2e/harness/tmdb";
@@ -133,9 +133,13 @@ describe("profiles", () => {
 		const fallback = await resolveViewer(env.db, sessionOf("asha"), otherId, "en");
 		expect(fallback.profile.id).not.toBe(otherId);
 		expect(await browsingProfile(env.db, sessionOf("asha"), ownId)).toMatchObject({ kids: true, cap: "PG" });
-		expect(await browsingProfile(env.db, sessionOf("asha"), otherId)).toBeNull();
+		// Someone else's cookie is ignored: the default profile browses (its region counts, decision 0240).
+		expect(await browsingProfile(env.db, sessionOf("asha"), otherId)).toMatchObject({
+			id: fallback.profile.id,
+			kids: false,
+		});
 		expect(await browsingProfile(env.db, null, ownId)).toBeNull();
-		expect(await readingProfile(env.db, null, undefined)).toBeNull();
+		expect(await browsingProfile(env.db, null, undefined)).toBeNull();
 	});
 });
 

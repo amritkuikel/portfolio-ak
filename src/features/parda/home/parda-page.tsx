@@ -9,6 +9,7 @@ import { PARDA_NAME } from "../brand";
 import { Billboard, type BillboardItem } from "../kit/billboard";
 import { tmdbImage } from "../kit/image";
 import { ContinueRail } from "../library/continue-rail";
+import { ForYouRails } from "../library/for-you-rails";
 import { pardaLinks } from "../links";
 import { pardaPageQueryOptions } from "../queries";
 import { isPardaHub, type PardaPage } from "../search";
@@ -62,6 +63,7 @@ function PageContent({ data }: { data: Extract<HubPageData, { configured: true }
 			) : null}
 			<div className="flex flex-col gap-10 pt-8 pb-12">
 				{data.page === "home" ? <ContinueRail imageBase={data.imageBase} /> : null}
+				{data.page === "home" ? <ForYouRails /> : null}
 				{data.rails.map((rail) =>
 					rail.titles === undefined ? (
 						<StreamedRail key={rail.id} page={data.page} head={rail} />

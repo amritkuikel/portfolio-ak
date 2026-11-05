@@ -540,7 +540,7 @@ test.describe("Parda's progress with a session", () => {
 test.describe("Parda's marks for a visitor", () => {
 	test("marking a season watched starts a guest, moves the action and shows the banner", async ({ page, harness }) => {
 		await harness.resetRateLimits();
-		await page.goto(pardaFixturePath("series"));
+		await page.goto(pardaFixturePath("series"), { waitUntil: "networkidle" });
 		const play = page.getByTestId("title-play");
 		await expect(play).toHaveText(/Play/);
 		await page.getByTestId("mark-season").click();
@@ -798,5 +798,102 @@ test.describe("Parda's source ranking", () => {
 		// Another title still starts on Server 1.
 		await page.goto(pardaFixturePath("watch-movie"));
 		await expect(frame(page)).toHaveAttribute("src", /^\/parda\/api\/1\//);
+	});
+});
+
+// Task 67: the library and profiles (decision 0240). Each flow is a visitor whose first
+// save starts a guest, so its profiles and rows are its own beside every other flow.
+test.describe("Parda's library", () => {
+	test("+ My List and ♥ start a guest, and the library lists and drops them", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		const heading = (await page.getByTestId("title-heading").textContent())?.trim() ?? "";
+		await page.getByTestId("title-hero").getByTestId("list-toggle").click();
+		await expect(page.getByTestId("title-hero").getByTestId("list-toggle")).toHaveAttribute("aria-pressed", "true");
+		await expect(page.getByTestId("parda-guest-banner")).toBeVisible();
+		await page.getByTestId("title-hero").getByTestId("favourite-toggle").click();
+		await expect(page.getByTestId("title-hero").getByTestId("favourite-toggle")).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
+		await page.getByTestId("rate-like").click();
+		await expect(page.getByTestId("rate-like")).toHaveAttribute("aria-pressed", "true");
+
+		await page.goto("/app/parda/library/list");
+		const list = page.getByTestId("library-list");
+		await expect(list.getByTestId("poster-card")).toHaveCount(1);
+		await expect(list).toContainText(heading.slice(0, 12));
+		await page.goto("/app/parda/library/favourites");
+		await expect(page.getByTestId("library-favourites").getByTestId("poster-card")).toHaveCount(1);
+		// Off from the card: the list is empty again.
+		await page.goto("/app/parda/library/list");
+		await list.getByTestId("card-list-toggle").click();
+		await page.reload();
+		await expect(page.getByTestId("library-empty")).toBeVisible();
+	});
+
+	test("History lists a title marked watched, takes it out, and clears", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		await page.getByTestId("mark-title").click();
+		await expect(page.getByTestId("mark-title")).toHaveAttribute("aria-pressed", "true");
+		await page.goto("/app/parda/library/history");
+		await expect(page.getByTestId("history-entry")).toHaveCount(1);
+		await page.getByTestId("history-remove").click();
+		await expect(page.getByTestId("library-empty")).toBeVisible();
+
+		await page.goto(pardaFixturePath("series"), { waitUntil: "networkidle" });
+		await page.getByTestId("mark-season").click();
+		await expect(page.getByTestId("season-watched")).toBeVisible();
+		await page.goto("/app/parda/library/history");
+		await page.getByTestId("history-clear").click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Clear history" }).click();
+		await expect(page.getByTestId("library-empty")).toBeVisible();
+	});
+});
+
+test.describe("Parda's profiles", () => {
+	test("a kids' profile browses under its cap, and a PIN keeps it out of the parent's", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		await page.getByTestId("title-hero").getByTestId("list-toggle").click();
+		await expect(page.getByTestId("parda-guest-banner")).toBeVisible();
+
+		await page.goto("/app/parda/profiles");
+		await page.getByTestId("profiles-manage").click();
+		await page.getByTestId("profile-add").click();
+		const dialog = page.getByTestId("profile-dialog");
+		await dialog.getByLabel("Name").fill("Kid");
+		await dialog.getByRole("switch", { name: "Kids' profile" }).click();
+		await dialog.getByRole("button", { name: "Add profile" }).click();
+		await expect(dialog).toBeHidden();
+		await expect(page.getByTestId("profile-tile")).toHaveCount(2);
+
+		// Lock the account's own profile (the first) with a PIN.
+		await page.getByTestId("profile-edit").first().click();
+		await dialog.getByTestId("profile-pin-input").fill("2468");
+		await dialog.getByTestId("profile-pin-save").click();
+		await expect(page.getByText("The PIN is set.")).toBeVisible();
+		await dialog.getByRole("button", { name: "Close" }).click();
+		await page.getByTestId("profiles-manage").click();
+
+		await page.getByTestId("profile-pick").filter({ hasText: "Kid" }).click();
+		await page.waitForURL(/\/app\/parda$/);
+		// The capped rails are TMDB's discover answers for the kids' cap.
+		await expect(page.getByTestId("title-rail").first()).toBeVisible();
+		await page.goto("/app/parda/profiles");
+		await expect(page.getByTestId("profiles-kids-note")).toBeVisible();
+		await expect(page.getByTestId("profiles-manage")).toHaveCount(0);
+
+		await page.getByTestId("profile-pick").first().click();
+		const pin = page.getByTestId("pin-dialog");
+		await pin.getByTestId("pin-entry").fill("1111");
+		await pin.getByTestId("pin-submit").click();
+		await expect(pin.getByRole("alert")).toHaveText("That PIN isn't right.");
+		await pin.getByTestId("pin-entry").fill("2468");
+		await pin.getByTestId("pin-submit").click();
+		await page.waitForURL(/\/app\/parda$/);
+		await page.goto("/app/parda/profiles");
+		await expect(page.getByTestId("profiles-manage")).toBeVisible();
 	});
 });

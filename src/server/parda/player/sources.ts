@@ -18,11 +18,19 @@ export type PlayerTarget = {
 type SourceTemplates = Pick<PardaSourceRow, "movieTemplate" | "tvTemplate">;
 
 /**
- * The language players are asked for (`{lang}`): the page's when the admin lists it in
- * `pd_settings.languages`, else the first they list (decision 0237).
+ * The language players are asked for (`{lang}`): the profile's audio language when the
+ * admin lists it in `pd_settings.languages` (decision 0240), else the page's when listed,
+ * else the first they list (decision 0237).
  */
-export const playerLanguage = (locale: string, languages: ReadonlyArray<string> | undefined): string =>
-	!languages?.length || languages.includes(locale) ? locale : (languages[0] ?? locale);
+export const playerLanguage = (
+	locale: string,
+	languages: ReadonlyArray<string> | undefined,
+	preferred?: string | null,
+): string => {
+	const listed = (language: string) => !languages?.length || languages.includes(language);
+	if (preferred && listed(preferred)) return preferred;
+	return listed(locale) ? locale : (languages?.[0] ?? locale);
+};
 
 /** The player URL for one title; null when the source can't play it (a token has no value). */
 export function playerUrl(

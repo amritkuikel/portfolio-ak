@@ -415,7 +415,7 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 };
 
 /**
- * Parda's library (decision 0236): anyone with a session, guests included. Each runs
+ * Parda's library and profiles (decisions 0236 and 0240): anyone with a session, guests included. Each runs
  * requirePardaViewer (the session and the active profile) then withPardaServices, and
  * acts on that profile only (tests/server/parda-access.test.ts).
  */
@@ -429,6 +429,24 @@ const PARDA_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"removePardaContinue",
 		"rewatchPardaTitle",
 		"importPardaProgress",
+		"getPardaSaved",
+		"setPardaListed",
+		"setPardaPersonFavourite",
+		"ratePardaTitle",
+		"getPardaLibrary",
+		"getPardaHistory",
+		"removePardaHistory",
+		"clearPardaHistory",
+		"getPardaForYou",
+	],
+	"parda/profiles.ts": [
+		"getPardaProfiles",
+		"createPardaProfile",
+		"updatePardaProfile",
+		"deletePardaProfile",
+		"setPardaProfilePin",
+		"switchPardaProfile",
+		"setPardaDigest",
 	],
 };
 // parda:end

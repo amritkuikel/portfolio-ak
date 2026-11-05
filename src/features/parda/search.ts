@@ -128,3 +128,18 @@ export const watchSearchSchema = z.object({
 	s: optionalNumber(9_999),
 	e: optionalNumber(99_999, 1),
 });
+
+/** The library's tabs at /app/parda/library/$tab (decision 0240). */
+export const LIBRARY_TABS = ["list", "favourites", "continue", "history"] as const;
+export type LibraryTab = (typeof LIBRARY_TABS)[number];
+export const isLibraryTab = (value: string): value is LibraryTab =>
+	(LIBRARY_TABS as ReadonlyArray<string>).includes(value);
+
+/** My List's and ♥'s filters and order; History's page. Defaults are left out of the URL. */
+export const librarySearchSchema = z.object({
+	type: z.enum(["all", "movie", "tv"]).default("all").catch("all"),
+	sort: z.enum(["added", "title", "year"]).default("added").catch("added"),
+	page: pageNumber,
+});
+export type LibraryQuery = z.output<typeof librarySearchSchema>;
+export const LIBRARY_DEFAULTS: LibraryQuery = { type: "all", sort: "added", page: 1 };

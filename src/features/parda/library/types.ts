@@ -1,3 +1,5 @@
+import type { HubTitle } from "../home/types";
+
 /**
  * What the library functions return (decision 0236): lean, like the catalogue's answers.
  */
@@ -38,8 +40,71 @@ export type ContinueRailData = { imageBase: string; items: ContinueItem[] };
 
 /** Who's watching, for the frame: the profile, and when a guest's data is deleted. */
 export type PardaViewerData = {
-	profile: { id: string; name: string; autoplay: boolean };
+	profile: { id: string; name: string; avatar: string | null; kids: boolean; autoplay: boolean };
+	/** How many profiles the owner has: the account menu offers to switch from two. */
+	profiles: number;
 	isGuest: boolean;
 	/** ISO time; null for an account. */
 	guestDeletesAt: string | null;
+};
+
+/** A title in the library's grids and the personal rails: as the rails carry it (decision 0240). */
+export type LibraryTitle = HubTitle;
+
+/**
+ * What the profile has saved, for the buttons on cards and pages: title keys
+ * (`movie:550`) on My List and ♥, favourite people's ids, and likes. The most recent
+ * 2,000 of each, which every button on every page reads.
+ */
+export type SavedState = {
+	watchlist: string[];
+	favourite: string[];
+	people: number[];
+	likes: string[];
+	dislikes: string[];
+};
+
+export type LibraryListSort = "added" | "title" | "year";
+export type LibraryListType = "all" | "movie" | "tv";
+
+export type LibraryListData = {
+	imageBase: string;
+	titles: LibraryTitle[];
+	page: number;
+	pageCount: number;
+	total: number;
+};
+
+export type FavouritePerson = { id: number; name: string; portrait: string | null };
+
+export type LibraryFavouritesData = LibraryListData & { people: FavouritePerson[] };
+
+export type HistoryEntry = {
+	media: LibraryMedia;
+	id: number;
+	slug: string;
+	title: string;
+	poster: string | null;
+	backdrop: string | null;
+	/** A series' episodes watched that day, latest first; empty for a movie. */
+	episodes: Array<{ season: number; episode: number }>;
+	/** The latest of them: how far that one got. */
+	share: number;
+	/** ISO time of the latest. */
+	at: string;
+};
+
+/** History by day ("YYYY-MM-DD" in Parda's time zone), latest first, a page at a time. */
+export type HistoryData = {
+	imageBase: string;
+	days: Array<{ day: string; entries: HistoryEntry[] }>;
+	page: number;
+	hasMore: boolean;
+};
+
+/** The home's personal rails: "Because you liked …" and "New from people you love". Null when there's nothing to show. */
+export type ForYouData = {
+	imageBase: string;
+	because: { title: string; titles: LibraryTitle[] } | null;
+	people: LibraryTitle[] | null;
 };
