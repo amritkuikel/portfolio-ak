@@ -1,5 +1,13 @@
 import { Link, type LinkOptions } from "@tanstack/react-router";
-import { ClapperboardIcon, HouseIcon, InfoIcon, type LucideIcon, SparklesIcon, TvIcon } from "lucide-react";
+import {
+	ClapperboardIcon,
+	CompassIcon,
+	HouseIcon,
+	InfoIcon,
+	type LucideIcon,
+	SparklesIcon,
+	TvIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
@@ -7,6 +15,7 @@ import { ConsentSettingsButton } from "@/components/layout/observability";
 import { ThemeToggle } from "@/components/layout/theme";
 import { m } from "@/paraglide/messages";
 import { pardaLinks } from "../links";
+import { PardaSearchButton } from "../search/search-button";
 import { PardaGuestBanner } from "./guest-banner";
 import { PardaNoticeBanner } from "./notice-banner";
 import { PardaWordmark } from "./parda-mark";
@@ -14,7 +23,8 @@ import { PardaUserMenu } from "./parda-user-menu";
 
 /**
  * Parda's sections: the top mask's links on wide screens, the tab bar on phones.
- * A link arrives with its route (PLAN 12.3): Home and About (Task 61), the hubs (Task 62).
+ * A link arrives with its route (PLAN 12.3): Home and About (Task 61), the hubs (Task 62),
+ * Discover (Task 66). About isn't in the tab bar: the footer links it on every page.
  */
 const SECTIONS: ReadonlyArray<{
 	link: LinkOptions;
@@ -22,25 +32,38 @@ const SECTIONS: ReadonlyArray<{
 	icon: LucideIcon;
 	exact?: boolean;
 	testId: string;
+	/** In the phone's tab bar too. */
+	tab?: false;
+	/** In the top mask only from `lg`: below it the footer has it. */
+	wide?: true;
 }> = [
 	{ link: pardaLinks.home(), label: m.pd_nav_home, icon: HouseIcon, exact: true, testId: "parda-nav-home" },
 	{ link: pardaLinks.hub("movies"), label: m.pd_hub_movies, icon: ClapperboardIcon, testId: "parda-nav-movies" },
 	{ link: pardaLinks.hub("series"), label: m.pd_hub_series, icon: TvIcon, testId: "parda-nav-series" },
 	{ link: pardaLinks.hub("anime"), label: m.pd_hub_anime, icon: SparklesIcon, testId: "parda-nav-anime" },
-	{ link: pardaLinks.about(), label: m.pd_nav_about, icon: InfoIcon, testId: "parda-nav-about" },
+	{ link: pardaLinks.discover(), label: m.pd_nav_discover, icon: CompassIcon, testId: "parda-nav-discover" },
+	{
+		link: pardaLinks.about(),
+		label: m.pd_nav_about,
+		icon: InfoIcon,
+		testId: "parda-nav-about",
+		tab: false,
+		wide: true,
+	},
 ];
 
 const focusRing = "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 /**
  * The top mask (decision 0232): always solid, 60 px, the wordmark at the start, the
- * sections beside it, language, theme and account at the end. Nothing in it sits on
+ * sections beside it, search, language (from `lg`; the footer has it below), theme and
+ * account at the end. Nothing in it sits on
  * a picture, so it never needs a scrim.
  */
 function PardaHeader() {
 	return (
 		<header className="sticky top-0 z-40 bg-pd-mask text-pd-ink" data-testid="parda-header">
-			<div className="flex h-15 items-center gap-6 px-4 sm:px-6 lg:px-8">
+			<div className="flex h-15 items-center gap-4 px-4 sm:px-6 lg:gap-6 lg:px-8">
 				<Link {...pardaLinks.home()} className={`-mx-1 px-1 py-1 ${focusRing}`} data-testid="parda-home-link">
 					<PardaWordmark />
 					<span className="sr-only">{m.pd_nav_home()}</span>
@@ -48,11 +71,11 @@ function PardaHeader() {
 				<nav aria-label={m.pd_nav_label()} className="max-md:hidden">
 					<ul className="flex items-center gap-1">
 						{SECTIONS.map((section) => (
-							<li key={section.testId}>
+							<li key={section.testId} className={section.wide ? "max-lg:hidden" : undefined}>
 								<Link
 									{...section.link}
 									activeOptions={{ exact: section.exact ?? false }}
-									className={`block px-3 py-2 text-pd-muted text-sm transition-colors hover:text-pd-ink aria-[current=page]:text-pd-ink aria-[current=page]:shadow-[inset_0_-2px_0_var(--pd-action)] ${focusRing}`}
+									className={`block px-2 py-2 text-pd-muted lg:px-3 text-sm transition-colors hover:text-pd-ink aria-[current=page]:text-pd-ink aria-[current=page]:shadow-[inset_0_-2px_0_var(--pd-action)] ${focusRing}`}
 									data-testid={section.testId}
 								>
 									{section.label()}
@@ -62,7 +85,8 @@ function PardaHeader() {
 					</ul>
 				</nav>
 				<div className="ms-auto flex items-center gap-1">
-					<LanguageSwitcher className="max-sm:hidden" />
+					<PardaSearchButton />
+					<LanguageSwitcher className="max-lg:hidden" />
 					<ThemeToggle />
 					<PardaUserMenu />
 				</div>
@@ -83,7 +107,7 @@ function PardaTabBar() {
 			data-testid="parda-tab-bar"
 		>
 			<ul className="grid h-14 auto-cols-fr grid-flow-col">
-				{SECTIONS.map((section) => {
+				{SECTIONS.filter((section) => section.tab !== false).map((section) => {
 					const Icon = section.icon;
 					return (
 						<li key={section.testId} className="flex">
@@ -127,7 +151,7 @@ function PardaFooter() {
 					<Link {...pardaLinks.about()} className={`underline-offset-4 hover:underline ${focusRing}`}>
 						{m.pd_footer_about()}
 					</Link>
-					<LanguageSwitcher className="sm:hidden" />
+					<LanguageSwitcher className="lg:hidden" />
 					<ConsentSettingsButton />
 				</div>
 			</div>

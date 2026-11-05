@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 65)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 66)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -40,7 +40,7 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 | `public/parda/` | The icons, rendered from `icon.svg`, and TMDB's logo (`tmdb.svg`, TMDB's own file) |
 
 - **One frame on every page** (decision 0233): the layout renders it, and the page renders its `<main>`. The top mask is always solid, so nothing in it sits on a picture.
-- **Sections:** Home, Movies, Series, Anime and About: the top mask's links from `md` up, the tab bar below. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists. The frame keeps the tab bar's height clear on phones.
+- **Sections:** Home, Movies, Series, Anime, Discover and About: the top mask's links from `md` up (About and the language from `lg`, decision 0239), the tab bar below (without About: the footer links it). Search sits in the top mask at every width. Add a section to `SECTIONS` in `parda-frame.tsx` when its route exists, and check the top mask at 768 px. The frame keeps the tab bar's height clear on phones.
 - **The 404:** `/app/parda/$` throws `notFound()`, so the layout's `notFoundComponent` answers in the frame. One segment (`/app/parda/whatever`) reaches `$hub`, whose loader does the same for anything but a hub.
 - **SEO:** pages are `noindex` through the layout. An indexable page uses `seo({ siteName: PARDA_NAME })`, goes in `INDEXABLE` (`tests/unit/route-seo.test.ts`) and the sitemap. Today that's the home, the hubs and `/app/parda/about` (`PARDA_SITEMAP`), and the title pages (`catalog/sitemap.ts`, from `pd_title`). A page titled by TMDB also goes in `CONTENT_TITLED`.
 - **The notice page** (`/app/parda/about`) holds TMDB's logo and notice, JustWatch's attribution, playback, players' ads, the uBlock Origin Lite stores (`BLOCKER_STORES`, the section `#ad-blocker` Task 64's button falls back to) and takedowns.
@@ -80,6 +80,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **Streaming:** the first two rails come with the page; each later one is its own `getPardaRail` query, started by the loader and rendered under `<Suspense>` with a skeleton of its size, so it streams into the same response.
 - **Failure:** a rail TMDB can't answer is `null` and says "couldn't load" in a box of a rail's height; in the browser a `CatchBoundary` does the same. An empty rail isn't shown. Only `UPSTREAM_UNAVAILABLE` degrades.
 - **Lean answers:** pictures are TMDB paths plus one `imageBase`, overviews are cut to 280 characters, genres are ids, rail labels are structured and named on the client.
+- **"See all":** a rail whose request Discover can repeat (genre, language and keyword rails) carries `more`, Discover's filters, and its heading links there (Task 66).
 - **Adding a rail:** add it to the page's list in `rails.ts` (and its label to `RailLabelKey` and `rail-labels.ts` if it's new), then `pnpm tmdb:record`. `tests/server/parda-catalog.test.ts` fails for a rail without a recording.
 
 ## A title's pages
@@ -101,7 +102,8 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **A blocked or unknown title, person or collection** is Parda's 404, TMDB failing a 503; a season TMDB can't answer says so inside its block.
 - **"Surprise me"** (`/app/parda/surprise?from=`) redirects to a random title from the page's popular and top rated lists. Its link is never preloaded.
 - **Progress on the page** (Task 64): a movie's bar under the picture; each episode's bar, Play and watched mark; each season's bar and mark; *Mark series watched* in the hero.
-- **Not yet:** My List, ♥ and Like (Task 67), keywords as links (Task 66).
+- **Keywords** link to Discover (`?keyword=`, Task 66).
+- **Not yet:** My List, ♥ and Like (Task 67).
 
 ## Watching and progress
 
@@ -125,6 +127,28 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **Progress** goes to the profile with a session and to the browser without one. Watching never starts a guest; a mark, *Remove* or *Rewatch* does (`guest_scope=parda`), and the browser's progress is imported once a session exists.
 - **Shortcuts** (outside the iframe): `N` next, `P` previous, `E` episodes, `T` theater, `Esc` leaves theater, `K` play or pause.
 - **Guests** see a banner under the top mask with the day their progress is deleted.
+
+## Search and Discover
+
+Decision 0239. Both read TMDB through `catalog/service.ts` (`searchCatalog`, `listTitles`), so takedowns apply.
+
+| File | Holds |
+| --- | --- |
+| `src/features/parda/search.ts` | The URL contracts: `searchPageSchema` (`q`, `tab`, `page` up to 500), `discoverSearchSchema` and `DISCOVER_DEFAULTS` |
+| `src/features/parda/discover/options.ts` | Genres per type, languages, networks and studios (TMDB ids), the score choices. Imports nothing |
+| `src/server/parda/catalog/discover-requests.ts` | Pure: `applicableFilters`, `discoverRequest`, `discoverOfRail` (a rail's "See all"), the recorder's samples |
+| `src/server/parda/catalog/search.ts`, `discover.ts` | The pages' data, the overlay's hits, `noteSearch` (`pd_search_stat`) |
+| `src/server/parda/tmdb/search.ts` | TMDB's search answers mapped, people included, with the Nepali fill-in |
+| `src/functions/parda/search.ts` | `getPardaSearch`, `getPardaSuggest`, `notePardaSearch`, `getPardaDiscover` (`withPardaCatalog`) |
+| `src/features/parda/search/` | `search-button.tsx` (the top mask's Search and the shortcuts), `search-overlay.tsx` (lazy), `search-page.tsx`, `hit-grid.tsx`, `recent.ts`, `load.ts`, `queries.ts` |
+| `src/features/parda/discover/discover-page.tsx` | Discover: `FilterBar`, chips, the grid |
+
+- **The overlay:** Search, Ctrl/⌘ K or `/`. Empty: recent searches, recently viewed (both this browser's only) and trending. Typed (two letters, a 250 ms pause): "See all results" first, so Enter opens the page, then titles and people.
+- **The search page** searches on submit (a GET form), in four tabs. Nothing found: tips, Discover and trending. Noindex.
+- **Statistics:** only the page counts a search, and only one really shown: page 1, all kinds, not a preload. Per UTC day and normalized query; no user or IP.
+- **Discover** is indexable, canonical without filters. The server drops filters that don't apply to the type. Sorting by score or date has a vote floor; newest stops at today.
+- **Limits:** a search without a session has its own per-IP limit (150 per 5 minutes, page loads included). Over it the page and the overlay say so; nothing fails.
+- **Adding a Discover filter:** the param in `discoverSearchSchema`, its TMDB parameter in `discoverRequest`, its control and chip in `discover-page.tsx`, a case in `tests/unit/parda-discover.test.ts`.
 
 ## Catalogue
 
@@ -223,6 +247,10 @@ score = availability × (0.4 × quality + 0.4 × smoothness + 0.2 × speed) − 
 - **`pd_blocked_title`:** one per title (`pd_blocked_title_unique`). The title is a 404 and leaves every list from every entry point (`catalog/service.ts`) and the sitemap. Deleting a source keeps its plays and reports, with no source.
 
 ## Pitfalls already solved
+
+- **Seven links overflowed the top mask at 768 px:** About and the language show there only from `lg` (the footer has both).
+- **A takedown in the billboard test needed a title nobody recorded:** the sixth title fills in, and a Nepali answer can lack a backdrop the English one has, so the recorder keeps two spare billboard titles.
+- **The review loads each page twice:** with the statistics' note also counted, the search limit tripped during the review; the note no longer counts against it.
 
 - **Exploration on a fresh install** would start every play on a random server, because no source has data: it waits until one source has 20 plays.
 - **`adaptive` defaulted to `false`,** which read as the admin's "no" once the probe could say otherwise; migration `0031` made those null.

@@ -1,4 +1,5 @@
 import "@tanstack/react-start/server-only";
+import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import type { PardaMedia } from "@/server/db/schema";
 import { type PardaControls, titleKey } from "../controls";
@@ -10,6 +11,7 @@ import {
 	type ListMedia,
 	mapDetails,
 	mapList,
+	parse,
 	type TitleDetails,
 	type TitleList,
 	type TitleSummary,
@@ -27,6 +29,7 @@ import {
 	type SeasonDetails,
 	type TitleCredits,
 } from "../tmdb/pages";
+import { fillInSearch, mapSearch, type SearchKind, type SearchResults } from "../tmdb/search";
 import { creditsPath, DETAILS_PARAMS, PERSON_PARAMS, seasonPath } from "./requests";
 
 /**
@@ -113,6 +116,50 @@ export async function listTitles(
 		fillInList,
 	);
 	return withoutBlocked(services, list);
+}
+
+/**
+ * A search (Task 66): TMDB's multi search or one kind, a page at a time, minus takedowns
+ * (a blocked title also leaves a person's "known for"). Cached as searches, 10 minutes.
+ */
+export async function searchCatalog(
+	services: CatalogServices,
+	scope: CatalogScope,
+	kind: SearchKind,
+	query: string,
+	page = 1,
+): Promise<SearchResults> {
+	const results = await read(
+		services,
+		scope,
+		"search",
+		`search/${kind}`,
+		{ query, page },
+		(raw) => mapSearch(kind, raw),
+		fillInSearch,
+	);
+	const blocked = await services.controls.blocked();
+	const allowed = (item: { media: string; id: number }) =>
+		item.media === "person" || !blocked.has(titleKey(item.media as PardaMedia, item.id));
+	return {
+		...results,
+		hits: results.hits
+			.filter(allowed)
+			.map((hit) => (hit.media === "person" ? { ...hit, knownFor: hit.knownFor.filter(allowed) } : hit)),
+	};
+}
+
+/** A keyword's name (Discover's heading for `?keyword=`). */
+export async function keywordName(services: CatalogServices, scope: CatalogScope, id: number): Promise<string> {
+	return read(
+		services,
+		{ ...scope, locale: "en" },
+		"details",
+		`keyword/${id}`,
+		{},
+		(raw) => parse(z.object({ name: z.string() }), raw, "keyword").name,
+		(name) => name,
+	);
 }
 
 /** A title's details, with its recommendations and similar titles minus takedowns. */

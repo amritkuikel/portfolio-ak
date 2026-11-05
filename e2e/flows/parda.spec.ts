@@ -119,9 +119,119 @@ test.describe("Parda's frame on a phone", () => {
 		await page.goto("/app/parda", { waitUntil: "networkidle" });
 		const tabs = page.getByTestId("parda-tab-bar");
 		await expect(tabs).toBeVisible();
-		await tabs.getByRole("link", { name: /About|बारेमा/ }).click();
-		await expect(page).toHaveURL(/\/app\/parda\/about$/);
-		await expect(page.getByTestId("parda-header").getByTestId("parda-nav-about")).toBeHidden();
+		// About is in the footer on every page; Discover takes its place in the tab bar (Task 66).
+		await expect(tabs.getByRole("link", { name: /About|बारेमा/ })).toHaveCount(0);
+		await tabs.getByRole("link", { name: /Discover|अन्वेषण/ }).click();
+		await expect(page).toHaveURL(/\/app\/parda\/discover$/);
+		await expect(page.getByTestId("parda-header").getByTestId("parda-nav-discover")).toBeHidden();
+		// Search stays in the top mask, as an icon.
+		await page.getByTestId("parda-search-button").click();
+		await expect(page.getByTestId("parda-search-overlay")).toBeVisible();
+	});
+});
+
+// Task 66: search (the overlay and the page) and Discover, on the recorded catalogue.
+test.describe("Parda's search", () => {
+	test.beforeEach(async ({ harness }) => {
+		await harness.resetRateLimits();
+	});
+
+	test("the overlay opens with Ctrl K, lists hits, and Enter opens every result", async ({ page }) => {
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		await page.keyboard.press("Control+k");
+		const overlay = page.getByTestId("parda-search-overlay");
+		await expect(overlay).toBeVisible();
+		// Empty, it suggests what's trending.
+		await expect(overlay.getByTestId("parda-search-trending")).toBeVisible();
+		await page.getByTestId("parda-search-input").fill("star");
+		await expect(overlay.getByTestId("parda-search-titles").getByRole("option").first()).toBeVisible();
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/app\/parda\/search\?q=star$/);
+		await expect(page.getByTestId("parda-search-results").getByRole("link").first()).toBeVisible();
+		await expect(page.getByTestId("parda-search-tab-all")).toHaveAttribute("aria-current", "page");
+		await page.getByTestId("parda-search-tab-people").click();
+		await expect(page).toHaveURL(/tab=people/);
+		await expect(page.getByTestId("parda-search-results").getByTestId("person-card").first()).toBeVisible();
+		// The search is remembered in this browser, for the overlay.
+		await page.keyboard.press("/");
+		await expect(page.getByTestId("parda-recent-searches")).toContainText("star");
+	});
+
+	test("a hit opens its page, which the overlay then lists as recently viewed", async ({ page }) => {
+		await page.goto("/app/parda/about", { waitUntil: "networkidle" });
+		await page.getByTestId("parda-search-button").click();
+		await page.getByTestId("parda-search-input").fill("star");
+		const first = page.getByTestId("parda-search-titles").getByRole("option").first();
+		const name = (await first.locator("span.font-medium").textContent()) ?? "";
+		await first.click();
+		await expect(page).toHaveURL(/\/app\/parda\/(movie|series)\/\d+/);
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
+		await page.keyboard.press("Control+k");
+		await expect(page.getByTestId("parda-recently-viewed")).toContainText(name);
+	});
+
+	test("the page searches on Enter, and suggests what's trending when nothing is found", async ({ page }) => {
+		await page.goto("/app/parda/search", { waitUntil: "networkidle" });
+		await expect(page.getByTestId("parda-search-suggestions")).toBeVisible();
+		await page.getByTestId("parda-search-field").fill("qzxv no such title");
+		await page.getByTestId("parda-search-field").press("Enter");
+		await expect(page).toHaveURL(/q=qzxv\+no\+such\+title/);
+		await expect(page.getByTestId("parda-search-empty")).toBeVisible();
+		await expect(page.getByTestId("parda-search-suggestions").getByRole("link").first()).toBeVisible();
+		await page
+			.getByRole("link", { name: /Discover/ })
+			.first()
+			.click();
+		await expect(page).toHaveURL(/\/app\/parda\/discover$/);
+	});
+});
+
+test.describe("Parda's search without JavaScript", () => {
+	test.use({ javaScriptEnabled: false });
+
+	test("the page's form and its tabs work as plain links", async ({ page, harness }) => {
+		await harness.resetRateLimits();
+		await page.goto("/app/parda/search", { waitUntil: "load" });
+		await page.getByTestId("parda-search-field").fill("star");
+		await page.getByTestId("parda-search-field").press("Enter");
+		await expect(page).toHaveURL(/q=star/);
+		await expect(page.getByTestId("parda-search-results")).toBeVisible();
+		await page.getByTestId("parda-search-tab-series").click();
+		await expect(page).toHaveURL(/tab=series/);
+		await expect(page.getByTestId("parda-search-results")).toBeVisible();
+	});
+});
+
+test.describe("Parda's Discover", () => {
+	test("filters through the address, and a chip removes a filter", async ({ page }) => {
+		await page.goto("/app/parda/discover", { waitUntil: "networkidle" });
+		await expect(page.getByTestId("parda-discover-results").getByRole("link").first()).toBeVisible();
+		await page.getByLabel("Type").selectOption("series");
+		await expect(page).toHaveURL(/type=series/);
+		await page.getByLabel("Sort by").selectOption("rating");
+		await expect(page).toHaveURL(/sort=rating/);
+		await expect(page.getByTestId("parda-discover-results").getByRole("link").first()).toBeVisible();
+		await page.goto("/app/parda/discover?genres=28", { waitUntil: "networkidle" });
+		const chips = page.getByTestId("active-filters");
+		await expect(chips).toContainText("Action");
+		await chips.getByRole("link", { name: /Action/ }).click();
+		await expect(page).toHaveURL(/\/app\/parda\/discover$/);
+		await expect(page.getByTestId("active-filters")).toHaveCount(0);
+	});
+
+	test("a title's keyword and a hub's genre rail lead there", async ({ page }) => {
+		await page.goto(pardaFixturePath("movie"), { waitUntil: "networkidle" });
+		const keyword = page.getByTestId("title-keywords").getByRole("link").first();
+		const name = (await keyword.textContent()) ?? "";
+		await keyword.click();
+		await expect(page).toHaveURL(/\/app\/parda\/discover\?keyword=\d+$/);
+		await expect(page.getByTestId("active-filters")).toContainText(name);
+		await expect(page.getByTestId("parda-discover-results").getByRole("link").first()).toBeVisible();
+
+		await page.goto("/app/parda/movies", { waitUntil: "networkidle" });
+		await page.getByTestId("rail-see-all").first().click();
+		await expect(page).toHaveURL(/\/app\/parda\/discover\?genres=\d+$/);
+		await expect(page.getByTestId("active-filters")).toBeVisible();
 	});
 });
 

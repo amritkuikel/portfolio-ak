@@ -8,6 +8,7 @@ import { useTitleProgress } from "../library/title-progress";
 import { pardaLinks } from "../links";
 import { pardaTitleQueryOptions } from "../queries";
 import { titleRouteParams } from "../search";
+import { useRememberViewed } from "../search/recent";
 import { Episodes, NewEpisodeBanner } from "./episodes";
 import { Gallery } from "./gallery";
 import { TitleHero } from "./title-hero";
@@ -29,6 +30,14 @@ const route = getRouteApi("/_parda/app/parda/$type/$id/");
 
 function TitleContent({ data }: { data: Extract<TitlePageData, { configured: true }> }) {
 	const { title, imageBase } = data;
+	useRememberViewed({
+		media: title.media,
+		id: title.id,
+		slug: title.slug,
+		name: title.title,
+		picture: title.poster,
+		imageBase,
+	});
 	const progress = useTitleProgress(
 		{ media: title.media, id: title.id, slug: title.slug },
 		title.media === "tv"

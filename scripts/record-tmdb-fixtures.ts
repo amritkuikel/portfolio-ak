@@ -8,7 +8,9 @@
  * - for each of those titles, its full credits and, for a series, its first season;
  * - the popular lists and the first title of each, which the catalogue tests use;
  * - the first actor of the review's title and of each popular first, and the collection
- *   of every recorded movie that belongs to one (person and collection pages).
+ *   of every recorded movie that belongs to one (person and collection pages);
+ * - search and Discover (Task 66): each sample query in every tab, each sample of
+ *   Discover's filters, and the popular movie's first keyword with its Discover page.
  *
  * Files are named by `fixtureName` (e2e/harness/tmdb.ts). Tests pick their ids from the
  * recorded lists, so recording again changes no test.
@@ -16,6 +18,12 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fixtureName } from "../e2e/harness/tmdb.ts";
+import {
+	DISCOVER_SAMPLES,
+	discoverFilters,
+	discoverRequest,
+	SEARCH_SAMPLES,
+} from "../src/server/parda/catalog/discover-requests.ts";
 import { BILLBOARD_SIZE, PAGE_LAYOUTS, railContext } from "../src/server/parda/catalog/rails.ts";
 import {
 	creditsPath,
@@ -257,7 +265,9 @@ for (const [page, layout] of Object.entries(PAGE_LAYOUTS)) {
 		if (spec.id !== layout.billboardFrom) continue;
 		const picks = titlesOf(answer, request.media)
 			.filter((item) => item.backdrop_path)
-			.slice(0, BILLBOARD_SIZE);
+			// Two spare: a takedown of a billboard title brings in the next, and a Nepali answer can lack a
+			// backdrop the English one has (tests/server/parda-catalog.test.ts).
+			.slice(0, BILLBOARD_SIZE + 2);
 		for (const [index, pick] of picks.entries()) {
 			const details = remember(await recordTitle(pick.media, pick.id));
 			// The e2e review opens the home billboard's first title, and its first actor's page.
@@ -273,4 +283,34 @@ for (const media of ["movie", "tv"]) {
 	await recordFirstActor(remember(await recordTitle(media, first.id)));
 }
 for (const id of collections) await record(`collection/${id}`);
+
+const today = new Date().toISOString().slice(0, 10);
+const discover = async (filters: Parameters<typeof discoverFilters>[0]) => {
+	const request = discoverRequest(discoverFilters(filters), today);
+	await record(request.path, request.params);
+};
+for (const sample of DISCOVER_SAMPLES) await discover(sample);
+for (const kind of ["multi", "movie", "tv", "person"])
+	await record(`search/${kind}`, { query: SEARCH_SAMPLES.found, page: 1 });
+await record("search/multi", { query: SEARCH_SAMPLES.nothing, page: 1 });
+// The flows open the first title the overlay lists.
+const firstHit = titlesOf(await record("search/multi", { query: SEARCH_SAMPLES.found, page: 1 }), "mixed")[0];
+if (firstHit) await recordTitle(firstHit.media, firstHit.id);
+// A title page's keywords link to Discover: the popular movie's first, named and listed.
+const popularMovie = (recorded.get(fixtureName("movie/popular", [["page", "1"]], "any"))?.results ?? [])[0];
+const keyword = popularMovie
+	? (
+			recorded.get(
+				fixtureName(
+					`movie/${popularMovie.id}`,
+					Object.entries(DETAILS_PARAMS).map(([key, value]) => [key, String(value)]),
+					"any",
+				),
+			) as { keywords?: { keywords?: Array<{ id: number }> } } | undefined
+		)?.keywords?.keywords?.[0]
+	: undefined;
+if (keyword) {
+	await record(`keyword/${keyword.id}`);
+	await discover({ keyword: keyword.id });
+}
 console.log(`record-tmdb-fixtures: wrote ${readdirSync(OUT).length} files to tests/fixtures/tmdb`);

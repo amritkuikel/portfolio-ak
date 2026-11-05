@@ -2175,7 +2175,7 @@ As 11.1, with these differences:
 | 64 | The player, progress and Continue watching, guests | xhigh | Done (decision 0236) |
 | 65 | Admin I: sources, kill switch, takedowns, reports, settings | high | Done (decision 0237) |
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Done (decision 0238) |
-| 66 | Search and discover | high | Planned |
+| 66 | Search and discover | high | Done (decision 0239) |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Planned |
 | 68 | Schedule and new-episode alerts | high | Planned |
 | 69 | Admin II: overview, curation, home layout | high | Planned |
@@ -2646,12 +2646,28 @@ Across the players:
 - Run `pnpm db:migrate` on Neon (`0031_parda_ranking`).
 - To run the probe: set `PARDA_PROBE_SECRET` in Vercel and in the repo's Actions secrets, and the Actions variable `PARDA_PROBE_URL`; after the first runs, check the Actions minutes (deployment.md).
 
-### Task 66: Search and discover (planned)
+### Task 66: Search and discover (done)
 
-- **Overlay:** Mod+K and `/`, debounced `search/multi`, keyboard navigation, recently viewed and recent searches, trending.
-- **Search page:** All / Movies / Series / People tabs, pagination, suggestions for an empty result. `pd_search_stat` is written from this page only.
-- **Discover:** the URL contract in `search.ts`, `FilterBar` (type, genres, years, rating, runtime, language, status, network or studio, sort), the 500-page cap.
-- **Nav and limits:** the Search and Discover links; a rate limit without a session.
+**Done** (decision 0239; the guide's "Search and Discover").
+
+**What changed:**
+- **Overlay:** the top mask's Search (a link to the page without JavaScript), Ctrl/⌘ K and `/` open a lazy cmdk overlay: recent searches, recently viewed and trending when empty; TMDB's multi search after a 250 ms pause, with "See all results" first, titles and people; arrow keys and Enter.
+- **Search page** `/app/parda/search` (noindex): All / Movies / Series / People, 20 a page up to 500, a GET form that searches on submit; for nothing found, tips, Discover and trending. `pd_search_stat` (migration `0032_parda_search`) counts a search the page really showed (page 1, all kinds, not a preload), per UTC day and normalized query, with no user or IP.
+- **Discover** `/app/parda/discover` (indexable, in the sitemap): `FilterBar` with type, genres, years, score, runtime, language, a series' status, network or studio, sort; chips; the 500-page cap; `?keyword=` named from TMDB. Pure requests in `catalog/discover-requests.ts`, with vote floors for score and date sorts.
+- **Links:** Discover in the top mask and the tab bar (About moves to the footer on phones; About and the language show in the top mask from `lg`), genre, language and keyword rails' "See all", a title's keywords.
+- **Limits:** a search without a session has its own per-IP limit (150 per 5 minutes, page loads included); over it, the page and the overlay say so.
+- **Server:** `tmdb/search.ts`, `searchCatalog` and `keywordName` in `catalog/service.ts` (takedowns), `catalog/search.ts`, `catalog/discover.ts`, `src/functions/parda/search.ts` (guard list and Storybook mock).
+- **Fixtures:** re-recorded with search, Discover's samples, the first search hit's title, a keyword and two spare billboard titles: 224 files, 4.6 MB.
+- **Tests:** `tests/unit/parda-discover.test.ts` (the URL contract, every filter's TMDB parameters, floors, type-only filters, rails' Discover), `tests/server/parda-search.test.ts` (tabs, nothing found, TMDB failing, Nepali fill-in, takedowns in the page and the overlay, the statistics, Discover's samples, keywords, rails' "See all"), the "Parda/Search" story, seven e2e flows (the overlay and Enter, a hit and recently viewed, nothing found, the page without JavaScript, Discover's filters and chips, a keyword and a rail's "See all") and six pages in the review.
+
+**Deviations (0239):**
+- **The kids' cap doesn't filter search or Discover yet:** kids' profiles arrive with Task 67, which applies the cap everywhere.
+- **About left the phone's tab bar** for Discover.
+- **`pd_search_stat` isn't pruned yet:** Task 69 reads and prunes it.
+
+**Numbers:** entry 279.9 of 280 kB (278.7 before): two routes and Discover's contract. The next task with a route must trim route options or raise the budget, with a decision. `pnpm test` 149 files, 1,462 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, `pnpm test:storybook` (538 of 538), build-storybook, `e2e/flows/parda.spec.ts` (46 passed, 1 flaky: "marking a season watched", which passed on retry) and the review of every `/app/parda` page (252 of 252). The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0032_parda_search`).
 
 ### Task 67: Library and profiles (planned)
 
@@ -2665,6 +2681,7 @@ Across the players:
 - **Profiles:**
   - the picker with 2 or more profiles; create, edit, delete; avatars;
   - **kids** with a certification cap and a PIN (hashed, rate limited);
+  - the cap also filters search and Discover (0239);
   - region per profile (falling back to `x-vercel-ip-country` when TMDB supports it, then the admin default);
   - audio language, autoplay next.
 - **Accounts:** the email digest opt-in.
@@ -2679,7 +2696,7 @@ Across the players:
 ### Task 69: Admin II, overview and curation (planned)
 
 - **Overview:** plays (today / 7 / 30 days), unique viewers, guests vs accounts, watch time, top titles, top and zero-result searches, open reports, server failure rate (charts with `dataviz`).
-  - Built on the rollup cron, `pd_daily_stat` and the 90-day prune of `pd_play`.
+  - Built on the rollup cron, `pd_daily_stat` and the 90-day prune of `pd_play` and `pd_search_stat` (0239).
 - **Curation:**
   - billboard slots: a TMDB title picker, order, start and end dates, tagline in en/ne;
   - collections: en/ne, slug, ordered titles, published; shown as rails and at `/c/$slug`.

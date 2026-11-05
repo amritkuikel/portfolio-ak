@@ -131,6 +131,8 @@ import { Route as PardaAppPardaIndexRouteImport } from './routes/_parda/app/pard
 import { Route as PardaAppPardaSplatRouteImport } from './routes/_parda/app/parda/$'
 import { Route as PardaAppPardaHubRouteImport } from './routes/_parda/app/parda/$hub'
 import { Route as PardaAppPardaAboutRouteImport } from './routes/_parda/app/parda/about'
+import { Route as PardaAppPardaDiscoverRouteImport } from './routes/_parda/app/parda/discover'
+import { Route as PardaAppPardaSearchRouteImport } from './routes/_parda/app/parda/search'
 import { Route as PardaAppPardaSignInRouteImport } from './routes/_parda/app/parda/sign-in'
 import { Route as PardaAppPardaSignUpRouteImport } from './routes/_parda/app/parda/sign-up'
 import { Route as PardaAppPardaSurpriseRouteImport } from './routes/_parda/app/parda/surprise'
@@ -829,6 +831,16 @@ const PardaAppPardaAboutRoute = PardaAppPardaAboutRouteImport.update({
   path: '/app/parda/about',
   getParentRoute: () => PardaRouteRoute,
 } as any)
+const PardaAppPardaDiscoverRoute = PardaAppPardaDiscoverRouteImport.update({
+  id: '/app/parda/discover',
+  path: '/app/parda/discover',
+  getParentRoute: () => PardaRouteRoute,
+} as any)
+const PardaAppPardaSearchRoute = PardaAppPardaSearchRouteImport.update({
+  id: '/app/parda/search',
+  path: '/app/parda/search',
+  getParentRoute: () => PardaRouteRoute,
+} as any)
 const PardaAppPardaSignInRoute = PardaAppPardaSignInRouteImport.update({
   id: '/app/parda/sign-in',
   path: '/app/parda/sign-in',
@@ -1341,6 +1353,8 @@ export interface FileRoutesByFullPath {
   '/app/parda/$': typeof PardaAppPardaSplatRoute
   '/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/app/parda/about': typeof PardaAppPardaAboutRoute
+  '/app/parda/discover': typeof PardaAppPardaDiscoverRoute
+  '/app/parda/search': typeof PardaAppPardaSearchRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
   '/app/parda/surprise': typeof PardaAppPardaSurpriseRoute
@@ -1510,6 +1524,8 @@ export interface FileRoutesByTo {
   '/app/parda/$': typeof PardaAppPardaSplatRoute
   '/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/app/parda/about': typeof PardaAppPardaAboutRoute
+  '/app/parda/discover': typeof PardaAppPardaDiscoverRoute
+  '/app/parda/search': typeof PardaAppPardaSearchRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
   '/app/parda/surprise': typeof PardaAppPardaSurpriseRoute
@@ -1699,6 +1715,8 @@ export interface FileRoutesById {
   '/_parda/app/parda/$': typeof PardaAppPardaSplatRoute
   '/_parda/app/parda/$hub': typeof PardaAppPardaHubRoute
   '/_parda/app/parda/about': typeof PardaAppPardaAboutRoute
+  '/_parda/app/parda/discover': typeof PardaAppPardaDiscoverRoute
+  '/_parda/app/parda/search': typeof PardaAppPardaSearchRoute
   '/_parda/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/_parda/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
   '/_parda/app/parda/surprise': typeof PardaAppPardaSurpriseRoute
@@ -1886,6 +1904,8 @@ export interface FileRouteTypes {
     | '/app/parda/$'
     | '/app/parda/$hub'
     | '/app/parda/about'
+    | '/app/parda/discover'
+    | '/app/parda/search'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
     | '/app/parda/surprise'
@@ -2055,6 +2075,8 @@ export interface FileRouteTypes {
     | '/app/parda/$'
     | '/app/parda/$hub'
     | '/app/parda/about'
+    | '/app/parda/discover'
+    | '/app/parda/search'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
     | '/app/parda/surprise'
@@ -2243,6 +2265,8 @@ export interface FileRouteTypes {
     | '/_parda/app/parda/$'
     | '/_parda/app/parda/$hub'
     | '/_parda/app/parda/about'
+    | '/_parda/app/parda/discover'
+    | '/_parda/app/parda/search'
     | '/_parda/app/parda/sign-in'
     | '/_parda/app/parda/sign-up'
     | '/_parda/app/parda/surprise'
@@ -3200,6 +3224,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PardaAppPardaAboutRouteImport
       parentRoute: typeof PardaRouteRoute
     }
+    '/_parda/app/parda/discover': {
+      id: '/_parda/app/parda/discover'
+      path: '/app/parda/discover'
+      fullPath: '/app/parda/discover'
+      preLoaderRoute: typeof PardaAppPardaDiscoverRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
+    '/_parda/app/parda/search': {
+      id: '/_parda/app/parda/search'
+      path: '/app/parda/search'
+      fullPath: '/app/parda/search'
+      preLoaderRoute: typeof PardaAppPardaSearchRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
     '/_parda/app/parda/sign-in': {
       id: '/_parda/app/parda/sign-in'
       path: '/app/parda/sign-in'
@@ -3690,6 +3728,8 @@ interface PardaRouteRouteChildren {
   PardaAppPardaSplatRoute: typeof PardaAppPardaSplatRoute
   PardaAppPardaHubRoute: typeof PardaAppPardaHubRoute
   PardaAppPardaAboutRoute: typeof PardaAppPardaAboutRoute
+  PardaAppPardaDiscoverRoute: typeof PardaAppPardaDiscoverRoute
+  PardaAppPardaSearchRoute: typeof PardaAppPardaSearchRoute
   PardaAppPardaSignInRoute: typeof PardaAppPardaSignInRoute
   PardaAppPardaSignUpRoute: typeof PardaAppPardaSignUpRoute
   PardaAppPardaSurpriseRoute: typeof PardaAppPardaSurpriseRoute
@@ -3705,6 +3745,8 @@ const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaSplatRoute: PardaAppPardaSplatRoute,
   PardaAppPardaHubRoute: PardaAppPardaHubRoute,
   PardaAppPardaAboutRoute: PardaAppPardaAboutRoute,
+  PardaAppPardaDiscoverRoute: PardaAppPardaDiscoverRoute,
+  PardaAppPardaSearchRoute: PardaAppPardaSearchRoute,
   PardaAppPardaSignInRoute: PardaAppPardaSignInRoute,
   PardaAppPardaSignUpRoute: PardaAppPardaSignUpRoute,
   PardaAppPardaSurpriseRoute: PardaAppPardaSurpriseRoute,

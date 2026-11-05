@@ -173,6 +173,7 @@ const INDEXABLE: ReadonlyArray<{
 		siteName: "Parda",
 	})),
 	{ to: "/app/parda/about", label: "parda about", context: {}, path: "/app/parda/about", siteName: "Parda" },
+	{ to: "/app/parda/discover", label: "parda discover", context: {}, path: "/app/parda/discover", siteName: "Parda" },
 	...pardaContentPages,
 	// parda:end
 	// @strip-demo:indexable (the neutral landing page goes here when the portfolio is stripped)

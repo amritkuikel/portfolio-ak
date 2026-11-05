@@ -35,7 +35,7 @@ describe("<form> method", () => {
 		expect(forms.length).toBeGreaterThanOrEqual(11);
 	});
 
-	it("every form sets method; only FilterBar and Taskline's search use GET", () => {
+	it("every form sets method; only FilterBar and the search pages use GET", () => {
 		const missing = forms.filter(({ tag }) => !/\bmethod="(post|get)"/.test(tag));
 		expect(missing).toEqual([]);
 		const gets = forms
@@ -43,6 +43,7 @@ describe("<form> method", () => {
 			.map(({ file }) => file.split(path.sep).join("/"));
 		expect(gets).toEqual([
 			"src/components/filters/filter-bar.tsx",
+			"src/features/parda/search/search-page.tsx", // @parda
 			"src/features/taskline/find/search-page.tsx", // @taskline
 		]);
 	});

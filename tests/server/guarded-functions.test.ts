@@ -410,6 +410,7 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getPardaSurprise",
 		"getPardaBanner",
 	],
+	"parda/search.ts": ["getPardaSearch", "getPardaSuggest", "notePardaSearch", "getPardaDiscover"],
 	"parda/watch.ts": ["getPardaWatch", "recordPardaPlay", "reportPardaProblem"],
 };
 

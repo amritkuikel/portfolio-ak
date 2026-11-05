@@ -1,5 +1,5 @@
 import { linkOptions } from "@tanstack/react-router";
-import { PARDA_HUBS, type PardaHub, type PardaPage, typeOfMedia } from "./search";
+import { type DiscoverSearch, PARDA_HUBS, type PardaHub, type PardaPage, type SearchTab, typeOfMedia } from "./search";
 import { titleParam } from "./slug";
 
 /**
@@ -32,6 +32,10 @@ export const pardaLinks = {
 	collection: (id: number) => linkOptions({ to: "/app/parda/collection/$id", params: { id: String(id) } }),
 	/** A random title from the page's good lists: a redirect, so it works without JavaScript. */
 	surprise: (from: PardaPage) => linkOptions({ to: "/app/parda/surprise", search: { from } }),
+	/** The search page (noindex): a query, a tab and a page; without a query, the page asks for one. */
+	search: (q?: string, tab?: SearchTab) => linkOptions({ to: "/app/parda/search", search: { q, tab } }),
+	/** Discover (indexable), with any of its filters (decision 0239). */
+	discover: (filters: Partial<DiscoverSearch> = {}) => linkOptions({ to: "/app/parda/discover", search: filters }),
 	about: (hash?: string) => linkOptions({ to: "/app/parda/about", ...(hash ? { hash } : {}) }),
 	signIn: (redirect?: string) => linkOptions({ to: "/app/parda/sign-in", search: { redirect } }),
 	signUp: (redirect?: string) => linkOptions({ to: "/app/parda/sign-up", search: { redirect } }),
@@ -41,6 +45,8 @@ export const pardaLinks = {
 export const PARDA_PATHS = {
 	home: "/app/parda",
 	about: "/app/parda/about",
+	discover: "/app/parda/discover",
+	search: "/app/parda/search",
 	hub: (hub: PardaHub) => `/app/parda/${hub}`,
 	title: (media: Media, id: number, slug: string) => `/app/parda/${typeOfMedia(media)}/${titleParam(id, slug)}`,
 	credits: (media: Media, id: number, slug: string) => `${PARDA_PATHS.title(media, id, slug)}/credits`,
@@ -52,5 +58,6 @@ export const PARDA_PATHS = {
 export const PARDA_SITEMAP: ReadonlyArray<string> = [
 	PARDA_PATHS.home,
 	...PARDA_HUBS.map(PARDA_PATHS.hub),
+	PARDA_PATHS.discover,
 	PARDA_PATHS.about,
 ];

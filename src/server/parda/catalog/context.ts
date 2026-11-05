@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { getCookie, getRequest } from "@tanstack/react-start/server";
+import { isAppError } from "@/lib/errors";
 import type { Localized } from "@/lib/i18n/localized";
 import type { Session } from "@/lib/session";
 import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
@@ -57,4 +58,28 @@ export async function pardaBanner(): Promise<Localized | null> {
 	const settings = await pardaControls.settings();
 	const banner = "banner" in settings ? settings.banner : null;
 	return banner?.en.trim() ? banner : null;
+}
+
+/**
+ * Searches without a session, per IP (Task 66, decision 0239): each one is a TMDB call
+ * the cache rarely answers, so they have their own limit, page loads included. About
+ * one search every two seconds for five minutes; the overlay waits for a pause in typing.
+ */
+const SEARCH_LIMIT = { max: 150, windowSeconds: 300 } as const;
+
+export async function limitAnonymousSearch(session: Session | null): Promise<void> {
+	if (session) return;
+	const ip = clientIpHash(trustedClientIp(getRequest()));
+	await enforceRateLimit(db, `parda-search:${ip ?? "unknown"}`, SEARCH_LIMIT);
+}
+
+/** Whether a search may go ahead: false once an anonymous caller is over the limit. */
+export async function withinSearchLimit(session: Session | null): Promise<boolean> {
+	try {
+		await limitAnonymousSearch(session);
+		return true;
+	} catch (error) {
+		if (isAppError(error) && error.code === "RATE_LIMITED") return false;
+		throw error;
+	}
 }

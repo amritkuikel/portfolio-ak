@@ -1,5 +1,5 @@
 import type { Locale } from "@/paraglide/runtime";
-import type { PardaPage, PardaType } from "./search";
+import type { DiscoverSearch, PardaPage, PardaType, SearchTab } from "./search";
 
 /** Parda's query keys: the catalogue's answers depend on the language (TMDB's text, the Nepali fill-in). */
 export const pardaKeys = {
@@ -14,6 +14,10 @@ export const pardaKeys = {
 	credits: (locale: Locale, type: PardaType, id: number) => [...pardaKeys.title(locale, type, id), "credits"] as const,
 	person: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "person", id] as const,
 	collection: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "collection", id] as const,
+	search: (locale: Locale, q: string, tab: SearchTab, page: number) =>
+		[...pardaKeys.catalog(locale), "search", q, tab, page] as const,
+	suggest: (locale: Locale, q: string) => [...pardaKeys.catalog(locale), "suggest", q] as const,
+	discover: (locale: Locale, filters: DiscoverSearch) => [...pardaKeys.catalog(locale), "discover", filters] as const,
 };
 
 /**

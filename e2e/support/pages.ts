@@ -343,6 +343,13 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/parda/watch/$type/$id", params: { from: "parda", page: "watch-movie" }, label: "movie" },
 	{ route: "/app/parda/watch/$type/$id", params: { from: "parda", page: "watch-series" }, label: "series" },
 	{ route: "/app/parda/about" },
+	// Search and Discover (Task 66): empty, with results, with nothing found; Discover as it opens and filtered.
+	{ route: "/app/parda/search", label: "empty" },
+	{ route: "/app/parda/search", path: "/app/parda/search?q=star", label: "results" },
+	{ route: "/app/parda/search", path: "/app/parda/search?q=star&tab=people", label: "people" },
+	{ route: "/app/parda/search", path: "/app/parda/search?q=qzxv+no+such+title", label: "nothing found" },
+	{ route: "/app/parda/discover", label: "default" },
+	{ route: "/app/parda/discover", path: "/app/parda/discover?type=series&sort=rating", label: "filtered" },
 	{ route: "/app/parda/sign-in" },
 	{ route: "/app/parda/sign-up" },
 	{ route: "/app/parda/$", path: "/app/parda/no/such/page", status: 404, label: "unknown page" },

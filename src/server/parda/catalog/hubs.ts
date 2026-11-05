@@ -4,6 +4,7 @@ import type { PardaPage } from "@/features/parda/search";
 import { AppError, isAppError } from "@/lib/errors";
 import { errorFields, log } from "@/server/log";
 import type { TitleSummary } from "../tmdb/mappers";
+import { discoverOfRail } from "./discover-requests";
 import { AWAITED_RAILS, BILLBOARD_SIZE, PAGE_LAYOUTS, type RailContext, type RailSpec, railContext } from "./rails";
 import { type CatalogScope, type CatalogServices, listTitles, titleDetails } from "./service";
 
@@ -40,7 +41,7 @@ export const toHubTitle = (title: TitleSummary): HubTitle => ({
 });
 
 /** TMDB failing (UPSTREAM_UNAVAILABLE) is logged and becomes null; anything else is a bug and throws. */
-async function degrade<T>(what: string, load: () => Promise<T>): Promise<T | null> {
+export async function degrade<T>(what: string, load: () => Promise<T>): Promise<T | null> {
 	try {
 		return await load();
 	} catch (error) {
@@ -111,10 +112,17 @@ export async function hubPage(
 			id: spec.id,
 			kind: spec.kind,
 			label: spec.label,
+			...withMore(spec, context),
 			...(index < AWAITED_RAILS ? { titles: awaited[index] ?? null } : {}),
 		})),
 	};
 }
+
+/** Discover's filters for a rail, when Discover can show the same titles. */
+const withMore = (spec: RailSpec, context: RailContext) => {
+	const more = discoverOfRail(spec.request(context));
+	return more ? { more } : {};
+};
 
 /** One streamed rail of a page, by its id. */
 export async function hubRail(

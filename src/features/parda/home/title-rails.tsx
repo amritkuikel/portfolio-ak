@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { CatchBoundary } from "@tanstack/react-router";
+import { CatchBoundary, Link } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { Rail, RailItem, RailSkeleton } from "@/components/data-display/rail";
 import { m } from "@/paraglide/messages";
@@ -34,6 +34,21 @@ export function toPosterItem(title: HubTitle, imageBase: string): PosterCardItem
 		}),
 		rating: title.rating,
 	};
+}
+
+/** A rail Discover can show in full links there (Task 66). */
+function SeeAll({ head, title }: { head: HubRailHead; title: string }) {
+	if (!head.more) return null;
+	return (
+		<Link
+			{...pardaLinks.discover(head.more)}
+			className="text-pd-muted text-sm underline-offset-4 outline-none hover:text-pd-ink hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+			data-testid="rail-see-all"
+		>
+			{m.pd_rail_see_all()}
+			<span className="sr-only">: {title}</span>
+		</Link>
+	);
 }
 
 const titleKey = (title: HubTitle) => `${title.media}:${title.id}`;
@@ -82,7 +97,7 @@ export function TitleRail({
 		);
 	}
 	return (
-		<Rail title={title} titleClassName={HEADING} data-testid="title-rail">
+		<Rail title={title} titleClassName={HEADING} action={<SeeAll head={head} title={title} />} data-testid="title-rail">
 			{titles.map((each) => (
 				<RailItem key={titleKey(each)} className={POSTER_ITEM}>
 					<PosterCard

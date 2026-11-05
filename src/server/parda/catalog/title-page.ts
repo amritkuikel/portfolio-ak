@@ -21,7 +21,7 @@ type Locale = CatalogScope["locale"];
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Country and language names in the page's language, made on the server so the browser's ICU data can't differ. */
-function namer(locale: Locale, type: "region" | "language") {
+export function namer(locale: Locale, type: "region" | "language") {
 	let names: Intl.DisplayNames | null = null;
 	try {
 		names = new Intl.DisplayNames([locale], { type, fallback: "code" });

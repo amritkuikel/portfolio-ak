@@ -80,3 +80,24 @@ export function pardaPageHead(page: PardaPage, hero: HeroPreload | undefined) {
 		],
 	};
 }
+
+/** Discover's head (Task 66): indexable; every filtered address names the bare page as canonical. */
+export function pardaDiscoverHead() {
+	const home = localizedUrl(PARDA_PATHS.home, getLocale());
+	const title = m.pd_discover_title();
+	const description = m.pd_discover_description();
+	return seo({
+		title,
+		siteName: PARDA_NAME,
+		description,
+		path: PARDA_PATHS.discover,
+		jsonLd: {
+			"@type": "CollectionPage",
+			name: title,
+			description,
+			url: localizedUrl(PARDA_PATHS.discover, getLocale()),
+			inLanguage: getLocale(),
+			isPartOf: { "@id": `${home}#website` },
+		},
+	});
+}

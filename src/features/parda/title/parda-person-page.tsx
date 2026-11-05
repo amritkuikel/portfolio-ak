@@ -12,6 +12,7 @@ import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
 import { pardaLinks } from "../links";
 import { pardaPersonQueryOptions } from "../queries";
+import { useRememberViewed } from "../search/recent";
 import { departmentLabel } from "./labels";
 import { formatTmdbDate } from "./title-hero";
 import { ExternalLinks, INSET, PosterRail, roleOf } from "./title-sections";
@@ -46,6 +47,14 @@ function FilmographyRow({ entry }: { entry: FilmographyEntry }) {
 
 function PersonContent({ data }: { data: Extract<PersonPageData, { configured: true }> }) {
 	const { person, imageBase } = data;
+	useRememberViewed({
+		media: "person",
+		id: person.id,
+		slug: "",
+		name: person.name,
+		picture: person.profile,
+		imageBase,
+	});
 	const facts = [
 		person.knownFor ? m.pd_person_known_for_department({ department: departmentLabel(person.knownFor) }) : null,
 		person.birthday

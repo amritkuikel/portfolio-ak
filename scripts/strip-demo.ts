@@ -235,6 +235,8 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/server/parda-access.test.ts",
 			"tests/server/parda-admin.test.ts",
 			"tests/server/parda-ranking.test.ts",
+			"tests/server/parda-search.test.ts",
+			"tests/unit/parda-discover.test.ts",
 			"e2e/harness/tmdb.ts",
 			"e2e/flows/parda.spec.ts",
 			"docs/guides/parda.md",

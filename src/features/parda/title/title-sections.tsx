@@ -11,6 +11,7 @@ import { PersonCard, PosterCard } from "../kit/cards";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
 import { pardaLinks } from "../links";
+import { typeOfMedia } from "../search";
 import { jobLabel, PROVIDER_ORDER, providerKindLabel } from "./labels";
 import { formatTmdbDate } from "./title-hero";
 import type {
@@ -220,14 +221,22 @@ export function TitleDetails({ title }: { title: TitleFacts }) {
 		<Section id="details" title={m.pd_details_heading()}>
 			<div className={cn(INSET, "flex flex-col gap-6")}>
 				{items.length ? <DescriptionList items={items} className="max-w-4xl" /> : null}
-				{/* Keywords become links to Discover with Task 66. */}
+				{/* Each keyword is Discover's list of titles with it (Task 66). */}
 				{title.keywords.length ? (
 					<div className="flex flex-col gap-2">
 						<h3 className="text-pd-muted text-sm">{m.pd_details_keywords()}</h3>
 						<ul className="flex flex-wrap gap-2" data-testid="title-keywords">
 							{title.keywords.map((keyword) => (
-								<li key={keyword.id} className="bg-pd-ground-2 px-2 py-1 text-xs">
-									{keyword.name}
+								<li key={keyword.id}>
+									<Link
+										{...pardaLinks.discover({
+											type: typeOfMedia(title.media),
+											keyword: keyword.id,
+										})}
+										className="block bg-pd-ground-2 px-2 py-1 text-xs outline-none transition-colors hover:text-pd-ink focus-visible:ring-[3px] focus-visible:ring-ring/50"
+									>
+										{keyword.name}
+									</Link>
 								</li>
 							))}
 						</ul>

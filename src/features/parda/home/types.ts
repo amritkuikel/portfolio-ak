@@ -1,4 +1,4 @@
-import type { PardaPage } from "../search";
+import type { DiscoverSearch, PardaPage } from "../search";
 
 /**
  * What the home and the hubs receive (decision 0234). Lean: the dehydrated query state
@@ -51,7 +51,13 @@ export type RailLabelKey =
 
 export type AnimeKeyword = "isekai" | "shounen" | "mecha" | "sliceOfLife";
 
-export type HubRailHead = { id: string; kind: "top10" | "poster"; label: RailLabel };
+export type HubRailHead = {
+	id: string;
+	kind: "top10" | "poster";
+	label: RailLabel;
+	/** Discover's filters for the same titles (Task 66): the heading links there. */
+	more?: Partial<DiscoverSearch>;
+};
 
 /** `titles` null: the rail couldn't load (TMDB failed), and says so in place. */
 export type HubRailTitles = HubTitle[] | null;

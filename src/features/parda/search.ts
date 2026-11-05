@@ -62,6 +62,67 @@ export const surpriseSearchSchema = z.object({
 		.catch("home"),
 });
 
+/** The search page's tabs (Task 66): TMDB's multi search, or one kind. */
+export const SEARCH_TABS = ["all", "movies", "series", "people"] as const;
+export type SearchTab = (typeof SEARCH_TABS)[number];
+/** TMDB answers at most 500 pages of any search or discover query. */
+export const TMDB_MAX_PAGE = 500;
+/** The longest query kept: the box's maxlength, the URL's and the statistics'. */
+export const QUERY_MAX = 100;
+
+const pageNumber = z.coerce.number().int().min(1).max(TMDB_MAX_PAGE).default(1).catch(1);
+
+/** `/app/parda/search?q=dune&tab=movies&page=2` (decision 0239). */
+export const searchPageSchema = z.object({
+	q: z.string().trim().max(QUERY_MAX).default("").catch(""),
+	tab: z.enum(SEARCH_TABS).default("all").catch("all"),
+	page: pageNumber,
+});
+export type SearchPageSearch = z.output<typeof searchPageSchema>;
+
+export const DISCOVER_SORTS = ["popular", "rating", "newest", "oldest", "title"] as const;
+export const DISCOVER_RUNTIMES = ["short", "medium", "long"] as const;
+export const DISCOVER_STATUSES = ["returning", "production", "ended", "canceled"] as const;
+
+const optional = <T extends z.ZodType>(schema: T) =>
+	z.preprocess((value) => (value === "" ? undefined : value), schema.optional()).catch(undefined);
+const year = optional(z.coerce.number().int().min(1874).max(2100));
+
+/**
+ * Discover's URL contract (decision 0239): what `FilterBar`'s GET form writes, so the
+ * same address works with and without JavaScript. `company` is a network for series and
+ * a studio for movies; `status` applies to series only. The server drops what doesn't
+ * apply to the type.
+ */
+export const discoverSearchSchema = z.object({
+	type: z.enum(["movie", "series"]).default("movie").catch("movie"),
+	genres: z
+		.preprocess(
+			(value) => (value === undefined || value === "" ? [] : Array.isArray(value) ? value : [value]),
+			z.array(z.coerce.number().int().positive().max(99_999)).max(5),
+		)
+		.default(() => [])
+		.catch(() => []),
+	from: year,
+	to: year,
+	rating: optional(z.coerce.number().int().min(1).max(9)),
+	runtime: optional(z.enum(DISCOVER_RUNTIMES)),
+	language: optional(z.string().regex(/^[a-z]{2}$/)),
+	status: optional(z.enum(DISCOVER_STATUSES)),
+	company: optional(z.coerce.number().int().positive().max(9_999_999)),
+	keyword: optional(z.coerce.number().int().positive().max(99_999_999)),
+	sort: z.enum(DISCOVER_SORTS).default("popular").catch("popular"),
+	page: pageNumber,
+});
+export type DiscoverSearch = z.output<typeof discoverSearchSchema>;
+/** Discover's defaults, left out of its URLs. */
+export const DISCOVER_DEFAULTS: Pick<DiscoverSearch, "type" | "genres" | "sort" | "page"> = {
+	type: "movie",
+	genres: [],
+	sort: "popular",
+	page: 1,
+};
+
 /** The watch page's search: a series' season and episode (`?s=2&e=5`); a movie has neither. */
 export const watchSearchSchema = z.object({
 	s: optionalNumber(9_999),

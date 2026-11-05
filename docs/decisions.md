@@ -243,6 +243,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0236](#0236-pardas-player-progress-and-continue-watching): Parda's player, progress and Continue watching
 - [0237](#0237-pardas-admin-i-sources-takedowns-reports-and-settings): Parda's admin I: sources, takedowns, reports and settings
 - [0238](#0238-parda-ranks-its-sources-from-viewers-and-a-daily-probe): Parda ranks its sources from viewers and a daily probe
+- [0239](#0239-parda-searches-and-discovers-through-the-catalogue-service): Parda searches and discovers through the catalogue service
 </details>
 
 ---
@@ -3022,3 +3023,28 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 - **The e2e flows set standings through the harness** rather than running the rollup on seeded plays (the cron would also refresh `pd_title` from fixtures that don't cover it); the rollup itself is covered on PGlite.
 
 **Alternatives considered:** racing hidden iframes and a speed test from the browser (rejected in 12.5); storing the orders with the scores (an admin's pin or mode would wait for the next run); a per-title skip from any two failures (one client could hide a source for everyone); requiring the original language for anime in the probe (the snapshot would need a new column for one probe title).
+
+## 0239: Parda searches and discovers through the catalogue service
+
+**What:** Task 66. Search (an overlay and a page) and Discover, both reading TMDB through `catalog/service.ts`, so takedowns apply to them like every other list.
+- **The overlay** (`features/parda/search/search-overlay.tsx`, cmdk with its own filtering off) opens from the top mask's Search, Ctrl/⌘ K or `/`. It's a `lazy()` chunk loaded on first use; the button is a link to the search page, so it works without JavaScript. Empty, it lists this browser's recent searches and recently viewed titles and people (`search/recent.ts`, localStorage, try/catch, never sent) and the home's trending rail (the same query, no new function). Typed, it asks `getPardaSuggest` after a 250 ms pause, from two letters, and lists "See all results" first, so Enter opens the page; the arrow keys move through the rest.
+- **The search page** (`/app/parda/search?q=&tab=&page=`, noindex) has four tabs (all, movies, series, people: `search/multi`, `search/movie`, `search/tv`, `search/person`), 20 a page up to TMDB's 500, and for no query or nothing found, tips, a link to Discover and the trending titles. Its box is a GET form inside `<search>`; it searches on submit, not while typing, so the statistics hold what people meant to search.
+- **`pd_search_stat`** (migration `0032_parda_search`): one row per UTC day and normalized query (NFKC, lower case, single spaces, 100 characters) with a count and whether the latest search found nothing. No user, profile or IP. Only the search page writes it, and only for a search really shown: its first page of all kinds, from the loader when it isn't a preload (`notePardaSearch`, which reads the answer the page just cached).
+- **Discover** (`/app/parda/discover`, indexable, canonical without its filters) is a `FilterBar`: type, genres (TMDB's per type), years, a minimum score, a runtime band, original language (named on the server, 0234), a series' status, a network for series or a studio for movies (a fixed list of TMDB ids checked against its API on 2026-11-05) and sort. `?keyword=` comes from a title's keywords, named from `keyword/{id}`. The server keeps only what applies to the type (`applicableFilters`), so a stale field after switching type does nothing.
+- **Sorting by score or date has a vote floor** (score 200, newest 10, oldest and title 50; a minimum score 50), and newest stops at today, or each list would open on titles nobody has seen or that aren't out.
+- **Rails link to Discover:** `discoverOfRail` turns a rail's discover request into Discover's filters when it can (genre, language and keyword rails); rails with dates or other lists (trending, airing this week) have no "See all".
+- **Limits:** a search without a session (the page with a query, the overlay; not the statistics' note) counts against its own per-IP limit, 150 per 5 minutes, page loads included, beside the catalogue's 300 for direct calls. Over it, the page says so in place of results (`limited`), rather than failing, and the overlay shows the same line.
+- **Requests are pure** (`catalog/discover-requests.ts`, like `rails.ts`), so `pnpm tmdb:record` records exactly what the pages ask: Discover's samples, the two search samples in every tab, the first search hit's title, and the popular movie's first keyword.
+
+**Why:** PLAN Task 66 and 12.5 ("Catalogue": takedowns in one place; "Routes": `/discover`, `/search`; "SEO": Discover indexable, search not).
+
+**Deviations from PLAN Task 66:**
+- **The kids' cap doesn't filter search or Discover yet:** no screen makes a kids' profile until Task 67, which applies the cap to every list at once.
+- **About left the phone's tab bar** for Discover (the footer links it on every page), and the top mask shows About and the language only from `lg`: at 768 px seven links and the controls overflowed.
+- **No 90-day prune of `pd_search_stat` yet:** Task 69 reads it and prunes it with `pd_play`.
+
+**Found on the way:** the billboard test failed after re-recording, because a takedown brings in the sixth title and a Nepali answer can lack a backdrop the English one has; the recorder now keeps two spare billboard titles.
+
+**Numbers:** entry 279.9 of 280 kB (278.7 before): two routes and Discover's URL contract. The next task with a route must trim route options or raise the budget, with a decision.
+
+**Alternatives considered:** counting searches inside the page's server function (a hover preload would count, and the query cache would hide repeats unevenly); `FilterBar` for the search box (it applies after each pause in typing, which would count "sta", "star", "star w"); free-text network and studio ids (TMDB has no Nepali names for them, and a select works without JavaScript); TMDB's `with_genres` as "any of" (a pipe): "all of" is what a viewer narrowing a list expects.
