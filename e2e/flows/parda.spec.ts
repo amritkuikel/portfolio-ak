@@ -694,6 +694,135 @@ const setOrder = async (page: Page, mode: "auto" | "manual") => {
 	await expect(order).toHaveAttribute("data-state", mode);
 };
 
+test.describe("Parda's curation", () => {
+	test.use(signedIn("admin"));
+
+	test("a collection is built with the picker, published at /c/{slug}, placed as a rail, then deleted", async ({
+		page,
+		harness,
+		guard,
+	}) => {
+		guard.allow(RESOURCE_STATUS(404));
+		await harness.resetRateLimits();
+		await page.goto("/admin/parda/collections/new");
+		await page.waitForLoadState("networkidle");
+		await page.getByRole("textbox", { name: /^Name/ }).first().fill("Flow picks");
+		await expect(page.getByLabel("Address")).toHaveValue("flow-picks");
+		// Publishing with no titles is refused on the titles.
+		await page.getByRole("switch", { name: "Published" }).click();
+		await page.getByRole("button", { name: "Create collection" }).click();
+		await expect(page.getByText("Add a title before publishing.").first()).toBeVisible();
+
+		await page.getByRole("combobox", { name: "Add a title" }).click();
+		await page.getByRole("combobox", { name: "Search TMDB for a title" }).fill("star");
+		const option = page.getByRole("option").first();
+		await expect(option).toBeVisible();
+		await option.click();
+		await page.keyboard.press("Escape");
+		await expect(page.getByTestId("collection-title")).toHaveCount(1);
+		await page.getByRole("button", { name: "Create collection" }).click();
+		await expect(page).toHaveURL(/\/admin\/parda\/collections$/);
+		await expect(page.getByTestId("parda-collections-table")).toContainText("/c/flow-picks");
+
+		await page.goto("/app/parda/c/flow-picks");
+		await expect(page.getByRole("heading", { level: 1, name: "Flow picks" })).toBeVisible();
+		await expect(page.getByTestId("collection-parts").getByRole("listitem")).toHaveCount(1);
+
+		// Off on the home until the layout places it.
+		await page.goto("/app/parda");
+		await expect(page.getByRole("heading", { name: "Flow picks" })).toHaveCount(0);
+		await page.goto("/admin/parda/layout");
+		await page.waitForLoadState("networkidle");
+		const toggle = page.getByRole("switch", { name: "Show Flow picks" });
+		await toggle.click();
+		// Alt + arrows move a rail from its handle, here all the way to the top.
+		const handle = page.getByRole("button", { name: "Move Flow picks" });
+		await handle.focus();
+		const count = await page.getByTestId("parda-layout-rail").count();
+		for (let step = 0; step < count; step += 1) await page.keyboard.press("Alt+ArrowUp");
+		await expect(page.getByTestId("parda-layout-rail").first()).toContainText("Flow picks");
+		await page.getByTestId("parda-layout-save").click();
+		await expect(page.getByTestId("parda-layout-save")).toBeDisabled();
+
+		await page.goto("/app/parda");
+		const rail = page.getByRole("region", { name: "Flow picks" });
+		await expect(rail).toBeVisible();
+		await rail.getByTestId("rail-see-all").or(page.getByTestId("rail-see-all").first()).first().click();
+		await expect(page).toHaveURL(/\/app\/parda\/c\/flow-picks$/);
+
+		// Deleting it takes the page and the rail.
+		await page.goto("/admin/parda/collections");
+		await page.waitForLoadState("networkidle");
+		await page
+			.getByTestId("parda-collections-table")
+			.getByRole("button", { name: /actions/i })
+			.first()
+			.click();
+		await page.getByRole("menuitem", { name: "Delete" }).click();
+		await page.getByRole("button", { name: "Delete" }).last().click();
+		await expect(page.getByText("/c/flow-picks")).toHaveCount(0);
+		const gone = await page.goto("/app/parda/c/flow-picks");
+		expect(gone?.status()).toBe(404);
+	});
+
+	test("a billboard slot leads its page with the admin's tagline, until it's deleted", async ({ page }) => {
+		await page.goto("/admin/parda/billboard/new?page=series");
+		await page.waitForLoadState("networkidle");
+		// Refused without a title.
+		await page.getByRole("button", { name: "Add slot" }).click();
+		await expect(page.getByText("Choose a title.").first()).toBeVisible();
+		await page.getByRole("combobox", { name: "Title" }).click();
+		await page.getByRole("combobox", { name: "Search TMDB for a title" }).fill("star");
+		await page.getByRole("option").first().click();
+		await page
+			.getByRole("textbox", { name: /^Tagline/ })
+			.first()
+			.fill("The curator's choice");
+		await page.getByRole("button", { name: "Add slot" }).click();
+		await expect(page).toHaveURL(/\/admin\/parda\/billboard\?page=series$/);
+		await expect(page.getByTestId("parda-billboard-table")).toContainText("Showing");
+
+		await page.goto("/app/parda/series");
+		await expect(page.getByText("The curator's choice").first()).toBeVisible();
+
+		await page.goto("/admin/parda/billboard?page=series");
+		await page.waitForLoadState("networkidle");
+		await page
+			.getByTestId("parda-billboard-table")
+			.getByRole("button", { name: /actions/i })
+			.first()
+			.click();
+		await page.getByRole("menuitem", { name: "Delete" }).click();
+		await page.getByRole("button", { name: "Delete" }).last().click();
+		await expect(page.getByRole("cell", { name: "Showing" })).toHaveCount(0);
+		await page.goto("/app/parda/series");
+		await expect(page.getByText("The curator's choice")).toHaveCount(0);
+	});
+
+	test("the overview adds today's plays to the finished days, by range", async ({ page, harness }) => {
+		await harness.pardaPlays();
+		try {
+			await page.goto("/admin/parda?range=today");
+			const overview = page.getByTestId("parda-admin-overview");
+			await expect(overview).toBeVisible();
+			await expect(page.getByTestId("parda-range-today")).toHaveAttribute("aria-current", "page");
+			// Other pages may be playing while this runs: exact figures are in tests/server/parda-curation.test.ts.
+			await expect(page.getByTestId("parda-top-titles").getByRole("link").first()).toBeVisible();
+			await expect(page.getByTestId("parda-top-searches")).toContainText("e2e top search");
+			await expect(page.getByTestId("parda-zero-searches")).toContainText("e2e nothing found");
+			await expect(page.getByTestId("parda-servers")).toContainText("Server 1");
+
+			// A longer range takes the finished days in; the links work without a reload.
+			await page.getByTestId("parda-range-30d").click();
+			await expect(page).toHaveURL(/range=30d/);
+			await expect(page.getByTestId("parda-range-30d")).toHaveAttribute("aria-current", "page");
+			await expect(overview.locator("[data-figures]").filter({ hasText: "Plays, 30 days" })).toContainText(/\d{3}/);
+		} finally {
+			await harness.pardaPlays(false);
+		}
+	});
+});
+
 test.describe("Parda's source ranking", () => {
 	test.use(signedIn("admin"));
 

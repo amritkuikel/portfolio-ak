@@ -1,7 +1,7 @@
 /**
  * The home's and the hubs' rails (PLAN Task 62, decision 0234): which rails each page
- * shows, in order, and the TMDB request behind each. A config in code until Task 69
- * makes the layout editable.
+ * has, their first order, and the TMDB request behind each. The admin reorders and hides
+ * them (`pd_rail`, `mergedRails` in ../curation.ts, decision 0242).
  *
  * This module imports nothing at runtime, so `pnpm tmdb:record` (a plain Node script)
  * records exactly these requests, and the fixtures can't drift from the pages.
@@ -16,7 +16,7 @@ export type RailContext = { today: string; seasonStart: string; seasonEnd: strin
 export type RailRequest = { media: ListMedia; path: string; params: Readonly<Record<string, string | number>> };
 
 export type RailSpec = {
-	/** Stable within its page: the client asks for a streamed rail by it, and Task 69 stores layouts by it. */
+	/** Stable within its page: the client asks for a streamed rail by it, and `pd_rail` stores layouts by it. */
 	id: string;
 	kind: "top10" | "poster";
 	/** Named by the client in the page's language (`railLabel`). */

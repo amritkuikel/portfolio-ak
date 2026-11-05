@@ -39,6 +39,8 @@ export const pardaLinks = {
 		}),
 	person: (id: number) => linkOptions({ to: "/app/parda/person/$id", params: { id: String(id) } }),
 	collection: (id: number) => linkOptions({ to: "/app/parda/collection/$id", params: { id: String(id) } }),
+	/** A collection the admin put together (decision 0242). */
+	curated: (slug: string) => linkOptions({ to: "/app/parda/c/$slug", params: { slug } }),
 	/** A random title from the page's good lists: a redirect, so it works without JavaScript. */
 	surprise: (from: PardaPage) => linkOptions({ to: "/app/parda/surprise", search: { from } }),
 	/** The search page (noindex): a query, a tab and a page; without a query, the page asks for one. */
@@ -71,6 +73,7 @@ export const PARDA_PATHS = {
 	credits: (media: Media, id: number, slug: string) => `${PARDA_PATHS.title(media, id, slug)}/credits`,
 	person: (id: number) => `/app/parda/person/${id}`,
 	collection: (id: number) => `/app/parda/collection/${id}`,
+	curated: (slug: string) => `/app/parda/c/${slug}`,
 } as const;
 
 /** Parda's indexable pages without parameters (PLAN 12.5, "SEO"); titles come from `pd_title` (sitemap.ts). */

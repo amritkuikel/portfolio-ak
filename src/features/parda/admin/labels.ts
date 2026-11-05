@@ -1,6 +1,7 @@
 import { defineStatuses } from "@/components/data-display/status-badge";
 import { m } from "@/paraglide/messages";
 import type { PardaReportKind, PardaReportStatus } from "../player/playback";
+import type { PardaPage } from "../search";
 import type { LabSandbox, PardaAdminMedia, SOURCE_ADAPTERS, SOURCE_ADAPTIVE } from "./schema";
 import type { PardaReportKindFilter, PardaReportStatusFilter } from "./search";
 
@@ -28,6 +29,20 @@ export const MEDIA_LABELS: Readonly<Record<PardaAdminMedia, () => string>> = {
 	movie: m.pd_lab_media_movie,
 	tv: m.pd_lab_media_tv,
 };
+
+/** The pages a billboard slot or a layout belongs to. */
+export const PAGE_LABELS: Readonly<Record<PardaPage, () => string>> = {
+	home: m.pd_nav_home,
+	movies: m.pd_hub_movies,
+	series: m.pd_hub_series,
+	anime: m.pd_hub_anime,
+};
+
+export const SLOT_STATES = defineStatuses({
+	live: { label: m.pd_admin_slot_live, tone: "success" },
+	scheduled: { label: m.pd_admin_slot_scheduled, tone: "info" },
+	ended: { label: m.pd_admin_slot_ended, tone: "neutral" },
+});
 
 export const REPORT_KIND_LABELS: Readonly<Record<PardaReportKind, () => string>> = {
 	"not-playing": m.pd_report_not_playing,

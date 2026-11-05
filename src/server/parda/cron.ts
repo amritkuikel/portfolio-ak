@@ -6,6 +6,7 @@ import { refreshCertificates, refreshTitles } from "./catalog/refresh";
 import { createPardaControls, type PardaControls } from "./controls";
 import { type CheckResult, checkNewEpisodes } from "./notify/check";
 import { type DigestResult, sendDigests } from "./notify/digest";
+import { type DailyResult, rollupDaily } from "./player/daily";
 import { type RollupResult, rollupSources } from "./player/stats";
 import type { Tmdb } from "./tmdb/client";
 
@@ -13,13 +14,15 @@ export type PardaCronResult = {
 	titles: { ok: boolean; skipped?: boolean; titles?: number };
 	certificates: { ok: boolean; skipped?: boolean; checked?: number; failed?: number };
 	ranking: { ok: boolean } & Partial<RollupResult>;
+	overview: { ok: boolean } & Partial<DailyResult>;
 	episodes: { ok: boolean; skipped?: boolean } & Partial<CheckResult>;
 	digest: { ok: boolean } & Partial<DigestResult>;
 };
 
 /**
  * `GET /api/cron/parda`, once a day: the `pd_title` refresh, the titles' US certificates
- * (decision 0240), the sources' rollup and scores (decision 0238), then the new-episode
+ * (decision 0240), the sources' rollup and scores (decision 0238), the overview's rollup
+ * and the 90-day prune (decision 0242), then the new-episode
  * check and, once its alerts are committed, the digest emails (decision 0241), each on
  * its own, so one failing leaves the others done. Running it twice changes nothing but
  * `refreshed_at` and today's rollup rows: a series checked today waits a day, and an
@@ -66,6 +69,13 @@ export async function runPardaCron(
 		log("error", "parda source rollup failed", errorFields(error));
 		ranking = { ok: false };
 	}
+	let overview: PardaCronResult["overview"];
+	try {
+		overview = { ok: true, ...(await rollupDaily(db, options.now)) };
+	} catch (error) {
+		log("error", "parda daily rollup failed", errorFields(error));
+		overview = { ok: false };
+	}
 	const controls = options.controls ?? createPardaControls(db);
 	let episodes: PardaCronResult["episodes"];
 	if (!tmdb) episodes = { ok: true, skipped: true };
@@ -97,5 +107,5 @@ export async function runPardaCron(
 		log("error", "parda digest failed", errorFields(error));
 		digest = { ok: false };
 	}
-	return { titles, certificates, ranking, episodes, digest };
+	return { titles, certificates, ranking, overview, episodes, digest };
 }

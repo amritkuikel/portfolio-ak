@@ -6,11 +6,13 @@ import { type JsonLd, localizedUrl, type SeoImage } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 import { getLocale, type Locale } from "@/paraglide/runtime";
 import { GENRE_LABELS } from "../genres";
+import type { HubTitle } from "../home/types";
 import { tmdbImage } from "../kit/image";
 import { PARDA_PATHS, pardaLinks } from "../links";
 import {
 	pardaCollectionQueryOptions,
 	pardaCreditsQueryOptions,
+	pardaCuratedQueryOptions,
 	pardaPersonQueryOptions,
 	pardaSeasonQueryOptions,
 	pardaTitleQueryOptions,
@@ -221,6 +223,25 @@ export async function loadPersonPage(
 	};
 }
 
+/** A list of titles as JSON-LD: a franchise's, or a curated collection's. */
+const collectionJsonLd = (name: string, path: string, parts: ReadonlyArray<HubTitle>, ordered: boolean): JsonLd => ({
+	"@type": "CollectionPage",
+	name,
+	url: url(path),
+	inLanguage: getLocale(),
+	mainEntity: {
+		"@type": "ItemList",
+		...(ordered ? { itemListOrder: "https://schema.org/ItemListOrderAscending" } : {}),
+		numberOfItems: parts.length,
+		itemListElement: parts.map((part, index) => ({
+			"@type": "ListItem",
+			position: index + 1,
+			url: url(PARDA_PATHS.title(part.media, part.id, part.slug)),
+			name: part.title,
+		})),
+	},
+});
+
 export async function loadCollectionPage(
 	queryClient: QueryClient,
 	locale: Locale,
@@ -238,23 +259,29 @@ export async function loadCollectionPage(
 		),
 		path,
 		image: preview(imageBase, collection.backdrop, collection.name),
-		jsonLd: {
-			"@type": "CollectionPage",
-			name: collection.name,
-			url: url(path),
-			inLanguage: getLocale(),
-			mainEntity: {
-				"@type": "ItemList",
-				itemListOrder: "https://schema.org/ItemListOrderAscending",
-				numberOfItems: parts.length,
-				itemListElement: parts.map((part, index) => ({
-					"@type": "ListItem",
-					position: index + 1,
-					url: url(PARDA_PATHS.title(part.media, part.id, part.slug)),
-					name: part.title,
-				})),
-			},
-		},
+		jsonLd: collectionJsonLd(collection.name, path, parts, true),
+		preload: tmdbImage(imageBase, collection.backdrop, "backdrop"),
+	};
+}
+
+export async function loadCuratedPage(
+	queryClient: QueryClient,
+	locale: Locale,
+	slug: string,
+): Promise<ContentHead | undefined> {
+	const data = await loadDetailOr404(queryClient, pardaCuratedQueryOptions(locale, slug));
+	if (!data.configured) return undefined;
+	const { collection, imageBase, parts } = data;
+	const path = PARDA_PATHS.curated(collection.slug);
+	return {
+		title: collection.name,
+		description: describe(
+			collection.description,
+			m.pd_curated_description({ name: collection.name, count: String(parts.length) }),
+		),
+		path,
+		image: preview(imageBase, collection.backdrop, collection.name),
+		jsonLd: collectionJsonLd(collection.name, path, parts, false),
 		preload: tmdbImage(imageBase, collection.backdrop, "backdrop"),
 	};
 }

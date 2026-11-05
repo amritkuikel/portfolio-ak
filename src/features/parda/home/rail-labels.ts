@@ -30,6 +30,7 @@ const KEYWORDS: Readonly<Record<AnimeKeyword, () => string>> = {
 export function railLabel(label: RailLabel): string {
 	if ("key" in label) return LABELS[label.key]();
 	if ("keyword" in label) return KEYWORDS[label.keyword]();
+	if ("text" in label) return label.text;
 	const genre = GENRE_LABELS[label.genre]?.() ?? "";
 	if (label.of === "movies") return m.pd_rail_genre_movies({ genre });
 	if (label.of === "series") return m.pd_rail_genre_series({ genre });

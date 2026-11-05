@@ -82,6 +82,11 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	// apps:end
 	if (page.params.from === "parda") return pardaFixturePath(page.params.page); // @parda
 	if (page.params.from === "parda-source-id") return page.route.replace("$id", await harness.pardaSourceId("Server 1")); // @parda
+	if (page.params.from === "parda-curated") {
+		// @parda
+		const curated = await harness.pardaCurated(); // @parda
+		return page.route.replace(page.params.id === "slug" ? "$slug" : "$id", curated[page.params.id]); // @parda
+	} // @parda
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

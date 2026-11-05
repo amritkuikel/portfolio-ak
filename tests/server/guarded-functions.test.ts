@@ -186,6 +186,23 @@ const GUARDED_FUNCTIONS: Record<string, ReadonlyArray<[name: string, permission:
 	],
 	// taskline:end
 	// parda:start
+	"parda-admin/curation.ts": [
+		["searchPardaTitles", "parda:curate"],
+		["listPardaBillboards", "parda:read"],
+		["getPardaBillboard", "parda:read"],
+		["createPardaBillboard", "parda:curate"],
+		["updatePardaBillboard", "parda:curate"],
+		["reorderPardaBillboards", "parda:curate"],
+		["deletePardaBillboards", "parda:curate"],
+		["listPardaCollections", "parda:read"],
+		["getPardaAdminCollection", "parda:read"],
+		["createPardaCollection", "parda:curate"],
+		["updatePardaCollection", "parda:curate"],
+		["deletePardaCollections", "parda:curate"],
+		["getPardaLayout", "parda:read"],
+		["savePardaLayout", "parda:curate"],
+	],
+	"parda-admin/overview.ts": [["getPardaOverview", "parda:read"]],
 	"parda-admin/player-lab.ts": [
 		["listPardaLabSources", "parda:configure"],
 		["openPardaLabPlayer", "parda:configure"],
@@ -407,6 +424,7 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"getPardaCredits",
 		"getPardaPerson",
 		"getPardaCollection",
+		"getPardaCurated",
 		"getPardaSurprise",
 		"getPardaBanner",
 	],

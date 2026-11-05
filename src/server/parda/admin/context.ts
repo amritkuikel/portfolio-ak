@@ -5,8 +5,9 @@ import { staleError } from "@/lib/concurrency";
 import { notFound } from "@/server/db/crud";
 import type { Tx } from "@/server/db/types";
 import type { Services } from "@/server/services";
+import type { CatalogServices } from "../catalog/service";
 import type { PardaControls } from "../controls";
-import { pardaControls } from "../tmdb/store";
+import { pardaCache, pardaControls, pardaTmdb } from "../tmdb/store";
 
 /**
  * What Parda's admin services work with (decision 0237): the call's services and the
@@ -16,6 +17,14 @@ import { pardaControls } from "../tmdb/store";
 export type PardaAdminServices = Services & { controls: Pick<PardaControls, "invalidate"> };
 
 export const pardaAdmin = (services: Services): PardaAdminServices => ({ ...services, controls: pardaControls });
+
+/** What curation works with (decision 0242): the same, and the catalogue a title is picked and read through. */
+export type PardaCurator = PardaAdminServices & { catalog: CatalogServices | null };
+
+export const pardaCurator = (services: Services): PardaCurator => ({
+	...pardaAdmin(services),
+	catalog: pardaTmdb ? { tmdb: pardaTmdb, cache: pardaCache, controls: pardaControls } : null,
+});
 
 type WithVersion = PgTable & { id: AnyPgColumn; version: AnyPgColumn };
 

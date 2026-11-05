@@ -179,3 +179,13 @@ export type CollectionPageData =
 
 /** Where "Surprise me" lands. */
 export type SurpriseTarget = { media: "movie" | "tv"; id: number; slug: string } | null;
+
+/** A collection the admin put together, at /app/parda/c/{slug} (decision 0242). */
+export type CuratedPageData =
+	| { configured: false }
+	| {
+			configured: true;
+			imageBase: string;
+			collection: { slug: string; name: string; description: string; backdrop: string | null };
+			parts: HubTitle[];
+	  };

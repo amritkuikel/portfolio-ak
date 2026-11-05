@@ -85,13 +85,16 @@ export const pdSource = pgTable(
 /**
  * One row per playback (PLAN 12.5, "pd_play"; decision 0236): what Task 65a's ranking
  * reads. The watch page makes the id, so later reports update the same row. No user,
- * IP or user agent: only the kind of viewer.
+ * IP or user agent: only the kind of viewer, and `viewer_key`, a keyed hash that changes
+ * each UTC day, so a day's viewers can be counted and no one can be followed across days
+ * (decision 0242).
  */
 export const pdPlay = pgTable(
 	"pd_play",
 	{
 		id: uuid().primaryKey(),
 		viewerKind: text().$type<PardaViewerKind>().notNull(),
+		viewerKey: text(),
 		sourceId: uuid().references(() => pdSource.id, { onDelete: "set null" }),
 		media: text().$type<PardaMedia>().notNull(),
 		tmdbId: integer().notNull(),

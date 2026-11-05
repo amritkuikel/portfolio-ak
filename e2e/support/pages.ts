@@ -32,7 +32,8 @@ export type ReviewedPage = {
 		| { from: "form-id" } // @apps
 		| { from: "form-slug" } // @apps
 		| { from: "parda"; page: PardaFixturePage } // @parda
-		| { from: "parda-source-id" }; // @parda
+		| { from: "parda-source-id" } // @parda
+		| { from: "parda-curated"; id: "slug" | "billboard" | "collection" }; // @parda
 	/** The concrete path, when it isn't `route` (the not-found page, a fixed `$param`). */
 	path?: string;
 	/** The expected HTTP status when it isn't 200. */
@@ -372,6 +373,16 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/admin/parda/titles/new", as: "admin" },
 	{ route: "/admin/parda/reports", as: "admin" },
 	{ route: "/admin/parda/settings", as: "admin" },
+	// Task 69: the overview, curation and the layout, and a curated collection's page.
+	{ route: "/admin/parda", as: "admin" },
+	{ route: "/admin/parda/billboard", as: "admin" },
+	{ route: "/admin/parda/billboard/new", as: "admin" },
+	{ route: "/admin/parda/billboard/$id", as: "admin", params: { from: "parda-curated", id: "billboard" } },
+	{ route: "/admin/parda/collections", as: "admin" },
+	{ route: "/admin/parda/collections/new", as: "admin" },
+	{ route: "/admin/parda/collections/$id", as: "admin", params: { from: "parda-curated", id: "collection" } },
+	{ route: "/admin/parda/layout", as: "admin" },
+	{ route: "/app/parda/c/$slug", params: { from: "parda-curated", id: "slug" } },
 	// parda:end
 	// @new-feature:reviewed-pages
 	// Errors
@@ -388,7 +399,6 @@ export const NOT_REVIEWED: Readonly<Record<string, string>> = {
 	"/api/csp-report": "POST endpoint for CSP reports (checked by e2e/flows/frontend.spec.ts)",
 	"/l/$slug": "a redirect, or the 404 (checked by e2e/flows/apps.spec.ts)", // @apps
 	"/app/taskline/$ws": "a redirect to the workspace's projects (checked by e2e/flows/taskline.spec.ts)", // @taskline
-	"/admin/parda": "a layout, a 404 until its overview page arrives in Task 69", // @parda
 	"/app/parda/surprise": "a redirect to a random title (checked by e2e/flows/parda.spec.ts)", // @parda
 	"/app/taskline/$ws/p/$key/settings": "a redirect to the settings' first section", // @taskline
 	"/apps/kanban": "Kanban's old address, a redirect to Taskline (checked by e2e/flows/taskline.spec.ts)", // @taskline

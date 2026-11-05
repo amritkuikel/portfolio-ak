@@ -7,11 +7,13 @@ import {
 	FlagIcon, // @parda
 	FlaskConicalIcon, // @parda
 	FolderKanbanIcon, // @portfolio
+	GalleryHorizontalIcon, // @parda
 	GaugeIcon, // @taskline
 	HistoryIcon, // @taskline
 	ImagesIcon, // @portfolio
 	InboxIcon, // @portfolio
 	KeyRoundIcon,
+	LayersIcon, // @parda
 	LayoutGridIcon, // @apps
 	LayoutTemplateIcon, // @taskline
 	Link2Icon, // @apps
@@ -20,6 +22,7 @@ import {
 	NotebookPenIcon, // @portfolio
 	PaletteIcon,
 	QuoteIcon, // @portfolio
+	RowsIcon, // @parda
 	ScrollTextIcon,
 	ServerIcon, // @parda
 	SettingsIcon, // @taskline
@@ -301,6 +304,43 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 	},
 	// taskline:end
 	// parda:start
+	{
+		// Only on this exact path: the other Parda sections are under it.
+		...linkOptions({ to: "/admin/parda", activeOptions: { exact: true } }),
+		label: m.admin_nav_parda_overview,
+		description: m.pd_admin_overview_description,
+		icon: ChartColumnIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_overview,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/billboard" }),
+		label: m.admin_nav_parda_billboard,
+		description: m.pd_admin_billboard_description,
+		icon: GalleryHorizontalIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_billboard,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/collections" }),
+		label: m.admin_nav_parda_collections,
+		description: m.pd_admin_collections_description,
+		icon: LayersIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_collections,
+	},
+	{
+		...linkOptions({ to: "/admin/parda/layout" }),
+		label: m.admin_nav_parda_layout,
+		description: m.pd_admin_layout_description,
+		icon: RowsIcon,
+		permission: "parda:read",
+		group: "parda",
+		keywords: m.admin_keywords_parda_layout,
+	},
 	{
 		...linkOptions({ to: "/admin/parda/sources" }),
 		label: m.admin_nav_parda_sources,

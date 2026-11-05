@@ -37,12 +37,12 @@ export function toPosterItem(title: HubTitle, imageBase: string): PosterCardItem
 	};
 }
 
-/** A rail Discover can show in full links there (Task 66). */
+/** A rail Discover can show in full links there (Task 66); a curated collection links to its page (Task 69). */
 function SeeAll({ head, title }: { head: HubRailHead; title: string }) {
-	if (!head.more) return null;
+	if (!head.more && !head.collection) return null;
 	return (
 		<Link
-			{...pardaLinks.discover(head.more)}
+			{...(head.collection ? pardaLinks.curated(head.collection) : pardaLinks.discover(head.more))}
 			className="text-pd-muted text-sm underline-offset-4 outline-none hover:text-pd-ink hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
 			data-testid="rail-see-all"
 		>

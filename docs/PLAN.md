@@ -2178,7 +2178,7 @@ As 11.1, with these differences:
 | 66 | Search and discover | high | Done (decision 0239) |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Done (decision 0240) |
 | 68 | Schedule and new-episode alerts | high | Done (decision 0241) |
-| 69 | Admin II: overview, curation, home layout | high | Planned |
+| 69 | Admin II: overview, curation, home layout | high | Done (decision 0242) |
 | 69a | Watch party | xhigh | Planned |
 | 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
 
@@ -2723,14 +2723,30 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0034_parda_alerts`). The digest needs Resend configured in production (it is for the auth emails already). The first daily run only records where each followed series is; alerts start the day after.
 
-### Task 69: Admin II, overview and curation (planned)
+### Task 69: Admin II, overview and curation (done)
 
-- **Overview:** plays (today / 7 / 30 days), unique viewers, guests vs accounts, watch time, top titles, top and zero-result searches, open reports, server failure rate (charts with `dataviz`).
-  - Built on the rollup cron, `pd_daily_stat` and the 90-day prune of `pd_play` and `pd_search_stat` (0239).
-- **Curation:**
-  - billboard slots: a TMDB title picker, order, start and end dates, tagline in en/ne;
-  - collections: en/ne, slug, ordered titles, published; shown as rails and at `/c/$slug`.
-- **Home layout:** `pd_rail` per hub, reordered with dnd-kit and seeded from Task 62's config.
+**Done** (decision 0242; the guide's "Curation and the overview").
+
+**What changed:**
+- **Tables** (migration `0035_parda_curation`): `pd_billboard`, `pd_collection`, `pd_collection_item`, `pd_rail`, `pd_daily_stat`, and `pd_play.viewer_key`.
+- **Overview** `/admin/parda` (`?range=today|7d|30d`): plays in each window, open reports, unique viewers a day, watch time, the failure rate, plays without an account, a 30-day chart by kind of viewer, top titles, top and zero-result searches, and each server's failures.
+- **Daily job:** `player/daily.ts` rolls days up into `pd_daily_stat` (a missed run fills in) and deletes `pd_play` and `pd_search_stat` after 90 days.
+- **Billboard** `/admin/parda/billboard` (`/new`, `/$id`): a TMDB title picker, the page, order, dates and tagline in en/ne. Live slots lead the page's billboard and its rail fills the rest.
+- **Collections** `/admin/parda/collections` (`/new`, `/$id`): en/ne name and description, slug, up to 50 ordered titles, published. Shown at `/app/parda/c/$slug` (indexable, in the sitemap) and as rails.
+- **Layout** `/admin/parda/layout`: each page's rails and published collections, reordered with dnd-kit, each with a switch.
+- **Functions:** `src/functions/parda-admin/overview.ts` and `curation.ts` (`parda:read`, `parda:curate`), `getPardaCurated` (`PARDA_PUBLIC_FUNCTIONS`), each with its Storybook mock. Eight audit actions, three targets, four sections and two commands.
+- **Tests:** `tests/server/parda-curation.test.ts` (slots, dates, takedowns and caps, order, versions, collections, slugs, the sitemap, layouts, the picker, the rollup, the prune, the overview), three e2e flows with `POST /e2e/parda-curated` and `/e2e/parda-plays`, four stories, and the review of the nine new pages.
+
+**Deviations (0242):**
+- **Unique viewers are per day:** `pd_play` holds no identity, so `viewer_key` changes each UTC day; 7 and 30 days show the average per day.
+- **`pd_rail` isn't seeded:** no rows means the config's order, and a rail added in code joins at the end.
+- **"Curation" is two pages,** billboard and collections.
+- **Server failure rate is a table with meters,** not a chart: one server drew a page-wide block, and a rate means little without its plays beside it.
+- **Added:** a collection's optional description, and a slot's page.
+
+**Numbers:** entry 283.4 of 285 kB (281.2 before). Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, db:check, the build and the bundle check, build-storybook, 18 test files (312 tests), the `Parda/Admin` stories in en/light and ne/dark (16 of 16), `e2e/flows/parda.spec.ts` (55 of 55) and the review of the nine new pages (108 of 108). Nine screenshots of 6 pages, in a sample of widths, languages and themes, showed a wrong column heading and an oversized failure chart, both fixed; the `impeccable` critique wasn't run. The `dataviz` validator passes the chart's colours in light; in dark, separation and contrast pass and the lightness band fails on hex values estimated from the shared tokens, which are unchanged. The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0035_parda_curation`). Unique viewers count from the first play after that; older plays have no key.
 
 ### Task 69a: Watch party (planned)
 

@@ -8,7 +8,7 @@ import { zodInput } from "@/functions/_lib/validator";
 import { withPardaCatalog } from "@/middleware/parda";
 import { locales } from "@/paraglide/runtime";
 import { db } from "@/server/db/client";
-import { failureClient, limitPlayback, viewerKind } from "@/server/parda/player/limits";
+import { failureClient, limitPlayback, viewerDayKey, viewerKind } from "@/server/parda/player/limits";
 import { recordPlay, reportProblem } from "@/server/parda/player/plays";
 import { noteTitleFailure } from "@/server/parda/player/stats";
 import { watchPage } from "@/server/parda/player/watch";
@@ -92,6 +92,7 @@ export const recordPardaPlay = createServerFn({ method: "POST" })
 			context.catalog.services.controls,
 			viewerKind(context.session),
 			data,
+			viewerDayKey(context.session),
 		);
 		if (failedNow && sourceId) {
 			const client = await failureClient(context.session);

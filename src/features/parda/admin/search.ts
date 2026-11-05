@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { listSchema } from "@/lib/crud/schema";
 import { enumParam } from "@/lib/list/params";
+import { PARDA_HUBS } from "../search";
 
 /**
  * The URL contract of Parda's admin lists (PLAN Task 65). Route files import from here,
@@ -52,6 +53,15 @@ export type PardaReportListInput = z.output<typeof pardaReportList.input>;
 
 /** /admin/parda/player-lab: `?source=` picks a row ("Test in the lab" on the sources page). */
 export const playerLabSearch = z.object({ source: z.uuid().optional().catch(undefined) });
+
+/** /admin/parda: the window the overview's figures cover. */
+export const PARDA_OVERVIEW_RANGES = ["today", "7d", "30d"] as const;
+export type PardaOverviewRange = (typeof PARDA_OVERVIEW_RANGES)[number];
+export const pardaOverviewSearch = z.object({ range: enumParam(PARDA_OVERVIEW_RANGES, "7d") });
+
+/** /admin/parda/billboard and /layout: the page whose slots or rails are shown. */
+export const PARDA_PAGES = ["home", ...PARDA_HUBS] as const;
+export const pardaPageSearch = z.object({ page: enumParam(PARDA_PAGES, "home") });
 
 /** The tables' preference keys (hidden columns, page size), for the routes and the pages. */
 export const PARDA_TAKEDOWNS_TABLE_ID = "parda-takedowns";

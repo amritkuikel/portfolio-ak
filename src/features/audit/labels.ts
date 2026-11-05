@@ -96,6 +96,14 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, () => string> = {
 	"parda.settings.update": m.audit_action_parda_settings_update,
 	"parda.playback": m.audit_action_parda_playback,
 	"parda.cache.purge": m.audit_action_parda_cache_purge,
+	"parda.billboard.create": m.audit_action_parda_billboard_create,
+	"parda.billboard.update": m.audit_action_parda_billboard_update,
+	"parda.billboard.reorder": m.audit_action_parda_billboard_reorder,
+	"parda.billboard.delete": m.audit_action_parda_billboard_delete,
+	"parda.collection.create": m.audit_action_parda_collection_create,
+	"parda.collection.update": m.audit_action_parda_collection_update,
+	"parda.collection.delete": m.audit_action_parda_collection_delete,
+	"parda.layout.update": m.audit_action_parda_layout_update,
 	// parda:end
 	// @new-feature:audit-action-labels
 };
@@ -132,6 +140,9 @@ export const AUDIT_TARGET_LABELS: Record<AuditTarget, () => string> = {
 	"parda-title": m.audit_target_parda_title,
 	"parda-report": m.audit_target_parda_report,
 	"parda-settings": m.audit_target_parda_settings,
+	"parda-billboard": m.audit_target_parda_billboard,
+	"parda-collection": m.audit_target_parda_collection,
+	"parda-layout": m.audit_target_parda_layout,
 	// parda:end
 	// @new-feature:audit-target-labels
 };

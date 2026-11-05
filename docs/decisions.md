@@ -246,6 +246,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0239](#0239-parda-searches-and-discovers-through-the-catalogue-service): Parda searches and discovers through the catalogue service
 - [0240](#0240-pardas-library-profiles-and-the-kids-cap): Parda's library, profiles and the kids' cap
 - [0241](#0241-pardas-schedule-and-new-episode-alerts): Parda's schedule and new-episode alerts
+- [0242](#0242-pardas-admin-ii-overview-curation-and-layout): Parda's admin II: overview, curation and layout
 </details>
 
 ---
@@ -3114,3 +3115,27 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Numbers:** see PLAN Task 68.
 
 **Alternatives considered:** a state per profile and series (a TMDB call per follower, and a first-check baseline per profile); TMDB's `tv/on_the_air` for anime (every country's series, and no day); TMDB's changes feed (it says a series changed, not that an episode aired, and still needs the details); a browser time-zone cookie (the first page would still need a zone, and a reload once it's set); an instant email per alert (the daily check makes them all at once anyway, so the digest is the instant email).
+
+## 0242: Parda's admin II: overview, curation and layout
+
+**What:** Task 69. `/admin/parda` (the overview), `/billboard`, `/collections` and `/layout`, each server function `requirePermission` → `withServices`, read with `parda:read`, changed with `parda:curate`, every write audited (`parda.billboard.*`, `parda.collection.*`, `parda.layout.update`). Curated collections at `/app/parda/c/$slug`. Tables `pd_billboard`, `pd_collection`, `pd_collection_item`, `pd_rail`, `pd_daily_stat` and the column `pd_play.viewer_key` (migration `0035_parda_curation`).
+- **Read through the controls:** slots, collections and rails are one more entry in the controls' 30 s cache (`controls.curation`, `src/server/parda/curation.ts`), cleared by every write, so a page's read adds no query. That module holds the pure rules and imports nothing from the catalogue, which would be a cycle.
+- **Curated titles go through `titleDetails`:** takedowns and kids' caps apply with no code of their own, and a blocked title drops out of a slot, a rail and a page by itself.
+- **A title is read when it's chosen,** on the server, and its snapshot kept in `pd_title`: a forged or blocked ref is refused on its field, and admin lists name their titles without TMDB. It happens before the audited transaction, so a TMDB call never holds one open.
+- **Overview's sources:** finished days from `pd_daily_stat`, today live from `pd_play` (a morning rollup of today would be stale all day), and the range's lists from their rows, which the 90-day prune bounds and the `created_at` index serves.
+- **The rollup fills in:** it recomputes every day since the last stored one, so a missed cron run loses nothing, and a repeat replaces the same rows.
+
+**Why:** PLAN Task 69 and 12.5.
+
+**Deviations from PLAN Task 69:**
+- **Unique viewers are per day.** `pd_play` deliberately holds no user or IP (12.5, 0236), so "unique viewers" had nothing to count. `viewer_key` is an HMAC of the user or hashed IP with the UTC day: a day's viewers can be counted, and nobody can be followed from one day to the next. Different days' keys can't be compared, so 7 and 30 days show the average per day, labelled as such, not a true unique count over the period. A stable key would give that number, at the price of tracking viewers across 90 days; the owner can ask for it.
+- **`pd_rail` isn't seeded.** The config is the starting state: no rows means its order, and rows that don't name a rail leave it on, last. A seed would copy the config into a migration, and a rail added in code later would stay invisible until someone added a row. A row is written only when the admin saves.
+- **"Curation" is two pages,** `/billboard` and `/collections`, because each is a list with the shared `CrudListPage` (delete, export, row actions), which takes a whole page.
+- **Collections also have a description,** optional and in both languages, because a page without any text gives search engines only a generated line.
+- **A collection placed as a rail reads each title's details,** at most 50, cached for 24 h, because `pd_title` has no overview or score for the poster's preview.
+- **Slots also belong to a page** (the home or a hub), since each has a billboard.
+- **Server failure rate is a table with meters, not a chart.** The only other chart here is the daily plays. With few servers, a bar chart drew a page-wide block, and a rate means little without its plays beside it.
+
+**Alternatives considered:** a stable hashed viewer id (see above); a client-made id in the browser (a persistent tracker needing consent, and easy to reset); a jsonb of top titles per day in `pd_daily_stat` (daily top lists can't be added up into a true 30-day top); seeding `pd_rail` in the migration (see above).
+
+**Numbers:** see PLAN Task 69.

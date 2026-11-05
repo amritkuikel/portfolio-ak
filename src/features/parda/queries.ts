@@ -3,6 +3,7 @@ import {
 	getPardaBanner,
 	getPardaCollection,
 	getPardaCredits,
+	getPardaCurated,
 	getPardaHub,
 	getPardaPerson,
 	getPardaRail,
@@ -75,6 +76,13 @@ export const pardaCollectionQueryOptions = (locale: Locale, id: number) =>
 	queryOptions({
 		queryKey: pardaKeys.collection(locale, id),
 		queryFn: () => getPardaCollection({ data: { id, locale } }),
+		staleTime: CATALOG_STALE,
+	});
+
+export const pardaCuratedQueryOptions = (locale: Locale, slug: string) =>
+	queryOptions({
+		queryKey: pardaKeys.curated(locale, slug),
+		queryFn: () => getPardaCurated({ data: { slug, locale } }),
 		staleTime: CATALOG_STALE,
 	});
 

@@ -40,7 +40,7 @@ type AsyncProps = FieldBaseProps &
 	};
 
 /** The search results for what's typed, and a memory of every option's label seen so far. */
-function useAsyncOptions(
+export function useAsyncOptions(
 	{ queryKey, search, debounceMs = 250, selected = [] }: AsyncSearch & { selected?: ReadonlyArray<FieldOption> },
 	open: boolean,
 ) {
@@ -65,7 +65,7 @@ function useAsyncOptions(
 	};
 }
 
-function AsyncOptionList({
+export function AsyncOptionList({
 	listId,
 	state,
 	isSelected,

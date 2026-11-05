@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLUG_MAX, SLUG_PATTERN } from "@/lib/slug";
 import { parseTitleParam } from "./slug";
 
 /**
@@ -25,6 +26,9 @@ export const titleParamsSchema = z.object({ type: z.enum(["movie", "series"]), i
 
 /** A person's or a collection's `$id`. */
 export const idParamSchema = z.object({ id: tmdbId });
+
+/** A curated collection's `$slug` (/app/parda/c/best-of-2024). */
+export const curatedParamSchema = z.object({ slug: z.string().max(SLUG_MAX).regex(SLUG_PATTERN) });
 
 /**
  * `$type/$id` as a title's pages read them: a known type, and an id with its slug

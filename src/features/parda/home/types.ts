@@ -31,7 +31,12 @@ export type HubSlide = HubTitle & {
 };
 
 /** A rail's name, rendered by the client in the page's language (`railLabel`). */
-export type RailLabel = { key: RailLabelKey } | { genre: number; of?: "movies" | "series" } | { keyword: AnimeKeyword };
+export type RailLabel =
+	| { key: RailLabelKey }
+	| { genre: number; of?: "movies" | "series" }
+	| { keyword: AnimeKeyword }
+	/** A curated collection's name, already in the page's language. */
+	| { text: string };
 
 export type RailLabelKey =
 	| "top10"
@@ -57,6 +62,8 @@ export type HubRailHead = {
 	label: RailLabel;
 	/** Discover's filters for the same titles (Task 66): the heading links there. */
 	more?: Partial<DiscoverSearch>;
+	/** A curated collection's slug: the heading links to its page instead. */
+	collection?: string;
 };
 
 /** `titles` null: the rail couldn't load (TMDB failed), and says so in place. */

@@ -146,6 +146,17 @@ export class Harness {
 		await fetch(`${E2E.harnessURL}/e2e/parda-rank`, { method: "DELETE" });
 	}
 
+	/** Plays today, earlier days' rollups and searches for the overview (Task 69); `false` takes them away. */
+	async pardaPlays(on = true) {
+		await fetch(`${E2E.harnessURL}/e2e/parda-plays`, { method: on ? "POST" : "DELETE" });
+	}
+
+	/** A published collection and a billboard slot for the review's pages (Task 69): written once, the same on every call. */
+	async pardaCurated(): Promise<{ slug: string; billboard: string; collection: string }> {
+		const response = await fetch(`${E2E.harnessURL}/e2e/parda-curated`, { method: "POST" });
+		return (await response.json()) as { slug: string; billboard: string; collection: string };
+	}
+
 	/** An alert of new episodes (S1 E1–2) of a series, as the daily check writes it (Task 68). */
 	async pardaAlert(userId: string, tmdbId: number, title: string) {
 		await fetch(`${E2E.harnessURL}/e2e/parda-alert`, {

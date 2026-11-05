@@ -1,11 +1,15 @@
 import { z } from "zod";
 import type { Localized } from "@/lib/i18n/localized";
 import type { Paged } from "@/lib/list/paging";
-import { localizedText, optionalText, required } from "@/lib/validation";
+import { localizedText, optionalText, required, slug } from "@/lib/validation";
+import { m } from "@/paraglide/messages";
 import { locales } from "@/paraglide/runtime";
+import type { RailLabel } from "../home/types";
 import { KIDS_CAPS } from "../kids";
 import type { PardaSourceAdapter } from "../player/adapters/types";
 import type { PardaReportKind, PardaReportStatus } from "../player/playback";
+import type { PardaPage } from "../search";
+import { PARDA_PAGES, type PardaOverviewRange } from "./search";
 
 /**
  * Parda's admin (PLAN Task 65, decision 0237): one schema per write, shared by the form
@@ -226,3 +230,158 @@ export const playbackInput = z.strictObject({ enabled: z.boolean() });
 
 export const SOURCE_ORDER_MODES = ["auto", "manual"] as const;
 export const sourceOrderModeInput = z.strictObject({ mode: z.enum(SOURCE_ORDER_MODES) });
+
+// ---------------------------------------------------------------------------
+// Curation (PLAN Task 69, decision 0242)
+// ---------------------------------------------------------------------------
+
+/** A title as the picker holds it: "movie:550". */
+const titleRef = () => z.string().regex(/^(movie|tv):[1-9][0-9]{0,8}$/, { error: () => m.pd_admin_title_required() });
+
+export const parseTitleRef = (ref: string): { media: PardaAdminMedia; id: number } => {
+	const [media, id] = ref.split(":");
+	return { media: media === "tv" ? "tv" : "movie", id: Number(id) };
+};
+
+/** A title found by the picker. */
+export type TitleOption = { ref: string; media: PardaAdminMedia; id: number; title: string; year: number | null };
+
+export const titleSearchInput = z.strictObject({ q: z.string().trim().max(100) });
+
+const dateField = () => z.iso.date().or(z.literal(""));
+
+const billboardFields = z.strictObject({
+	page: z.enum(PARDA_PAGES),
+	title: titleRef(),
+	/** Empty English keeps TMDB's tagline. */
+	tagline: localizedText({ max: 120, optional: true }),
+	startsOn: dateField(),
+	endsOn: dateField(),
+});
+
+const datesInOrder = (value: { startsOn: string; endsOn: string }, context: z.RefinementCtx) => {
+	if (value.startsOn && value.endsOn && value.endsOn < value.startsOn) {
+		context.addIssue({ code: "custom", path: ["endsOn"], message: m.pd_admin_billboard_dates_order() });
+	}
+};
+
+export const billboardInput = billboardFields.superRefine(datesInOrder);
+export type BillboardInput = z.output<typeof billboardInput>;
+export type BillboardFormValues = z.input<typeof billboardInput>;
+export const billboardUpdateInput = billboardFields
+	.extend({ id: z.uuid(), updatedAt: version() })
+	.superRefine(datesInOrder);
+
+export const billboardOrderInput = z.strictObject({
+	page: z.enum(PARDA_PAGES),
+	ids: z.array(z.uuid()).min(1).max(100),
+});
+
+export type AdminBillboard = {
+	id: string;
+	page: PardaPage;
+	media: PardaAdminMedia;
+	tmdbId: number;
+	title: Localized | null;
+	tagline: Localized;
+	startsOn: string;
+	endsOn: string;
+	state: "live" | "scheduled" | "ended";
+	updatedAt: string;
+};
+
+/** A collection holds at most this many titles: each is a details call the first time it's read. */
+export const COLLECTION_MAX_TITLES = 50;
+
+const collectionFields = z.strictObject({
+	name: localizedText({ max: 80 }),
+	slug: slug(),
+	description: localizedText({ max: 500, optional: true }),
+	published: z.boolean(),
+	items: z.array(titleRef()).max(COLLECTION_MAX_TITLES),
+});
+
+const publishedHasTitles = (value: { published: boolean; items: string[] }, context: z.RefinementCtx) => {
+	if (value.published && value.items.length === 0) {
+		context.addIssue({ code: "custom", path: ["items"], message: m.pd_admin_collection_needs_titles() });
+	}
+};
+
+export const collectionInput = collectionFields.superRefine(publishedHasTitles);
+export type CollectionInput = z.output<typeof collectionInput>;
+export type CollectionFormValues = z.input<typeof collectionInput>;
+export const collectionUpdateInput = collectionFields
+	.extend({ id: z.uuid(), updatedAt: version() })
+	.superRefine(publishedHasTitles);
+
+export type AdminCollectionItem = { ref: string; media: PardaAdminMedia; tmdbId: number; title: Localized | null };
+
+export type AdminCollection = {
+	id: string;
+	name: Localized;
+	slug: string;
+	description: Localized;
+	published: boolean;
+	count: number;
+	items: AdminCollectionItem[];
+	updatedAt: string;
+	modifiedAt: string;
+};
+
+/** One rail on the layout page: named by its label (a rail in code) or its collection. */
+export type AdminLayoutRail = {
+	key: string;
+	visible: boolean;
+	label: RailLabel;
+	/** A curated collection's rail, and whether viewers can see it yet. */
+	collection: { name: Localized; published: boolean } | null;
+};
+
+export type AdminLayout = { page: PardaPage; saved: boolean; rails: AdminLayoutRail[] };
+
+export const layoutInput = z.strictObject({
+	page: z.enum(PARDA_PAGES),
+	rails: z
+		.array(z.strictObject({ key: z.string().regex(/^[a-z0-9-]{1,40}$/), visible: z.boolean() }))
+		.min(1)
+		.max(200),
+});
+export type LayoutInput = z.output<typeof layoutInput>;
+
+// ---------------------------------------------------------------------------
+// Overview
+// ---------------------------------------------------------------------------
+
+export type AdminOverviewDay = {
+	day: string;
+	account: number;
+	guest: number;
+	anonymous: number;
+	viewers: number;
+	watchedS: number;
+};
+
+export type AdminOverview = {
+	range: PardaOverviewRange;
+	today: string;
+	/** Plays in each window, whichever range is chosen. */
+	plays: { today: number; week: number; month: number };
+	openReports: number;
+	/** The chosen range. */
+	viewersPerDay: number;
+	watchedS: number;
+	failureRate: number | null;
+	byKind: { account: number; guest: number; anonymous: number };
+	/** The last 30 days, oldest first, every day there. */
+	days: AdminOverviewDay[];
+	topTitles: Array<{
+		media: PardaAdminMedia;
+		tmdbId: number;
+		title: Localized | null;
+		plays: number;
+		watchedS: number;
+	}>;
+	topSearches: Array<{ query: string; count: number }>;
+	zeroSearches: Array<{ query: string; count: number }>;
+	servers: Array<{ id: string; name: Localized; plays: number; failed: number; failureRate: number }>;
+};

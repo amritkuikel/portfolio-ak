@@ -2,12 +2,15 @@ import "@tanstack/react-start/server-only";
 import type { PardaHub } from "@/features/parda/search";
 import type {
 	CollectionPageData,
+	CuratedPageData,
 	FilmographyEntry,
 	PersonPageData,
 	SurpriseTarget,
 } from "@/features/parda/title/types";
+import { AppError } from "@/lib/errors";
+import { localizedValue } from "@/lib/i18n/localized";
 import type { PersonCredit } from "../tmdb/pages";
-import { toHubTitle } from "./hubs";
+import { curatedTitles, toHubTitle } from "./hubs";
 import { PAGE_LAYOUTS, railContext } from "./rails";
 import { type CatalogScope, type CatalogServices, collectionDetails, listTitles, personDetails } from "./service";
 
@@ -108,6 +111,30 @@ export async function collectionPage(
 			backdrop: collection.backdrop,
 		},
 		parts: collection.parts.map(({ date: _date, ...part }) => toHubTitle(part)),
+	};
+}
+
+/** A curated collection's page, by its slug: a 404 unless it's published and has a title to show here (decision 0242). */
+export async function curatedPage(
+	services: CatalogServices,
+	scope: CatalogScope,
+	slug: string,
+): Promise<Extract<CuratedPageData, { configured: true }>> {
+	const { collections } = await services.controls.curation();
+	const collection = collections.find((each) => each.published && each.slug === slug);
+	if (!collection) throw new AppError("NOT_FOUND", `Parda: no collection "${slug}"`);
+	const titles = await curatedTitles(services, scope, collection);
+	if (titles.length === 0) throw new AppError("NOT_FOUND", `Parda: nothing to show in "${slug}"`);
+	return {
+		configured: true,
+		imageBase: services.tmdb.config.imageBase,
+		collection: {
+			slug: collection.slug,
+			name: localizedValue(collection.name, scope.locale),
+			description: collection.description ? localizedValue(collection.description, scope.locale) : "",
+			backdrop: titles.find((title) => title.backdrop)?.backdrop ?? null,
+		},
+		parts: titles.map(toHubTitle),
 	};
 }
 

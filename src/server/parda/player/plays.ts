@@ -44,11 +44,13 @@ export async function recordPlay(
 	controls: PardaControls,
 	viewerKind: PardaViewerKind,
 	report: PlayReport,
+	viewerKey: string | null = null,
 ): Promise<{ failedNow: boolean; sourceId: string | null }> {
 	const sourceId = await knownSource(controls, report.sourceId);
 	const values = {
 		id: report.playbackId,
 		viewerKind,
+		viewerKey,
 		sourceId,
 		media: report.media,
 		tmdbId: report.id,

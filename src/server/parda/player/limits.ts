@@ -1,10 +1,11 @@
 import "@tanstack/react-start/server-only";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { getRequest } from "@tanstack/react-start/server";
 import type { PardaViewerKind } from "@/features/parda/player/playback";
 import type { Session } from "@/lib/session";
 import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
 import { db } from "@/server/db/client";
+import { serverEnv } from "@/server/env";
 import { consumeRateLimit, enforceRateLimit, type RateLimitRule } from "@/server/http/rate-limit";
 
 /**
@@ -40,3 +41,17 @@ export async function failureClient(session: Session | null): Promise<string | n
 
 export const viewerKind = (session: Session | null): PardaViewerKind =>
 	session ? (session.isAnonymous ? "guest" : "account") : "anonymous";
+
+/**
+ * Who a playback belongs to, today only (decision 0242): the caller's key hashed with the
+ * app's secret and the UTC day, so the overview can count a day's viewers and no row can
+ * be tied to a person, or to the same person on another day. Null when the IP is unknown.
+ */
+export function viewerDayKey(session: Session | null, now: Date = new Date()): string | null {
+	const ip = session ? null : clientIpHash(trustedClientIp(getRequest()));
+	if (!session && !ip) return null;
+	return createHmac("sha256", serverEnv.BETTER_AUTH_SECRET)
+		.update(`parda-viewer:${now.toISOString().slice(0, 10)}:${session ? session.user.id : ip}`)
+		.digest("base64url")
+		.slice(0, 22);
+}

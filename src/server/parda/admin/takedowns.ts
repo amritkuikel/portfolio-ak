@@ -22,7 +22,7 @@ const WHAT = "Parda takedown";
 type Row = typeof pdBlockedTitle.$inferSelect;
 
 /** Each title's name from the snapshot, by "media:id". */
-async function titleNames(db: Db, rows: ReadonlyArray<{ media: PardaMedia; tmdbId: number }>) {
+export async function titleNames(db: Db, rows: ReadonlyArray<{ media: PardaMedia; tmdbId: number }>) {
 	const names = new Map<string, Localized>();
 	if (rows.length === 0) return names;
 	const found = await db

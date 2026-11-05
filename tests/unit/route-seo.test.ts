@@ -120,6 +120,19 @@ const pardaContentPages: ReadonlyArray<{
 		path: "/app/parda/collection/263",
 		siteName: "Parda",
 	},
+	{
+		to: "/app/parda/c/$slug",
+		label: "parda curated",
+		context: {
+			params: { slug: "festival-picks" },
+			loaderData: pardaHead("Festival picks", "/app/parda/c/festival-picks", {
+				"@type": "CollectionPage",
+				name: "Festival picks",
+			}),
+		},
+		path: "/app/parda/c/festival-picks",
+		siteName: "Parda",
+	},
 ];
 // parda:end
 
@@ -190,6 +203,7 @@ const CONTENT_TITLED = new Set([
 	"parda credits",
 	"parda person",
 	"parda collection",
+	"parda curated",
 	// parda:end
 	// @new-feature:content-titled
 ]);

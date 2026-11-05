@@ -85,6 +85,10 @@ import { Route as DevExamplesStreamingRouteImport } from './routes/dev/examples/
 import { Route as DevTestCrudIndexRouteImport } from './routes/dev/test-crud/index'
 import { Route as DevTestCrudSlugRouteImport } from './routes/dev/test-crud/$slug'
 import { Route as AdminAdminAuditIndexRouteImport } from './routes/_admin/admin/audit/index'
+import { Route as AdminAdminPardaIndexRouteImport } from './routes/_admin/admin/parda/index'
+import { Route as AdminAdminPardaBillboardRouteRouteImport } from './routes/_admin/admin/parda/billboard/route'
+import { Route as AdminAdminPardaCollectionsRouteRouteImport } from './routes/_admin/admin/parda/collections/route'
+import { Route as AdminAdminPardaLayoutRouteImport } from './routes/_admin/admin/parda/layout'
 import { Route as AdminAdminPardaPlayerLabRouteImport } from './routes/_admin/admin/parda/player-lab'
 import { Route as AdminAdminPardaReportsRouteImport } from './routes/_admin/admin/parda/reports'
 import { Route as AdminAdminPardaSettingsRouteImport } from './routes/_admin/admin/parda/settings'
@@ -146,6 +150,12 @@ import { Route as TasklineAppsKanbanIndexRouteImport } from './routes/_taskline/
 import { Route as TasklineAppsKanbanBoardIdRouteImport } from './routes/_taskline/apps/kanban/$boardId'
 import { Route as DevExamplesMaskingIndexRouteImport } from './routes/dev/examples/masking/index'
 import { Route as DevExamplesMaskingIdRouteImport } from './routes/dev/examples/masking/$id'
+import { Route as AdminAdminPardaBillboardIndexRouteImport } from './routes/_admin/admin/parda/billboard/index'
+import { Route as AdminAdminPardaBillboardIdRouteImport } from './routes/_admin/admin/parda/billboard/$id'
+import { Route as AdminAdminPardaBillboardNewRouteImport } from './routes/_admin/admin/parda/billboard/new'
+import { Route as AdminAdminPardaCollectionsIndexRouteImport } from './routes/_admin/admin/parda/collections/index'
+import { Route as AdminAdminPardaCollectionsIdRouteImport } from './routes/_admin/admin/parda/collections/$id'
+import { Route as AdminAdminPardaCollectionsNewRouteImport } from './routes/_admin/admin/parda/collections/new'
 import { Route as AdminAdminPardaSourcesIndexRouteImport } from './routes/_admin/admin/parda/sources/index'
 import { Route as AdminAdminPardaSourcesIdRouteImport } from './routes/_admin/admin/parda/sources/$id'
 import { Route as AdminAdminPardaSourcesNewRouteImport } from './routes/_admin/admin/parda/sources/new'
@@ -165,6 +175,7 @@ import { Route as AdminAdminTasklineTimesheetsUtilizationRouteImport } from './r
 import { Route as AppsAppsFormsFormIdIndexRouteImport } from './routes/_apps/apps/forms/$formId/index'
 import { Route as AppsAppsFormsFormIdResultsRouteImport } from './routes/_apps/apps/forms/$formId/results'
 import { Route as AppsAppsNotesSTokenRouteImport } from './routes/_apps/apps/notes/s/$token'
+import { Route as PardaAppPardaCSlugRouteImport } from './routes/_parda/app/parda/c/$slug'
 import { Route as PardaAppPardaCollectionIdRouteImport } from './routes/_parda/app/parda/collection/$id'
 import { Route as PardaAppPardaLibraryTabRouteImport } from './routes/_parda/app/parda/library/$tab'
 import { Route as PardaAppPardaPersonIdRouteImport } from './routes/_parda/app/parda/person/$id'
@@ -579,6 +590,28 @@ const AdminAdminAuditIndexRoute = AdminAdminAuditIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminAdminAuditRouteRoute,
 } as any)
+const AdminAdminPardaIndexRoute = AdminAdminPardaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminPardaRouteRoute,
+} as any)
+const AdminAdminPardaBillboardRouteRoute =
+  AdminAdminPardaBillboardRouteRouteImport.update({
+    id: '/billboard',
+    path: '/billboard',
+    getParentRoute: () => AdminAdminPardaRouteRoute,
+  } as any)
+const AdminAdminPardaCollectionsRouteRoute =
+  AdminAdminPardaCollectionsRouteRouteImport.update({
+    id: '/collections',
+    path: '/collections',
+    getParentRoute: () => AdminAdminPardaRouteRoute,
+  } as any)
+const AdminAdminPardaLayoutRoute = AdminAdminPardaLayoutRouteImport.update({
+  id: '/layout',
+  path: '/layout',
+  getParentRoute: () => AdminAdminPardaRouteRoute,
+} as any)
 const AdminAdminPardaPlayerLabRoute =
   AdminAdminPardaPlayerLabRouteImport.update({
     id: '/player-lab',
@@ -914,6 +947,42 @@ const DevExamplesMaskingIdRoute = DevExamplesMaskingIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => DevExamplesMaskingRouteRoute,
 } as any)
+const AdminAdminPardaBillboardIndexRoute =
+  AdminAdminPardaBillboardIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPardaBillboardRouteRoute,
+  } as any)
+const AdminAdminPardaBillboardIdRoute =
+  AdminAdminPardaBillboardIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminPardaBillboardRouteRoute,
+  } as any)
+const AdminAdminPardaBillboardNewRoute =
+  AdminAdminPardaBillboardNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPardaBillboardRouteRoute,
+  } as any)
+const AdminAdminPardaCollectionsIndexRoute =
+  AdminAdminPardaCollectionsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminAdminPardaCollectionsRouteRoute,
+  } as any)
+const AdminAdminPardaCollectionsIdRoute =
+  AdminAdminPardaCollectionsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AdminAdminPardaCollectionsRouteRoute,
+  } as any)
+const AdminAdminPardaCollectionsNewRoute =
+  AdminAdminPardaCollectionsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminAdminPardaCollectionsRouteRoute,
+  } as any)
 const AdminAdminPardaSourcesIndexRoute =
   AdminAdminPardaSourcesIndexRouteImport.update({
     id: '/',
@@ -1026,6 +1095,11 @@ const AppsAppsNotesSTokenRoute = AppsAppsNotesSTokenRouteImport.update({
   id: '/apps/notes/s/$token',
   path: '/apps/notes/s/$token',
   getParentRoute: () => AppsRoute,
+} as any)
+const PardaAppPardaCSlugRoute = PardaAppPardaCSlugRouteImport.update({
+  id: '/app/parda/c/$slug',
+  path: '/app/parda/c/$slug',
+  getParentRoute: () => PardaRouteRoute,
 } as any)
 const PardaAppPardaCollectionIdRoute =
   PardaAppPardaCollectionIdRouteImport.update({
@@ -1334,6 +1408,8 @@ export interface FileRoutesByFullPath {
   '/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/admin/parda/billboard': typeof AdminAdminPardaBillboardRouteRouteWithChildren
+  '/admin/parda/collections': typeof AdminAdminPardaCollectionsRouteRouteWithChildren
   '/admin/parda/sources': typeof AdminAdminPardaSourcesRouteRouteWithChildren
   '/admin/parda/titles': typeof AdminAdminPardaTitlesRouteRouteWithChildren
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
@@ -1341,6 +1417,7 @@ export interface FileRoutesByFullPath {
   '/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/app/taskline': typeof TasklineAppTasklineShellRouteRouteWithChildren
+  '/admin/parda/layout': typeof AdminAdminPardaLayoutRoute
   '/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
   '/admin/parda/reports': typeof AdminAdminPardaReportsRoute
   '/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
@@ -1383,6 +1460,7 @@ export interface FileRoutesByFullPath {
   '/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit/': typeof AdminAdminAuditIndexRoute
+  '/admin/parda/': typeof AdminAdminPardaIndexRoute
   '/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/admin/taskline/': typeof AdminAdminTasklineIndexRoute
   '/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
@@ -1398,6 +1476,10 @@ export interface FileRoutesByFullPath {
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/app/taskline/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
+  '/admin/parda/billboard/$id': typeof AdminAdminPardaBillboardIdRoute
+  '/admin/parda/billboard/new': typeof AdminAdminPardaBillboardNewRoute
+  '/admin/parda/collections/$id': typeof AdminAdminPardaCollectionsIdRoute
+  '/admin/parda/collections/new': typeof AdminAdminPardaCollectionsNewRoute
   '/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
   '/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
   '/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
@@ -1409,6 +1491,7 @@ export interface FileRoutesByFullPath {
   '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
   '/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
@@ -1416,6 +1499,8 @@ export interface FileRoutesByFullPath {
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/admin/parda/billboard/': typeof AdminAdminPardaBillboardIndexRoute
+  '/admin/parda/collections/': typeof AdminAdminPardaCollectionsIndexRoute
   '/admin/parda/sources/': typeof AdminAdminPardaSourcesIndexRoute
   '/admin/parda/titles/': typeof AdminAdminPardaTitlesIndexRoute
   '/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
@@ -1478,7 +1563,6 @@ export interface FileRoutesByTo {
   '/f/$slug': typeof FSlugRoute
   '/l/$slug': typeof LSlugRoute
   '/dev': typeof DevIndexRoute
-  '/admin/parda': typeof AdminAdminPardaRouteRouteWithChildren
   '/admin/apps': typeof AdminAdminAppsRoute
   '/admin/links': typeof AdminAdminLinksRoute
   '/admin/media': typeof AdminAdminMediaRoute
@@ -1515,6 +1599,7 @@ export interface FileRoutesByTo {
   '/dev/examples': typeof DevExamplesIndexRoute
   '/dev/test-crud': typeof DevTestCrudIndexRoute
   '/app/taskline': typeof TasklineAppTasklineIndexRoute
+  '/admin/parda/layout': typeof AdminAdminPardaLayoutRoute
   '/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
   '/admin/parda/reports': typeof AdminAdminPardaReportsRoute
   '/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
@@ -1557,6 +1642,7 @@ export interface FileRoutesByTo {
   '/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/admin/audit': typeof AdminAdminAuditIndexRoute
+  '/admin/parda': typeof AdminAdminPardaIndexRoute
   '/admin/roles': typeof AdminAdminRolesIndexRoute
   '/admin/taskline': typeof AdminAdminTasklineIndexRoute
   '/admin/test-crud': typeof AdminAdminTestCrudIndexRoute
@@ -1569,6 +1655,10 @@ export interface FileRoutesByTo {
   '/app/parda': typeof PardaAppPardaIndexRoute
   '/apps/kanban': typeof TasklineAppsKanbanIndexRoute
   '/dev/examples/masking': typeof DevExamplesMaskingIndexRoute
+  '/admin/parda/billboard/$id': typeof AdminAdminPardaBillboardIdRoute
+  '/admin/parda/billboard/new': typeof AdminAdminPardaBillboardNewRoute
+  '/admin/parda/collections/$id': typeof AdminAdminPardaCollectionsIdRoute
+  '/admin/parda/collections/new': typeof AdminAdminPardaCollectionsNewRoute
   '/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
   '/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
   '/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
@@ -1580,6 +1670,7 @@ export interface FileRoutesByTo {
   '/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
   '/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
@@ -1587,6 +1678,8 @@ export interface FileRoutesByTo {
   '/app/taskline/home': typeof TasklineAppTasklineShellHomeRoute
   '/app/taskline/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/app/taskline/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/admin/parda/billboard': typeof AdminAdminPardaBillboardIndexRoute
+  '/admin/parda/collections': typeof AdminAdminPardaCollectionsIndexRoute
   '/admin/parda/sources': typeof AdminAdminPardaSourcesIndexRoute
   '/admin/parda/titles': typeof AdminAdminPardaTitlesIndexRoute
   '/admin/portfolio/journal': typeof AdminAdminPortfolioJournalIndexRoute
@@ -1702,6 +1795,8 @@ export interface FileRoutesById {
   '/_site/work/': typeof SiteWorkIndexRoute
   '/dev/examples/': typeof DevExamplesIndexRoute
   '/dev/test-crud/': typeof DevTestCrudIndexRoute
+  '/_admin/admin/parda/billboard': typeof AdminAdminPardaBillboardRouteRouteWithChildren
+  '/_admin/admin/parda/collections': typeof AdminAdminPardaCollectionsRouteRouteWithChildren
   '/_admin/admin/parda/sources': typeof AdminAdminPardaSourcesRouteRouteWithChildren
   '/_admin/admin/parda/titles': typeof AdminAdminPardaTitlesRouteRouteWithChildren
   '/_admin/admin/portfolio/journal': typeof AdminAdminPortfolioJournalRouteRouteWithChildren
@@ -1709,6 +1804,7 @@ export interface FileRoutesById {
   '/_admin/admin/taskline/projects': typeof AdminAdminTasklineProjectsRouteRouteWithChildren
   '/_admin/admin/taskline/timesheets': typeof AdminAdminTasklineTimesheetsRouteRouteWithChildren
   '/_taskline/app/taskline/_shell': typeof TasklineAppTasklineShellRouteRouteWithChildren
+  '/_admin/admin/parda/layout': typeof AdminAdminPardaLayoutRoute
   '/_admin/admin/parda/player-lab': typeof AdminAdminPardaPlayerLabRoute
   '/_admin/admin/parda/reports': typeof AdminAdminPardaReportsRoute
   '/_admin/admin/parda/settings': typeof AdminAdminPardaSettingsRoute
@@ -1751,6 +1847,7 @@ export interface FileRoutesById {
   '/_taskline/apps/kanban/$boardId': typeof TasklineAppsKanbanBoardIdRoute
   '/dev/examples/masking/$id': typeof DevExamplesMaskingIdRoute
   '/_admin/admin/audit/': typeof AdminAdminAuditIndexRoute
+  '/_admin/admin/parda/': typeof AdminAdminPardaIndexRoute
   '/_admin/admin/roles/': typeof AdminAdminRolesIndexRoute
   '/_admin/admin/taskline/': typeof AdminAdminTasklineIndexRoute
   '/_admin/admin/test-crud/': typeof AdminAdminTestCrudIndexRoute
@@ -1766,6 +1863,10 @@ export interface FileRoutesById {
   '/dev/examples/masking/': typeof DevExamplesMaskingIndexRoute
   '/_admin/admin/taskline/projects/$id': typeof AdminAdminTasklineProjectsIdRouteRouteWithChildren
   '/_taskline/app/taskline/_shell/$ws': typeof TasklineAppTasklineShellWsRouteRouteWithChildren
+  '/_admin/admin/parda/billboard/$id': typeof AdminAdminPardaBillboardIdRoute
+  '/_admin/admin/parda/billboard/new': typeof AdminAdminPardaBillboardNewRoute
+  '/_admin/admin/parda/collections/$id': typeof AdminAdminPardaCollectionsIdRoute
+  '/_admin/admin/parda/collections/new': typeof AdminAdminPardaCollectionsNewRoute
   '/_admin/admin/parda/sources/$id': typeof AdminAdminPardaSourcesIdRoute
   '/_admin/admin/parda/sources/new': typeof AdminAdminPardaSourcesNewRoute
   '/_admin/admin/parda/titles/new': typeof AdminAdminPardaTitlesNewRoute
@@ -1777,6 +1878,7 @@ export interface FileRoutesById {
   '/_admin/admin/taskline/timesheets/utilization': typeof AdminAdminTasklineTimesheetsUtilizationRoute
   '/_apps/apps/forms/$formId/results': typeof AppsAppsFormsFormIdResultsRoute
   '/_apps/apps/notes/s/$token': typeof AppsAppsNotesSTokenRoute
+  '/_parda/app/parda/c/$slug': typeof PardaAppPardaCSlugRoute
   '/_parda/app/parda/collection/$id': typeof PardaAppPardaCollectionIdRoute
   '/_parda/app/parda/library/$tab': typeof PardaAppPardaLibraryTabRoute
   '/_parda/app/parda/person/$id': typeof PardaAppPardaPersonIdRoute
@@ -1784,6 +1886,8 @@ export interface FileRoutesById {
   '/_taskline/app/taskline/_shell/home': typeof TasklineAppTasklineShellHomeRoute
   '/_taskline/app/taskline/_shell/inbox': typeof TasklineAppTasklineShellInboxRoute
   '/_taskline/app/taskline/_shell/settings': typeof TasklineAppTasklineShellSettingsRoute
+  '/_admin/admin/parda/billboard/': typeof AdminAdminPardaBillboardIndexRoute
+  '/_admin/admin/parda/collections/': typeof AdminAdminPardaCollectionsIndexRoute
   '/_admin/admin/parda/sources/': typeof AdminAdminPardaSourcesIndexRoute
   '/_admin/admin/parda/titles/': typeof AdminAdminPardaTitlesIndexRoute
   '/_admin/admin/portfolio/journal/': typeof AdminAdminPortfolioJournalIndexRoute
@@ -1894,6 +1998,8 @@ export interface FileRouteTypes {
     | '/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/admin/parda/billboard'
+    | '/admin/parda/collections'
     | '/admin/parda/sources'
     | '/admin/parda/titles'
     | '/admin/portfolio/journal'
@@ -1901,6 +2007,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/projects'
     | '/admin/taskline/timesheets'
     | '/app/taskline'
+    | '/admin/parda/layout'
     | '/admin/parda/player-lab'
     | '/admin/parda/reports'
     | '/admin/parda/settings'
@@ -1943,6 +2050,7 @@ export interface FileRouteTypes {
     | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit/'
+    | '/admin/parda/'
     | '/admin/roles/'
     | '/admin/taskline/'
     | '/admin/test-crud/'
@@ -1958,6 +2066,10 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/'
     | '/admin/taskline/projects/$id'
     | '/app/taskline/$ws'
+    | '/admin/parda/billboard/$id'
+    | '/admin/parda/billboard/new'
+    | '/admin/parda/collections/$id'
+    | '/admin/parda/collections/new'
     | '/admin/parda/sources/$id'
     | '/admin/parda/sources/new'
     | '/admin/parda/titles/new'
@@ -1969,6 +2081,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/parda/c/$slug'
     | '/app/parda/collection/$id'
     | '/app/parda/library/$tab'
     | '/app/parda/person/$id'
@@ -1976,6 +2089,8 @@ export interface FileRouteTypes {
     | '/app/taskline/home'
     | '/app/taskline/inbox'
     | '/app/taskline/settings'
+    | '/admin/parda/billboard/'
+    | '/admin/parda/collections/'
     | '/admin/parda/sources/'
     | '/admin/parda/titles/'
     | '/admin/portfolio/journal/'
@@ -2038,7 +2153,6 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/l/$slug'
     | '/dev'
-    | '/admin/parda'
     | '/admin/apps'
     | '/admin/links'
     | '/admin/media'
@@ -2075,6 +2189,7 @@ export interface FileRouteTypes {
     | '/dev/examples'
     | '/dev/test-crud'
     | '/app/taskline'
+    | '/admin/parda/layout'
     | '/admin/parda/player-lab'
     | '/admin/parda/reports'
     | '/admin/parda/settings'
@@ -2117,6 +2232,7 @@ export interface FileRouteTypes {
     | '/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/admin/audit'
+    | '/admin/parda'
     | '/admin/roles'
     | '/admin/taskline'
     | '/admin/test-crud'
@@ -2129,6 +2245,10 @@ export interface FileRouteTypes {
     | '/app/parda'
     | '/apps/kanban'
     | '/dev/examples/masking'
+    | '/admin/parda/billboard/$id'
+    | '/admin/parda/billboard/new'
+    | '/admin/parda/collections/$id'
+    | '/admin/parda/collections/new'
     | '/admin/parda/sources/$id'
     | '/admin/parda/sources/new'
     | '/admin/parda/titles/new'
@@ -2140,6 +2260,7 @@ export interface FileRouteTypes {
     | '/admin/taskline/timesheets/utilization'
     | '/apps/forms/$formId/results'
     | '/apps/notes/s/$token'
+    | '/app/parda/c/$slug'
     | '/app/parda/collection/$id'
     | '/app/parda/library/$tab'
     | '/app/parda/person/$id'
@@ -2147,6 +2268,8 @@ export interface FileRouteTypes {
     | '/app/taskline/home'
     | '/app/taskline/inbox'
     | '/app/taskline/settings'
+    | '/admin/parda/billboard'
+    | '/admin/parda/collections'
     | '/admin/parda/sources'
     | '/admin/parda/titles'
     | '/admin/portfolio/journal'
@@ -2261,6 +2384,8 @@ export interface FileRouteTypes {
     | '/_site/work/'
     | '/dev/examples/'
     | '/dev/test-crud/'
+    | '/_admin/admin/parda/billboard'
+    | '/_admin/admin/parda/collections'
     | '/_admin/admin/parda/sources'
     | '/_admin/admin/parda/titles'
     | '/_admin/admin/portfolio/journal'
@@ -2268,6 +2393,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/taskline/projects'
     | '/_admin/admin/taskline/timesheets'
     | '/_taskline/app/taskline/_shell'
+    | '/_admin/admin/parda/layout'
     | '/_admin/admin/parda/player-lab'
     | '/_admin/admin/parda/reports'
     | '/_admin/admin/parda/settings'
@@ -2310,6 +2436,7 @@ export interface FileRouteTypes {
     | '/_taskline/apps/kanban/$boardId'
     | '/dev/examples/masking/$id'
     | '/_admin/admin/audit/'
+    | '/_admin/admin/parda/'
     | '/_admin/admin/roles/'
     | '/_admin/admin/taskline/'
     | '/_admin/admin/test-crud/'
@@ -2325,6 +2452,10 @@ export interface FileRouteTypes {
     | '/dev/examples/masking/'
     | '/_admin/admin/taskline/projects/$id'
     | '/_taskline/app/taskline/_shell/$ws'
+    | '/_admin/admin/parda/billboard/$id'
+    | '/_admin/admin/parda/billboard/new'
+    | '/_admin/admin/parda/collections/$id'
+    | '/_admin/admin/parda/collections/new'
     | '/_admin/admin/parda/sources/$id'
     | '/_admin/admin/parda/sources/new'
     | '/_admin/admin/parda/titles/new'
@@ -2336,6 +2467,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/taskline/timesheets/utilization'
     | '/_apps/apps/forms/$formId/results'
     | '/_apps/apps/notes/s/$token'
+    | '/_parda/app/parda/c/$slug'
     | '/_parda/app/parda/collection/$id'
     | '/_parda/app/parda/library/$tab'
     | '/_parda/app/parda/person/$id'
@@ -2343,6 +2475,8 @@ export interface FileRouteTypes {
     | '/_taskline/app/taskline/_shell/home'
     | '/_taskline/app/taskline/_shell/inbox'
     | '/_taskline/app/taskline/_shell/settings'
+    | '/_admin/admin/parda/billboard/'
+    | '/_admin/admin/parda/collections/'
     | '/_admin/admin/parda/sources/'
     | '/_admin/admin/parda/titles/'
     | '/_admin/admin/portfolio/journal/'
@@ -2938,6 +3072,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminAuditIndexRouteImport
       parentRoute: typeof AdminAdminAuditRouteRoute
     }
+    '/_admin/admin/parda/': {
+      id: '/_admin/admin/parda/'
+      path: '/'
+      fullPath: '/admin/parda/'
+      preLoaderRoute: typeof AdminAdminPardaIndexRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/billboard': {
+      id: '/_admin/admin/parda/billboard'
+      path: '/billboard'
+      fullPath: '/admin/parda/billboard'
+      preLoaderRoute: typeof AdminAdminPardaBillboardRouteRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/collections': {
+      id: '/_admin/admin/parda/collections'
+      path: '/collections'
+      fullPath: '/admin/parda/collections'
+      preLoaderRoute: typeof AdminAdminPardaCollectionsRouteRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
+    '/_admin/admin/parda/layout': {
+      id: '/_admin/admin/parda/layout'
+      path: '/layout'
+      fullPath: '/admin/parda/layout'
+      preLoaderRoute: typeof AdminAdminPardaLayoutRouteImport
+      parentRoute: typeof AdminAdminPardaRouteRoute
+    }
     '/_admin/admin/parda/player-lab': {
       id: '/_admin/admin/parda/player-lab'
       path: '/player-lab'
@@ -3365,6 +3527,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevExamplesMaskingIdRouteImport
       parentRoute: typeof DevExamplesMaskingRouteRoute
     }
+    '/_admin/admin/parda/billboard/': {
+      id: '/_admin/admin/parda/billboard/'
+      path: '/'
+      fullPath: '/admin/parda/billboard/'
+      preLoaderRoute: typeof AdminAdminPardaBillboardIndexRouteImport
+      parentRoute: typeof AdminAdminPardaBillboardRouteRoute
+    }
+    '/_admin/admin/parda/billboard/$id': {
+      id: '/_admin/admin/parda/billboard/$id'
+      path: '/$id'
+      fullPath: '/admin/parda/billboard/$id'
+      preLoaderRoute: typeof AdminAdminPardaBillboardIdRouteImport
+      parentRoute: typeof AdminAdminPardaBillboardRouteRoute
+    }
+    '/_admin/admin/parda/billboard/new': {
+      id: '/_admin/admin/parda/billboard/new'
+      path: '/new'
+      fullPath: '/admin/parda/billboard/new'
+      preLoaderRoute: typeof AdminAdminPardaBillboardNewRouteImport
+      parentRoute: typeof AdminAdminPardaBillboardRouteRoute
+    }
+    '/_admin/admin/parda/collections/': {
+      id: '/_admin/admin/parda/collections/'
+      path: '/'
+      fullPath: '/admin/parda/collections/'
+      preLoaderRoute: typeof AdminAdminPardaCollectionsIndexRouteImport
+      parentRoute: typeof AdminAdminPardaCollectionsRouteRoute
+    }
+    '/_admin/admin/parda/collections/$id': {
+      id: '/_admin/admin/parda/collections/$id'
+      path: '/$id'
+      fullPath: '/admin/parda/collections/$id'
+      preLoaderRoute: typeof AdminAdminPardaCollectionsIdRouteImport
+      parentRoute: typeof AdminAdminPardaCollectionsRouteRoute
+    }
+    '/_admin/admin/parda/collections/new': {
+      id: '/_admin/admin/parda/collections/new'
+      path: '/new'
+      fullPath: '/admin/parda/collections/new'
+      preLoaderRoute: typeof AdminAdminPardaCollectionsNewRouteImport
+      parentRoute: typeof AdminAdminPardaCollectionsRouteRoute
+    }
     '/_admin/admin/parda/sources/': {
       id: '/_admin/admin/parda/sources/'
       path: '/'
@@ -3497,6 +3701,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/apps/notes/s/$token'
       preLoaderRoute: typeof AppsAppsNotesSTokenRouteImport
       parentRoute: typeof AppsRoute
+    }
+    '/_parda/app/parda/c/$slug': {
+      id: '/_parda/app/parda/c/$slug'
+      path: '/app/parda/c/$slug'
+      fullPath: '/app/parda/c/$slug'
+      preLoaderRoute: typeof PardaAppPardaCSlugRouteImport
+      parentRoute: typeof PardaRouteRoute
     }
     '/_parda/app/parda/collection/$id': {
       id: '/_parda/app/parda/collection/$id'
@@ -3793,6 +4004,7 @@ interface PardaRouteRouteChildren {
   PardaAppPardaSignUpRoute: typeof PardaAppPardaSignUpRoute
   PardaAppPardaSurpriseRoute: typeof PardaAppPardaSurpriseRoute
   PardaAppPardaIndexRoute: typeof PardaAppPardaIndexRoute
+  PardaAppPardaCSlugRoute: typeof PardaAppPardaCSlugRoute
   PardaAppPardaCollectionIdRoute: typeof PardaAppPardaCollectionIdRoute
   PardaAppPardaLibraryTabRoute: typeof PardaAppPardaLibraryTabRoute
   PardaAppPardaPersonIdRoute: typeof PardaAppPardaPersonIdRoute
@@ -3813,6 +4025,7 @@ const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaSignUpRoute: PardaAppPardaSignUpRoute,
   PardaAppPardaSurpriseRoute: PardaAppPardaSurpriseRoute,
   PardaAppPardaIndexRoute: PardaAppPardaIndexRoute,
+  PardaAppPardaCSlugRoute: PardaAppPardaCSlugRoute,
   PardaAppPardaCollectionIdRoute: PardaAppPardaCollectionIdRoute,
   PardaAppPardaLibraryTabRoute: PardaAppPardaLibraryTabRoute,
   PardaAppPardaPersonIdRoute: PardaAppPardaPersonIdRoute,
@@ -4094,6 +4307,42 @@ const AdminAdminAuditRouteRouteChildren: AdminAdminAuditRouteRouteChildren = {
 const AdminAdminAuditRouteRouteWithChildren =
   AdminAdminAuditRouteRoute._addFileChildren(AdminAdminAuditRouteRouteChildren)
 
+interface AdminAdminPardaBillboardRouteRouteChildren {
+  AdminAdminPardaBillboardIdRoute: typeof AdminAdminPardaBillboardIdRoute
+  AdminAdminPardaBillboardNewRoute: typeof AdminAdminPardaBillboardNewRoute
+  AdminAdminPardaBillboardIndexRoute: typeof AdminAdminPardaBillboardIndexRoute
+}
+
+const AdminAdminPardaBillboardRouteRouteChildren: AdminAdminPardaBillboardRouteRouteChildren =
+  {
+    AdminAdminPardaBillboardIdRoute: AdminAdminPardaBillboardIdRoute,
+    AdminAdminPardaBillboardNewRoute: AdminAdminPardaBillboardNewRoute,
+    AdminAdminPardaBillboardIndexRoute: AdminAdminPardaBillboardIndexRoute,
+  }
+
+const AdminAdminPardaBillboardRouteRouteWithChildren =
+  AdminAdminPardaBillboardRouteRoute._addFileChildren(
+    AdminAdminPardaBillboardRouteRouteChildren,
+  )
+
+interface AdminAdminPardaCollectionsRouteRouteChildren {
+  AdminAdminPardaCollectionsIdRoute: typeof AdminAdminPardaCollectionsIdRoute
+  AdminAdminPardaCollectionsNewRoute: typeof AdminAdminPardaCollectionsNewRoute
+  AdminAdminPardaCollectionsIndexRoute: typeof AdminAdminPardaCollectionsIndexRoute
+}
+
+const AdminAdminPardaCollectionsRouteRouteChildren: AdminAdminPardaCollectionsRouteRouteChildren =
+  {
+    AdminAdminPardaCollectionsIdRoute: AdminAdminPardaCollectionsIdRoute,
+    AdminAdminPardaCollectionsNewRoute: AdminAdminPardaCollectionsNewRoute,
+    AdminAdminPardaCollectionsIndexRoute: AdminAdminPardaCollectionsIndexRoute,
+  }
+
+const AdminAdminPardaCollectionsRouteRouteWithChildren =
+  AdminAdminPardaCollectionsRouteRoute._addFileChildren(
+    AdminAdminPardaCollectionsRouteRouteChildren,
+  )
+
 interface AdminAdminPardaSourcesRouteRouteChildren {
   AdminAdminPardaSourcesIdRoute: typeof AdminAdminPardaSourcesIdRoute
   AdminAdminPardaSourcesNewRoute: typeof AdminAdminPardaSourcesNewRoute
@@ -4129,20 +4378,30 @@ const AdminAdminPardaTitlesRouteRouteWithChildren =
   )
 
 interface AdminAdminPardaRouteRouteChildren {
+  AdminAdminPardaBillboardRouteRoute: typeof AdminAdminPardaBillboardRouteRouteWithChildren
+  AdminAdminPardaCollectionsRouteRoute: typeof AdminAdminPardaCollectionsRouteRouteWithChildren
   AdminAdminPardaSourcesRouteRoute: typeof AdminAdminPardaSourcesRouteRouteWithChildren
   AdminAdminPardaTitlesRouteRoute: typeof AdminAdminPardaTitlesRouteRouteWithChildren
+  AdminAdminPardaLayoutRoute: typeof AdminAdminPardaLayoutRoute
   AdminAdminPardaPlayerLabRoute: typeof AdminAdminPardaPlayerLabRoute
   AdminAdminPardaReportsRoute: typeof AdminAdminPardaReportsRoute
   AdminAdminPardaSettingsRoute: typeof AdminAdminPardaSettingsRoute
+  AdminAdminPardaIndexRoute: typeof AdminAdminPardaIndexRoute
 }
 
 const AdminAdminPardaRouteRouteChildren: AdminAdminPardaRouteRouteChildren = {
+  AdminAdminPardaBillboardRouteRoute:
+    AdminAdminPardaBillboardRouteRouteWithChildren,
+  AdminAdminPardaCollectionsRouteRoute:
+    AdminAdminPardaCollectionsRouteRouteWithChildren,
   AdminAdminPardaSourcesRouteRoute:
     AdminAdminPardaSourcesRouteRouteWithChildren,
   AdminAdminPardaTitlesRouteRoute: AdminAdminPardaTitlesRouteRouteWithChildren,
+  AdminAdminPardaLayoutRoute: AdminAdminPardaLayoutRoute,
   AdminAdminPardaPlayerLabRoute: AdminAdminPardaPlayerLabRoute,
   AdminAdminPardaReportsRoute: AdminAdminPardaReportsRoute,
   AdminAdminPardaSettingsRoute: AdminAdminPardaSettingsRoute,
+  AdminAdminPardaIndexRoute: AdminAdminPardaIndexRoute,
 }
 
 const AdminAdminPardaRouteRouteWithChildren =

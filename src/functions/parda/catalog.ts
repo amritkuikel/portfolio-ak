@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { HubPageData, HubRailData } from "@/features/parda/home/types";
-import { idParamSchema, PARDA_HUBS, PARDA_TYPES, titleParamsSchema } from "@/features/parda/search";
+import { curatedParamSchema, idParamSchema, PARDA_HUBS, PARDA_TYPES, titleParamsSchema } from "@/features/parda/search";
 import type {
 	CollectionPageData,
 	CreditsPageData,
+	CuratedPageData,
 	PersonPageData,
 	SeasonData,
 	SurpriseTarget,
@@ -16,7 +17,7 @@ import { withPardaCatalog } from "@/middleware/parda";
 import { locales } from "@/paraglide/runtime";
 import { catalogScope, pardaBanner } from "@/server/parda/catalog/context";
 import { hubPage, hubRail } from "@/server/parda/catalog/hubs";
-import { collectionPage, personPage, surprise } from "@/server/parda/catalog/people";
+import { collectionPage, curatedPage, personPage, surprise } from "@/server/parda/catalog/people";
 import { creditsPage, seasonPage, titlePage } from "@/server/parda/catalog/title-page";
 
 /**
@@ -42,6 +43,7 @@ const seasonInput = z.strictObject({
 	locale,
 });
 const idInput = idParamSchema.extend({ locale }).strict();
+const curatedInput = curatedParamSchema.extend({ locale }).strict();
 const surpriseInput = z.strictObject({ from: page, locale });
 
 export const getPardaHub = createServerFn({ method: "GET" })
@@ -121,6 +123,17 @@ export const getPardaCollection = createServerFn({ method: "GET" })
 		({ data, context }): Promise<CollectionPageData> =>
 			context.catalog
 				? collectionPage(context.catalog.services, catalogScope(context.catalog, data.locale), data.id)
+				: Promise.resolve({ configured: false }),
+	);
+
+/** A collection the admin put together, at /app/parda/c/{slug} (decision 0242). */
+export const getPardaCurated = createServerFn({ method: "GET" })
+	.middleware([withPardaCatalog])
+	.validator(zodInput(curatedInput))
+	.handler(
+		({ data, context }): Promise<CuratedPageData> =>
+			context.catalog
+				? curatedPage(context.catalog.services, catalogScope(context.catalog, data.locale), data.slug)
 				: Promise.resolve({ configured: false }),
 	);
 

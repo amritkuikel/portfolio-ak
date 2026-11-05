@@ -14,6 +14,7 @@ export const pardaKeys = {
 	credits: (locale: Locale, type: PardaType, id: number) => [...pardaKeys.title(locale, type, id), "credits"] as const,
 	person: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "person", id] as const,
 	collection: (locale: Locale, id: number) => [...pardaKeys.catalog(locale), "collection", id] as const,
+	curated: (locale: Locale, slug: string) => [...pardaKeys.catalog(locale), "curated", slug] as const,
 	search: (locale: Locale, q: string, tab: SearchTab, page: number) =>
 		[...pardaKeys.catalog(locale), "search", q, tab, page] as const,
 	suggest: (locale: Locale, q: string) => [...pardaKeys.catalog(locale), "suggest", q] as const,

@@ -9,7 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { DemoQuery } from "../../scripts/lib/demo-data.ts";
-import { serveTmdb } from "./tmdb.ts"; // @parda
+import { popularFixture, serveTmdb } from "./tmdb.ts"; // @parda
 
 export type CapturedEmail = { id: string; to: string; subject: string; text: string; html: string; tag?: string };
 
@@ -359,6 +359,74 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				await query(`delete from "pd_source_stat"`);
 				await query(`delete from "pd_source_title_fail"`);
 				return send(response, 200, { ok: true });
+			}
+			if (route === "POST /e2e/parda-plays") {
+				// Task 69: today's plays, earlier days' rollups and searches, for the overview.
+				const title = popularFixture("movie", 0).id;
+				const kinds = ["account", "guest", "anonymous"];
+				for (const [index, kind] of kinds.entries()) {
+					await query(
+						`insert into "pd_play" ("id", "viewer_kind", "viewer_key", "source_id", "media", "tmdb_id", "failed", "watched_s")
+						 select gen_random_uuid(), $1, $2, "id", 'movie', $3, $4, 1800 from "pd_source" where "name"->>'en' = 'Server 1'`,
+						[kind, `e2e-plays-${index}`, title, index === 2],
+					);
+				}
+				for (let day = 1; day < 24; day += 1) {
+					await query(
+						`insert into "pd_daily_stat" ("day", "account_plays", "guest_plays", "anonymous_plays", "failed", "viewers", "watched_s")
+						 values (current_date - $1::int, $2, $3, $4, 1, $5, 7200) on conflict do nothing`,
+						[day, 8 + (day % 7), 2 + (day % 3), 3 + (day % 5), 9 + (day % 6)],
+					);
+				}
+				for (const [query_, count, zero] of [
+					["e2e top search", 12, false],
+					["e2e nothing found", 3, true],
+				] as const) {
+					await query(
+						`insert into "pd_search_stat" ("day", "query", "count", "zero_results") values (current_date, $1, $2, $3) on conflict do nothing`,
+						[query_, count, zero],
+					);
+				}
+				return send(response, 200, { ok: true });
+			}
+			if (route === "DELETE /e2e/parda-plays") {
+				await query(`delete from "pd_play" where "viewer_key" like 'e2e-plays-%'`);
+				await query(`delete from "pd_daily_stat"`);
+				await query(`delete from "pd_search_stat" where "query" like 'e2e %'`);
+				return send(response, 200, { ok: true });
+			}
+			if (route === "POST /e2e/parda-curated") {
+				// Task 69: a published collection of recorded titles, and a slot on the anime hub (so the home's flows don't see it).
+				const titles = (["movie", "tv"] as const).map((media) => ({ media, id: popularFixture(media, 0).id }));
+				const { rows: found } = await query(`select "id" from "pd_collection" where "slug" = 'e2e-review-picks'`);
+				const collection = (found[0] ??
+					(
+						await query(
+							`insert into "pd_collection" ("slug", "name", "published") values ('e2e-review-picks', $1::jsonb, true) returning "id"`,
+							[JSON.stringify({ en: "Review picks", ne: "समीक्षाका छनोट" })],
+						)
+					).rows[0]) as { id: string };
+				if (!found[0]) {
+					for (const [position, title] of titles.entries()) {
+						await query(
+							`insert into "pd_collection_item" ("collection_id", "media", "tmdb_id", "position") values ($1, $2, $3, $4)`,
+							[collection.id, title.media, title.id, position],
+						);
+					}
+				}
+				const first = titles[0];
+				const { rows: slots } = await query(
+					`select "id" from "pd_billboard" where "page" = 'anime' and "tmdb_id" = $1`,
+					[first?.id],
+				);
+				const slot = (slots[0] ??
+					(
+						await query(
+							`insert into "pd_billboard" ("page", "media", "tmdb_id", "tagline") values ('anime', $1, $2, $3::jsonb) returning "id"`,
+							[first?.media, first?.id, JSON.stringify({ en: "The review's slot", ne: "" })],
+						)
+					).rows[0]) as { id: string };
+				return send(response, 200, { slug: "e2e-review-picks", collection: collection.id, billboard: slot.id });
 			}
 			if (route === "POST /e2e/parda-alert") {
 				// Task 68: the daily check's alert, S1 E1–2 of a series, for an account's default profile.

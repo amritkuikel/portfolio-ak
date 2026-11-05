@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 68)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 69)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), the notice page, sign-in, sign-up and the 404, the admin's pages (the overview, billboard slots, collections, the home layout, sources, takedowns, reports, settings, the player lab), curated collections at `/app/parda/c/{slug}`, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -73,7 +73,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 
 | File | Holds |
 | --- | --- |
-| `src/server/parda/catalog/rails.ts` | The layout of each page: its rails in order (id, `top10` or `poster`, label, the TMDB request), and the rail that fills the billboard. No runtime imports, so `pnpm tmdb:record` records exactly these requests. Task 69 makes it editable |
+| `src/server/parda/catalog/rails.ts` | The layout of each page: its rails in order (id, `top10` or `poster`, label, the TMDB request), and the rail that fills the billboard. No runtime imports, so `pnpm tmdb:record` records exactly these requests. The admin orders and hides them (`pd_rail`, see "Curation and the overview") |
 | `src/server/parda/catalog/hubs.ts` | `hubPage` (the billboard with each title's details, and the first `AWAITED_RAILS` rails) and `hubRail` (one later rail) |
 | `src/features/parda/home/` | `load.ts` (the loader: awaits the page, starts every later rail, returns the picture to preload), `head.ts` (`seo()`, JSON-LD, the preload), `title-rails.tsx` (`TitleRail`, `StreamedRail`), `rail-labels.ts`, `types.ts` (the DTOs) |
 
@@ -81,7 +81,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 - **Failure:** a rail TMDB can't answer is `null` and says "couldn't load" in a box of a rail's height; in the browser a `CatchBoundary` does the same. An empty rail isn't shown. Only `UPSTREAM_UNAVAILABLE` degrades.
 - **Lean answers:** pictures are TMDB paths plus one `imageBase`, overviews are cut to 280 characters, genres are ids, rail labels are structured and named on the client.
 - **"See all":** a rail whose request Discover can repeat (genre, language and keyword rails) carries `more`, Discover's filters, and its heading links there (Task 66).
-- **Adding a rail:** add it to the page's list in `rails.ts` (and its label to `RailLabelKey` and `rail-labels.ts` if it's new), then `pnpm tmdb:record`. `tests/server/parda-catalog.test.ts` fails for a rail without a recording.
+- **Adding a rail:** add it to the page's list in `rails.ts` (and its label to `RailLabelKey` and `rail-labels.ts` if it's new), then `pnpm tmdb:record`. `tests/server/parda-catalog.test.ts` fails for a rail without a recording. A page whose layout was saved shows the new rail last until the admin moves it.
 
 ## A title's pages
 
@@ -292,6 +292,27 @@ score = availability × (0.4 × quality + 0.4 × smoothness + 0.2 × speed) − 
 - **A source's templates** are checked on save (`sourceFieldProblems`) and refused on their own field. A new source starts disabled: try it in the lab, then enable it. A sandbox warns that most players refuse one.
 - **Versions:** the forms save from the row's integer `version` (`saveVersioned` in `server/parda/admin/context.ts`); enable, pin, the kill switch and the purge leave it alone.
 - **`pd_blocked_title`:** one per title (`pd_blocked_title_unique`). The title is a 404 and leaves every list from every entry point (`catalog/service.ts`) and the sitemap. Deleting a source keeps its plays and reports, with no source.
+
+## Curation and the overview
+
+Decision 0242. `/admin/parda`, `/billboard`, `/collections`, `/layout`. Reading is `parda:read`; billboard slots, collections and layouts change with `parda:curate`. Every write is audited and clears the controls' cache.
+
+| File | Holds |
+| --- | --- |
+| `src/server/db/schema/parda/curation.ts` | `pd_billboard`, `pd_collection` and `pd_collection_item`, `pd_rail`, `pd_daily_stat` |
+| `src/server/parda/curation.ts` | `loadCuration` (what the controls hold for 30 s), `mergedRails`, `visibleRails`, `slotState`, `liveBillboards`: the pure rules |
+| `src/server/parda/admin/curation.ts`, `overview.ts` | The admin's services, the title picker's search, the overview's numbers |
+| `src/server/parda/player/daily.ts` | The daily rollup and the 90-day prune |
+| `src/server/parda/catalog/hubs.ts`, `people.ts` | Slots on the billboard, collections as rails, `curatedPage` |
+| `src/features/parda/admin/overview/`, `curation/` | The pages; `title-fields.tsx` is the picker and the ordered list of titles |
+
+- **Billboard slots** lead their page: those live today (Kathmandu's dates, both days included, either open), in the admin's order, then the page's rail fills up to five, each title once. An empty tagline keeps TMDB's. A slot's title that's blocked, over a kids' cap or without a backdrop is left out, and the rail takes its place.
+- **Collections** have a name and description in both languages, a slug, up to 50 ordered titles, and a published switch. Published (it needs a title), the page `/app/parda/c/{slug}` is indexable and in the sitemap, and it can be placed as a rail. Takedowns and caps apply through `titleDetails`, so a blocked title drops out by itself; a collection with nothing left to show is a 404.
+- **Titles are read once when chosen:** saving reads each title `pd_title` doesn't know through the catalogue, so a blocked or unknown one is refused on its field, and keeps its snapshot, so admin lists name it without TMDB.
+- **The layout:** `pd_rail` holds a page's rails by id (`c-{collection}` for a collection). A page with no rows is the config's order, and a rail added in code later joins at the end, so nothing is seeded. A collection is off until placed. Continue watching and the personal rails aren't in it. The first two visible rails come with the page; a collection placed first reads its titles' details before the page is sent.
+- **The overview:** finished days from `pd_daily_stat`, today live from `pd_play`, and top titles, searches and failures by server read from the range's rows. Days are UTC, as `pd_search_stat`'s. Nothing here reads TMDB.
+- **Unique viewers:** `pd_play.viewer_key` is a keyed hash of the user (or the hashed IP) and the UTC day, so a day's viewers can be counted and nobody can be followed across days. The overview says "a day": the period's figure is an average, because different days' keys can't be compared.
+- **The rollup** runs in `GET /api/cron/parda`: every day since the last one stored, so a missed run fills in. `pd_play` and `pd_search_stat` are deleted after 90 days; `pd_daily_stat` is kept.
 
 ## Pitfalls already solved
 

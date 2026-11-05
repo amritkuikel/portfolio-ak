@@ -3,6 +3,7 @@ import type { HubPageData, HubRailData } from "../../../../src/features/parda/ho
 import type {
 	CollectionPageData,
 	CreditsPageData,
+	CuratedPageData,
 	PersonPageData,
 	SeasonData,
 	SurpriseTarget,
@@ -24,6 +25,9 @@ export const getPardaPerson = fn(async (): Promise<PersonPageData> => ({ configu
 );
 export const getPardaCollection = fn(async (): Promise<CollectionPageData> => ({ configured: false })).mockName(
 	"getPardaCollection",
+);
+export const getPardaCurated = fn(async (): Promise<CuratedPageData> => ({ configured: false })).mockName(
+	"getPardaCurated",
 );
 export const getPardaSurprise = fn(async (): Promise<SurpriseTarget> => null).mockName("getPardaSurprise");
 export const getPardaBanner = fn(async (): Promise<{ en: string; ne: string } | null> => null).mockName(

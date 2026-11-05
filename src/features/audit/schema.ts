@@ -103,6 +103,14 @@ export const AUDIT_ACTIONS = [
 	"parda.settings.update",
 	"parda.playback",
 	"parda.cache.purge",
+	"parda.billboard.create",
+	"parda.billboard.update",
+	"parda.billboard.reorder",
+	"parda.billboard.delete",
+	"parda.collection.create",
+	"parda.collection.update",
+	"parda.collection.delete",
+	"parda.layout.update",
 	// parda:end
 	// @new-feature:audit-actions
 ] as const;
@@ -140,6 +148,9 @@ export const AUDIT_TARGETS = [
 	"parda-title",
 	"parda-report",
 	"parda-settings",
+	"parda-billboard",
+	"parda-collection",
+	"parda-layout",
 	// parda:end
 	// @new-feature:audit-targets
 ] as const;

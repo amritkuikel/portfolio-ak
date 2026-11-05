@@ -2,12 +2,13 @@ import "@tanstack/react-start/server-only";
 import { asc, isNotNull } from "drizzle-orm";
 import { pdBlockedTitle, pdSettings, pdSource, pdTitle } from "@/server/db/schema";
 import type { Db } from "@/server/db/types";
+import { loadCuration } from "./curation";
 import { latestStandings } from "./player/stats";
 
 /**
  * The rows every page's reads depend on, read from Postgres at most every 30 s per
  * process (decision 0229): takedowns, the settings, the sources and their latest daily
- * standings (decision 0238). A change reaches
+ * standings (decision 0238), and what the admin curates (decision 0242). A change reaches
  * every server within 30 s, without a query on each read.
  */
 const TTL_MS = 30_000;
@@ -51,6 +52,7 @@ export function createPardaControls(db: Db, now: () => number = Date.now) {
 	}, now);
 	const sources = cached(() => db.select().from(pdSource).orderBy(asc(pdSource.position)), now);
 	const standings = cached(() => latestStandings(db), now);
+	const curation = cached(() => loadCuration(db), now);
 	// The daily job changes these; ten minutes keeps a kids' list from querying them on every read.
 	const certifications = cached(
 		async () => {
@@ -69,6 +71,8 @@ export function createPardaControls(db: Db, now: () => number = Date.now) {
 		sources,
 		/** Each source's latest daily rollup and score: what the automatic order reads. */
 		standings,
+		/** Billboard slots, collections and each page's saved rails. */
+		curation,
 		/** The US certificate of every title `pd_title` knows one for: what a kids' list is filtered by (decision 0240). */
 		certifications,
 		/**
@@ -80,6 +84,7 @@ export function createPardaControls(db: Db, now: () => number = Date.now) {
 			settings.clear();
 			sources.clear();
 			standings.clear();
+			curation.clear();
 			certifications.clear();
 		},
 	};
