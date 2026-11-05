@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { ShuffleIcon } from "lucide-react";
+import { PlayIcon, ShuffleIcon } from "lucide-react";
 import { MAIN_CONTENT } from "@/components/layout/skip-link";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
@@ -10,15 +10,16 @@ import { Billboard, type BillboardItem } from "../kit/billboard";
 import { tmdbImage } from "../kit/image";
 import { ContinueRail } from "../library/continue-rail";
 import { ForYouRails } from "../library/for-you-rails";
+import { ListButton } from "../library/save-buttons";
 import { pardaLinks } from "../links";
 import { pardaPageQueryOptions } from "../queries";
 import { isPardaHub, type PardaPage } from "../search";
 import { CatalogUnconfigured } from "./catalog-unconfigured";
 import { hubTitle } from "./head";
 import { StreamedRail, TitleRail } from "./title-rails";
-import type { HubPageData, HubSlide } from "./types";
+import type { BillboardSlide, HubPageData } from "./types";
 
-const toBillboardItem = (slide: HubSlide, imageBase: string): BillboardItem => ({
+const toBillboardItem = (slide: BillboardSlide, imageBase: string): BillboardItem => ({
 	key: `${slide.media}:${slide.id}`,
 	title: slide.title,
 	tagline: slide.tagline,
@@ -41,19 +42,33 @@ function PageContent({ data }: { data: Extract<HubPageData, { configured: true }
 					actions={(item) => {
 						const slide = slides.get(item.key);
 						if (!slide) return null;
+						const ref = { media: slide.media, id: slide.id, title: slide.title };
+						// Play when a source can start it (the title page's rule), else the title's page (0244).
 						return (
 							<>
-								<Button asChild size="lg">
-									<Link {...pardaLinks.title(slide.media, slide.id, slide.slug)} data-testid="billboard-details">
-										{m.pd_billboard_details()}
-										<span className="sr-only">: {slide.title}</span>
-									</Link>
-								</Button>
+								{slide.playable ? (
+									<Button asChild size="lg">
+										<Link {...pardaLinks.watch(slide.media, slide.id, slide.slug)} data-testid="billboard-play">
+											<PlayIcon aria-hidden />
+											{m.pd_action_play()}
+											<span className="sr-only">: {slide.title}</span>
+										</Link>
+									</Button>
+								) : (
+									<Button asChild size="lg">
+										<Link {...pardaLinks.title(slide.media, slide.id, slide.slug)} data-testid="billboard-details">
+											{m.pd_billboard_details()}
+											<span className="sr-only">: {slide.title}</span>
+										</Link>
+									</Button>
+								)}
+								<ListButton title={ref} />
 								{/* A redirect to a random title: never preloaded, or hovering would pick one. */}
 								<Button asChild size="lg" variant="ghost">
 									<Link {...pardaLinks.surprise(data.page)} preload={false} data-testid="surprise-me">
 										<ShuffleIcon aria-hidden />
-										{m.pd_surprise_me()}
+										{/* Its icon alone on phones, so the slide's actions keep to one row in either language. */}
+										<span className="max-sm:sr-only">{m.pd_surprise_me()}</span>
 									</Link>
 								</Button>
 							</>

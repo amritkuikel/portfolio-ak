@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 69a)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), watch parties, the notice page, sign-in, sign-up and the 404, the admin's pages (the overview, billboard slots, collections, the home layout, sources, takedowns, reports, settings, the player lab), curated collections at `/app/parda/c/{slug}`, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Part 6 is complete (Tasks 59 to 70)**: it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), watch parties, the notice page, sign-in, sign-up and the 404, the admin's pages (the overview, billboard slots, collections, the home layout, sources, takedowns, reports, settings, the player lab), curated collections at `/app/parda/c/{slug}`, and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -21,7 +21,7 @@ The page is a cinema screen: two masks hold the interface and fit each picture's
 
 They redefine Graphite's `--background`, `--primary`, `--border` and the rest, so the shared kit needs no variants. Tailwind has `bg-pd-mask`, `text-pd-ink` and so on.
 
-**Type:** `pd-display` with `text-pd-title` or `text-pd-head`; a subtitle is `text-pd-sub text-pd-subtitle` (size, then colour), at most two lines, inside `pd-scrim`'s solid 5.5rem. Anek Devanagari is display only; text stays Inter and Noto Sans Devanagari.
+**Type:** `pd-display` with `text-pd-title` or `text-pd-head`; a subtitle is `text-pd-sub text-pd-subtitle` (size, then colour), at most two lines, inside `pd-scrim`'s solid band (4.5rem on phones, 5.5rem from `md`, then gone 2.5rem higher, 0244). Anek Devanagari is display only; text stays Inter and Noto Sans Devanagari.
 
 **Motion:** one ease (`--pd-ease`), transform and opacity only, inside the `no-preference` block at the end of the file: `pd-move` and `pd-press`. A test enforces it.
 
@@ -63,7 +63,7 @@ They redefine Graphite's `--background`, `--primary`, `--border` and the rest, s
 
 Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit under pictures, never on them; pass `alt=""` where the caption names the title.
 
-**The billboard:** a poster between the masks on phones, a 2.39:1 backdrop from `md`, the tagline as a subtitle over the scrim (none when TMDB has none), and the title, facts and `actions` in the lower mask. It moves every 8 s and stops for its visible pause button, a resting mouse, focus inside it and a hidden tab; under reduced motion it never moves and the button is hidden by CSS. Only the current, previous and next pictures are mounted. The title box has one height (two lines on phones, one from `md`, a long title at half size in two lines), so moving on shifts nothing. The home's and hubs' heads preload the first picture (`pardaPageHead`).
+**The billboard:** a poster between the masks on phones (narrowed to the height left by the masks and the tab bar, so Play is on the first screen, 0244), a 2.39:1 backdrop from `md`, the tagline as a subtitle over the scrim (none when TMDB has none), and the title, facts and `actions` in the lower mask. It moves every 8 s and stops for its visible pause button, a resting mouse, focus inside it and a hidden tab; under reduced motion it never moves and the button is hidden by CSS. Only the current, previous and next pictures are mounted. The title box has one height (two lines on phones, one from `md`, a long title at half size in two lines), so moving on shifts nothing. The billboard preloads its first picture itself (`preloadHero` in `kit/hero-preload.ts`: `ReactDOM.preload` with `fetchPriority: "high"`, which React puts first in `<head>`; a route `head()` link lands after every modulepreload, 0245), and the title hero does the same. The home gives it Play (to the watch page, when `isPlayable` finds a source; *Details* otherwise), My list and *Surprise me*.
 
 **Captions** have one height: two lines for the title, one for the detail, so cards line up and a skeleton is exactly its card's size. **Numbers and dates** go through `formatNumber` and `formatDate` (`src/lib/i18n/intl.ts`), never `Intl.*(getLocale())`: Chrome has no Nepali ICU data, so it would print Latin digits where the server printed Devanagari and break hydration.
 
@@ -75,7 +75,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 | --- | --- |
 | `src/server/parda/catalog/rails.ts` | The layout of each page: its rails in order (id, `top10` or `poster`, label, the TMDB request), and the rail that fills the billboard. No runtime imports, so `pnpm tmdb:record` records exactly these requests. The admin orders and hides them (`pd_rail`, see "Curation and the overview") |
 | `src/server/parda/catalog/hubs.ts` | `hubPage` (the billboard with each title's details, and the first `AWAITED_RAILS` rails) and `hubRail` (one later rail) |
-| `src/features/parda/home/` | `load.ts` (the loader: awaits the page, starts every later rail, returns the picture to preload), `head.ts` (`seo()`, JSON-LD, the preload), `title-rails.tsx` (`TitleRail`, `StreamedRail`), `rail-labels.ts`, `types.ts` (the DTOs) |
+| `src/features/parda/home/` | `load.ts` (the loader: awaits the page, starts every later rail, returns nothing), `head.ts` (`seo()`, JSON-LD), `title-rails.tsx` (`TitleRail`, `StreamedRail`), `rail-labels.ts`, `types.ts` (the DTOs) |
 
 - **Streaming:** the first two rails come with the page; each later one is its own `getPardaRail` query, started by the loader and rendered under `<Suspense>` with a skeleton of its size, so it streams into the same response.
 - **Failure:** a rail TMDB can't answer is `null` and says "couldn't load" in a box of a rail's height; in the browser a `CatchBoundary` does the same. An empty rail isn't shown. Only `UPSTREAM_UNAVAILABLE` degrades.
@@ -92,7 +92,7 @@ Cards take links as `LinkOptions` (what `pardaLinks` returns). Captions sit unde
 | `src/features/parda/slug.ts` | `titleSlug` (from the English title), `titleParam`, `parseTitleParam` |
 | `src/server/parda/catalog/title-page.ts` | `titlePage` (every section, names of countries and languages in the page's language, the player for Play), `seasonPage` (30 episodes a page), `creditsPage` |
 | `src/server/parda/catalog/people.ts` | `personPage`, `collectionPage`, `surprise` |
-| `src/features/parda/title/load.ts` | The loaders: data, the 301 to the canonical slug, the head (`ContentHead`: title, description, path, preview image, JSON-LD, preload). Imported lazily |
+| `src/features/parda/title/load.ts` | The loaders: data, the 301 to the canonical slug, the head (`ContentHead`: title, description, path, preview image, JSON-LD, a preload for collection pages; the title page's hero preloads itself). Imported lazily |
 | `src/features/parda/title/head.ts` | `pardaContentHead`: renders the loader's head (route options, so small) |
 | `src/features/parda/title/` | `title-hero.tsx`, `episodes.tsx`, `title-sections.tsx`, `gallery.tsx`, `video-dialog.tsx`, the four pages, `labels.ts` (TMDB's English statuses, departments, jobs and video kinds named) |
 
@@ -147,7 +147,7 @@ Decision 0240. `/app/parda/library/{list,favourites,continue,history}` and `/app
 - **Lists are named from `pd_title`:** saving reads the title (takedowns and the cap apply) and writes its snapshot, so My List sorts by title or year without TMDB. History names its titles through the catalogue, like Continue watching.
 - **History** is the progress rows by day in Parda's time zone (`APP_TIME_ZONE`), each title once a day with its episodes. Taking a day out deletes those rows; *Clear history* deletes every row and what Continue watching kept.
 - **Personal rails:** recommendations of the latest liked title (♥ when nothing is liked), minus Not for me and My List; the latest titles (two years back, and those to come) of the eight newest favourite people. Awaited by the home's loader for a session.
-- **Profiles:** at most five; the default is the account's own and never a kids' one. A kids' profile can only switch. A PIN locks a profile: choosing it from another asks for the PIN, and the `pd_profile` cookie then carries an HMAC of the profile and its PIN hash, so a guessed id opens nothing and a new PIN ends old cookies. Without a usable cookie a browser is on the default profile, or the oldest unlocked one when the default is locked. A locked profile is changed only from inside it.
+- **Profiles:** at most five; the default is the account's own and never a kids' one. A kids' profile can only switch. A PIN locks a profile: choosing it from another asks for the PIN, and the `pd_profile` cookie then carries an HMAC of the profile and its PIN hash, so a guessed id opens nothing and a new PIN ends old cookies. Without a usable cookie a browser is on the default profile, or the oldest unlocked one when the default is locked. An account always keeps one profile without a PIN (`setPin` and `deleteProfile` refuse to take the last one, 0244), so that fallback never lands on a locked profile. A locked profile is changed only from inside it: `PardaViewer.opened` says the PIN was entered (or there is none), and landing on a profile by the fallback isn't that.
 - **Switching** reloads Parda at its home: every cached list may differ for another profile.
 - **The kids' cap** (TMDB's US ladder, the profile's or the admin's): lists TMDB can filter (discover, a type's popular, trending and top rated) are asked as discover queries with the exact certificates (`certification=G|PG`; never `certification.lte`, which lets NR in). Everything else (both types' trending, upcoming, on the air, search, recommendations, filmographies, collections) passes only titles whose US certificate `pd_title` knows to be within the cap; the daily job fills those in (400 a day, the unasked first). A title over the cap, or with no US certificate, is a 404, with its season and credits.
 - **Region:** the profile's, else the visitor's country (`x-vercel-ip-country`) when TMDB has watch data for it (`TMDB_REGIONS`), else the admin's. **Players' language:** the profile's when the admin lists it, else the page's rule.
@@ -205,7 +205,7 @@ TMDB, read through `src/server/parda/catalog/service.ts` only: that module appli
 | --- | --- |
 | `tmdb/client.ts` | `createTmdb(config, fetcher)`: 8 s timeout, one retry on 5xx, one `Retry-After` wait on 429 (at most 10 s), `include_adult=false`. Failures are `UPSTREAM_UNAVAILABLE` (503); a 404 is `NOT_FOUND` |
 | `tmdb/cache.ts` | LRU, a TTL per class (configuration 7 d, details 24 h, lists 1 h, search 10 min), stale for one more TTL while refreshing, concurrent reads coalesced |
-| `tmdb/mappers.ts` | Zod to lean DTOs, only the fields pages use, plus the Nepali fill-in from English |
+| `tmdb/mappers.ts` | Zod to lean DTOs, only the fields pages use, plus the Nepali fill-in from English (`nepaliName`: a Nepali title counts only in Devanagari, 0244) |
 | `tmdb/store.ts` | The singletons: `pardaTmdb` (null without `TMDB_READ_TOKEN`), `pardaControls` and `pardaCache` |
 | `catalog/context.ts`, `src/middleware/parda.ts` | `withPardaCatalog`: the services, the region and the cap (a kids' profile's, decision 0240), null when not configured; anonymous calls over HTTP limited to 300 per 5 minutes per IP (SSR isn't counted) |
 | `controls.ts` | Takedowns, settings and sources from Postgres, at most every 30 s per process |
@@ -383,3 +383,7 @@ Decision 0243. `/app/parda/party/{code}`, noindex and never listed; the code is 
 - **TanStack's `Link` sets `aria-current="page"`** on the active season link, overriding ours; the season picker uses `"page"` too.
 - **Country names from the browser's `Intl`** would differ from the server's in Nepali (0234); the page builder names them on the server.
 - **An index route beside a child:** `$type/$id.tsx` would make the credits page its child; the title page is `$type/$id/index.tsx` (route id `/_parda/app/parda/$type/$id/`).
+- **TMDB's Nepali answer isn't blank without a translation:** it gives the title in its original language (モブサイコ100), so `trim() ||` never fell back to English. `nepaliName` keeps a Nepali title only in Devanagari (0244).
+- **Full-page screenshots hide what the tab bar covers:** a fixed bar is drawn once at the viewport's bottom, so the billboard's Play row sat under it at 390×844 while every full-page shot looked fine. Check the first screen with a viewport-only capture (0244).
+- **A fallback that lands on a locked profile isn't the PIN:** with every profile locked, "the profile you're in" was the fallback's, and counted as proof. `PardaViewer.opened` separates the two, and one profile always stays open (0244).
+- **A route `head()` preload lands after every modulepreload** (78th on the home), so the hero picture waited behind the scripts. `preloadHero` (React's `preload`) puts it first. Measure Lighthouse behind an HTTP/2 + brotli proxy: over HTTP/1.1, Lantern queues Parda's 150 early requests six at a time, and for an image LCP it counts every request started before the paint (0245).

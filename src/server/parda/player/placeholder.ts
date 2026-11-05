@@ -117,7 +117,8 @@ body{display:grid;place-items:center;padding:1rem;background:#111;color:#f5f5f5;
 h1{margin:0;font-size:1.125rem}
 p{margin:.5rem 0}
 #clock{font-size:1.5rem;font-variant-numeric:tabular-nums}
-button{min-height:44px;min-width:96px;border:1px solid #f5f5f5;border-radius:6px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+button{min-height:44px;min-width:96px;border:1px solid #f5f5f5;border-radius:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
+@media (max-height:280px){body{padding:.5rem;font-size:13px;line-height:1.35}h1{font-size:.9375rem}p{margin:.125rem 0}#clock{font-size:1.125rem}button{min-height:32px}}
 `;
 
 const attribute = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");

@@ -16,7 +16,12 @@ export const GUEST_SCOPE_COOKIE = "guest_scope";
 export const parseGuestScope = (value: string | null | undefined) =>
 	value && /^[a-z]{1,20}$/.test(value) ? value : null;
 
-/** Sets the scope for the guest about to start (a minute is plenty for one sign-in). */
+/**
+ * Sets the scope for the guest about to start (a minute is plenty for one sign-in).
+ * Only Parda calls it today; a project without that layer keeps it as core (0244).
+ *
+ * @public
+ */
 export function setGuestScope(section: string): void {
 	// biome-ignore lint/suspicious/noDocumentCookie: one short-lived, non-sensitive cookie; the Cookie Store API isn't in Safari or Firefox.
 	document.cookie = `${GUEST_SCOPE_COOKIE}=${section}; path=/; max-age=60; samesite=lax`;

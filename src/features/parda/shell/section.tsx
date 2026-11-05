@@ -1,6 +1,6 @@
 import { Link, Outlet } from "@tanstack/react-router";
 import { ConfirmProvider } from "@/components/dialogs/confirm";
-import { NotFoundPage } from "@/components/errors/not-found-page";
+import { NotFound } from "@/components/errors/not-found-page";
 import { SectionHome } from "@/components/errors/section-home";
 import { m } from "@/paraglide/messages";
 import { pardaLinks } from "../links";
@@ -28,7 +28,7 @@ export function PardaNotFound() {
 	return (
 		<SectionHome link={home()}>
 			<PardaFrame>
-				<NotFoundPage />
+				<NotFound titleClassName="pd-display text-pd-head" />
 			</PardaFrame>
 		</SectionHome>
 	);

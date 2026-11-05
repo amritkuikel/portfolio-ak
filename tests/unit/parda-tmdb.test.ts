@@ -6,7 +6,7 @@ import { isAppError } from "@/lib/errors";
 import { PAGE_LAYOUTS, railContext } from "@/server/parda/catalog/rails";
 import { createTmdbCache, TMDB_TTL, tmdbCacheKey } from "@/server/parda/tmdb/cache";
 import { createTmdb } from "@/server/parda/tmdb/client";
-import { fillIn, fillInList, mapDetails, mapList } from "@/server/parda/tmdb/mappers";
+import { fillIn, fillInList, mapDetails, mapList, nepaliName } from "@/server/parda/tmdb/mappers";
 import { fixtureName } from "../../e2e/harness/tmdb";
 
 const fixture = (name: string): unknown =>
@@ -238,6 +238,19 @@ describe("the mappers", () => {
 			title: "शीर्षक",
 			overview: "Text",
 		});
+		// Without a Nepali translation TMDB answers in the original language: English is better then (0244).
+		expect(
+			fillIn({ ...base, title: "モブサイコ100", overview: "" }, { ...base, title: "Mob Psycho 100", overview: "" })
+				.title,
+		).toBe("Mob Psycho 100");
+		expect(
+			fillIn(
+				{ ...base, title: "Socias por accidente", overview: "" },
+				{ ...base, title: "Accidental Partners", overview: "" },
+			).title,
+		).toBe("Accidental Partners");
+		expect(nepaliName("  ", "Title")).toBe("Title");
+		expect(nepaliName("기생충", "")).toBe("기생충");
 	});
 
 	it("builds images with fixed aspects and no image without a path", () => {

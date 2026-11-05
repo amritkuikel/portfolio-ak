@@ -21,13 +21,22 @@ import * as repo from "./repository";
  * and the active profile. The `pd_profile` cookie names it; a profile with a PIN counts
  * only when the cookie carries proof the PIN was entered (an HMAC of the profile and its
  * PIN hash, so changing the PIN ends it). Without a usable cookie it's the default
- * profile, or, when that one is locked, the oldest unlocked one.
+ * profile, or, when that one is locked, the oldest unlocked one. An account always keeps
+ * one unlocked profile (`setPin`, `deleteProfile`; decision 0244), so that fallback never
+ * has to hand over a locked one.
  */
 export const PROFILE_COOKIE = "pd_profile";
 
 export type PardaViewer = {
 	userId: string;
 	isGuest: boolean;
+	/**
+	 * Whether the viewer really opened this profile: it has no PIN, or the cookie proved it.
+	 * False only when every profile is locked and the cookie proves none (two locks racing,
+	 * or rows from before 0244): the viewer is then at the door, and nothing that a PIN guards
+	 * counts "being inside it" as proof.
+	 */
+	opened: boolean;
 	profile: Pick<
 		PardaProfileRow,
 		"id" | "name" | "avatar" | "kids" | "cap" | "region" | "audioLanguage" | "autoplay" | "isDefault"
@@ -86,7 +95,7 @@ async function fallbackProfile(db: Db, ownerId: string, name: string): Promise<P
 	const fallback = await repo.ensureDefaultProfile(db, ownerId, name);
 	if (fallback.pinHash === null) return fallback;
 	const profiles = await repo.profilesOf(db, ownerId);
-	// Every profile locked: there's no one to keep out, so the default it is.
+	// Every profile locked (which 0244 prevents): the default, but not opened (`PardaViewer.opened`).
 	return profiles.find((row) => row.pinHash === null) ?? fallback;
 }
 
@@ -97,10 +106,15 @@ export async function resolveViewer(
 	locale: Locale,
 ): Promise<PardaViewer> {
 	const userId = session.user.id;
+	const chosen = await cookieProfile(db, userId, cookie);
 	const profile =
-		(await cookieProfile(db, userId, cookie)) ??
-		(await fallbackProfile(db, userId, session.user.name.trim() || m.pd_profile_default({}, { locale })));
-	return { userId, isGuest: session.isAnonymous === true, profile: pick(profile) };
+		chosen ?? (await fallbackProfile(db, userId, session.user.name.trim() || m.pd_profile_default({}, { locale })));
+	return {
+		userId,
+		isGuest: session.isAnonymous === true,
+		opened: chosen !== null || profile.pinHash === null,
+		profile: pick(profile),
+	};
 }
 
 /**
@@ -120,7 +134,8 @@ export async function browsingProfile(
 	if (!fallback) return null;
 	if (fallback.pinHash === null) return pick(fallback);
 	const unlocked = (await repo.profilesOf(db, session.user.id)).find((row) => row.pinHash === null);
-	return pick(unlocked ?? fallback);
+	// Every profile locked and none proved (0244): browse as a visitor would, with no one's progress.
+	return unlocked ? pick(unlocked) : null;
 }
 
 /** When the daily cleanup deletes a guest (and everything it saved): its creation plus the guest lifetime. */
@@ -160,8 +175,20 @@ type Services = { db: Db; viewer: PardaViewer };
  */
 function mayManage(ctx: Services, target?: PardaProfileRow) {
 	if (ctx.viewer.profile.kids) throw new AppError("FORBIDDEN", "A kids' profile can't manage profiles");
-	if (target && target.pinHash !== null && target.id !== ctx.viewer.profile.id) {
+	if (target && target.pinHash !== null && !inside(ctx, target)) {
 		throw new AppError("FORBIDDEN", "A locked profile is changed from inside it");
+	}
+}
+
+/** Inside a locked profile means its PIN was entered, not just that the fallback landed on it (0244). */
+const inside = (ctx: Services, target: PardaProfileRow) => ctx.viewer.opened && target.id === ctx.viewer.profile.id;
+
+/** Refuses a change that would leave every profile of the account locked (0244). */
+async function keepOneOpen(ctx: Services, change: { lock?: string; remove?: string }) {
+	const rows = await repo.profilesOf(ctx.db, ctx.viewer.userId);
+	const open = rows.some((row) => row.id !== change.remove && row.id !== change.lock && row.pinHash === null);
+	if (!open) {
+		throw ruleError("CONFLICT", "One profile stays without a PIN", m.pd_profile_pin_last_open());
 	}
 }
 
@@ -217,6 +244,7 @@ export async function deleteProfile(ctx: Services, id: string): Promise<void> {
 	const target = await owned(ctx, id);
 	mayManage(ctx, target);
 	if (target.isDefault) throw new AppError("BAD_REQUEST", "The default profile stays");
+	if (target.pinHash === null) await keepOneOpen(ctx, { remove: id });
 	await repo.deleteProfile(ctx.db, ctx.viewer.userId, id);
 }
 
@@ -225,6 +253,7 @@ export async function setPin(ctx: Services, id: string, pin: string | null): Pro
 	const target = await owned(ctx, id);
 	mayManage(ctx, target);
 	if (pin !== null && !PIN_PATTERN.test(pin)) throw new AppError("BAD_REQUEST", "A PIN is four digits");
+	if (pin !== null && target.pinHash === null) await keepOneOpen(ctx, { lock: id });
 	const row = await repo.updateProfile(ctx.db, ctx.viewer.userId, id, {
 		pinHash: pin === null ? null : await hashPin(pin),
 	});
@@ -238,7 +267,7 @@ export async function setPin(ctx: Services, id: string, pin: string | null): Pro
  */
 export async function switchProfile(ctx: Services, id: string, pin: string | undefined): Promise<string> {
 	const target = await owned(ctx, id);
-	if (target.pinHash !== null && target.id !== ctx.viewer.profile.id) {
+	if (target.pinHash !== null && !inside(ctx, target)) {
 		await enforceRateLimit(ctx.db, `parda-pin:${target.id}`, PIN_LIMIT);
 		if (!pin || !(await pinMatches(pin, target.pinHash))) {
 			throw new AppError("BAD_REQUEST", "Wrong PIN", { fieldErrors: { pin: [m.pd_profile_pin_wrong()] } });

@@ -12,6 +12,7 @@ import {
 	fillIn,
 	itemSchema,
 	linksOf,
+	nepaliName,
 	parse,
 	summaries,
 	type TitleSummary,
@@ -288,7 +289,7 @@ export const fillInCollection = (nepali: CollectionDetails, english: CollectionD
 	const byId = new Map(english.parts.map((part) => [part.id, part]));
 	return {
 		...nepali,
-		name: nepali.name.trim() || english.name,
+		name: nepaliName(nepali.name, english.name),
 		overview: nepali.overview.trim() || english.overview,
 		parts: nepali.parts.map((part) => {
 			const fallback = byId.get(part.id);

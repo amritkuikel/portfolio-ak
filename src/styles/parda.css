@@ -188,7 +188,8 @@ html[data-section="parda"] ::selection {
 	--font-pd-display: "Anek Display", "Anek Fallback", "Anek Devanagari Fallback", Arial, "Nirmala UI", sans-serif;
 
 	/* Display sizes: a title between the masks, a rail's heading, and the subtitle on a picture. */
-	--text-pd-title: clamp(2.25rem, 1.65rem + 2.5vw, 4rem);
+	/* 36px at 390, 64px at 1280 (the direction contract's first viewport). */
+	--text-pd-title: clamp(2.25rem, 1.48rem + 3.15vw, 4rem);
 	--text-pd-head: clamp(1.625rem, 1.5rem + 0.55vw, 2rem);
 	--text-pd-sub: clamp(1.125rem, 1rem + 0.5vw, 1.5rem);
 	--text-pd-sub--line-height: 1.3;
@@ -209,8 +210,22 @@ html[data-section="parda"] ::selection {
 }
 
 /* Under text on a picture: solid for two lines of subtitle (keep text inside it), then gone, so the picture stays a picture. */
+/*
+ * Solid only where a subtitle's two lines and its padding sit (4.5rem on phones, 5.5rem from
+ * md), so the 4.5:1 test holds, then gone 2.5rem higher: the picture stays bright above it
+ * (the finish review, decision 0244).
+ */
 @utility pd-scrim {
-	background-image: linear-gradient(to top, var(--pd-scrim) 0, var(--pd-scrim) 5.5rem, transparent 10rem);
+	--pd-scrim-solid: 4.5rem;
+	background-image: linear-gradient(
+		to top,
+		var(--pd-scrim) 0,
+		var(--pd-scrim) var(--pd-scrim-solid),
+		transparent calc(var(--pd-scrim-solid) + 2.5rem)
+	);
+	@media (width >= 48rem) {
+		--pd-scrim-solid: 5.5rem;
+	}
 }
 
 /* The motion rules: transform and opacity only, one ease, and nothing under reduced motion. */

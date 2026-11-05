@@ -542,11 +542,23 @@ export const mapDetails = (media: PardaMedia, raw: unknown, region: string): Tit
 	};
 };
 
+const DEVANAGARI = /\p{Script=Devanagari}/u;
+
+/**
+ * A name from TMDB's Nepali answer, or the English one. Without a Nepali translation TMDB
+ * answers a title in its original language (モブサイコ100, Socias por accidente), not blank,
+ * so a name counts as Nepali only when it's written in Devanagari (decision 0244).
+ */
+export const nepaliName = (nepali: string, english: string) => {
+	const value = nepali.trim();
+	return value && (DEVANAGARI.test(value) || !english.trim()) ? value : english;
+};
+
 /** Blank Nepali text filled in from English: TMDB has almost none (PLAN 12.4). The slug is always English's. */
 export const fillIn = <T extends TitleSummary>(nepali: T, english: T): T => ({
 	...nepali,
 	slug: english.slug,
-	title: nepali.title.trim() || english.title,
+	title: nepaliName(nepali.title, english.title),
 	overview: nepali.overview.trim() || english.overview,
 });
 

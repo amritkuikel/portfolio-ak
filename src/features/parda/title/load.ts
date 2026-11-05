@@ -148,7 +148,8 @@ export async function loadTitlePage(
 		path: PARDA_PATHS.title(title.media, title.id, title.slug),
 		image: preview(imageBase, title.backdrop, title.title),
 		jsonLd: titleJsonLd(title, imageBase, data),
-		preload: tmdbImage(imageBase, title.backdrop, "backdrop"),
+		// The hero preloads its own picture, at the top of the head (`preloadHero`, decision 0245).
+		preload: null,
 	};
 }
 

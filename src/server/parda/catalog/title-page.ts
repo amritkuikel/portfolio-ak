@@ -4,9 +4,8 @@ import type { CreditsPageData, SeasonData, TitlePageData } from "@/features/pard
 import { isAppError } from "@/lib/errors";
 import type { PardaMedia } from "@/server/db/schema";
 import { errorFields, log } from "@/server/log";
-import { playerUrl } from "../player/sources";
-import type { TitleDetails } from "../tmdb/mappers";
 import { cut, toHubTitle } from "./hubs";
+import { firstSeason, isPlayable } from "./playable";
 import { type CatalogScope, type CatalogServices, titleCredits, titleDetails, titleSeason } from "./service";
 
 /**
@@ -35,32 +34,6 @@ export function namer(locale: Locale, type: "region" | "language") {
 			return code;
 		}
 	};
-}
-
-/** The first season that isn't specials, or the specials when that's all there is. */
-export const firstSeason = (details: Pick<TitleDetails, "seasonList">) =>
-	details.seasonList.find((season) => season.number > 0)?.number ?? details.seasonList[0]?.number ?? null;
-
-/**
- * Whether Play leads anywhere (decision 0236): playback is on and some enabled source can
- * fill its template for this title. The watch page does the rest.
- */
-async function isPlayable(services: CatalogServices, details: TitleDetails, locale: Locale): Promise<boolean> {
-	const settings = await services.controls.settings();
-	if (!settings.playbackEnabled) return false;
-	const season = details.media === "tv" ? firstSeason(details) : null;
-	if (details.media === "tv" && season === null) return false;
-	for (const source of await services.controls.sources()) {
-		if (!source.enabled) continue;
-		const target = {
-			media: details.media,
-			id: details.id,
-			imdb: details.imdbId,
-			...(season === null ? {} : { season, episode: 1 }),
-		};
-		if (playerUrl(source, target, { lang: locale, keepStart: true }) !== null) return true;
-	}
-	return false;
 }
 
 export async function titlePage(

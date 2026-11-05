@@ -2124,7 +2124,7 @@ The sandbox checked and finished, the review with its fixes, the template matrix
 
 ---
 
-## 12. Part 6: Parda, a movie, series and anime streaming product (Tasks 59–70 with 65a and 69a, planned)
+## 12. Part 6: Parda, a movie, series and anime streaming product (Tasks 59–70 with 65a and 69a, done)
 
 Part 6 adds **Parda** (पर्दा, "the screen"), a streaming product with its own URL, shell and brand, built as a layer the way Taskline was (0208).
 - **Catalogue:** TMDB.
@@ -2180,7 +2180,7 @@ As 11.1, with these differences:
 | 68 | Schedule and new-episode alerts | high | Done (decision 0241) |
 | 69 | Admin II: overview, curation, home layout | high | Done (decision 0242) |
 | 69a | Watch party | xhigh | Done (decision 0243) |
-| 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
+| 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Done (decisions 0244–0245) |
 
 - **Order is fixed.** The legal controls exist from 59 and get their admin UI in 65, right after public playback.
 - **Lettered tasks** keep the numbers of later parts unchanged.
@@ -2781,16 +2781,43 @@ Across the players:
 - Then open a party in two browsers once, to check the real service.
 - Run `pnpm db:migrate` on Neon (`0036_parda_party`).
 
-### Task 70: Wrap-up (planned)
+### Task 70: Wrap-up (done)
 
-- **Full e2e:** `pnpm test:e2e`, plus Lighthouse (mobile ≥ 95 on home and a title), the bundle per page, and `EXPLAIN` of the library queries.
-- **Template matrix:** strip-demo with `--keep-parda` alone and with the other layers.
-- **Docs:** `docs/guides/parda.md` complete; CLAUDE.md (guide table, "Where things are", layout, commands, pitfalls).
-- **Review:**
-  - the `impeccable-finish-reviewer` agent against the contract, then fixes;
-  - `impeccable-documenter` (`docs/design/parda.md`);
-  - `/security-review`, with fixes;
-  - the measurements as a decision.
+The reviews with their fixes, the design record, the measurements and the template matrix (decisions 0244, 0245).
+
+- **Security review** over `6c5c4e5..HEAD`, run by an agent with the `/security-review` brief: the skill itself needs `origin/HEAD`, which this clone lacks. One MEDIUM finding, fixed with tests. With every profile locked and no cookie proof, the fallback handed over the locked default, whose PIN could then be lifted. Now an account keeps one profile without a PIN, and `PardaViewer.opened` says whether the PIN was really entered. Everything else was found sound (0244).
+- **Finish review** (`impeccable-finish-reviewer`, 97 screenshots against the contract and the comp): "ship after fixes".
+  - **Fixed:**
+    - the phone billboard's actions were under the tab bar, so its poster now narrows to the height left;
+    - the billboard has Play (when a source can start it) and My list;
+    - a lighter scrim that still passes 4.5:1;
+    - Nepali titles that showed the original language (TMDB answers that way, so a Nepali title now counts only in Devanagari);
+    - yellow kept to its three jobs, square corners, the 404 in Anek, the title at 64 px at 1280, "My list";
+    - the placeholder player fits a phone's frame.
+  - **Kept:** the logo in dark (0235), the shared kit's empty states and slider.
+  - **Left for the owner:** the watch page's lower mask as the comp draws it, and the masks' glide between pages, which was never built.
+- **Design record:** `docs/design/parda.md` (`impeccable-documenter`), stripped with the layer.
+- **Numbers (0245):**
+  - **Library queries:** 0.1–5 ms on 47,680 progress rows, every one on an index; no new index.
+  - **JavaScript:** every page 283.5 of 285 kB; Parda's home adds 60.7 kB, a title 70.6, profiles 196.9.
+  - **Lighthouse mobile,** behind an HTTP/2 + brotli proxy: home 73–80, a title 80–85, with accessibility 100 and CLS 0. **The ≥ 95 target isn't met:** for an image LCP, Lantern counts all 150 early requests (285 KB JS, 159 KB fonts), so LCP simulates at 3.8–4.6 s against 375 ms observed. The hero is now preloaded first in `<head>` (`preloadHero`).
+  - **Tests:** `pnpm test:e2e` 2,598 passed and 1 flaky (`/admin/audit`'s CLS on a loaded machine; not Parda), 37.1 min; after the last change, Parda's flows 66/66 and its review 396/396. `pnpm test` 157 files, 1,653 tests; Storybook 116 files, 552 tests.
+- **Template matrix:** CI's template job by hand, in scratch clones with CI's env: all layers, each `--keep-…`, and `--keep-parda --keep-taskline`. It failed at first, since the job hadn't run since Task 59:
+  - stripping every layer left an open brace in `e2e/review.spec.ts` (Biome had moved a `// @parda` off its line), so that block now uses `parda:start`/`parda:end`;
+  - `--keep-parda` lost Taskline's `ChartColumnIcon`, so Parda's overview has its own icon;
+  - `setGuestScope` is tagged `@public`.
+
+  Then all six rows passed, both `new:feature` runs included (0244).
+- **Deviations:**
+  - `/security-review` ran as an agent with its brief (above).
+  - Lighthouse misses its target, recorded rather than chased: what's left is bytes shared with every page, or Anek's preload, both the owner's call.
+  - `vitest.config.ts` pre-bundles `react-dom` for the stories: the new `preload` import was found mid-run and reloaded the browser, failing 30 stories.
+  - The shared `NotFound` gains `titleClassName`.
+  - No migration.
+- **For the owner:**
+  - Decide on the watch page's lower mask, the masks' glide and the Lighthouse target (0244, 0245).
+  - Run `pnpm db:migrate` on Neon: nine migrations are pending there (`pnpm diagnose`).
+  - Push, or run the template job, before Part 7.
 
 **Out of scope for Part 6:**
 - viewer comments and reviews (TMDB's are shown);

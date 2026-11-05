@@ -248,6 +248,8 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0241](#0241-pardas-schedule-and-new-episode-alerts): Parda's schedule and new-episode alerts
 - [0242](#0242-pardas-admin-ii-overview-curation-and-layout): Parda's admin II: overview, curation and layout
 - [0243](#0243-pardas-watch-party-ably-and-sync-through-commands): Parda's watch party: Ably, and sync through commands
+- [0244](#0244-part-6-reviewed-what-changed-and-what-stayed): Part 6 reviewed: what changed and what stayed
+- [0245](#0245-part-6-measured-task-70): Part 6 measured (Task 70)
 </details>
 
 ---
@@ -3167,3 +3169,79 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Alternatives considered:** Pusher (above); a server-side publish on the kill switch (a server SDK or REST call, and it reaches only those still connected); a WebSocket server of our own (Vercel functions can't host one); user ids as client ids (they'd reach everyone in the room); a host-only control scheme (the plan has anyone control play, pause and seek).
 
 **Numbers:** see PLAN Task 69a.
+
+## 0244: Part 6 reviewed: what changed and what stayed
+
+*Task 70. Supersedes 0240's "when every profile is locked, the default" (PIN locks).*
+
+- **The security review** covered `6c5c4e5..HEAD` (Tasks 59 to 69a). `/security-review` couldn't run as written, because this clone has no `origin/HEAD` and the skill would have pasted a 125,000-line diff into one context. An agent ran the same brief instead: high-confidence, exploitable findings only.
+  - **One finding, MEDIUM, fixed.** With every profile locked and no proof in the `pd_profile` cookie, the fallback handed over the locked default. Someone with the browser (a child on a shared laptop) could delete the cookie and get the adult's library and history. They could then lift the PIN: `switchProfile` and `setPin` treated "the profile you're in" as proof.
+  - **The fix:**
+    - **An account keeps one profile without a PIN.** `setPin` refuses to lock the last open profile, and `deleteProfile` refuses to delete it, with "One profile stays without a PIN: it's the one Parda opens when no PIN has been entered." So the fallback always has an unlocked profile to land on. A single profile with a PIN guarded nothing anyway, because the fallback opened it.
+    - **`PardaViewer.opened`:** true when the profile has no PIN or the cookie proved it. Only an opened profile counts as "inside it" for `switchProfile`, `setPin`, `updateProfile` and `deleteProfile`.
+    - **`browsingProfile` is null** when every profile is locked and none is proved, so the catalogue browses as a visitor's would.
+  - **What's left:** rows locked before this rule, or two locks racing, can still leave every profile locked. Library reads then still land on the locked default, but its lock can't be lifted and nothing can switch into it without the PIN. Parda isn't deployed yet (its migrations haven't run on Neon), so no such rows exist.
+  - **Found sound** (the agent's list): every function's guard and its order; profile and owner scoping (no client-sent profile or owner id anywhere); PIN hashing, rate limit and cookie proof; the kids' cap and takedowns from every entry point; the party's token (one channel, 30 min, renewed only with a seat), seats under a row lock, host-only actions; the probe's bearer check (constant time, 404 without it); the cron secret; source origins and templates (no way into the CSP header or `script-src`); `postMessage` origin and source checks; the placeholder player's escaping and its own CSP; TMDB paths (no SSRF) and JSON-LD escaping; redirects; the guest claim; server-only secrets and dehydrated data; the digest email.
+- **The finish review** (the `impeccable-finish-reviewer` agent, against the contract, the Masking comp and 97 screenshots of the production build): "ship after fixes", eight items.
+  - **Fixed:**
+    - **The phone billboard's actions were under the tab bar** at 390×844, found by a viewport-only capture before the agent ran. The 2:3 screen now narrows to the height left between the top mask, the lower mask (15rem) and the tab bar, and the masks close in at the sides. At 390×844 that's a 325 px poster.
+    - **The billboard offers Play and My list,** as the comp and the first viewport have it. Play goes to the watch page when a source can start the title (`isPlayable`, now in `catalog/playable.ts` and shared with the title page), and *Details* takes its place when none can. *Surprise me* stays (0235), as its icon alone on phones.
+    - **The scrim:** solid only where two subtitle lines and their padding sit (4.5rem on phones, 5.5rem from `md`), then gone 2.5rem higher instead of at 10rem. The 4.5:1 test still holds.
+    - **Nepali titles in a third language.** Without a Nepali translation, TMDB answers a title in its original language (モブサイコ100, Socias por accidente), not blank, so the blank check never fell back. A Nepali title (or a collection's name) now counts only when it's written in Devanagari; otherwise it's the English one (`nepaliName`).
+    - **Yellow's three jobs:** rating stars, Top 10 numbers and avatar letters are ink now. On-states (a checked My list, a filled ♥, the current tab's bar, the slide indicator) keep the action colour, which is ink in light.
+    - **Square corners:** the library's tabs, the poster's quick ♥ and the profile's lock badge were round.
+    - **The 404's heading** is in Anek. The shared page gains `NotFound({ titleClassName })`; `NotFoundPage` stays the router's.
+    - **The display title** reaches 64 px at 1280, as the contract says (it reached 58 px).
+    - **"My list"** in sentence case in English.
+    - **The placeholder player fits a phone's 219 px frame,** and its button is square.
+  - **Kept:**
+    - **The logo in the dark theme** (0235): the reviewer saw a grey box because the fixtures' pictures are placeholders. TMDB's logos are the titles' own lettering.
+    - **The poster column and the actions on the title page,** and *Surprise me* (0235).
+    - **Empty states** use the shared `EmptyState`, and the seek bar is the shared slider with its round thumb: shared kit, not Parda's own.
+  - **Left for later (the owner's call):** the watch page's lower mask as the comp draws it, with the title at its left, the servers as plain buttons, one ad-blocker button and a full-width progress line. Today it's the Task 64 layout (0236): a server menu, the ad-blocker note under the description, and the title below the mask. That's a redesign of the player chrome and its e2e flows, not a wrap-up fix.
+  - **Also left, found by the design record:** the contract's signature interaction, the masks gliding to the next picture's shape on navigation, was never built. Only the billboard's pictures cross-fade. It would need view transitions across Parda's routes.
+- **The design record** is `docs/design/parda.md` (the `impeccable-documenter` agent, from the shipped code), stripped with the layer.
+- **The template matrix** (CI's template job by hand, in short scratch clones with CI's env, plus `--keep-parda --keep-taskline`) failed in two rows at first. Nothing is pushed during a part, so the job hadn't run since Task 59:
+  - **Stripping every layer broke `e2e/review.spec.ts`.** Biome had moved the `// @parda` marker off the line that opens `if (… "parda-curated") {` onto a line of its own, so stripping left an open brace. The block now uses `parda:start` and `parda:end`, as 0226 did for `vite.config.ts`.
+  - **`--keep-parda` lost `ChartColumnIcon`,** marked `@taskline` in `admin/sections.ts`, though Parda's overview used it too. Parda's overview now has its own `ChartNoAxesColumnIcon`, marked `@parda`.
+  - **`setGuestScope`** is tagged `@public`: only Parda calls it, and a project without Parda keeps it as core, like 0226's helpers.
+  - Then every row passed: all layers, each `--keep-…` and `--keep-parda --keep-taskline`, with both `new:feature` runs.
+
+**Why:** PLAN Task 70.
+
+**Alternatives considered:** a "door" state (a viewer with no profile until a PIN is entered) instead of the one-open-profile rule. It would mean a refusal in every library function and a picker that works without a profile, so it's a larger change for a case the rule removes. Also considered: keeping *Details* on the billboard (the comp and the first viewport both have Play), and a 45% gradient for the scrim, which fails the 4.5:1 test on a white picture.
+
+## 0245: Part 6 measured (Task 70)
+
+Measured on the owner's Windows machine (Node 24.11, 12 threads, 11.7 GB), 2026-11-05.
+
+- **The library's queries, on a heavy seed:** PGlite, so these are CPU and plans, not Neon's network. One profile has 400 movies and 80 series of 36 episodes over a year (3,280 rows), 1,000 titles on My list, 300 ♥ and 300 ratings. 200 other profiles hold 44,400 rows, for 47,680 progress rows and 11,300 list rows in all; `pd_title` has 4,000 titles. Each query is the repository's own SQL, captured at the driver, with `EXPLAIN ANALYZE`, best of three warm runs.
+
+  | Read | Queries | Execution |
+  | --- | --- | --- |
+  | Continue watching (`recentTitles`) | 2 | 3.6 + 1.4 ms |
+  | A series' rows (title and watch pages) | 2 | 0.0 + 0.1 ms |
+  | My list by added, page 1 | 2 | 0.2 + 2.3 ms |
+  | My list by title, page 20 | 2 | 3.3 + 2.1 ms |
+  | My list, series by year | 2 | 0.4 + 0.4 ms |
+  | History, page 1 / page 20 | 1 | 0.1 / 0.7 ms |
+  | Saved keys (the badges), 500 | 1 | 0.3 ms |
+  | Likes | 1 | 0.3 ms |
+
+- **What the plans say:** no new index.
+  - Continue watching and History start from `pd_progress_recent_idx` (profile, `updated_at`).
+  - A series' rows come from `pd_progress_episode_unique`, and My list's pages from `pd_list_item_recent_idx`.
+  - The list's count and its title sort read `pd_title` whole (a seq scan of 4,000 rows, under 1 ms), because a hash join is cheaper than looking up 1,000 keys at that size. On a much larger snapshot the planner moves to the primary key, which is there.
+  - Ratings scan the profile's 300 rows.
+- **Every page's JavaScript:** 283.5 kB gzip (budget 285; 270.5 at the end of Part 5). Parda's pages add on top of it:
+  - viewer pages: profiles 196.9 kB (the form and its dialogs), Discover 85.6, the library 84.5, search 78.1, watch 72.6, a title 70.6, the schedule 64.5, a party 64.2, a person 62.8, credits and collections 61, home and hubs 60.7, sign-in 26.6, about 4.4;
+  - the layout adds 51.4 kB;
+  - the admin's heaviest are the collection and billboard forms, about 204 kB.
+- **Lighthouse 13.6, mobile, simulated throttling,** behind a local HTTP/2 proxy with brotli, as Vercel serves pages. The harness server compresses nothing, and over HTTP/1.1 Lantern queues its 150 early requests six at a time.
+  - **Scores in three runs:** the home 73, 73 and 80; a title 85, 85 and 80. Accessibility 100 on both, best practices 100 on the home and 96 on the title, SEO 100. CLS 0, FCP 1.1–1.2 s, TBT 170–430 ms.
+  - **LCP 3.8–4.6 s simulated, 375 ms observed.** The billboard's or title's picture is the LCP element. For an image LCP, Lantern counts every request started before the paint: 150 of them, with 285 KB of JavaScript, 159 KB of fonts (Anek's variable width file alone is 112 KB), 54 KB of HTML and 31 KB of CSS. Taskline's landing has a text LCP and scores 968 ms on the same JavaScript.
+  - **The plan's ≥ 95 isn't met.** Getting there means fewer bytes before the first paint: no Anek preload on phones (its no-shift fallback is measured, 0232), a subset of Anek, or a smaller entry. That's the owner's call.
+  - **One change made here:** the hero picture is preloaded from where it renders (`preloadHero` calls `ReactDOM.preload` with `fetchPriority: "high"`). React puts it first in `<head>`, where the route `head()` link sat 78th, after 65 modulepreloads and both fonts. A browser fetches it first. Lantern's number barely moved, because it counts the same 150 requests either way.
+- **`pnpm test:e2e`,** the full suite, with 0244's fixes and before the preload change: 2,598 passed and 1 flaky in 37.1 min. The flaky one was `/admin/audit` in Nepali, dark, at 1280: a CLS of 0.0224 from its table's rows on a loaded machine. It passed on retry and isn't Parda's code. After the preload change, Parda's flows passed 66 of 66 and the review of Parda's pages 396 of 396.
+- **The rest:** `pnpm test` 157 files and 1,653 tests; Storybook 116 files and 552 tests. On one full run, one story (search's overlay, `ne`/dark) didn't render under load; it passes alone, as in Tasks 58 and 59. After `preloadHero`, 30 stories failed on one run: Vite found `react-dom` itself only mid-run, optimized it and reloaded the browser. `vitest.config.ts` now pre-bundles it (`STORY_DEPS`), and a run from a cleared cache passed all 552.
+- **Template matrix:** see 0244.

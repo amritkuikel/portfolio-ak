@@ -6,6 +6,7 @@ import { m } from "@/paraglide/messages";
 import { GENRE_LABELS } from "../genres";
 import { CertBadge, ProgressBar, RatingBadge } from "../kit/badges";
 import { formatYear } from "../kit/cards";
+import { preloadHero } from "../kit/hero-preload";
 import { tmdbImage } from "../kit/image";
 import { TmdbImage } from "../kit/tmdb-image";
 import { HeartButton, ListButton, RateButtons } from "../library/save-buttons";
@@ -92,18 +93,13 @@ export function TitleHero({
 	const genres = title.genres.flatMap((genre) => (GENRE_LABELS[genre] ? [GENRE_LABELS[genre]()] : []));
 	const logo = title.logo ? `${imageBase.replace(/\/$/, "")}/w500${title.logo}` : null;
 	const status = title.media === "tv" && title.status ? statusLabel(title.status) : null;
+	const backdrop = tmdbImage(imageBase, title.backdrop, "backdrop");
+	preloadHero(backdrop);
 	return (
 		<section aria-labelledby="title-heading" data-testid="title-hero">
 			<div className="bg-pd-mask">
 				<div className={SCREEN}>
-					<TmdbImage
-						image={tmdbImage(imageBase, title.backdrop, "backdrop")}
-						alt=""
-						label={title.title}
-						aspect="backdrop"
-						sizes="100vw"
-						priority
-					/>
+					<TmdbImage image={backdrop} alt="" label={title.title} aspect="backdrop" sizes="100vw" priority />
 					{title.tagline ? (
 						<p
 							aria-hidden

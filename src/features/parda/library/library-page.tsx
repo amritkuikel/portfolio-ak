@@ -96,7 +96,7 @@ function Choice<T extends string>({
 							patch={{ ...patch(option.value), page: undefined }}
 							aria-current={option.value === value ? "true" : undefined}
 							className={cn(
-								"block rounded-full border border-border px-3 py-1 text-sm hover:bg-pd-ground-2 aria-[current=true]:border-pd-action aria-[current=true]:bg-pd-ground-2",
+								"block rounded-none border border-border px-3 py-1 text-sm hover:bg-pd-ground-2 aria-[current=true]:border-pd-action aria-[current=true]:bg-pd-ground-2",
 								focusRing,
 							)}
 						>

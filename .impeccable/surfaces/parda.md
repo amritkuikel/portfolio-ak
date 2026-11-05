@@ -43,6 +43,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Unresolved
 
-- The finish review and the design record (`docs/design/parda.md`) run in Task 70, once the pages exist.
+- The finish review ran in Task 70 ("ship after fixes"; its fixes and what was kept are decision 0244), and the design record is `docs/design/parda.md`. Still open: the watch page's lower mask as the comp draws it (the title at its left, servers as plain buttons, one ad-blocker button, a full-width progress line), and the masks gliding between pages (not built).
 - Bad pictures: a title without a backdrop needs a designed state in the masks (Task 61's `TmdbImage` and `Billboard`).
 - Taglines are often missing, and TMDB rarely has them in Nepali: the subtitle line is simply absent then, not filled in.

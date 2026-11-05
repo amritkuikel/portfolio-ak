@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { CertBadge, RatingBadge } from "./badges";
 import { formatYear } from "./cards";
+import { preloadHero } from "./hero-preload";
 import type { PardaImage } from "./image";
 
 export type BillboardItem = {
@@ -34,12 +35,23 @@ const TITLE_BOX = "flex h-[2lh] items-end text-pd-title leading-none md:h-[1lh] 
 /** Longer than this, a title takes two half-size lines from md, rather than one line that cuts it off. */
 const LONG_TITLE = 22;
 
-/** The screen's shape (decision 0232): a poster between the masks on phones, 2.39:1 from `md`. */
-const SCREEN = "relative aspect-[2/3] w-full overflow-hidden bg-pd-ground-2 md:aspect-[2.39/1]";
+/**
+ * The screen's shape (decision 0232): a poster between the masks on phones, 2.39:1 from `md`.
+ * On a phone the poster is as tall as the height left over by the top mask, the lower mask
+ * (two rows of actions, 15rem) and the tab bar, so Play is never under the tab bar on the
+ * first screen; the masks close in at the sides instead (decision 0244).
+ */
+const SCREEN =
+	"relative mx-auto aspect-[2/3] w-full overflow-hidden bg-pd-ground-2 max-md:max-w-[calc((100svh_-_22.5rem_-_env(safe-area-inset-bottom))*2/3)] md:aspect-[2.39/1]";
 
 function Picture({ item, priority, current }: { item: BillboardItem; priority: boolean; current: boolean }) {
 	const narrow = item.poster ?? item.backdrop;
 	const wide = item.backdrop ?? item.poster;
+	if (priority) {
+		// The first picture, in the shape each width shows (`md`, the screen's breakpoint).
+		preloadHero(narrow, "(max-width: 767.98px)");
+		preloadHero(wide, "(min-width: 768px)");
+	}
 	if (!narrow || !wide) {
 		return (
 			<div
@@ -139,7 +151,7 @@ export function Billboard({
 		<section
 			aria-roledescription={m.pd_billboard_role()}
 			aria-label={m.pd_billboard_label()}
-			className={cn("flex flex-col", className)}
+			className={cn("flex flex-col bg-pd-mask", className)}
 			onPointerEnter={(event) => event.pointerType === "mouse" && setHeld(true)}
 			onPointerLeave={() => setHeld(false)}
 			onFocus={() => setHeld(true)}
@@ -233,7 +245,7 @@ export function Billboard({
 /** The billboard while it loads: the same screen and lower mask, so it hands over without a shift. */
 export function BillboardSkeleton({ className }: { className?: string }) {
 	return (
-		<div aria-hidden className={cn("flex flex-col", className)} data-testid="billboard-skeleton">
+		<div aria-hidden className={cn("flex flex-col bg-pd-mask", className)} data-testid="billboard-skeleton">
 			<Skeleton className={cn(SCREEN, "rounded-none")} />
 			<div className="flex flex-col gap-4 bg-pd-mask px-4 pt-4 pb-6 sm:px-6 md:flex-row md:items-end md:justify-between md:gap-8 lg:px-8">
 				<div className="flex min-w-0 flex-1 flex-col gap-2">

@@ -134,6 +134,22 @@ describe("billboard slots", () => {
 		expect(page.billboard[0]?.tagline).toBe((await titleDetails(services(), EN, "movie", movie(3))).tagline);
 	});
 
+	it("offer Play when a source can start the slide, and Details without one or with playback off (0244)", async () => {
+		expect((await hubPage(services(), EN, "home", NOW)).billboard.some((each) => each.playable)).toBe(false);
+		await env.db.insert(schema.pdSource).values({
+			name: { en: "Server 1", ne: "सर्भर १" },
+			movieTemplate: "/parda/api/1/movie/{id}",
+			tvTemplate: "/parda/api/1/tv/{id}/{season}/{episode}",
+			adapter: "parda",
+			position: 1,
+		});
+		const page = await hubPage(services(), EN, "home", NOW);
+		expect(page.billboard.length).toBeGreaterThan(0);
+		expect(page.billboard.every((each) => each.playable)).toBe(true);
+		await env.db.update(schema.pdSettings).set({ playbackEnabled: false });
+		expect((await hubPage(services(), EN, "home", NOW)).billboard.some((each) => each.playable)).toBe(false);
+	});
+
 	it("show only between their dates, both days included (Kathmandu's)", async () => {
 		const first = movie(3);
 		await curation.createBillboard(curator(), {

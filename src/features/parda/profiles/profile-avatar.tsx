@@ -47,7 +47,7 @@ export function ProfileAvatar({
 		<span
 			aria-hidden
 			className={cn(
-				"inline-flex shrink-0 items-center justify-center bg-pd-ground-2 font-semibold text-pd-action",
+				"inline-flex shrink-0 items-center justify-center bg-pd-ground-2 font-semibold text-pd-ink",
 				SIZES[size],
 				className,
 			)}

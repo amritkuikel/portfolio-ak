@@ -30,6 +30,9 @@ export type HubSlide = HubTitle & {
 	certification: string | null;
 };
 
+/** On the billboard, whether Play has a source to start (as on the title page); Details otherwise (0244). */
+export type BillboardSlide = HubSlide & { playable: boolean };
+
 /** A rail's name, rendered by the client in the page's language (`railLabel`). */
 export type RailLabel =
 	| { key: RailLabelKey }
@@ -79,7 +82,7 @@ export type HubPageData =
 			configured: true;
 			page: PardaPage;
 			imageBase: string;
-			billboard: HubSlide[];
+			billboard: BillboardSlide[];
 			rails: Array<HubRailHead & { titles?: HubRailTitles }>;
 	  };
 

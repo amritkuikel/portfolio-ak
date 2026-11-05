@@ -253,7 +253,7 @@ export function CardListToggle({
 			aria-pressed={on}
 			title={label}
 			className={cn(
-				"size-8 rounded-full bg-black/60 text-pd-on-picture hover:bg-black/80 hover:text-pd-on-picture",
+				"size-8 rounded-none bg-black/60 text-pd-on-picture hover:bg-black/80 hover:text-pd-on-picture",
 				on
 					? null
 					: "opacity-0 focus-visible:opacity-100 group-focus-within/card:opacity-100 group-hover/card:opacity-100 pointer-coarse:opacity-100",

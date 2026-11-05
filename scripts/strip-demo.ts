@@ -202,6 +202,8 @@ const SPECS: Record<Layer, LayerSpec> = {
 			// The "Masking" design system and its direction contract (Task 60, decision 0232).
 			"src/styles/parda.css",
 			".impeccable/surfaces/parda.md",
+			// Its design record, written from the shipped pages (Task 70).
+			"docs/design/parda.md",
 			"tests/unit/parda-tokens.test.ts",
 			"src/server/parda",
 			"src/functions/parda",

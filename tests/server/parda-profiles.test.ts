@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MAX_PROFILES } from "@/features/parda/profiles/options";
 import type { Session } from "@/lib/session";
 import * as schema from "@/server/db/schema";
+import * as profileRepo from "@/server/parda/profiles/repository";
 import * as profiles from "@/server/parda/profiles/service";
 import { browsingProfile, resolveViewer } from "@/server/parda/profiles/service";
 import { createTestDb } from "../utils/test-db";
@@ -159,9 +160,38 @@ describe("PIN locks", () => {
 		await expect(profiles.setPin(inside, second.id, null)).resolves.toMatchObject({ pinHash: null });
 	});
 
-	it("falls back to the default when every profile is locked", async () => {
+	it("keeps one profile without a PIN: locking or deleting the last open one is refused (0244)", async () => {
 		const asha = await viewer("asha");
+		await expect(profiles.setPin(asha, asha.viewer.profile.id, "2468")).rejects.toMatchObject({ code: "CONFLICT" });
+		const second = await profiles.createProfile(asha, fields("Second"));
+		const third = await profiles.createProfile(asha, fields("Third"));
 		await profiles.setPin(asha, asha.viewer.profile.id, "2468");
-		expect((await viewer("asha")).viewer.profile.id).toBe(asha.viewer.profile.id);
+		await profiles.setPin(asha, second.id, "1234");
+		await expect(profiles.setPin(asha, third.id, "1357")).rejects.toMatchObject({ code: "CONFLICT" });
+		// Deleting the last open profile would leave only locked ones; a locked one can go.
+		const asThird = await viewer("asha", profiles.profileCookieValue(third));
+		await expect(profiles.deleteProfile(asThird, third.id)).rejects.toMatchObject({ code: "CONFLICT" });
+		const lockedSecond = await profileRepo.ownedProfile(env.db, "asha", second.id);
+		if (!lockedSecond) throw new Error("the second profile is gone");
+		const inSecond = await viewer("asha", profiles.profileCookieValue(lockedSecond));
+		await expect(profiles.deleteProfile(inSecond, second.id)).resolves.toBeUndefined();
+	});
+
+	it("doesn't open a locked default the fallback lands on when every profile is locked (0244)", async () => {
+		// Rows from before 0244, or two locks racing: every profile has a PIN and the cookie proves none.
+		const asha = await viewer("asha");
+		await env.db.update(schema.pdProfile).set({ pinHash: await profiles.hashPin("2468") });
+		const atDoor = await viewer("asha");
+		expect(atDoor.viewer.profile.id).toBe(asha.viewer.profile.id);
+		expect(atDoor.viewer.opened).toBe(false);
+		// The catalogue browses as a visitor: no one's progress, no one's region.
+		expect(await browsingProfile(env.db, sessionOf("asha"), undefined)).toBeNull();
+		// Landing on it isn't being inside it: switching in needs the PIN, and its lock can't be lifted.
+		await expect(profiles.switchProfile(atDoor, asha.viewer.profile.id, undefined)).rejects.toMatchObject({
+			code: "BAD_REQUEST",
+		});
+		await expect(profiles.setPin(atDoor, asha.viewer.profile.id, null)).rejects.toMatchObject({ code: "FORBIDDEN" });
+		const cookie = await profiles.switchProfile(atDoor, asha.viewer.profile.id, "2468");
+		expect((await viewer("asha", cookie)).viewer.opened).toBe(true);
 	});
 });

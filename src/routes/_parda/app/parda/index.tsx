@@ -9,6 +9,6 @@ export const Route = createFileRoute("/_parda/app/parda/")({
 		const { loadPardaPage } = await import("@/features/parda/home/load");
 		return loadPardaPage(context.queryClient, getLocale(), "home", Boolean(context.session));
 	},
-	head: ({ loaderData }) => pardaPageHead("home", loaderData),
+	head: () => pardaPageHead("home"),
 	component: PardaHome,
 });

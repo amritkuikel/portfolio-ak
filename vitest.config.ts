@@ -10,8 +10,13 @@ import { zodAlias } from "./vite/zod-alias.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Libraries stories load lazily (React.lazy, dynamic imports). */
+/**
+ * Libraries stories load lazily (React.lazy, dynamic imports), or that Vite's scan misses:
+ * `react-dom` itself (Parda's `preloadHero` imports `preload`, decision 0245) was found only
+ * mid-run, and the reload failed every story then in flight.
+ */
 const STORY_DEPS = [
+	"react-dom",
 	"@tiptap/react",
 	"@tiptap/starter-kit",
 	"recharts",

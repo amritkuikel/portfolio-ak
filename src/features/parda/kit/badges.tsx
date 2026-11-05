@@ -12,7 +12,7 @@ export function RatingBadge({ rating, className }: { rating: number | null; clas
 	const value = formatNumber(rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	return (
 		<span className={cn("inline-flex items-center gap-1 tabular-nums", className)}>
-			<StarIcon aria-hidden className="size-3.5 fill-current text-pd-action" />
+			<StarIcon aria-hidden className="size-3.5 fill-current text-pd-ink" />
 			<span aria-hidden>{value}</span>
 			<span className="sr-only">{m.pd_rating({ value })}</span>
 		</span>

@@ -80,14 +80,15 @@ async function resolvePath(page: ReviewedPage, harness: Harness) {
 	if (page.params.from === "form-id") return page.route.replace("$formId", (await harness.reviewForm("member")).id);
 	if (page.params.from === "form-slug") return page.route.replace("$slug", (await harness.reviewForm("member")).slug);
 	// apps:end
-	if (page.params.from === "parda") return pardaFixturePath(page.params.page); // @parda
-	if (page.params.from === "parda-source-id") return page.route.replace("$id", await harness.pardaSourceId("Server 1")); // @parda
-	if (page.params.from === "parda-party") return page.route.replace("$code", await harness.pardaParty()); // @parda
+	// parda:start (a block: Biome moves a line's marker off an opening brace, decision 0244)
+	if (page.params.from === "parda") return pardaFixturePath(page.params.page);
+	if (page.params.from === "parda-source-id") return page.route.replace("$id", await harness.pardaSourceId("Server 1"));
+	if (page.params.from === "parda-party") return page.route.replace("$code", await harness.pardaParty());
 	if (page.params.from === "parda-curated") {
-		// @parda
-		const curated = await harness.pardaCurated(); // @parda
-		return page.route.replace(page.params.id === "slug" ? "$slug" : "$id", curated[page.params.id]); // @parda
-	} // @parda
+		const curated = await harness.pardaCurated();
+		return page.route.replace(page.params.id === "slug" ? "$slug" : "$id", curated[page.params.id]);
+	}
+	// parda:end
 	const pattern = routePattern(page.route);
 	const path = (await fromSitemap()).find((candidate) => pattern.test(candidate));
 	if (!path) throw new Error(`no sitemap URL matches ${page.route}`);

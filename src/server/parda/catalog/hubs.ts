@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import type {
+	BillboardSlide,
 	HubPageData,
 	HubRailData,
 	HubRailHead,
@@ -21,6 +22,7 @@ import {
 } from "../curation";
 import type { TitleDetails, TitleSummary } from "../tmdb/mappers";
 import { discoverOfRail } from "./discover-requests";
+import { isPlayable } from "./playable";
 import { AWAITED_RAILS, BILLBOARD_SIZE, PAGE_LAYOUTS, type RailContext, type RailSpec, railContext } from "./rails";
 import { type CatalogScope, type CatalogServices, listTitles, titleDetails } from "./service";
 
@@ -89,15 +91,24 @@ async function shownDetails(
 	}
 }
 
-/** A title on the billboard, with the facts its lower mask shows; the admin's tagline wins when it has one. */
-function slideOf(details: TitleDetails, locale: CatalogScope["locale"], tagline?: Localized | null): HubSlide {
-	return {
+/**
+ * A title on the billboard, with the facts its lower mask shows and whether Play has a
+ * source (0244); the admin's tagline wins when it has one.
+ */
+async function slideOf(
+	services: CatalogServices,
+	details: TitleDetails,
+	locale: CatalogScope["locale"],
+	tagline?: Localized | null,
+): Promise<BillboardSlide> {
+	const slide: HubSlide = {
 		...toHubTitle(details),
 		tagline: tagline?.en.trim() ? localizedValue(tagline, locale) : details.tagline,
 		runtime: details.media === "movie" ? details.runtime : null,
 		seasons: details.seasons,
 		certification: details.certification,
 	};
+	return { ...slide, playable: await isPlayable(services, details, locale) };
 }
 
 /**
@@ -111,16 +122,16 @@ async function billboard(
 	slots: ReadonlyArray<BillboardRow>,
 	spec: RailSpec,
 	context: RailContext,
-): Promise<HubSlide[]> {
+): Promise<BillboardSlide[]> {
 	const curated = await Promise.all(
 		slots.slice(0, BILLBOARD_SIZE).map((slot) =>
-			degrade(`billboard ${slot.media}/${slot.tmdbId}`, async (): Promise<HubSlide | null> => {
+			degrade(`billboard ${slot.media}/${slot.tmdbId}`, async (): Promise<BillboardSlide | null> => {
 				const details = await shownDetails(services, scope, slot.media, slot.tmdbId);
-				return details?.backdrop ? slideOf(details, scope.locale, slot.tagline) : null;
+				return details?.backdrop ? slideOf(services, details, scope.locale, slot.tagline) : null;
 			}),
 		),
 	);
-	const chosen = curated.filter((slide): slide is HubSlide => slide !== null);
+	const chosen = curated.filter((slide): slide is BillboardSlide => slide !== null);
 	const room = BILLBOARD_SIZE - chosen.length;
 	if (room <= 0) return chosen;
 	const taken = new Set(chosen.map((slide) => `${slide.media}:${slide.id}`));
@@ -128,14 +139,14 @@ async function billboard(
 	const picked = titles.filter((title) => title.backdrop && !taken.has(`${title.media}:${title.id}`)).slice(0, room);
 	const slides = await Promise.all(
 		picked.map((title) =>
-			degrade(`${title.media}/${title.id}`, async (): Promise<HubSlide | null> => {
+			degrade(`${title.media}/${title.id}`, async (): Promise<BillboardSlide | null> => {
 				// A title a kids' cap refuses (its US certificate disagrees with the list's) is left out.
 				const details = await shownDetails(services, scope, title.media, title.id);
-				return details ? slideOf(details, scope.locale) : null;
+				return details ? slideOf(services, details, scope.locale) : null;
 			}),
 		),
 	);
-	return [...chosen, ...slides.filter((slide): slide is HubSlide => slide !== null)];
+	return [...chosen, ...slides.filter((slide): slide is BillboardSlide => slide !== null)];
 }
 
 /** A curated collection's titles in the admin's order, minus any that can't be shown here (the service decides). */

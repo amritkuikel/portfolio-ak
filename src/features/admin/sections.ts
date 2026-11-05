@@ -3,6 +3,7 @@ import {
 	BanIcon, // @parda
 	BriefcaseIcon, // @portfolio
 	ChartColumnIcon, // @taskline
+	ChartNoAxesColumnIcon, // @parda
 	DatabaseIcon,
 	FlagIcon, // @parda
 	FlaskConicalIcon, // @parda
@@ -309,7 +310,8 @@ export const ADMIN_SECTIONS: ReadonlyArray<AdminSection> = [
 		...linkOptions({ to: "/admin/parda", activeOptions: { exact: true } }),
 		label: m.admin_nav_parda_overview,
 		description: m.pd_admin_overview_description,
-		icon: ChartColumnIcon,
+		// Its own icon: a line marker belongs to one layer, and Taskline's ChartColumnIcon goes with it (0244).
+		icon: ChartNoAxesColumnIcon,
 		permission: "parda:read",
 		group: "parda",
 		keywords: m.admin_keywords_parda_overview,

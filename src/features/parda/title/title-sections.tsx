@@ -357,7 +357,7 @@ export function Reviews({ reviews }: { reviews: ReadonlyArray<TitleReview> }) {
 								<span className="font-medium">{review.author}</span>
 								{review.rating !== null ? (
 									<span className="inline-flex items-center gap-1 text-sm">
-										<StarIcon aria-hidden className="size-3.5 fill-current text-pd-action" />
+										<StarIcon aria-hidden className="size-3.5 fill-current text-pd-ink" />
 										{m.pd_review_rating({ rating: formatNumber(review.rating) })}
 									</span>
 								) : null}

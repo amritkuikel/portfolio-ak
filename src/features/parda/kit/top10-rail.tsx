@@ -44,7 +44,7 @@ export function Top10Rail({
 							sizes="(min-width: 1024px) 12rem, (min-width: 640px) 11rem, 9rem"
 						/>
 						<span className="flex h-20 items-start gap-3 bg-pd-mask px-3 py-2.5">
-							<span aria-hidden className="pd-display text-[2.5rem] text-pd-action tabular-nums leading-none">
+							<span aria-hidden className="pd-display text-[2.5rem] text-pd-ink tabular-nums leading-none">
 								{formatNumber(index + 1)}
 							</span>
 							<span className="flex min-w-0 flex-col gap-0.5 pt-0.5">

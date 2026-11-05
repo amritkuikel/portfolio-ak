@@ -11,6 +11,6 @@ export const Route = createFileRoute("/_parda/app/parda/$hub")({
 		const { loadPardaPage } = await import("@/features/parda/home/load");
 		return loadPardaPage(context.queryClient, getLocale(), params.hub);
 	},
-	head: ({ params, loaderData }) => pardaPageHead(isPardaHub(params.hub) ? params.hub : "home", loaderData),
+	head: ({ params }) => pardaPageHead(isPardaHub(params.hub) ? params.hub : "home"),
 	component: PardaHubPage,
 });

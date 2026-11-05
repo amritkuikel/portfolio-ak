@@ -237,7 +237,7 @@ test.describe("Parda's Discover", () => {
 
 // Task 62: the home, the hubs and the title page stub, on the recorded catalogue.
 test.describe("Parda's home and hubs", () => {
-	test("streams every rail, and the billboard leads to a title", async ({ page }) => {
+	test("streams every rail, and the billboard plays its title", async ({ page }) => {
 		await page.goto("/app/parda", { waitUntil: "networkidle" });
 		await expect(page.getByTestId("billboard")).toBeVisible();
 		await expect(page.getByTestId("top10-rail").getByRole("link")).toHaveCount(10);
@@ -248,9 +248,11 @@ test.describe("Parda's home and hubs", () => {
 		// The first picture, in the shape each width shows (the frame preloads other images of its own).
 		await expect(page.locator('link[rel="preload"][as="image"][media]')).toHaveCount(2);
 		const title = await page.getByTestId("billboard").getByRole("heading", { level: 2 }).textContent();
-		await page.getByTestId("billboard-details").click();
-		await expect(page).toHaveURL(/\/app\/parda\/(movie|series)\/\d+-[a-z0-9-]+$/);
-		await expect(page.getByRole("heading", { level: 1 })).toHaveText(title ?? "");
+		// Play when a source can start it (0244): every seeded server can, so no slide falls back to Details.
+		await expect(page.getByTestId("billboard-details")).toHaveCount(0);
+		await page.getByTestId("billboard-play").click();
+		await expect(page).toHaveURL(/\/app\/parda\/watch\/(movie|series)\/\d+-[a-z0-9-]+$/);
+		await expect(page.getByRole("heading", { name: title ?? "", exact: true })).toBeVisible();
 	});
 
 	test("reaches each hub from the top mask, in Nepali too", async ({ page }) => {

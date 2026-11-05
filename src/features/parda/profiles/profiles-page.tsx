@@ -159,7 +159,7 @@ function ProfileTile({
 					className={cn("size-24 sm:size-28", active ? "ring-2 ring-pd-action" : null)}
 				/>
 				{managing ? (
-					<span className="absolute end-1 top-1 flex size-8 items-center justify-center rounded-full bg-black/60 text-pd-on-picture">
+					<span className="absolute end-1 top-1 flex size-8 items-center justify-center rounded-none bg-black/60 text-pd-on-picture">
 						<PencilIcon aria-hidden className="size-4" />
 					</span>
 				) : null}
