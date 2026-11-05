@@ -240,6 +240,10 @@ const SPECS: Record<Layer, LayerSpec> = {
 			"tests/unit/parda-kids.test.ts",
 			"tests/server/parda-saved.test.ts",
 			"tests/server/parda-profiles.test.ts",
+			// Schedule and new-episode alerts (Task 68, decision 0241).
+			"src/server/email/templates/parda-emails.tsx",
+			"tests/unit/parda-alerts.test.ts",
+			"tests/server/parda-alerts.test.ts",
 			"e2e/harness/tmdb.ts",
 			"e2e/flows/parda.spec.ts",
 			"docs/guides/parda.md",

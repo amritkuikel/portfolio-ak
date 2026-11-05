@@ -8,6 +8,7 @@ import { popularTitles, titleDetails, usCertificate } from "@/server/parda/catal
 import { createPardaControls } from "@/server/parda/controls";
 import * as saved from "@/server/parda/library/saved";
 import * as library from "@/server/parda/library/service";
+import * as alerts from "@/server/parda/notify/service";
 import * as profiles from "@/server/parda/profiles/service";
 import { resolveViewer } from "@/server/parda/profiles/service";
 import { createTmdbCache } from "@/server/parda/tmdb/cache";
@@ -19,9 +20,10 @@ import { createTestDb } from "../utils/test-db";
  * Parda's access matrix (PLAN 12.5, "Guard test"; decisions 0236 and 0240): every library
  * operation acts on the caller's own profile, works for a guest, and refuses a blocked
  * title (or one over a kids' cap). Saving progress is refused with playback off. Every
- * profile operation acts on the caller's own profiles, and a kids' profile can only switch. The functions' middleware (requirePardaViewer,
- * then withPardaServices) is checked by tests/server/guarded-functions.test.ts; party
- * rows join with Task 69a.
+ * profile operation acts on the caller's own profiles, and a kids' profile can only switch.
+ * Every alerts operation (decision 0241) reads and marks the caller's own profile's alerts. The
+ * functions' middleware (requirePardaViewer, then withPardaServices) is checked by
+ * tests/server/guarded-functions.test.ts; party rows join with Task 69a.
  */
 let env: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -252,4 +254,66 @@ describe("Parda's profiles access matrix", () => {
 			else await expect(asKid).rejects.toMatchObject({ code: "FORBIDDEN" });
 		});
 	}
+});
+
+/** Every alerts function's service call (src/functions/parda/alerts.ts, decision 0241). */
+const ALERT_OPERATIONS: Record<string, (context: Viewer) => Promise<unknown>> = {
+	getPardaInbox: (context) => alerts.inbox(context, "en"),
+	markPardaInboxRead: (context) => alerts.markRead(context, null),
+	getPardaFollowing: (context) => alerts.followingSchedule(context, "en", "2026-11-05"),
+};
+
+const alertFor = async (profileId: string) => {
+	const [row] = await env.db
+		.insert(schema.pdNotification)
+		.values({
+			profileId,
+			tmdbId: 1396,
+			season: 2,
+			episode: 5,
+			lastEpisode: 5,
+			data: { title: { en: "A series", ne: "" }, poster: null, backdrop: null, name: "", airDate: "2026-11-04" },
+		})
+		.returning();
+	return row;
+};
+
+describe("Parda's alerts access matrix", () => {
+	it("has a row for every alerts function", () => {
+		const source = readFileSync("src/functions/parda/alerts.ts", "utf8");
+		const functions = [...source.matchAll(/export const (\w+) = createServerFn/g)].map((match) => match[1]);
+		expect(functions).toEqual(Object.keys(ALERT_OPERATIONS));
+	});
+
+	for (const [name, operation] of Object.entries(ALERT_OPERATIONS)) {
+		it(`${name}: the own profile's alerts only, guests and kids' profiles allowed`, async () => {
+			const bina = await ctx("bina");
+			const binas = await alertFor(bina.viewer.profile.id);
+			const asha = await ctx("asha");
+			const result = await operation(asha);
+			if (name === "getPardaInbox") expect(result).toMatchObject({ items: [], unread: 0 });
+			// Nothing Asha does reads or marks Bina's alert.
+			const [after] = await env.db.select().from(schema.pdNotification);
+			expect(after?.id).toBe(binas?.id);
+			expect(after?.readAt).toBeNull();
+			expect(await alerts.inbox(bina, "en")).toMatchObject({ unread: 1 });
+
+			await expect(operation(await ctx("guest", true))).resolves.not.toThrow();
+			const kidsRow = await profiles.createProfile(bina, fields("Kid", true));
+			const kid: Viewer = {
+				...bina,
+				viewer: await resolveViewer(env.db, session("bina"), profiles.profileCookieValue(kidsRow), "en"),
+			};
+			await expect(operation(kid)).resolves.not.toThrow();
+		});
+	}
+
+	it("hides a blocked series' alerts", async () => {
+		const asha = await ctx("asha");
+		await alertFor(asha.viewer.profile.id);
+		expect((await alerts.inbox(asha, "en")).items).toHaveLength(1);
+		await env.db.insert(schema.pdBlockedTitle).values({ media: "tv", tmdbId: 1396, reason: "A notice" });
+		time += 30_001;
+		expect((await alerts.inbox(await ctx("asha"), "en")).items).toEqual([]);
+	});
 });

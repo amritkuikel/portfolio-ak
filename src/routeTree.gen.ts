@@ -133,6 +133,7 @@ import { Route as PardaAppPardaHubRouteImport } from './routes/_parda/app/parda/
 import { Route as PardaAppPardaAboutRouteImport } from './routes/_parda/app/parda/about'
 import { Route as PardaAppPardaDiscoverRouteImport } from './routes/_parda/app/parda/discover'
 import { Route as PardaAppPardaProfilesRouteImport } from './routes/_parda/app/parda/profiles'
+import { Route as PardaAppPardaScheduleRouteImport } from './routes/_parda/app/parda/schedule'
 import { Route as PardaAppPardaSearchRouteImport } from './routes/_parda/app/parda/search'
 import { Route as PardaAppPardaSignInRouteImport } from './routes/_parda/app/parda/sign-in'
 import { Route as PardaAppPardaSignUpRouteImport } from './routes/_parda/app/parda/sign-up'
@@ -843,6 +844,11 @@ const PardaAppPardaProfilesRoute = PardaAppPardaProfilesRouteImport.update({
   path: '/app/parda/profiles',
   getParentRoute: () => PardaRouteRoute,
 } as any)
+const PardaAppPardaScheduleRoute = PardaAppPardaScheduleRouteImport.update({
+  id: '/app/parda/schedule',
+  path: '/app/parda/schedule',
+  getParentRoute: () => PardaRouteRoute,
+} as any)
 const PardaAppPardaSearchRoute = PardaAppPardaSearchRouteImport.update({
   id: '/app/parda/search',
   path: '/app/parda/search',
@@ -1367,6 +1373,7 @@ export interface FileRoutesByFullPath {
   '/app/parda/about': typeof PardaAppPardaAboutRoute
   '/app/parda/discover': typeof PardaAppPardaDiscoverRoute
   '/app/parda/profiles': typeof PardaAppPardaProfilesRoute
+  '/app/parda/schedule': typeof PardaAppPardaScheduleRoute
   '/app/parda/search': typeof PardaAppPardaSearchRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1540,6 +1547,7 @@ export interface FileRoutesByTo {
   '/app/parda/about': typeof PardaAppPardaAboutRoute
   '/app/parda/discover': typeof PardaAppPardaDiscoverRoute
   '/app/parda/profiles': typeof PardaAppPardaProfilesRoute
+  '/app/parda/schedule': typeof PardaAppPardaScheduleRoute
   '/app/parda/search': typeof PardaAppPardaSearchRoute
   '/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1733,6 +1741,7 @@ export interface FileRoutesById {
   '/_parda/app/parda/about': typeof PardaAppPardaAboutRoute
   '/_parda/app/parda/discover': typeof PardaAppPardaDiscoverRoute
   '/_parda/app/parda/profiles': typeof PardaAppPardaProfilesRoute
+  '/_parda/app/parda/schedule': typeof PardaAppPardaScheduleRoute
   '/_parda/app/parda/search': typeof PardaAppPardaSearchRoute
   '/_parda/app/parda/sign-in': typeof PardaAppPardaSignInRoute
   '/_parda/app/parda/sign-up': typeof PardaAppPardaSignUpRoute
@@ -1924,6 +1933,7 @@ export interface FileRouteTypes {
     | '/app/parda/about'
     | '/app/parda/discover'
     | '/app/parda/profiles'
+    | '/app/parda/schedule'
     | '/app/parda/search'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
@@ -2097,6 +2107,7 @@ export interface FileRouteTypes {
     | '/app/parda/about'
     | '/app/parda/discover'
     | '/app/parda/profiles'
+    | '/app/parda/schedule'
     | '/app/parda/search'
     | '/app/parda/sign-in'
     | '/app/parda/sign-up'
@@ -2289,6 +2300,7 @@ export interface FileRouteTypes {
     | '/_parda/app/parda/about'
     | '/_parda/app/parda/discover'
     | '/_parda/app/parda/profiles'
+    | '/_parda/app/parda/schedule'
     | '/_parda/app/parda/search'
     | '/_parda/app/parda/sign-in'
     | '/_parda/app/parda/sign-up'
@@ -3262,6 +3274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PardaAppPardaProfilesRouteImport
       parentRoute: typeof PardaRouteRoute
     }
+    '/_parda/app/parda/schedule': {
+      id: '/_parda/app/parda/schedule'
+      path: '/app/parda/schedule'
+      fullPath: '/app/parda/schedule'
+      preLoaderRoute: typeof PardaAppPardaScheduleRouteImport
+      parentRoute: typeof PardaRouteRoute
+    }
     '/_parda/app/parda/search': {
       id: '/_parda/app/parda/search'
       path: '/app/parda/search'
@@ -3768,6 +3787,7 @@ interface PardaRouteRouteChildren {
   PardaAppPardaAboutRoute: typeof PardaAppPardaAboutRoute
   PardaAppPardaDiscoverRoute: typeof PardaAppPardaDiscoverRoute
   PardaAppPardaProfilesRoute: typeof PardaAppPardaProfilesRoute
+  PardaAppPardaScheduleRoute: typeof PardaAppPardaScheduleRoute
   PardaAppPardaSearchRoute: typeof PardaAppPardaSearchRoute
   PardaAppPardaSignInRoute: typeof PardaAppPardaSignInRoute
   PardaAppPardaSignUpRoute: typeof PardaAppPardaSignUpRoute
@@ -3787,6 +3807,7 @@ const PardaRouteRouteChildren: PardaRouteRouteChildren = {
   PardaAppPardaAboutRoute: PardaAppPardaAboutRoute,
   PardaAppPardaDiscoverRoute: PardaAppPardaDiscoverRoute,
   PardaAppPardaProfilesRoute: PardaAppPardaProfilesRoute,
+  PardaAppPardaScheduleRoute: PardaAppPardaScheduleRoute,
   PardaAppPardaSearchRoute: PardaAppPardaSearchRoute,
   PardaAppPardaSignInRoute: PardaAppPardaSignInRoute,
   PardaAppPardaSignUpRoute: PardaAppPardaSignUpRoute,

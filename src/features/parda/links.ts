@@ -50,6 +50,8 @@ export const pardaLinks = {
 		linkOptions({ to: "/app/parda/library/$tab", params: { tab }, search: query }),
 	/** Who's watching: the picker, and managing profiles (noindex). */
 	profiles: () => linkOptions({ to: "/app/parda/profiles" }),
+	/** The schedule (noindex, decision 0241): followed series for 14 days, anime this week. */
+	schedule: () => linkOptions({ to: "/app/parda/schedule" }),
 	about: (hash?: string) => linkOptions({ to: "/app/parda/about", ...(hash ? { hash } : {}) }),
 	signIn: (redirect?: string) => linkOptions({ to: "/app/parda/sign-in", search: { redirect } }),
 	signUp: (redirect?: string) => linkOptions({ to: "/app/parda/sign-up", search: { redirect } }),
@@ -63,6 +65,7 @@ export const PARDA_PATHS = {
 	search: "/app/parda/search",
 	library: (tab: LibraryTab = "list") => `/app/parda/library/${tab}`,
 	profiles: "/app/parda/profiles",
+	schedule: "/app/parda/schedule",
 	hub: (hub: PardaHub) => `/app/parda/${hub}`,
 	title: (media: Media, id: number, slug: string) => `/app/parda/${typeOfMedia(media)}/${titleParam(id, slug)}`,
 	credits: (media: Media, id: number, slug: string) => `${PARDA_PATHS.title(media, id, slug)}/credits`,

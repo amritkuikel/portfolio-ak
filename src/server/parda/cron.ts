@@ -1,7 +1,11 @@
 import "@tanstack/react-start/server-only";
 import type { Db } from "@/server/db/types";
+import type { EmailProvider } from "@/server/email/types";
 import { errorFields, log } from "@/server/log";
 import { refreshCertificates, refreshTitles } from "./catalog/refresh";
+import { createPardaControls, type PardaControls } from "./controls";
+import { type CheckResult, checkNewEpisodes } from "./notify/check";
+import { type DigestResult, sendDigests } from "./notify/digest";
 import { type RollupResult, rollupSources } from "./player/stats";
 import type { Tmdb } from "./tmdb/client";
 
@@ -9,18 +13,29 @@ export type PardaCronResult = {
 	titles: { ok: boolean; skipped?: boolean; titles?: number };
 	certificates: { ok: boolean; skipped?: boolean; checked?: number; failed?: number };
 	ranking: { ok: boolean } & Partial<RollupResult>;
+	episodes: { ok: boolean; skipped?: boolean } & Partial<CheckResult>;
+	digest: { ok: boolean } & Partial<DigestResult>;
 };
 
 /**
  * `GET /api/cron/parda`, once a day: the `pd_title` refresh, the titles' US certificates
- * (decision 0240), then the sources' rollup and scores (decision 0238), each on its own,
- * so one failing leaves the others done. Running
- * it twice changes nothing but `refreshed_at` and today's rollup rows.
+ * (decision 0240), the sources' rollup and scores (decision 0238), then the new-episode
+ * check and, once its alerts are committed, the digest emails (decision 0241), each on
+ * its own, so one failing leaves the others done. Running it twice changes nothing but
+ * `refreshed_at` and today's rollup rows: a series checked today waits a day, and an
+ * alert is emailed once.
  */
 export async function runPardaCron(
 	db: Db,
 	tmdb: Tmdb | null,
-	options: { now?: Date; onRanked?: () => void } = {},
+	options: {
+		now?: Date;
+		onRanked?: () => void;
+		/** The controls the alerts read (takedowns, the kids' cap); a fresh reader when not given. */
+		controls?: PardaControls;
+		emailProvider?: EmailProvider;
+		sleep?: (ms: number) => Promise<void>;
+	} = {},
 ): Promise<PardaCronResult> {
 	let titles: PardaCronResult["titles"];
 	if (!tmdb) titles = { ok: true, skipped: true };
@@ -51,5 +66,36 @@ export async function runPardaCron(
 		log("error", "parda source rollup failed", errorFields(error));
 		ranking = { ok: false };
 	}
-	return { titles, certificates, ranking };
+	const controls = options.controls ?? createPardaControls(db);
+	let episodes: PardaCronResult["episodes"];
+	if (!tmdb) episodes = { ok: true, skipped: true };
+	else {
+		try {
+			episodes = {
+				ok: true,
+				...(await checkNewEpisodes(db, tmdb, controls, {
+					...(options.now ? { now: options.now } : {}),
+					...(options.sleep ? { sleep: options.sleep } : {}),
+				})),
+			};
+		} catch (error) {
+			log("error", "parda episode check failed", errorFields(error));
+			episodes = { ok: false };
+		}
+	}
+	// After the check's transactions committed (as decision 0214): yesterday's unsent alerts go too.
+	let digest: PardaCronResult["digest"];
+	try {
+		digest = {
+			ok: true,
+			...(await sendDigests(db, await controls.blocked(), {
+				...(options.now ? { now: options.now } : {}),
+				...(options.emailProvider ? { provider: options.emailProvider } : {}),
+			})),
+		};
+	} catch (error) {
+		log("error", "parda digest failed", errorFields(error));
+		digest = { ok: false };
+	}
+	return { titles, certificates, ranking, episodes, digest };
 }

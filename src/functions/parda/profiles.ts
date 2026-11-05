@@ -125,11 +125,11 @@ export const switchPardaProfile = createServerFn({ method: "POST" })
 		return { ok: true };
 	});
 
-/** The account's email digest of new episodes (Task 68 sends it). Not for guests. */
+/** The account's email digest of new episodes (decision 0241), in the page's language. Not for guests. */
 export const setPardaDigest = createServerFn({ method: "POST" })
 	.middleware([requirePardaViewer, withPardaServices])
-	.validator(zodInput(z.strictObject({ digest: z.boolean() })))
+	.validator(zodInput(z.strictObject({ digest: z.boolean(), locale: z.enum(locales) })))
 	.handler(async ({ data, context }): Promise<{ ok: true }> => {
-		await profiles.setDigest({ ...context, isGuest: context.viewer.isGuest }, data.digest);
+		await profiles.setDigest({ ...context, isGuest: context.viewer.isGuest }, data.digest, data.locale);
 		return { ok: true };
 	});

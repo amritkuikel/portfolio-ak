@@ -84,14 +84,17 @@ export const pdRating = pgTable(
 );
 
 /**
- * An account's choices that aren't a profile's: the email digest (Task 68 sends it). One
- * row per user, made when they first choose; guests have no email, so never one.
+ * An account's choices that aren't a profile's: the email digest of new episodes (Task 68
+ * sends it, decision 0241) and the language it's written in, the page's when it was chosen.
+ * One row per user, made when they first choose; guests have no email, so never one.
  */
 export const pdAccount = pgTable("pd_account", {
 	userId: text()
 		.primaryKey()
 		.references(() => user.id, { onDelete: "cascade" }),
 	digest: boolean().notNull().default(false),
+	/** "en" or "ne"; null (rows from before Task 68) is English. */
+	locale: text(),
 	updatedAt: timestamp({ withTimezone: true })
 		.defaultNow()
 		.$onUpdate(() => new Date())

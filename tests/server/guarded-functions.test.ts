@@ -412,10 +412,11 @@ const PARDA_PUBLIC_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 	],
 	"parda/search.ts": ["getPardaSearch", "getPardaSuggest", "notePardaSearch", "getPardaDiscover"],
 	"parda/watch.ts": ["getPardaWatch", "recordPardaPlay", "reportPardaProblem"],
+	"parda/schedule.ts": ["getPardaAnimeWeek"],
 };
 
 /**
- * Parda's library and profiles (decisions 0236 and 0240): anyone with a session, guests included. Each runs
+ * Parda's library, profiles and alerts (decisions 0236, 0240 and 0241): anyone with a session, guests included. Each runs
  * requirePardaViewer (the session and the active profile) then withPardaServices, and
  * acts on that profile only (tests/server/parda-access.test.ts).
  */
@@ -448,6 +449,7 @@ const PARDA_FUNCTIONS: Record<string, ReadonlyArray<string>> = {
 		"switchPardaProfile",
 		"setPardaDigest",
 	],
+	"parda/alerts.ts": ["getPardaInbox", "markPardaInboxRead", "getPardaFollowing"],
 };
 // parda:end
 

@@ -1,4 +1,5 @@
 import type { HubTitle } from "../home/types";
+import type { NewEpisodeItem } from "../schedule/types";
 
 /**
  * What the library functions return (decision 0236): lean, like the catalogue's answers.
@@ -107,4 +108,6 @@ export type ForYouData = {
 	imageBase: string;
 	because: { title: string; titles: LibraryTitle[] } | null;
 	people: LibraryTitle[] | null;
+	/** New episodes of followed series (Task 68, decision 0241); null when there are none. */
+	episodes: NewEpisodeItem[] | null;
 };

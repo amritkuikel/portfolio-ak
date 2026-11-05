@@ -53,3 +53,20 @@ export const KEY_JOBS = [
 	"Editor",
 	"Producer",
 ] as const;
+
+/**
+ * Anime with an episode airing from `from` to `to` (Task 68's schedule, decision 0241),
+ * the most popular first: TMDB's animation genre in Japanese, as the anime hub's rails.
+ */
+export const animeAiringRequest = (from: string, to: string) =>
+	({
+		media: "tv",
+		path: "discover/tv",
+		params: {
+			with_genres: 16,
+			with_original_language: "ja",
+			sort_by: "popularity.desc",
+			"air_date.gte": from,
+			"air_date.lte": to,
+		},
+	}) as const;

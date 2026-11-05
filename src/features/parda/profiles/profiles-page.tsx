@@ -182,7 +182,7 @@ function DigestSwitch({ digest }: { digest: boolean }) {
 		setPending(true);
 		try {
 			const { setPardaDigest } = await import("@/functions/parda/profiles");
-			await setPardaDigest({ data: { digest: on } });
+			await setPardaDigest({ data: { digest: on, locale: getLocale() } });
 			await queryClient.invalidateQueries({ queryKey: pardaLibraryKeys.profiles(getLocale()) });
 		} catch (error) {
 			toast.error(errorMessage(error));

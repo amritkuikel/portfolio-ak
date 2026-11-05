@@ -358,6 +358,8 @@ export const REVIEWED_PAGES: ReadonlyArray<ReviewedPage> = [
 	{ route: "/app/parda/library/$tab", path: "/app/parda/library/history", as: "viewer", label: "history" },
 	{ route: "/app/parda/profiles", label: "signed out" },
 	{ route: "/app/parda/profiles", as: "viewer", label: "viewer" },
+	{ route: "/app/parda/schedule", label: "signed out" },
+	{ route: "/app/parda/schedule", as: "viewer", label: "viewer" },
 	{ route: "/app/parda/sign-in" },
 	{ route: "/app/parda/sign-up" },
 	{ route: "/app/parda/$", path: "/app/parda/no/such/page", status: 404, label: "unknown page" },

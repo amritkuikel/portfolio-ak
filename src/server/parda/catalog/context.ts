@@ -2,6 +2,8 @@ import "@tanstack/react-start/server-only";
 import { getCookie, getRequest, getRequestHeader } from "@tanstack/react-start/server";
 import { isTmdbRegion } from "@/features/parda/profiles/options";
 import { isAppError } from "@/lib/errors";
+import { todayInZone } from "@/lib/i18n/date-only";
+import { APP_TIME_ZONE } from "@/lib/i18n/intl";
 import type { Localized } from "@/lib/i18n/localized";
 import type { Session } from "@/lib/session";
 import { clientIpHash, trustedClientIp } from "@/server/auth/client-ip";
@@ -64,6 +66,27 @@ export async function pardaCatalog(session: Session | null): Promise<PardaCatalo
 		audioLanguage: profile?.audioLanguage ?? null,
 	};
 }
+
+const isTimeZone = (zone: string | undefined): zone is string => {
+	if (!zone) return false;
+	try {
+		new Intl.DateTimeFormat("en", { timeZone: zone });
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * The viewer's time zone (decision 0241): Vercel's `x-vercel-ip-timezone` when it names a
+ * real zone, else Parda's (`APP_TIME_ZONE`). The schedule's "today" is the viewer's.
+ */
+export function viewerZone(header: string | undefined): string {
+	return isTimeZone(header) ? header : APP_TIME_ZONE;
+}
+
+/** Today in the viewer's zone, as "YYYY-MM-DD". Inside a request only. */
+export const viewerToday = (now = new Date()) => todayInZone(viewerZone(getRequestHeader("x-vercel-ip-timezone")), now);
 
 export const catalogScope = (catalog: PardaCatalog, locale: CatalogScope["locale"]): CatalogScope => ({
 	locale,

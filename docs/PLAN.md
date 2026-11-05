@@ -2177,7 +2177,7 @@ As 11.1, with these differences:
 | 65a | Source ranking: viewer rollups, the daily probe, automatic order | high | Done (decision 0238) |
 | 66 | Search and discover | high | Done (decision 0239) |
 | 67 | Library (My List, Favourites, History, ratings) and profiles | xhigh | Done (decision 0240) |
-| 68 | Schedule and new-episode alerts | high | Planned |
+| 68 | Schedule and new-episode alerts | high | Done (decision 0241) |
 | 69 | Admin II: overview, curation, home layout | high | Planned |
 | 69a | Watch party | xhigh | Planned |
 | 70 | Wrap-up: full e2e, Lighthouse, template matrix, finish review | medium | Planned |
@@ -2699,12 +2699,29 @@ Across the players:
 
 **Left for the owner:** run `pnpm db:migrate` on Neon (`0033_parda_library`). The daily job fills the kids' certificates over its next three runs; until then a kids' profile sees TMDB-filtered rails but few search hits.
 
-### Task 68: Schedule and new-episode alerts (planned)
+### Task 68: Schedule and new-episode alerts (done)
 
-- **Schedule** `/schedule`: the next 14 days of followed series plus anime airing this week, by day in the viewer's zone (`todayInZone`).
-- **Cron:** the new-episode check, batched and under 40 requests per second, writing `pd_follow_state` and `pd_notification`.
-- **Bell inbox,** and the New episodes rail.
-- **Digest email:** React Email, sent after the transaction commits (as 0214).
+**Done** (decision 0241; the guide's "Schedule and alerts").
+
+**What changed:**
+- **Following:** a series in My List or ♥, or played or marked in the last six months. No Follow button.
+- **Tables** (migration `0034_parda_alerts`): `pd_follow_state` (per series), `pd_notification` (per profile, a season's range), `pd_account.locale` (the digest's language).
+- **The daily job's new steps:** the new-episode check (`notify/check.ts`: each followed series once a day, an ended one weekly, at most 1,500 a run, seven at a time under 35 requests a second, stopping after ten failures in a row; the first check only records where a series is; the alerts in the transaction that moves the state, minus a profile that already finished the range and a kids' profile its cap refuses), then the digest (`notify/digest.ts`, after the commits: per account that chose it, the week's unread alerts, in its language, claimed before sending, `parda-digest` in `parda-emails.tsx`). Pruning: states unchecked for 60 days, alerts over 90 days.
+- **Bell** in the top mask for a session (the layout loads it): the latest 30 alerts, the unread count, opening marks read, an alert opens the watch page at its first new episode, the footer leads to the schedule.
+- **New episodes** rail on the home (part of `getPardaForYou`): each series once until its range's last episode is finished.
+- **Schedule** `/app/parda/schedule` (noindex): followed series for 14 days (next episode and that season's dates, through the catalogue), anime airing for 7 (`getPardaAnimeWeek`, open to everyone), by day from today in `x-vercel-ip-timezone` (else `APP_TIME_ZONE`). Linked from the account menu, the bell and the footer.
+- **Functions:** `src/functions/parda/alerts.ts` (`getPardaInbox`, `markPardaInboxRead`, `getPardaFollowing`; the access matrix's alerts rows) and `src/functions/parda/schedule.ts` (`PARDA_PUBLIC_FUNCTIONS`), each with its Storybook mock. `setPardaDigest` takes the page's locale.
+- **Tests:** `tests/unit/parda-alerts.test.ts` (what's new, due, pacing, the days, the labels), `tests/server/parda-alerts.test.ts` (baseline, followers by list, ♥ and progress, whole seasons, who already watched, takedowns, caps, TMDB gone or down, the job, the digest once and in its language, failures handed back, the bell, the rail, both halves of the schedule, the zone), the access matrix, two e2e flows (the bell, its watch link, the rail and the schedule for a guest; a visitor's schedule) with `POST /e2e/parda-alert`, and the schedule in the review (signed out and as the viewer).
+
+**Deviations (0241):**
+- **"Followed" is defined here,** with no Follow button.
+- **The check's state is per series,** not per profile: one TMDB call per series.
+- **The schedule reads TMDB through the cache at page load,** not `pd_follow_state`, so a series followed today shows today.
+- **The e2e schedule has no anime:** the week's list shares the "Airing today" recording, and its titles' details aren't recorded; PGlite tests patch the airing data.
+
+**Numbers:** entry 281.2 of 285 kB (280.8 before). `pnpm test` 154 files, 1,546 tests. Run, per the owner's changed-files rule: typecheck, check, knip, i18n:check, the build and the bundle check, `pnpm test`, `pnpm test:storybook` (542 of 544: "Parda/Search › Overlay" timed out in both passes under load with the story still loading, and passed alone with the shell and library stories, 16 of 16), build-storybook, `e2e/flows/parda.spec.ts` with the review of every `/app/parda` and `/admin/parda` page (508 of 508). Screenshots of the bell, the rail and the schedule at 390 and 1280, en and ne, dark and light, showed one redundant line, fixed. The full suites wait for Task 70.
+
+**Left for the owner:** run `pnpm db:migrate` on Neon (`0034_parda_alerts`). The digest needs Resend configured in production (it is for the auth emails already). The first daily run only records where each followed series is; alerts start the day after.
 
 ### Task 69: Admin II, overview and curation (planned)
 

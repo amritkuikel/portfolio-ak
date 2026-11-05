@@ -360,6 +360,17 @@ export async function serveHarness(port: number, query: DemoQuery) {
 				await query(`delete from "pd_source_title_fail"`);
 				return send(response, 200, { ok: true });
 			}
+			if (route === "POST /e2e/parda-alert") {
+				// Task 68: the daily check's alert, S1 E1–2 of a series, for an account's default profile.
+				const body = (await readJson(request)) as { userId: string; tmdbId: number; title: string };
+				const data = { title: { en: body.title, ne: "" }, poster: null, backdrop: null, name: "", airDate: null };
+				await query(
+					`insert into "pd_notification" ("profile_id", "tmdb_id", "season", "episode", "last_episode", "data")
+					 select "id", $2, 1, 1, 2, $3::jsonb from "pd_profile" where "owner_id" = $1 and "is_default"`,
+					[body.userId, body.tmdbId, JSON.stringify(data)],
+				);
+				return send(response, 200, { ok: true });
+			}
 			// parda:end
 			// apps:start
 			if (route === "GET /e2e/note") return send(response, 200, await reviewNote(query, url.searchParams.get("email")));

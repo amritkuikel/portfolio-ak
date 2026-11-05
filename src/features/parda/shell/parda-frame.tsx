@@ -16,6 +16,7 @@ import { ConsentSettingsButton } from "@/components/layout/observability";
 import { ThemeToggle } from "@/components/layout/theme";
 import { m } from "@/paraglide/messages";
 import { pardaLinks } from "../links";
+import { PardaBell } from "../schedule/bell";
 import { PardaSearchButton } from "../search/search-button";
 import { PardaGuestBanner } from "./guest-banner";
 import { PardaNoticeBanner } from "./notice-banner";
@@ -94,6 +95,7 @@ function PardaHeader() {
 					<PardaSearchButton />
 					<LanguageSwitcher className="max-lg:hidden" />
 					<ThemeToggle />
+					<PardaBell />
 					<PardaUserMenu />
 				</div>
 			</div>
@@ -156,6 +158,9 @@ function PardaFooter() {
 				<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
 					<Link {...pardaLinks.about()} className={`underline-offset-4 hover:underline ${focusRing}`}>
 						{m.pd_footer_about()}
+					</Link>
+					<Link {...pardaLinks.schedule()} className={`underline-offset-4 hover:underline ${focusRing}`}>
+						{m.pd_schedule_title()}
 					</Link>
 					<LanguageSwitcher className="lg:hidden" />
 					<ConsentSettingsButton />

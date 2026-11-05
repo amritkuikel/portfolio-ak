@@ -239,6 +239,13 @@
 			"when": 1793854419237,
 			"tag": "0033_parda_library",
 			"breakpoints": true
+		},
+		{
+			"idx": 34,
+			"version": "7",
+			"when": 1793865064096,
+			"tag": "0034_parda_alerts",
+			"breakpoints": true
 		}
 	]
 }

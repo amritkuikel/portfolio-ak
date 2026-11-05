@@ -23,6 +23,7 @@ import { catalogScope, type PardaCatalog } from "../catalog/context";
 import { toHubTitle } from "../catalog/hubs";
 import { personDetails, titleDetails, usCertificate } from "../catalog/service";
 import { titleKey } from "../controls";
+import { newEpisodes } from "../notify/service";
 import * as repo from "./saved-repository";
 import type { PardaServices } from "./service";
 
@@ -278,7 +279,7 @@ const RAIL_MAX = 20;
  */
 export async function forYou(ctx: PardaServices, locale: Locale, now = new Date()): Promise<ForYouData> {
 	const catalog = ctx.catalog;
-	if (!catalog) return { imageBase: "", because: null, people: null };
+	if (!catalog) return { imageBase: "", because: null, people: null, episodes: null };
 	const scope = catalogScope(catalog, locale);
 	const profileId = ctx.viewer.profile.id;
 	const [liked, hearted, disliked, listed, people] = await Promise.all([
@@ -338,6 +339,15 @@ export async function forYou(ctx: PardaServices, locale: Locale, now = new Date(
 		return titles.length ? titles : null;
 	};
 
-	const [becauseRail, peopleRail] = await Promise.all([because(), fromPeople()]);
-	return { imageBase: catalog.services.tmdb.config.imageBase, because: becauseRail, people: peopleRail };
+	const [becauseRail, peopleRail, episodes] = await Promise.all([
+		because(),
+		fromPeople(),
+		newEpisodes(ctx, locale, now),
+	]);
+	return {
+		imageBase: catalog.services.tmdb.config.imageBase,
+		because: becauseRail,
+		people: peopleRail,
+		episodes: episodes.length ? episodes : null,
+	};
 }

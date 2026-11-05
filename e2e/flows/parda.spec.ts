@@ -897,3 +897,51 @@ test.describe("Parda's profiles", () => {
 		await expect(page.getByTestId("profiles-manage")).toBeVisible();
 	});
 });
+
+// Task 68: the schedule and new-episode alerts (decision 0241). The daily check is covered
+// on PGlite; here the harness writes its alert for this flow's own guest.
+test.describe("Parda's alerts", () => {
+	test("the bell shows a new episode of a followed series, opens its episode, and the home and schedule list it", async ({
+		page,
+		harness,
+	}) => {
+		await harness.resetRateLimits();
+		const series = pardaFixturePath("series");
+		await page.goto(series, { waitUntil: "networkidle" });
+		const title = (await page.getByTestId("title-heading").textContent())?.trim() ?? "";
+		await page.getByTestId("title-hero").getByTestId("list-toggle").click();
+		await expect(page.getByTestId("parda-guest-banner")).toBeVisible();
+		await expect(page.getByTestId("parda-bell")).toBeVisible();
+		await expect(page.getByTestId("parda-bell-count")).toHaveCount(0);
+
+		const session = (await (await page.request.get("/api/auth/get-session")).json()) as { user: { id: string } };
+		const id = Number(/\/series\/(\d+)/.exec(series)?.[1]);
+		await harness.pardaAlert(session.user.id, id, title);
+
+		await page.goto("/app/parda", { waitUntil: "networkidle" });
+		await expect(page.getByTestId("parda-bell-count")).toHaveText("1");
+		await expect(page.getByTestId("new-episodes-rail")).toContainText(title.slice(0, 12));
+		await page.getByTestId("parda-bell").click();
+		const inbox = page.getByTestId("parda-inbox");
+		await expect(inbox.getByTestId("inbox-item")).toHaveCount(1);
+		await expect(inbox.getByTestId("inbox-unread")).toHaveCount(1);
+		await expect(page.getByTestId("parda-bell-count")).toHaveCount(0);
+		await inbox.getByTestId("inbox-item").click();
+		await page.waitForURL(/\/app\/parda\/watch\/series\/\d+[^?]*\?s=1&e=1$/);
+
+		// Read now, after a reload too; the bell leads to the schedule.
+		await page.goto("/app/parda");
+		await expect(page.getByTestId("parda-bell-count")).toHaveCount(0);
+		await page.getByTestId("parda-bell").click();
+		await page.getByTestId("parda-inbox-schedule").click();
+		await page.waitForURL(/\/app\/parda\/schedule$/);
+		await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
+		await expect(page.getByTestId("schedule-signed-out")).toHaveCount(0);
+	});
+
+	test("a visitor's schedule asks them to sign in, and has no bell", async ({ page }) => {
+		await page.goto("/app/parda/schedule");
+		await expect(page.getByTestId("schedule-signed-out")).toBeVisible();
+		await expect(page.getByTestId("parda-bell")).toHaveCount(0);
+	});
+});

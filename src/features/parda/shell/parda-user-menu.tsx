@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import { BookmarkIcon, LayoutDashboardIcon, LogOutIcon, UserIcon, UserPlusIcon, UsersIcon } from "lucide-react";
+import {
+	BookmarkIcon,
+	CalendarDaysIcon,
+	LayoutDashboardIcon,
+	LogOutIcon,
+	UserIcon,
+	UserPlusIcon,
+	UsersIcon,
+} from "lucide-react";
 import { UserAvatar } from "@/components/data-display/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,6 +81,12 @@ export function PardaUserMenu() {
 						<Link {...pardaLinks.library()} data-testid="nav-library">
 							<BookmarkIcon aria-hidden />
 							{m.pd_my_list()}
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<Link {...pardaLinks.schedule()} data-testid="nav-schedule">
+							<CalendarDaysIcon aria-hidden />
+							{m.pd_schedule_title()}
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>

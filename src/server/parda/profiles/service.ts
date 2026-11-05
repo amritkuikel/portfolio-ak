@@ -247,10 +247,17 @@ export async function switchProfile(ctx: Services, id: string, pin: string | und
 	return profileCookieValue(target);
 }
 
-/** The email digest (Task 68 sends it): accounts only, since a guest has no email. */
-export async function setDigest(ctx: Services & { isGuest: boolean }, digest: boolean): Promise<void> {
+/**
+ * The email digest of new episodes (decision 0241): accounts only, since a guest has no
+ * email. It's written in `locale`, the page's language when it was chosen.
+ */
+export async function setDigest(
+	ctx: Services & { isGuest: boolean },
+	digest: boolean,
+	locale: "en" | "ne" = "en",
+): Promise<void> {
 	if (ctx.isGuest) throw new AppError("FORBIDDEN", "Guests have no email");
-	await repo.setAccountDigest(ctx.db, ctx.viewer.userId, digest);
+	await repo.setAccountDigest(ctx.db, ctx.viewer.userId, digest, locale);
 }
 
 export const digestOf = (db: Db, userId: string) => repo.accountDigest(db, userId);

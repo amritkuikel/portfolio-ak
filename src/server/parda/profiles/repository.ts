@@ -90,9 +90,9 @@ export async function accountDigest(db: Db | Tx, userId: string): Promise<boolea
 	return row?.digest ?? false;
 }
 
-export async function setAccountDigest(db: Db | Tx, userId: string, digest: boolean) {
+export async function setAccountDigest(db: Db | Tx, userId: string, digest: boolean, locale: string) {
 	await db
 		.insert(pdAccount)
-		.values({ userId, digest })
-		.onConflictDoUpdate({ target: pdAccount.userId, set: { digest, updatedAt: new Date() } });
+		.values({ userId, digest, locale })
+		.onConflictDoUpdate({ target: pdAccount.userId, set: { digest, locale, updatedAt: new Date() } });
 }

@@ -2,7 +2,7 @@
 
 Parda (पर्दा, "the screen") is a movie and series product at `/app/parda`, run from `/admin/parda`, built as a removable layer (`pnpm strip-demo`; decision 0228). The plan is [PLAN.md](../PLAN.md), section 12.
 
-**Today (Tasks 59 to 67)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
+**Today (Tasks 59 to 68)** it has a home and three hubs (movies, series, anime) of rails from TMDB, title, credits, person and collection pages, "Surprise me", search (an overlay and a page) and Discover, the watch page with progress and Continue watching, the library (My List, ♥, History) and profiles (kids' profiles under a cap, PIN locks), the schedule and new-episode alerts (the bell, New episodes, the email digest), the notice page, sign-in, sign-up and the 404, the admin's control pages (sources, takedowns, reports, settings, the player lab), and **no real video plays**. The servers are a placeholder until a licensed provider is connected (see "Connecting the real provider").
 
 ## Design: "Masking"
 
@@ -153,6 +153,28 @@ Decision 0240. `/app/parda/library/{list,favourites,continue,history}` and `/app
 - **Region:** the profile's, else the visitor's country (`x-vercel-ip-country`) when TMDB has watch data for it (`TMDB_REGIONS`), else the admin's. **Players' language:** the profile's when the admin lists it, else the page's rule.
 - **Fixtures:** `pnpm tmdb:record` records a kids' home too; `pnpm tmdb:record --kids` adds only those files.
 
+## Schedule and alerts
+
+Decision 0241. `/app/parda/schedule` (noindex), the bell, the home's New episodes rail and the email digest.
+
+| File | Holds |
+| --- | --- |
+| `src/server/db/schema/parda/alerts.ts` | `pd_follow_state` (per series: the latest aired episode the check saw, the next air date, `ended`, `checked_at`), `pd_notification` (per profile: a season's range `episode`–`last_episode`, names and pictures as data, `read_at`, `emailed_at`) |
+| `src/server/parda/notify/rules.ts` | Pure: what's new (`newEpisodes`), when a series is due (`isDue`), the pacing under TMDB's limit (`paced`) |
+| `src/server/parda/notify/check.ts` | The daily check: followed series, one `tv/{id}` each, the state and the alerts in one transaction, and pruning |
+| `src/server/parda/notify/digest.ts`, `src/server/email/templates/parda-emails.tsx` | The digest, after the check: one email per account that chose it |
+| `src/server/parda/notify/service.ts`, `repository.ts` | The bell, marking read, New episodes, the followed half of the schedule |
+| `src/server/parda/catalog/schedule.ts` | Anime airing this week (the half for everyone) |
+| `src/functions/parda/alerts.ts`, `schedule.ts` | `getPardaInbox`, `markPardaInboxRead`, `getPardaFollowing` (`requirePardaViewer` → `withPardaServices`); `getPardaAnimeWeek` (`withPardaCatalog`) |
+| `src/features/parda/schedule/` | `bell.tsx`, `schedule-page.tsx`, `days.ts` (the days, pure), `labels.ts` ("S2 · E1–8"), `queries.ts`, `load.ts` |
+
+- **Following:** My List, ♥, or a play or mark in the last six months. There's no Follow button.
+- **The check** runs in `GET /api/cron/parda` after the ranking: each followed series once a day (an ended one weekly), at most 1,500 a run, under 35 requests a second; ten failures in a row stop it. The first check of a series only records where it is. A new range goes to every profile following it then, except one that already finished it and a kids' profile its cap doesn't allow. Specials and episodes over 14 days old aren't news. States nobody kept checked for 60 days, and alerts over 90 days old, are deleted.
+- **The digest** follows the check in the same job: per account with `pd_account.digest`, the unread alerts of its profiles from the last week, in `pd_account.locale`. Claimed before sending, handed back on failure. Guests never.
+- **The bell** is in the top mask for a session; the `_parda` layout loads it. Opening it marks everything read.
+- **The schedule:** followed series for 14 days (their next episode, and that season's dates), anime for 7 (TMDB's discover list by air date, placed by each title's latest or next episode), by day from today in the viewer's zone (`x-vercel-ip-timezone`, else `APP_TIME_ZONE`). Air dates are the airing country's.
+- **Testing:** the check, the digest and both halves of the schedule run on PGlite with the airing data each test sets (`tests/server/parda-alerts.test.ts`); e2e writes an alert through the harness (`POST /e2e/parda-alert`).
+
 ## Search and Discover
 
 Decision 0239. Both read TMDB through `catalog/service.ts` (`searchCatalog`, `listTitles`), so takedowns apply.
@@ -189,7 +211,7 @@ TMDB, read through `src/server/parda/catalog/service.ts` only: that module appli
 | `controls.ts` | Takedowns, settings and sources from Postgres, at most every 30 s per process |
 | `catalog/requests.ts` | The title pages' TMDB requests (the details `append_to_response`, credits, season and person paths, the key jobs), shared with the recorder; no runtime imports |
 | `tmdb/pages.ts` | A season, the full credits, a person and a collection, each with its Nepali fill-in |
-| `catalog/refresh.ts`, `cron.ts` | The daily `pd_title` refresh, the top 500 of each media type, then their US certificates (400 a run) |
+| `catalog/refresh.ts`, `cron.ts` | The daily job: the `pd_title` refresh (the top 500 of each media type), their US certificates (400 a run), the sources' ranking, the new-episode check and the digest |
 
 Genre names are our own messages (`src/features/parda/genres.ts`), because TMDB's Nepali genre names are null.
 

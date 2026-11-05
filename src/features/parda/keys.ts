@@ -18,6 +18,8 @@ export const pardaKeys = {
 		[...pardaKeys.catalog(locale), "search", q, tab, page] as const,
 	suggest: (locale: Locale, q: string) => [...pardaKeys.catalog(locale), "suggest", q] as const,
 	discover: (locale: Locale, filters: DiscoverSearch) => [...pardaKeys.catalog(locale), "discover", filters] as const,
+	/** Anime airing this week (Task 68): the day is the viewer's, so it's read again after a minute. */
+	animeWeek: (locale: Locale) => [...pardaKeys.catalog(locale), "anime-week"] as const,
 };
 
 /**
@@ -39,4 +41,8 @@ export const pardaLibraryKeys = {
 	history: (locale: Locale, page: number) => [...pardaLibraryKeys.all, "history", locale, page] as const,
 	forYou: (locale: Locale) => [...pardaLibraryKeys.all, "for-you", locale] as const,
 	profiles: (locale: Locale) => [...pardaLibraryKeys.all, "profiles", locale] as const,
+	/** The bell (decision 0241): the profile's alerts and how many are unread. */
+	inbox: (locale: Locale) => [...pardaLibraryKeys.all, "inbox", locale] as const,
+	/** The followed series' half of the schedule. */
+	following: (locale: Locale) => [...pardaLibraryKeys.all, "following", locale] as const,
 };

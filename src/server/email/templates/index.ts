@@ -24,6 +24,7 @@ import {
 	type WelcomeProps,
 } from "./emails";
 import type { EmailBaseProps } from "./layout";
+import * as parda from "./parda-emails"; // @parda
 import * as taskline from "./taskline-emails"; // @taskline
 
 /** Full props per template (including locale and siteName). */
@@ -41,6 +42,7 @@ export interface EmailPropsMap {
 	"taskline-invite": taskline.TeamInviteProps; // @taskline
 	"taskline-notification": taskline.TaskNotificationProps; // @taskline
 	"taskline-digest": taskline.DailyDigestProps; // @taskline
+	"parda-digest": parda.EpisodeDigestProps; // @parda
 }
 
 export type EmailTemplateId = keyof EmailPropsMap;
@@ -174,6 +176,32 @@ export const emailTemplates: EmailRegistry = {
 		},
 	},
 	// taskline:end
+	// parda:start
+	"parda-digest": {
+		component: parda.EpisodeDigest,
+		subject: parda.episodeDigestSubject,
+		sample: {
+			name: "Sita Sharma",
+			items: [
+				{
+					id: "n1",
+					title: "The Long Monsoon",
+					episodes: "S2 · E5",
+					url: "https://example.com/app/parda/watch/series/1-the-long-monsoon?s=2&e=5",
+				},
+				{
+					id: "n2",
+					title: "Paper Lanterns",
+					episodes: "S1 · E1–8",
+					url: "https://example.com/app/parda/watch/series/2-paper-lanterns?s=1&e=1",
+				},
+			],
+			more: 0,
+			url: "https://example.com/app/parda/schedule",
+			settingsUrl: "https://example.com/app/parda/profiles",
+		},
+	},
+	// parda:end
 };
 
 export const EMAIL_TEMPLATE_IDS = Object.keys(emailTemplates) as EmailTemplateId[];

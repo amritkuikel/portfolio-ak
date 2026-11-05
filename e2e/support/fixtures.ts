@@ -146,6 +146,14 @@ export class Harness {
 		await fetch(`${E2E.harnessURL}/e2e/parda-rank`, { method: "DELETE" });
 	}
 
+	/** An alert of new episodes (S1 E1–2) of a series, as the daily check writes it (Task 68). */
+	async pardaAlert(userId: string, tmdbId: number, title: string) {
+		await fetch(`${E2E.harnessURL}/e2e/parda-alert`, {
+			method: "POST",
+			body: JSON.stringify({ userId, tmdbId, title }),
+		});
+	}
+
 	// parda:end
 
 	// taskline:start

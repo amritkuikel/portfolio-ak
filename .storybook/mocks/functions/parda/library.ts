@@ -51,5 +51,5 @@ export const getPardaHistory = fn(
 export const removePardaHistory = fn(async () => ({ ok: true as const })).mockName("removePardaHistory");
 export const clearPardaHistory = fn(async () => ({ ok: true as const })).mockName("clearPardaHistory");
 export const getPardaForYou = fn(
-	async (): Promise<ForYouData> => ({ imageBase: "", because: null, people: null }),
+	async (): Promise<ForYouData> => ({ imageBase: "", because: null, people: null, episodes: null }),
 ).mockName("getPardaForYou");

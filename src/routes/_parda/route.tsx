@@ -20,13 +20,18 @@ export const Route = createFileRoute("/_parda")({
 			import("@/features/parda/queries"),
 			import("@/lib/query"),
 		]);
-		// A session's profile (the account menu) and what it saved (every My List and ♥ button, decision 0240).
+		// A session's profile (the account menu), what it saved (every My List and ♥ button, decision 0240)
+		// and its alerts (the bell, decision 0241).
 		const viewer = async () => {
 			if (!context.session) return;
-			const { pardaSavedQueryOptions, pardaViewerQueryOptions } = await import("@/features/parda/library/queries");
+			const [{ pardaSavedQueryOptions, pardaViewerQueryOptions }, { pardaInboxQueryOptions }] = await Promise.all([
+				import("@/features/parda/library/queries"),
+				import("@/features/parda/schedule/queries"),
+			]);
 			await Promise.all([
 				ensureQuery(context.queryClient, pardaViewerQueryOptions()).catch(() => undefined),
 				ensureQuery(context.queryClient, pardaSavedQueryOptions()).catch(() => undefined),
+				ensureQuery(context.queryClient, pardaInboxQueryOptions(getLocale())).catch(() => undefined),
 			]);
 		};
 		await Promise.all([ensureQuery(context.queryClient, pardaBannerQueryOptions()).catch(() => undefined), viewer()]);

@@ -245,6 +245,7 @@ Record every non-obvious choice here: **What**, **Why**, **Alternatives consider
 - [0238](#0238-parda-ranks-its-sources-from-viewers-and-a-daily-probe): Parda ranks its sources from viewers and a daily probe
 - [0239](#0239-parda-searches-and-discovers-through-the-catalogue-service): Parda searches and discovers through the catalogue service
 - [0240](#0240-pardas-library-profiles-and-the-kids-cap): Parda's library, profiles and the kids' cap
+- [0241](#0241-pardas-schedule-and-new-episode-alerts): Parda's schedule and new-episode alerts
 </details>
 
 ---
@@ -3086,3 +3087,30 @@ Measured on the owner's Windows machine (Node 24.11), 2026-11-04.
 **Numbers:** entry 280.8 kB (279.9 before): two routes. The budget is 285 kB (was 280): Tasks 68 to 69a add four routes, and Task 70 measures and trims.
 
 **Alternatives considered:** a title snapshot on each list row (a second copy of `pd_title`); filtering every list through `pd_title` (the kids' rails would be nearly empty until the certificates fill in); a details call per title to check its certificate (hundreds of TMDB calls for a kids' home); `certification.lte` (lets NR in); a plain profile id in the cookie for a locked profile (anyone who saw the id could open it).
+
+## 0241: Parda's schedule and new-episode alerts
+
+**What:** Task 68. A daily new-episode check with alerts per profile, the bell, the home's New episodes rail, the email digest, and the schedule at `/app/parda/schedule` (noindex).
+- **Following:** a profile follows a series it has in My List or ♥, or played or marked in the last six months (Continue watching's window). No Follow button: what a viewer already does says what they care about.
+- **Tables** (migration `0034_parda_alerts`): `pd_follow_state`, one row per series for all profiles (the latest aired episode the check saw, the next air date, `ended`, `checked_at`), and `pd_notification` per profile (a range of one season, `episode` to `last_episode`, with the series' names, poster and backdrop as data, `read_at`, `emailed_at`; unique per profile, series, season and last episode). `pd_account.locale` holds the digest's language, the page's when it was chosen.
+- **The check** (`notify/check.ts`, the daily job's fourth step): every followed series not taken down is asked `tv/{id}` in English with no appends, once a day (20 h since the last check), or once a week when TMDB says it ended or no longer has it; at most 1,500 a run, the longest unchecked first. Seven at a time, each batch at least 200 ms, so under 35 requests a second (TMDB allows about 40, PLAN 12.4). Ten failures in a row is TMDB down: the run stops and the rest wait a day.
+- **What's new** (`notify/rules.ts`, pure): the first check only records where a series is, so following a long-running series alerts nothing. After that, when the latest aired episode is past what the check saw, the range is the rest of that season, or a new season from its first episode, so a whole season dropped at once is one alert. Specials (season 0) and episodes that aired over 14 days ago (a gap in checking, or TMDB filling in old data) aren't news.
+- **Who's told:** every profile following the series at that moment, in the transaction that moves the state, minus a profile that already finished the range's last episode and a kids' profile whose cap `pd_title`'s certificate doesn't allow (unknown is out, as everywhere, 0240). Takedowns stop the check asking at all; the bell and the rail hide a blocked series' alerts.
+- **The digest** runs after the check's transactions committed (as 0214): one email per account that chose it (`pd_account.digest`, never a guest), with the unread alerts of all its profiles from the last week, a series once, in the account's language. Rows are claimed (`emailed_at`) before the send, a failed send hands them back for tomorrow, and read alerts are claimed without a line. The email links each series' first new episode on the watch page, the schedule, and the profiles page to stop it. Template `parda-digest` in `parda-emails.tsx`, a layer file.
+- **The bell** sits in the top mask for a session, between the theme and the account; the layout loads its alerts (the latest 30 and the unread count) beside the profile and its saved keys, so the count renders with the page. Opening it marks every alert read and keeps the dots on what was new until it closes. An alert opens the watch page at its first new episode; the bell's footer leads to the schedule.
+- **New episodes** on the home: each series once, from its latest alert of the last 30 days, until the profile finishes that alert's last episode. It's part of `getPardaForYou`, which the home's loader already awaits for a session, so it costs no new function.
+- **The schedule:** the profile's followed series (the 60 most recently active) for the 14 days from today, from each series' details (its next episode) and that season's dates (both cached a day, through the catalogue service), plus anime airing in the 7 days from today: TMDB's discover list of anime with an air date in the week (20 most popular), each placed by its details' latest or next episode. By day, followed series first by title, then anime; an episode in both shows once. Days with nothing on are left out.
+- **Today is the viewer's:** Vercel's `x-vercel-ip-timezone`, when it names a real zone, else `APP_TIME_ZONE`. Air dates are the airing country's dates as TMDB gives them; without a time there's nothing to convert.
+- **Links:** the schedule is in the account menu, the bell's footer and Parda's footer (a visitor reaches it too: anime is for everyone), not the top mask, which is full (0240).
+
+**Why:** PLAN Task 68 and 12.5 ("Data model": `pd_follow_state`, `pd_notification`).
+
+**Deviations from PLAN Task 68:**
+- **"Followed" is defined here** (the plan didn't): My List, ♥ or recent watching, with no Follow button.
+- **The state is per series, not per profile:** one TMDB call per series however many follow it, and the first check's baseline is the series', so a profile that follows later is told from then on.
+- **The schedule reads TMDB through the cache at page load** rather than from `pd_follow_state`: a series followed today shows today, and takedowns and caps apply as on every page.
+- **The schedule's anime list shares its recording** with the anime hub's "Airing today" (fixture names drop date values); the details of the week's titles aren't recorded, so the e2e schedule has no anime. The PGlite tests patch the airing data they need.
+
+**Numbers:** see PLAN Task 68.
+
+**Alternatives considered:** a state per profile and series (a TMDB call per follower, and a first-check baseline per profile); TMDB's `tv/on_the_air` for anime (every country's series, and no day); TMDB's changes feed (it says a series changed, not that an episode aired, and still needs the details); a browser time-zone cookie (the first page would still need a zone, and a reload once it's set); an instant email per alert (the daily check makes them all at once anyway, so the digest is the instant email).
