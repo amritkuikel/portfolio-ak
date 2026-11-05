@@ -73,7 +73,7 @@
 		"@tiptap/react": "^3.32.2",
 		"@tiptap/starter-kit": "^3.32.2",
 		"@tiptap/suggestion": "^3.32.2",
-		"@vercel/functions": "^3.9.9",
+		"@vercel/functions": "^3.10.5",
 		"ably": "^2.30.0",
 		"better-auth": "^1.7.6",
 		"class-variance-authority": "^0.7.1",
